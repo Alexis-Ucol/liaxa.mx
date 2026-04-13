@@ -262,11 +262,11 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 <!-- WELCOME -->
 <div id="welcomeScreen">
   <div class="wcard">
-    <div class="wlogos" id="wlogos">
-      <img id="logo-left" src="/logos/Facultad_Economia.png" alt="Facultad de Economía" style="max-height:70px;max-width:140px;object-fit:contain">
-      <div class="wlogsep" id="wlogsep"></div>
-      <img id="logo-right" src="/logos/Universidad_Colima.png" alt="Universidad de Colima" style="max-height:70px;max-width:140px;object-fit:contain">
-    </div>
+  <div class="wlogos" id="wlogos">
+  <img id="logo-left" src="/logos/Facultad_Economia.png" alt="Facultad de Economía" style="max-height:70px;max-width:140px;object-fit:contain" onerror="this.style.display='none'">
+  <div class="wlogsep" id="wlogsep"></div>
+  <img id="logo-right" src="/logos/Universidad_Colima.png" alt="Universidad de Colima" style="max-height:70px;max-width:140px;object-fit:contain" onerror="this.style.display='none'">
+</div>
     <div class="wtitle">Consumidor Racional</div>
     <div class="wcourse">Microeconomía · Utilidad Cobb-Douglas</div>
     <label class="flabel" for="sName">Nombre completo</label>
@@ -298,10 +298,10 @@ body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(-
 <!-- LESSON -->
 <div id="lessonScreen">
   <div class="stickybar">
-    <div class="hlogos">
-      <img id="hlogo-left" src="/logos/Facultad_Economia.png" alt="Facultad de Economía" style="max-height:36px;max-width:72px;object-fit:contain">
-      <img id="hlogo-right" src="/logos/Universidad_Colima.png" alt="Universidad de Colima" style="max-height:36px;max-width:72px;object-fit:contain">
-    </div>
+   <div class="hlogos">
+  <img id="hlogo-left" src="/logos/Facultad_Economia.png" alt="Facultad de Economía" style="max-height:36px;max-width:72px;object-fit:contain" onerror="this.style.display='none'">
+  <img id="hlogo-right" src="/logos/Universidad_Colima.png" alt="Universidad de Colima" style="max-height:36px;max-width:72px;object-fit:contain" onerror="this.style.display='none'">
+</div>
     <div class="hsep"></div>
     <div class="htitle">Consumidor Racional: Cobb-Douglas</div>
     <div class="hsep"></div>
@@ -1729,7 +1729,68 @@ function buildLesson(rng) {
 /* ══════════════════════════════════════════════
    PDF (FIXED COLORS & LAYOUT)
 ══════════════════════════════════════════════ */
-async function generatePDF() {
+/* ═══════════════════════════════════════════════════════════════
+   IMAGE LOADER FOR PDF — converts PNG URLs to base64 on demand
+═══════════════════════════════════════════════════════════════ */
+window._logoCache = window._logoCache || {};
+
+async function loadImageForPDF(imgElement) {
+  if (!imgElement || !imgElement.src) return null;
+  
+  // Check cache first (so PNGs are only fetched once)
+  if (window._logoCache[imgElement.src]) {
+    return window._logoCache[imgElement.src];
+  }
+  
+  try {
+    // Fetch the image from the server
+    const response = await fetch(imgElement.src);
+    if (!response.ok) return null;
+    
+    const blob = await response.blob();
+    
+    // Convert to base64
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result;
+        window._logoCache[imgElement.src] = base64;
+        resolve(base64);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch(e) {
+    console.warn('Could not load image:', imgElement.src, e);
+    return null;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRELOAD LOGOS when page loads (so PDF generation is instant)
+═══════════════════════════════════════════════════════════════ */
+async function preloadLogosForPDF() {
+  const leftLogo = document.getElementById('logo-left');
+  const rightLogo = document.getElementById('logo-right');
+  const hleftLogo = document.getElementById('hlogo-left');
+  const hrightLogo = document.getElementById('hlogo-right');
+  
+  const logos = [leftLogo, rightLogo, hleftLogo, hrightLogo].filter(l => l && l.src);
+  
+  for (const logo of logos) {
+    try {
+      await fetch(logo.src); // Just cache the fetch, don't need base64 yet
+    } catch(e) {}
+  }
+}
+
+// Preload when page loads (makes PDF generation instant)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', preloadLogosForPDF);
+} else {
+  preloadLogosForPDF();
+}
+  async function generatePDF() {
   var btn = document.getElementById('dlBtn');
   btn.textContent = 'Generando PDF…'; btn.disabled = true;
   var jspdf = window.jspdf;
@@ -1768,6 +1829,38 @@ async function generatePDF() {
   doc.line(lx+8.23,ly+1.54,lx+8.23,ly+7.2);
   doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
   doc.text('LIAXA',lx+10,ly+6.8);
+    // LIAXA mark
+  var lx=PW-M-36, ly=10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[1.54,-1.54],[1.54,0.51],[1.55,-2.57]],lx+1.03,ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66,ly+2.57,0.9,'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23,ly+1.54,lx+8.23,ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA',lx+10,ly+6.8);
+
+  // ⬇️⬇️⬇️ ADD YOUR LOGO CODE HERE ⬇️⬇️⬇️
+  // ── Facultad de Economía logo (loads from PNG path) ──
+  var logoEl = document.getElementById('logo-left');
+  if (logoEl && logoEl.src) {
+    const logoBase64 = await loadImageForPDF(logoEl);
+    if (logoBase64) {
+      try { doc.addImage(logoBase64, 'PNG', M, 4, 40, 22); } catch(e) {}
+    }
+  }
+  
+  // ── Universidad de Colima logo (loads from PNG path) ──
+  var logoElR = document.getElementById('logo-right');
+  if (logoElR && logoElR.src) {
+    const logoBase64 = await loadImageForPDF(logoElR);
+    if (logoBase64) {
+      try { doc.addImage(logoBase64, 'PNG', PW/2 - 20, 4, 40, 22); } catch(e) {}
+    }
+  }
+  // ⬆️⬆️⬆️ END OF LOGO CODE ⬆️⬆️⬆️
+
+  doc.setTextColor(232,238,247); doc.setFontSize(17); doc.setFont('helvetica','bold');
+  doc.text('Consumidor Racional: Cobb-Douglas', M, 49);  
   doc.setTextColor(232,238,247); doc.setFontSize(17); doc.setFont('helvetica','bold');
   doc.text('Consumidor Racional: Cobb-Douglas', M, 49);
   doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
