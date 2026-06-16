@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manejo de POS — Liaxa</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#1B2B52;--green-dark:#0f2d5e;--green-bg:#e8eef7;
+  --gold:#E8A020;--gold-bg:#fdf3e7;
+  --bg:#f5f7fa;--surface:#ffffff;--surface2:#edf0f5;
+  --border:#d4d9e3;--text:#141820;--text2:#3a4050;--text3:#6a7080;
+  --ok:#1a6a4a;--ok-bg:rgba(26,106,74,.10);
+  --bad:#b03010;--bad-bg:rgba(176,48,16,.08);
+  --shadow:0 4px 24px rgba(27,43,82,.13);
+}
+[data-theme="dark"]{
+  --bg:#18181a;--surface:#242420;--surface2:#2e2e28;
+  --border:#3a3830;--text:#e8e4da;--text2:#b0aa9e;--text3:#7a7468;
+  --green:#5a8fd4;--green-dark:#8ab4e8;--green-bg:#1a2040;
+  --gold:#f0a050;--gold-bg:#281e0e;
+  --ok:#4a9a6f;--ok-bg:rgba(74,154,111,.15);
+  --bad:#c05030;--bad-bg:rgba(192,80,48,.13);
+  --shadow:0 4px 24px rgba(0,0,0,.35);
+}
+/* dark mode fixes for elements with hardcoded colors */
+[data-theme="dark"] .wlogo-placeholder{border-color:var(--green);background:var(--green-bg)}
+[data-theme="dark"] .wlogo-placeholder span{color:var(--green)}
+[data-theme="dark"] .wlogo-placeholder svg rect,[data-theme="dark"] .wlogo-placeholder svg line{stroke:var(--green)}
+[data-theme="dark"] .wfoot-liaxa span{color:var(--green)}
+[data-theme="dark"] .wfoot-liaxa svg polyline{stroke:var(--green)}
+[data-theme="dark"] .pos-terminal{background:#0e0e1a;color:#d4d0c8}
+[data-theme="dark"] .pos-terminal .pos-alert{color:#ff8080}
+[data-theme="dark"] .mcopt.rc{color:var(--ok)}
+[data-theme="dark"] .mcopt.sc{color:var(--ok)}
+[data-theme="dark"] .mcopt.sw{color:var(--bad)}
+[data-theme="dark"] .rpanel{background:var(--surface);border-color:var(--border)}
+[data-theme="dark"] #scoreDisplay{color:var(--green)}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+
+/* WELCOME */
+#welcomeScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem}
+.wcard{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:1.6rem 1.8rem 2rem;width:100%;max-width:400px;text-align:center;border-top:4px solid var(--gold)}
+.wlogo-placeholder{display:flex;align-items:center;justify-content:center;height:90px;border:2.5px dashed var(--green);border-radius:12px;background:var(--green-bg);flex-direction:column;gap:6px;margin-bottom:1.4rem}
+.wlogo-placeholder svg{opacity:.6}
+.wlogo-placeholder span{font-size:.68rem;font-weight:600;color:var(--green);letter-spacing:.06em;text-transform:uppercase;text-align:center;line-height:1.4}
+.wtitle{font-family:'Crimson Pro',serif;font-size:1.7rem;font-weight:700;margin-bottom:1.6rem;color:var(--text)}
+.flabel{display:block;font-size:.75rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;text-align:left}
+.finput{width:100%;padding:.7rem .9rem;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:.95rem;font-family:inherit;margin-bottom:1.1rem;transition:border-color .18s}
+.finput:focus{outline:none;border-color:var(--green)}
+.sbtn{width:100%;padding:.85rem;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;transition:background .18s;font-family:inherit}
+.sbtn:hover{background:var(--green-dark)}
+.sbtn:disabled{opacity:.45;cursor:not-allowed}
+.wfoot-liaxa{display:flex;justify-content:center;align-items:center;gap:.5rem;padding-top:1.2rem;margin-top:1.2rem;border-top:1px solid var(--border)}
+.wfoot-liaxa span{font-family:'Crimson Pro',serif;font-size:.95rem;font-weight:700;color:#1B2B52;letter-spacing:.04em}
+
+/* LESSON */
+#lessonScreen{display:none}
+.stickybar{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:.5rem 1.2rem;display:flex;align-items:center;gap:.7rem;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.hlogos-client{font-size:.58rem;font-weight:600;color:var(--green);letter-spacing:.07em;text-transform:uppercase;border:1px dashed var(--border);border-radius:5px;padding:.18rem .5rem}
+.hsep{width:1px;height:22px;background:var(--border);flex-shrink:0}
+.htitle{font-family:'Crimson Pro',serif;font-size:1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hchip{font-size:.7rem;background:var(--green-bg);color:var(--green-dark);padding:.2rem .65rem;border-radius:20px;white-space:nowrap;flex-shrink:0;margin-left:auto}
+.tbtn{background:none;border:1px solid var(--border);border-radius:7px;padding:.28rem .55rem;cursor:pointer;font-size:.82rem;color:var(--text2);flex-shrink:0}
+.progbar{height:3px;background:var(--border);position:fixed;top:47px;left:0;right:0;z-index:99}
+.progfill{height:100%;background:var(--green);width:0%;transition:width .4s}
+
+/* CONTENT */
+.lbody{max-width:720px;margin:0 auto;padding:4.5rem 1.2rem 4rem}
+.section{opacity:0;transform:translateY(16px);transition:opacity .48s,transform .48s;margin-bottom:2.8rem}
+.section.vis{opacity:1;transform:none}
+.stag{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.45rem}
+.section h2{font-family:'Crimson Pro',serif;font-size:1.55rem;font-weight:700;margin-bottom:.7rem}
+.section p{color:var(--text2);margin-bottom:.8rem;font-size:.92rem}
+.callout{background:var(--green-bg);border-left:4px solid var(--green);border-radius:0 10px 10px 0;padding:1rem 1.2rem;margin:1rem 0;font-size:.88rem}
+.callout p{margin-bottom:0;color:var(--text2)}
+
+/* SCENARIO CARDS */
+.pcrd{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;margin-bottom:1.3rem;overflow:hidden;transition:border-color .25s}
+.pcrd.ok{border-color:var(--ok)}
+.pcrd.bad{border-color:var(--bad)}
+.phdr{display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border)}
+.pnum{background:var(--green);color:#fff;width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:700;flex-shrink:0}
+.ptitle{font-weight:600;font-size:.88rem;color:var(--text)}
+.pbody{padding:1rem}
+
+/* POS TERMINAL */
+.pos-terminal{background:#1a1a2e;border-radius:10px;padding:1rem 1.2rem;margin:.8rem 0;font-family:'IBM Plex Mono',monospace;color:#e8e4da;font-size:.8rem;line-height:1.9}
+.pos-line{display:flex;justify-content:space-between}
+.pos-alert{color:#ff9999}
+.pos-total{border-top:1px solid #444;margin-top:.3rem;padding-top:.3rem;font-weight:700;color:#E8A020}
+
+.pstmt{background:var(--surface2);border-radius:8px;padding:.85rem .95rem;margin:.7rem 0;font-size:.88rem;color:var(--text2);border-left:3px solid var(--green)}
+.pq{font-size:.88rem;font-weight:600;margin:.8rem 0 .5rem;color:var(--text)}
+
+/* CHOICES */
+.mcopts{display:flex;flex-direction:column;gap:.45rem;margin-bottom:.6rem}
+.mcopt{display:flex;align-items:flex-start;gap:.65rem;padding:.75rem .85rem;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.86rem;transition:all .13s;user-select:none;line-height:1.5;color:var(--text);background:var(--surface)}
+.mcopt:hover:not(.dis){border-color:var(--green);background:var(--green-bg);color:var(--text)}
+.mcopt.dis{cursor:default;pointer-events:none}
+.mcopt.sc{border-color:var(--ok)!important;background:var(--ok-bg)!important;color:var(--ok)!important}
+.mcopt.sw{border-color:var(--bad)!important;background:var(--bad-bg)!important;color:var(--bad)!important}
+.mcopt.rc{border-color:var(--ok)!important;background:var(--ok-bg)!important;color:var(--ok)!important}
+.mcfb{display:none;padding:.7rem .9rem;border-radius:8px;font-size:.83rem;margin-top:.3rem;line-height:1.6}
+.mcfb.show{display:block}
+.mcfb.fbok{background:var(--ok-bg);color:var(--ok)}
+.mcfb.fbbad{background:var(--bad-bg);color:var(--bad)}
+
+/* HINT */
+.hintbtn{background:none;border:1px solid var(--gold);color:var(--gold);border-radius:6px;padding:.28rem .65rem;font-size:.78rem;cursor:pointer;margin-bottom:.45rem;font-family:inherit}
+.hintbox{display:none;background:var(--gold-bg);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:.65rem .85rem;font-size:.83rem;color:var(--text2)}
+.hintbox.show{display:block}
+
+/* RESULT */
+.rpanel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.8rem;text-align:center}
+#scoreDisplay{font-family:'Crimson Pro',serif;font-size:2.8rem;font-weight:700;color:var(--green)}
+#resultTitle{font-family:'Crimson Pro',serif;font-size:1.3rem;font-weight:700;margin-bottom:.5rem;color:var(--text)}
+#resultSub{font-size:.88rem;color:var(--text2);margin-bottom:1.5rem;line-height:1.6}
+.dlbtn{background:var(--green);color:#fff;border:none;border-radius:10px;padding:.8rem 1.8rem;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .18s;font-family:inherit}
+.dlbtn:hover{background:var(--green-dark)}
+.dlbtn:disabled{opacity:.6;cursor:wait}
+</style>
+</head>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogo-placeholder">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="6" fill="none" stroke="#1B2B52" stroke-width="1.5"/>
+        <rect x="6" y="8" width="20" height="14" rx="2" stroke="#1B2B52" stroke-width="1.5"/>
+        <line x1="10" y1="24" x2="10" y2="28" stroke="#1B2B52" stroke-width="1.5"/>
+        <line x1="22" y1="24" x2="22" y2="28" stroke="#1B2B52" stroke-width="1.5"/>
+        <line x1="7" y1="28" x2="25" y2="28" stroke="#1B2B52" stroke-width="1.5"/>
+      </svg>
+      <span>Logo de tu<br>empresa aquí</span>
+    </div>
+    <div class="wtitle">Manejo de Punto de Venta</div>
+    <label class="flabel" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkReady()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()" disabled>Comenzar módulo</button>
+    <div class="wfoot-liaxa">
+      <svg width="22" height="22" viewBox="0 0 68 80" fill="none">
+        <polyline points="0,62 18,46 36,52 58,22" stroke="#1B2B52" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="58" cy="22" r="6" fill="#E8A020"/>
+      </svg>
+      <div style="width:2px;height:20px;background:#E8A020;border-radius:1px;flex-shrink:0"></div>
+      <span>LIAXA</span>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <span class="hlogos-client">Logo de tu empresa aquí</span>
+    <div class="hsep"></div>
+    <svg width="22" height="26" viewBox="0 0 68 80" fill="none" style="flex-shrink:0">
+      <polyline points="0,62 18,46 36,52 58,22" stroke="#1B2B52" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="58" cy="22" r="6" fill="#E8A020"/>
+    </svg>
+    <div style="width:2px;height:22px;background:#E8A020;border-radius:1px;flex-shrink:0"></div>
+    <span style="font-family:'Crimson Pro',Georgia,serif;font-size:1.1rem;font-weight:700;color:#1B2B52;letter-spacing:.02em;flex-shrink:0">LIAXA</span>
+    <div class="hsep"></div>
+    <div class="htitle">Manejo de POS</div>
+    <span class="hchip" id="studentChip"></span>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody">
+    <div class="section">
+      <div class="stag">Capacitación · Punto de venta</div>
+      <h2>Manejo de situaciones en el POS</h2>
+      <p>En esta sesión enfrentarás tres situaciones reales que pueden ocurrir en la caja. Para cada una deberás elegir la acción correcta según los procedimientos del negocio.</p>
+      <div class="callout"><p>Lee cada situación con atención. Puedes pedir una pista antes de responder, pero intenta resolverlo primero por tu cuenta.</p></div>
+    </div>
+    <div id="scenariosContainer"></div>
+    <div class="section" id="resultSection" style="display:none">
+      <div class="rpanel">
+        <button class="dlbtn" id="dlBtn" onclick="generatePDF()">⬇ &nbsp;Descargar reporte PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── THEME ── */
+function toggleTheme(){
+  var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',n);
+  document.getElementById('themeBtn').textContent=n==='dark'?'☀️':'🌙';
+}
+
+/* ── RANDOM HELPERS ── */
+function rndInt(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function rndPick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function fmt(n){return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function shuffle(arr){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
+  return a;
+}
+
+/* ── SCENARIO GENERATORS ── (each returns a fresh scenario object with random numbers) ── */
+var GENERATORS=[
+  // 1. Cobro duplicado
+  function(){
+    var prod=rndPick(['Refresco 600ml','Agua embotellada','Café americano','Jugo natural','Galletas']);
+    var p1=rndInt(18,55);
+    var p2=rndInt(12,40);
+    var correctTotal=p1+p2;
+    var wrongTotal=p1*2+p2;
+    return{
+      title:'Cobro duplicado',
+      pos:[
+        {l:prod,a:fmt(p1)},
+        {l:prod+' (duplicado)',a:fmt(p1),alert:true},
+        {l:'Producto adicional',a:fmt(p2)}
+      ],
+      total:{l:'TOTAL COBRADO',a:fmt(wrongTotal)},
+      situation:'Un cliente compró un '+prod.toLowerCase()+' y un producto adicional. Al revisar el recibo nota que el '+prod.toLowerCase()+' aparece dos veces. La tarjeta ya fue cobrada por '+fmt(wrongTotal)+'. El monto correcto era '+fmt(correctTotal)+'.',
+      question:'¿Qué debes hacer?',
+      hint:'No puedes modificar un ticket ya cerrado. Se requiere un proceso específico para corregir un cargo ya aplicado a tarjeta.',
+      choices:[
+        {t:'Borrar una línea del ticket y dar '+fmt(p1)+' de cambio en efectivo',correct:false,fb:'Incorrecto. No se puede modificar un ticket cerrado. Mezclar métodos de pago genera problemas de cuadre y la tarjeta ya fue cobrada por el total.'},
+        {t:'Realizar una devolución por '+fmt(wrongTotal)+' y volver a cobrar '+fmt(correctTotal)+' correctamente',correct:true,fb:'Correcto. El procedimiento es cancelar la transacción completa y procesar un nuevo cobro por el monto correcto ('+fmt(correctTotal)+'). El registro queda limpio y el cuadre de caja intacto.'},
+        {t:'No hacer nada porque el sistema no permite modificaciones',correct:false,fb:'Incorrecto. Siempre existe un procedimiento de devolución. Ignorar el error afecta al cliente y genera inconsistencias en inventario.'},
+        {t:'Darle al cliente '+fmt(p1)+' del fondo de caja sin registrarlo',correct:false,fb:'Incorrecto. Esto genera un faltante en caja no registrado, lo que puede parecer una irregularidad en la revisión de turno.'}
+      ]
+    };
+  },
+  // 2. Monto incorrecto antes del cobro
+  function(){
+    var svc=rndPick(['Corte de cabello','Manicure','Servicio de limpieza','Consulta médica','Reparación de calzado']);
+    var correctAmt=rndInt(8,25)*10; // multiples of 10: 80–250
+    var wrongAmt=correctAmt*10;
+    return{
+      title:'Monto incorrecto antes del cobro',
+      pos:[
+        {l:svc,a:fmt(correctAmt)},
+        {l:'[Monto capturado]',a:fmt(wrongAmt),alert:true}
+      ],
+      total:{l:'TOTAL EN PANTALLA',a:fmt(wrongAmt)},
+      situation:'El cliente solicitó '+svc.toLowerCase()+' por '+fmt(correctAmt)+'. Al capturar el monto manualmente el cajero escribió '+fmt(wrongAmt)+' por error. El cliente lo notó antes de confirmar el pago con tarjeta.',
+      question:'El cliente está señalando el error. ¿Qué haces?',
+      hint:'La tarjeta aún NO ha sido cobrada. Esto cambia completamente el procedimiento disponible.',
+      choices:[
+        {t:'Pedir al cliente que confirme de todas formas y después hacer la devolución',correct:false,fb:'Incorrecto. Si el cliente no ha confirmado, no hay razón para procesar el cobro incorrecto. Eso generaría una devolución innecesaria y mala experiencia.'},
+        {t:'Cancelar el monto incorrecto y capturar '+fmt(correctAmt)+' antes de confirmar el cobro',correct:true,fb:'Correcto. Antes de que el cliente confirme se puede corregir la captura. Es la solución más limpia: sin devoluciones, sin doble trámite.'},
+        {t:'Llamar al gerente para que autorice el cambio',correct:false,fb:'No es necesario aquí. Corregir una captura antes del cobro es una operación que el cajero puede y debe realizar directamente.'},
+        {t:'Reiniciar el sistema para que el ticket desaparezca',correct:false,fb:'Incorrecto. Reiniciar puede generar pérdida de datos y cierres forzados de caja. Nunca es la solución a un error de captura.'}
+      ]
+    };
+  },
+  // 3. Tarjeta declinada
+  function(){
+    var item1=rndPick(['Comida para llevar','Lunch ejecutivo','Orden del día','Platillo especial']);
+    var item2=rndPick(['Agua mineral','Refresco','Café','Postre']);
+    var p1=rndInt(90,220);
+    var p2=rndInt(20,45);
+    var total=p1+p2;
+    return{
+      title:'Tarjeta declinada tras entregar el producto',
+      pos:[{l:item1,a:fmt(p1)},{l:item2,a:fmt(p2)}],
+      total:{l:'TOTAL',a:fmt(total)},
+      situation:'El cliente ya recibió su '+item1.toLowerCase()+' y '+item2.toLowerCase()+'. Al intentar cobrar '+fmt(total)+', la terminal declina la tarjeta. El cliente asegura que la usó hace unos minutos sin problema.',
+      question:'¿Cómo procedes?',
+      hint:'Tu rol no es diagnosticar el problema bancario, sino manejar la situación profesionalmente para cobrar el servicio.',
+      choices:[
+        {t:'Decirle que no puede retirarse y llamar a seguridad de inmediato',correct:false,fb:'Incorrecto. Una tarjeta declinada no implica fraude. Esta reacción dañaría innecesariamente la relación con el cliente y podría derivar en una queja formal.'},
+        {t:'Intentar el cobro una segunda vez; si vuelve a declinar, ofrecer métodos alternativos',correct:true,fb:'Correcto. A veces hay errores de conexión momentáneos. Si persiste, se ofrecen alternativas (efectivo, otra tarjeta, transferencia) sin insinuar ningún problema de parte del cliente.'},
+        {t:'Pedirle que regrese mañana con otro método de pago',correct:false,fb:'Incorrecto. El servicio ya fue prestado; el cobro debe resolverse en ese momento. Dejar ir al cliente sin pagar genera un faltante real en caja.'},
+        {t:'Cobrar sólo la mitad porque la otra parte la debe el banco',correct:false,fb:'Incorrecto. El monto a cobrar es '+fmt(total)+' independientemente del comportamiento de la tarjeta. La deuda es del cliente, no del banco.'}
+      ]
+    };
+  },
+  // 4. Descuento no autorizado
+  function(){
+    var prod1=rndPick(['Camisa','Pantalón','Vestido','Chamarra','Par de zapatos']);
+    var prod2=rndPick(['Cinturón','Calcetines','Gorra','Bolso','Bufanda']);
+    var p1=rndInt(25,60)*10;
+    var p2=rndInt(10,25)*10;
+    var disc=20;
+    var discAmt=Math.round((p1+p2)*disc/100);
+    var total=p1+p2-discAmt;
+    return{
+      title:'Descuento no autorizado',
+      pos:[
+        {l:prod1,a:fmt(p1)},
+        {l:prod2,a:fmt(p2)},
+        {l:'Descuento '+disc+'%',a:'-'+fmt(discAmt),alert:true}
+      ],
+      total:{l:'TOTAL',a:fmt(total)},
+      situation:'Un cliente conocido del dueño pide un descuento del '+disc+'% en su compra de '+fmt(p1+p2)+'. El cajero no tiene autorización para aplicar descuentos. El cliente insiste diciendo que el dueño siempre se lo da.',
+      question:'¿Qué debes hacer?',
+      hint:'Las políticas de descuento protegen los márgenes del negocio. Tu rol es aplicar lo que el sistema te permite, no lo que el cliente afirma.',
+      choices:[
+        {t:'Aplicar el descuento porque el cliente dice que el dueño lo autoriza',correct:false,fb:'Incorrecto. Una afirmación verbal del cliente no reemplaza la autorización del sistema. Aplicar el descuento sin respaldo puede generar faltantes y conflictos.'},
+        {t:'Negar el descuento de forma tajante sin dar ninguna explicación',correct:false,fb:'Parcialmente correcto en el resultado, pero la forma importa. Negar sin explicar puede generar una queja innecesaria y dañar la relación con el cliente.'},
+        {t:'Comunicarte con el responsable autorizado para que verifique y, si procede, autorice el descuento',correct:true,fb:'Correcto. El cajero debe escalar la solicitud al responsable, quien puede verificar la relación con el cliente y autorizar directamente. Esto protege al cajero y al negocio.'},
+        {t:'Darle al cliente '+fmt(discAmt)+' en efectivo del fondo de caja como "compensación"',correct:false,fb:'Incorrecto. Esto genera un faltante real de caja no registrado. Puede interpretarse como malversación independientemente de la intención.'}
+      ]
+    };
+  },
+  // 5. Billete sospechoso
+  function(){
+    var amounts=[200,500,1000];
+    var bill=rndPick(amounts);
+    var purchase=rndInt(60,bill-20);
+    var change=bill-purchase;
+    return{
+      title:'Billete sospechoso',
+      pos:[{l:'Productos varios',a:fmt(purchase)}],
+      total:{l:'PAGO EN EFECTIVO',a:fmt(bill)},
+      situation:'Un cliente paga con un billete de '+fmt(bill)+'. Al revisarlo, el detector indica que podría ser falso. El cliente se molesta y dice que lo acaba de sacar del banco.',
+      question:'¿Cómo manejas la situación?',
+      hint:'Tu responsabilidad es no aceptar billetes falsos, pero también manejar la situación con respeto. Afirmar públicamente que es falso antes de confirmarlo puede generar un conflicto innecesario.',
+      choices:[
+        {t:'Aceptar el billete para evitar el conflicto',correct:false,fb:'Incorrecto. Aceptar un billete falso genera una pérdida de '+fmt(bill)+' para el negocio y puede tener implicaciones legales para quien lo recibe conscientemente.'},
+        {t:'Retener el billete y llamar a las autoridades de inmediato',correct:false,fb:'Incorrecto como primera acción. El protocolo es verificar con el responsable e informar al cliente con respeto antes de involucrar autoridades.'},
+        {t:'Informar al cliente con respeto, mostrarle el resultado del detector y pedirle otro método de pago',correct:true,fb:'Correcto. Se informa de forma calmada y transparente, se muestra el resultado del detector, y se ofrece una alternativa. Si se confirma que es falso, se sigue el protocolo del negocio con el responsable.'},
+        {t:'Afirmar en voz alta frente a todos los clientes que el billete es falso',correct:false,fb:'Incorrecto. Afirmar públicamente antes de confirmarlo puede ser problemático y genera un conflicto innecesario. El manejo discreto protege tanto al negocio como al cliente.'}
+      ]
+    };
+  },
+  // 6. Error de cambio
+  function(){
+    var purchase=rndInt(40,90);
+    var paid=purchase<50?100:purchase<90?100:200;
+    var correctChange=paid-purchase;
+    var wrongChange=correctChange*10;
+    return{
+      title:'Error de cambio entregado',
+      pos:[{l:'Artículo',a:fmt(purchase)}],
+      total:{l:'PAGO',a:fmt(paid)},
+      situation:'El cliente pagó con '+fmt(paid)+' por una compra de '+fmt(purchase)+'. El cambio correcto era '+fmt(correctChange)+', pero el cajero entregó '+fmt(wrongChange)+' por distracción. El cliente ya se está retirando.',
+      question:'¿Qué debes hacer?',
+      hint:'El faltante al cierre será de '+fmt(wrongChange-correctChange)+' si no se resuelve ahora. Actúa con rapidez y respeto.',
+      choices:[
+        {t:'No decir nada para no hacer una escena',correct:false,fb:'Incorrecto. El silencio genera un faltante de '+fmt(wrongChange-correctChange)+' que deberá explicarse al cierre. Es responsabilidad del cajero corregir el error.'},
+        {t:'Llamar al cliente de vuelta, explicar el error con respeto y recuperar '+fmt(wrongChange-correctChange),correct:true,fb:'Correcto. La mayoría de los clientes entenderán el error si se maneja con rapidez y respeto. El cajero debe actuar de inmediato para recuperar la diferencia.'},
+        {t:'Llamar a seguridad para que detenga al cliente',correct:false,fb:'Incorrecto como primera respuesta. El error fue del cajero, no del cliente. Llamar a seguridad primero generaría una queja formal justificada.'},
+        {t:'Reportar un faltante en caja al cierre sin mencionar lo sucedido',correct:false,fb:'Incorrecto. Reportar un faltante sin explicar la causa puede interpretarse como ocultamiento. El error debe reportarse al responsable en el momento en que ocurre.'}
+      ]
+    };
+  },
+  // 7. Cierre de caja con diferencia
+  function(){
+    var expected=rndInt(28,85)*100;
+    var diff=rndPick([50,65,80,100,120]);
+    var actual=expected-diff;
+    return{
+      title:'Cierre de caja con diferencia',
+      pos:[
+        {l:'Efectivo físico contado',a:fmt(actual)},
+        {l:'Sistema registra',a:fmt(expected),alert:true},
+        {l:'Diferencia',a:'-'+fmt(diff),alert:true}
+      ],
+      total:{l:'FALTANTE',a:fmt(diff)},
+      situation:'Al hacer el cierre de turno, el efectivo físico en caja es '+fmt(diff)+' menos que lo que el sistema registra ('+fmt(expected)+' vs '+fmt(actual)+'). El cajero no recuerda ningún error durante el turno.',
+      question:'¿Qué procedimiento debes seguir?',
+      hint:'Un faltante siempre debe quedar documentado, independientemente de si se conoce la causa o no. La transparencia siempre protege al cajero.',
+      choices:[
+        {t:'Poner '+fmt(diff)+' de tu propio dinero para cuadrar la caja sin reportar nada',correct:false,fb:'Incorrecto. Aunque la intención sea buena, ocultar el faltante enmascara un posible problema sistémico. No reportar puede ser interpretado negativamente.'},
+        {t:'Reportar el faltante al responsable, documentarlo y explicar que no identificas la causa',correct:true,fb:'Correcto. El procedimiento es reportar y documentar siempre. El responsable determinará si se revisan cámaras, tickets o historial de transacciones. La transparencia protege al cajero.'},
+        {t:'Esperar al siguiente turno a ver si la caja cuadra sola',correct:false,fb:'Incorrecto. Los faltantes no se compensan entre turnos. Dejar pasar el cierre mezcla el faltante con el turno siguiente y dificulta identificar la causa.'},
+        {t:'Acusar a un compañero de turno sin evidencia',correct:false,fb:'Incorrecto. Hacer acusaciones sin evidencia es una falta grave de conducta laboral. El procedimiento correcto es reportar al responsable y dejar que la investigación determine la causa.'}
+      ]
+    };
+  },
+  // 8. Artículo sin código
+  function(){
+    var prod=rndPick(['artículo de temporada','producto de exhibición','artículo importado','producto de papelería','utensilio de cocina']);
+    var price=rndInt(3,18)*10;
+    var highPrice=price+rndPick([20,30,50]);
+    return{
+      title:'Artículo sin código de barras',
+      pos:[{l:'Artículo sin código',a:'$0.00',alert:true}],
+      total:{l:'TOTAL',a:'$0.00'},
+      situation:'Un cliente quiere comprar un '+prod+' cuya etiqueta está dañada. El precio correcto es aproximadamente '+fmt(price)+' pero ningún cajero lo recuerda con certeza.',
+      question:'¿Qué debes hacer?',
+      hint:'El precio debe verificarse desde una fuente confiable. Cobrar de más o de menos perjudica al cliente o al negocio.',
+      choices:[
+        {t:'Cobrar el precio que el cliente dice recordar',correct:false,fb:'Incorrecto. El cliente puede equivocarse. Un precio no verificado puede generar pérdidas o un conflicto posterior.'},
+        {t:'Verificar el precio consultando otro artículo igual, el sistema, o el personal del área',correct:true,fb:'Correcto. El precio debe confirmarse desde una fuente confiable antes de cobrar. Esto protege al cliente y al negocio por igual.'},
+        {t:'Cobrar '+fmt(highPrice)+' como precio estimado para no perder dinero',correct:false,fb:'Incorrecto. Cobrar de más al cliente es un problema ético y legal. El cliente tiene derecho al precio correcto del artículo.'},
+        {t:'Negarse a vender porque sin código el artículo no puede procesarse',correct:false,fb:'Incorrecto como primera respuesta. La mayoría de los sistemas POS permiten captura manual de precio. Negarse sin verificar primero afecta las ventas y la experiencia del cliente.'}
+      ]
+    };
+  }
+];
+
+/* ── STATE ── */
+var studentName='';
+var scenarios=[];
+var answers=[];
+var answered=0;
+var correct=0;
+
+/* ── WELCOME ── */
+function checkReady(){
+  document.getElementById('startBtn').disabled=
+    document.getElementById('sName').value.trim().length<2;
+}
+
+function startLesson(){
+  studentName=document.getElementById('sName').value.trim();
+  // Pick 3 generators without replacement, fully random
+  var pool=shuffle(GENERATORS);
+  scenarios=pool.slice(0,3).map(function(gen){return gen();});
+  answered=0;correct=0;answers=[];
+  buildScenarios();
+  document.getElementById('welcomeScreen').style.display='none';
+  document.getElementById('lessonScreen').style.display='block';
+  document.getElementById('studentChip').textContent=studentName;
+  var obs=new IntersectionObserver(function(e){
+    e.forEach(function(x){if(x.isIntersecting)x.target.classList.add('vis');});
+  },{threshold:.05});
+  document.querySelectorAll('.section').forEach(function(s){obs.observe(s);});
+}
+
+/* ── BUILD SCENARIOS ── */
+function buildScenarios(){
+  var container=document.getElementById('scenariosContainer');
+  container.innerHTML='';
+  scenarios.forEach(function(sc,i){
+    var shuffledChoices=shuffle(sc.choices);
+    answers.push({title:sc.title,correct:false,chosenText:'',feedback:'',hintUsed:false,shuffledChoices:shuffledChoices});
+    var posHTML='';
+    sc.pos.forEach(function(line){
+      posHTML+='<div class="pos-line'+(line.alert?' pos-alert':'')+'"><span>'+line.l+'</span><span>'+line.a+'</span></div>';
+    });
+    posHTML+='<div class="pos-line pos-total"><span>'+sc.total.l+'</span><span>'+sc.total.a+'</span></div>';
+    var choicesHTML='<div class="mcopts" id="opts'+i+'">';
+    shuffledChoices.forEach(function(ch,ci){
+      choicesHTML+='<div class="mcopt" onclick="handleChoice('+i+',this)" data-correct="'+(ch.correct?'1':'0')+'" data-fb="'+encodeURIComponent(ch.fb)+'" data-text="'+encodeURIComponent(ch.t)+'">'+ch.t+'</div>';
+    });
+    choicesHTML+='</div><div class="mcfb" id="fb'+i+'"></div>';
+    var sec=document.createElement('div');
+    sec.className='section';
+    sec.innerHTML=
+      '<div class="pcrd" id="pcrd'+i+'">'+
+        '<div class="phdr"><div class="pnum">'+(i+1)+'</div><div class="ptitle">'+sc.title+'</div></div>'+
+        '<div class="pbody">'+
+          '<div class="pos-terminal">'+posHTML+'</div>'+
+          '<div class="pstmt">'+sc.situation+'</div>'+
+          '<div class="pq">'+sc.question+'</div>'+
+          '<button class="hintbtn" id="hbtn'+i+'" onclick="showHint('+i+')">💡 Pista</button>'+
+          '<div class="hintbox" id="hbox'+i+'">'+sc.hint+'</div>'+
+          choicesHTML+
+        '</div>'+
+      '</div>';
+    container.appendChild(sec);
+  });
+}
+
+/* ── INTERACTION ── */
+function showHint(i){
+  document.getElementById('hbox'+i).classList.add('show');
+  document.getElementById('hbtn'+i).style.display='none';
+  answers[i].hintUsed=true;
+}
+
+function handleChoice(scIdx,el){
+  if(answers[scIdx].chosenText) return;
+  var isCorrect=el.getAttribute('data-correct')==='1';
+  var fb=decodeURIComponent(el.getAttribute('data-fb'));
+  var chosenText=decodeURIComponent(el.getAttribute('data-text'));
+  var opts=document.querySelectorAll('#opts'+scIdx+' .mcopt');
+  opts.forEach(function(o){
+    o.classList.add('dis');
+    if(o.getAttribute('data-correct')==='1') o.classList.add('rc');
+  });
+  el.classList.add(isCorrect?'sc':'sw');
+  var fbEl=document.getElementById('fb'+scIdx);
+  fbEl.innerHTML='<strong>'+(isCorrect?'✓ Correcto':'✗ Incorrecto')+'.</strong> '+fb;
+  fbEl.className='mcfb show '+(isCorrect?'fbok':'fbbad');
+  document.getElementById('pcrd'+scIdx).classList.add(isCorrect?'ok':'bad');
+  document.getElementById('hbtn'+scIdx).style.display='none';
+  answers[scIdx].correct=isCorrect;
+  answers[scIdx].chosenText=chosenText;
+  answers[scIdx].feedback=fb;
+  if(isCorrect) correct++;
+  answered++;
+  document.getElementById('progFill').style.width=(answered/scenarios.length*100)+'%';
+  if(answered===scenarios.length) setTimeout(showResults,700);
+}
+
+/* ── RESULTS ── */
+function showResults(){
+  var rs=document.getElementById('resultSection');
+  rs.style.display='block';
+  rs.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* ── PDF ── */
+function generatePDF(){
+  var btn=document.getElementById('dlBtn');
+  btn.disabled=true;btn.textContent='Generando…';
+  setTimeout(function(){
+    try{buildPDF();}catch(e){console.error(e);}
+    btn.innerHTML='⬇ &nbsp;Descargar reporte PDF';
+    btn.disabled=false;
+  },100);
+}
+
+function buildPDF(){
+  var doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+  var PW=210,PH=297,M=14,TW=PW-M*2;
+  var dateStr=new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'});
+
+  /* COVER */
+  doc.setFillColor(232,160,32);doc.rect(0,0,PW,3,'F');
+  doc.setFillColor(27,43,82);doc.rect(0,3,PW,57,'F');
+
+  // Client logo placeholder
+  var bx=M,by=8,bw=36,bh=28;
+  doc.setFillColor(238,241,248);doc.roundedRect(bx,by,bw,bh,3,3,'F');
+  doc.setDrawColor(27,43,82);doc.setLineWidth(0.5);
+  doc.setLineDashPattern([1.5,1.5],0);doc.roundedRect(bx,by,bw,bh,3,3,'S');
+  doc.setLineDashPattern([],0);
+  doc.setTextColor(27,43,82);doc.setFontSize(5.2);doc.setFont('helvetica','bold');
+  doc.text('Logo de tu',bx+bw/2,by+bh-4.5,{align:'center'});
+  doc.text('empresa aqui',bx+bw/2,by+bh-1.5,{align:'center'});
+
+  // LIAXA logo
+  var lx=PW-M-36,ly=10;
+  doc.setDrawColor(232,238,247);doc.setLineWidth(0.7);
+  doc.lines([[1.54,-1.54],[1.54,0.51],[1.55,-2.57]],lx+1.03,ly+6.17);
+  doc.setFillColor(232,160,32);doc.circle(lx+5.66,ly+2.57,0.9,'F');
+  doc.setDrawColor(232,160,32);doc.setLineWidth(0.7);
+  doc.line(lx+8.23,ly+1.54,lx+8.23,ly+7.2);
+  doc.setTextColor(232,238,247);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text('LIAXA',lx+10,ly+6.8);
+
+  doc.setTextColor(232,238,247);doc.setFontSize(19);doc.setFont('helvetica','bold');
+  doc.text('Manejo de Punto de Venta',M,49);
+  doc.setTextColor(150,165,200);doc.setFontSize(8);doc.setFont('helvetica','normal');
+  doc.text(dateStr,M,57);
+
+  // Participant block
+  doc.setFillColor(237,240,245);doc.roundedRect(M,68,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
+  doc.text('PARTICIPANTE',M+4,75);doc.text('MÓDULO',130,75);
+  doc.setTextColor(20,24,32);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text(studentName,M+4,83);doc.text('Capacitación POS',130,83);
+
+  // Score box
+  var pct=Math.round((correct/scenarios.length)*100);
+  var sc=pct>=70?[26,106,74]:pct>=50?[232,160,32]:[176,48,16];
+  doc.setFillColor(255,255,255);doc.roundedRect(M,96,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]);doc.setLineWidth(0.8);
+  doc.roundedRect(M,96,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]);doc.setFontSize(40);doc.setFont('helvetica','bold');
+  doc.text(pct+'%',PW/2,120,{align:'center'});
+  doc.setTextColor(130,140,160);doc.setFontSize(8.5);doc.setFont('helvetica','normal');
+  doc.text(correct+' correcto(s) de '+scenarios.length+' escenarios',PW/2,127,{align:'center'});
+
+  // Summary table
+  doc.setFillColor(27,43,82);doc.setTextColor(255,255,255);
+  doc.setFontSize(7);doc.setFont('helvetica','bold');
+  doc.rect(M,138,TW,8,'F');doc.text('RESUMEN DE ESCENARIOS',M+4,144);
+  var sy=150;
+  answers.forEach(function(a,i){
+    if(sy+12>PH-15){
+      doc.addPage();sy=20;
+      doc.setFillColor(27,43,82);doc.setTextColor(255,255,255);
+      doc.setFontSize(7);doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F');doc.text('RESUMEN (continuación)',M+4,sy+6);sy+=12;
+    }
+    doc.setFillColor(a.correct?232:255,a.correct?240:232,a.correct?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.circle(M+6,sy+5,2.5,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','bold');
+    doc.text(a.correct?'✓':'✗',M+4.5,sy+6.5);
+    doc.setTextColor(20,24,32);doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.text('Escenario '+(i+1)+': '+a.title,M+12,sy+6.5);
+    doc.setTextColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.text(a.correct?'Correcto':'Incorrecto',PW-M-24,sy+6.5);
+    sy+=12;
+  });
+
+  /* PER-SCENARIO PAGES */
+  answers.forEach(function(a,i){
+    doc.addPage();
+    doc.setFillColor(27,43,82);doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(232,160,32);doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(232,160,32);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    doc.text('Logo de tu empresa aquí  ·  Manejo de POS',M,10);
+    doc.setTextColor(232,238,247);doc.setFontSize(10.5);doc.setFont('helvetica','bold');
+    doc.text('Escenario '+(i+1)+' de '+scenarios.length+'  —  '+a.title,M,17);
+    var wy=25;
+
+    var chLines=doc.splitTextToSize('Respuesta elegida: '+a.chosenText,TW-18);
+    var fbLines=doc.splitTextToSize('Retroalimentación: '+a.feedback,TW-18);
+    var extraH=a.hintUsed?6:0;
+    var boxH=10+chLines.length*5.5+fbLines.length*5+extraH+4;
+    doc.setFillColor(a.correct?232:255,a.correct?240:232,a.correct?232:228);
+    doc.roundedRect(M,wy,TW,boxH,2,2,'F');
+    doc.setFillColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.circle(M+7,wy+8,3.5,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
+    doc.text(a.correct?'✓':'✗',M+5.2,wy+10.5);
+    var ay=wy+7;
+    doc.setTextColor(20,24,32);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){doc.text(ln,M+14,ay+li*5.5);});
+    ay+=chLines.length*5.5+3;
+    doc.setTextColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');
+    fbLines.forEach(function(ln,li){doc.text(ln,M+14,ay+li*5);});
+    if(a.hintUsed){
+      ay+=fbLines.length*5+2;
+      doc.setTextColor(122,88,0);doc.setFontSize(7.5);
+      doc.text('* Se utilizó la pista en este escenario',M+14,ay);
+    }
+    wy+=boxH+6;
+
+    var correctChoice=a.shuffledChoices.find(function(c){return c.correct;});
+    if(correctChoice){
+      doc.setFillColor(237,240,245);doc.roundedRect(M,wy,TW,16,2,2,'F');
+      doc.setTextColor(130,140,160);doc.setFontSize(7);doc.setFont('helvetica','bold');
+      doc.text('RESPUESTA CORRECTA',M+4,wy+6);
+      doc.setTextColor(26,106,74);doc.setFontSize(8.5);doc.setFont('helvetica','normal');
+      var corrLines=doc.splitTextToSize(correctChoice.t,TW-8);
+      corrLines.slice(0,2).forEach(function(ln,li){doc.text(ln,M+4,wy+11+li*4.5);});
+    }
+  });
+
+  /* FOOTER */
+  var pages=doc.internal.getNumberOfPages();
+  for(var p=1;p<=pages;p++){
+    doc.setPage(p);
+    doc.setFillColor(232,160,32);doc.rect(0,PH-3,PW,3,'F');
+    doc.setTextColor(130,140,160);doc.setFontSize(6.5);doc.setFont('helvetica','normal');
+    doc.text(studentName+'  ·  Manejo de POS  ·  Página '+p+'/'+pages,PW/2,PH-5,{align:'center'});
+  }
+  doc.save('ReportePOS_'+studentName.replace(/\s+/g,'_')+'.pdf');
+}
+</script>
+</body>
+</html>

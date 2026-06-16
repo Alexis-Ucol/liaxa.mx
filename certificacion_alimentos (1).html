@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manejo de Alimentos — Liaxa</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#1B2B52;--green-dark:#0f2d5e;--green-bg:#e8eef7;
+  --gold:#E8A020;--gold-bg:#fdf3e7;
+  --bg:#f5f7fa;--surface:#fff;--surface2:#edf0f5;
+  --border:#d4d9e3;--text:#141820;--text2:#3a4050;--text3:#6a7080;
+  --ok:#1a6a4a;--ok-bg:rgba(26,106,74,.10);
+  --bad:#b03010;--bad-bg:rgba(176,48,16,.08);
+  --shadow:0 4px 24px rgba(27,43,82,.13);
+}
+[data-theme="dark"]{
+  --bg:#18181a;--surface:#242420;--surface2:#2e2e28;--border:#3a3830;
+  --text:#e8e4da;--text2:#b0aa9e;--text3:#7a7468;
+  --green:#5a8fd4;--green-dark:#8ab4e8;--green-bg:#1a2040;
+  --gold:#f0a050;--gold-bg:#281e0e;
+  --ok:#4a9a6f;--ok-bg:rgba(74,154,111,.15);
+  --bad:#c05030;--bad-bg:rgba(192,80,48,.13);
+  --shadow:0 4px 24px rgba(0,0,0,.35);
+}
+[data-theme="dark"] .wlogo-placeholder{border-color:var(--green);background:var(--green-bg)}
+[data-theme="dark"] .wlogo-placeholder span{color:var(--green)}
+[data-theme="dark"] .wfoot-liaxa span{color:var(--green)}
+[data-theme="dark"] .wfoot-liaxa svg polyline{stroke:var(--green)}
+[data-theme="dark"] .stickybar-liaxa{color:var(--green)}
+[data-theme="dark"] .mcopt{color:var(--text);background:var(--surface)}
+[data-theme="dark"] .mcopt:hover:not(.dis){background:var(--green-bg)}
+[data-theme="dark"] .mcopt.sc{color:var(--ok)!important}
+[data-theme="dark"] .mcopt.sw{color:var(--bad)!important}
+[data-theme="dark"] .mcopt.rc{color:var(--ok)!important}
+[data-theme="dark"] .food-item{box-shadow:0 2px 8px rgba(0,0,0,.3)}
+[data-theme="dark"] .fridge-shelf{background:#2a2a3e}
+[data-theme="dark"] .fridge-body{background:#1a1a2e;border-color:#3a3a5e}
+[data-theme="dark"] .drop-zone{border-color:#3a3a5e;background:#12121e}
+[data-theme="dark"] .drop-zone.valid{border-color:var(--ok);background:rgba(74,154,111,.1)}
+[data-theme="dark"] .drop-zone.invalid{border-color:var(--bad);background:rgba(192,80,48,.08)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+
+/* WELCOME */
+#welcomeScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem}
+.wcard{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:1.6rem 1.8rem 2rem;width:100%;max-width:400px;text-align:center;border-top:4px solid var(--gold)}
+.wlogo-placeholder{display:flex;align-items:center;justify-content:center;height:90px;border:2.5px dashed var(--green);border-radius:12px;background:var(--green-bg);flex-direction:column;gap:6px;margin-bottom:1.4rem}
+.wlogo-placeholder svg{opacity:.6}
+.wlogo-placeholder span{font-size:.68rem;font-weight:600;color:var(--green);letter-spacing:.06em;text-transform:uppercase;text-align:center;line-height:1.4}
+.wtitle{font-family:'Crimson Pro',serif;font-size:1.7rem;font-weight:700;margin-bottom:1.6rem;color:var(--text)}
+.flabel{display:block;font-size:.75rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;text-align:left}
+.finput{width:100%;padding:.7rem .9rem;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:.95rem;font-family:inherit;margin-bottom:1.1rem;transition:border-color .18s}
+.finput:focus{outline:none;border-color:var(--green)}
+.sbtn{width:100%;padding:.85rem;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;transition:background .18s;font-family:inherit}
+.sbtn:hover{background:var(--green-dark)}.sbtn:disabled{opacity:.45;cursor:not-allowed}
+.wfoot-liaxa{display:flex;justify-content:center;align-items:center;gap:.5rem;padding-top:1.2rem;margin-top:1.2rem;border-top:1px solid var(--border)}
+.wfoot-liaxa span{font-family:'Crimson Pro',serif;font-size:.95rem;font-weight:700;color:#1B2B52;letter-spacing:.04em}
+
+/* LESSON */
+#lessonScreen{display:none}
+.stickybar{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:.5rem 1.2rem;display:flex;align-items:center;gap:.7rem;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.hlogos-client{font-size:.58rem;font-weight:600;color:var(--green);letter-spacing:.07em;text-transform:uppercase;border:1px dashed var(--border);border-radius:5px;padding:.18rem .5rem;flex-shrink:0}
+.hsep{width:1px;height:22px;background:var(--border);flex-shrink:0}
+.stickybar-liaxa{font-family:'Crimson Pro',Georgia,serif;font-size:1.1rem;font-weight:700;color:#1B2B52;letter-spacing:.02em;flex-shrink:0}
+.htitle{font-family:'Crimson Pro',serif;font-size:1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hchip{font-size:.7rem;background:var(--green-bg);color:var(--green-dark);padding:.2rem .65rem;border-radius:20px;white-space:nowrap;flex-shrink:0;margin-left:auto}
+.tbtn{background:none;border:1px solid var(--border);border-radius:7px;padding:.28rem .55rem;cursor:pointer;font-size:.82rem;color:var(--text2);flex-shrink:0}
+.progbar{height:3px;background:var(--border);position:fixed;top:47px;left:0;right:0;z-index:99}
+.progfill{height:100%;background:var(--green);width:0%;transition:width .4s}
+.lbody{max-width:740px;margin:0 auto;padding:4.5rem 1.2rem 4rem}
+.section{opacity:0;transform:translateY(16px);transition:opacity .48s,transform .48s;margin-bottom:2.8rem}
+.section.vis{opacity:1;transform:none}
+.stag{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.45rem}
+.section h2{font-family:'Crimson Pro',serif;font-size:1.55rem;font-weight:700;margin-bottom:.7rem}
+.section p{color:var(--text2);margin-bottom:.8rem;font-size:.92rem}
+.callout{background:var(--green-bg);border-left:4px solid var(--green);border-radius:0 10px 10px 0;padding:1rem 1.2rem;margin:1rem 0;font-size:.88rem}
+.callout p{margin-bottom:0;color:var(--text2)}
+.pcrd{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .25s;margin-bottom:1.3rem}
+.pcrd.ok{border-color:var(--ok)}.pcrd.bad{border-color:var(--bad)}
+.phdr{display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border)}
+.pnum{background:var(--green);color:#fff;width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:700;flex-shrink:0}
+.ptitle{font-weight:600;font-size:.88rem;color:var(--text)}
+.pbody{padding:1rem}
+.pstmt{background:var(--surface2);border-radius:8px;padding:.85rem .95rem;margin:.7rem 0;font-size:.88rem;color:var(--text2);border-left:3px solid var(--green)}
+.pq{font-size:.88rem;font-weight:600;margin:.8rem 0 .5rem;color:var(--text)}
+.mcopts{display:flex;flex-direction:column;gap:.45rem;margin-bottom:.6rem}
+.mcopt{padding:.75rem .85rem;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.86rem;transition:all .13s;user-select:none;line-height:1.5;color:var(--text);background:var(--surface)}
+.mcopt:hover:not(.dis){border-color:var(--green);background:var(--green-bg)}
+.mcopt.dis{cursor:default;pointer-events:none}
+.mcopt.sc{border-color:var(--ok)!important;background:var(--ok-bg)!important;color:var(--ok)!important}
+.mcopt.sw{border-color:var(--bad)!important;background:var(--bad-bg)!important;color:var(--bad)!important}
+.mcopt.rc{border-color:var(--ok)!important;background:var(--ok-bg)!important;color:var(--ok)!important}
+.mcfb{display:none;padding:.7rem .9rem;border-radius:8px;font-size:.83rem;margin-top:.3rem;line-height:1.6}
+.mcfb.show{display:block}
+.mcfb.fbok{background:var(--ok-bg);color:var(--ok)}
+.mcfb.fbbad{background:var(--bad-bg);color:var(--bad)}
+.hintbtn{background:none;border:1px solid var(--gold);color:var(--gold);border-radius:6px;padding:.28rem .65rem;font-size:.78rem;cursor:pointer;margin-bottom:.45rem;font-family:inherit}
+.hintbox{display:none;background:var(--gold-bg);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:.65rem .85rem;font-size:.83rem;color:var(--text2)}
+.hintbox.show{display:block}
+
+/* ── SCENARIO 1: FRIDGE DRAG & DROP ── */
+.fridge-area{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:.8rem 0}
+@media(max-width:500px){.fridge-area{grid-template-columns:1fr}}
+.food-tray{background:var(--surface2);border-radius:10px;padding:.7rem;min-height:80px}
+.food-tray-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:.5rem}
+.food-items-wrap{display:flex;flex-wrap:wrap;gap:.5rem;min-height:44px}
+.food-item{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .7rem;border-radius:20px;font-size:.78rem;font-weight:600;cursor:grab;user-select:none;transition:transform .15s,box-shadow .15s;box-shadow:0 2px 6px rgba(0,0,0,.12);touch-action:none}
+.food-item:active{cursor:grabbing;transform:scale(1.06);box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.food-item.placed{opacity:.5;cursor:default;pointer-events:none}
+.food-item.correct-placed{opacity:1;cursor:default;pointer-events:none;outline:2px solid var(--ok)}
+.food-item.wrong-placed{opacity:1;cursor:default;pointer-events:none;outline:2px solid var(--bad)}
+
+.fridge-body{background:#e8f0f8;border:2px solid #8090b0;border-radius:12px;padding:.6rem;display:flex;flex-direction:column;gap:.4rem}
+.fridge-shelf{background:#d0dcea;border-radius:6px;padding:.5rem .6rem;min-height:54px}
+.shelf-label{font-size:.65rem;font-weight:700;color:#4a5a7a;margin-bottom:.3rem;display:flex;justify-content:space-between;align-items:center}
+.shelf-temp{font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:700}
+.shelf-temp.danger{color:#b03010}
+.shelf-temp.ok{color:#1a6a4a}
+.drop-zone{min-height:40px;border:2px dashed var(--border);border-radius:6px;display:flex;flex-wrap:wrap;gap:.4rem;padding:.3rem;transition:all .18s;background:transparent}
+.drop-zone.drag-over{border-color:var(--green);background:var(--green-bg)}
+.drop-zone.valid{border-color:var(--ok);background:rgba(26,106,74,.08)}
+.drop-zone.invalid{border-color:var(--bad);background:rgba(176,48,16,.05)}
+.drop-zone.empty-hint::after{content:'Arrastra aquí';font-size:.7rem;color:var(--text3);display:flex;align-items:center;padding:.3rem .5rem}
+.check-btn{margin-top:.8rem;padding:.65rem 1.4rem;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:.86rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .18s;width:100%}
+.check-btn:hover{background:var(--green-dark)}
+.check-btn:disabled{opacity:.45;cursor:not-allowed}
+.fridge-result{display:none;margin-top:.6rem;padding:.7rem .9rem;border-radius:8px;font-size:.83rem;line-height:1.6}
+.fridge-result.show{display:block}
+.fridge-result.ok{background:var(--ok-bg);color:var(--ok)}
+.fridge-result.bad{background:var(--bad-bg);color:var(--bad)}
+
+/* ── SCENARIO 2: CUTTING BOARD ── */
+.board-canvas-wrap{border-radius:12px;overflow:hidden;margin:.8rem 0;background:#f0f4f0}
+.board-canvas-wrap canvas{display:block;width:100%;height:auto}
+
+/* ── SCENARIO 3: THERMOMETER ── */
+.thermo-wrap{display:grid;grid-template-columns:120px 1fr;gap:1rem;margin:.8rem 0;align-items:start}
+@media(max-width:440px){.thermo-wrap{grid-template-columns:80px 1fr}}
+.thermo-canvas-wrap{display:flex;flex-direction:column;align-items:center}
+.thermo-canvas-wrap canvas{display:block}
+.thermo-info{display:flex;flex-direction:column;gap:.6rem}
+.thermo-reading{font-family:'IBM Plex Mono',monospace;font-size:1.5rem;font-weight:700;text-align:center;padding:.5rem;border-radius:8px;transition:all .3s}
+.thermo-reading.safe{background:var(--ok-bg);color:var(--ok)}
+.thermo-reading.danger{background:var(--bad-bg);color:var(--bad)}
+.thermo-reading.warm{background:#fff3e0;color:#b05000}
+[data-theme="dark"] .thermo-reading.warm{background:#2e1e00;color:#f0a050}
+.time-display{font-size:.88rem;color:var(--text2);text-align:center}
+.danger-zone-label{font-size:.75rem;font-weight:700;color:#b03010;text-align:center;padding:.3rem;background:rgba(176,48,16,.08);border-radius:6px}
+
+/* RESULT */
+.rpanel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.8rem;text-align:center}
+.dlbtn{background:var(--green);color:#fff;border:none;border-radius:10px;padding:.8rem 1.8rem;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .18s;font-family:inherit}
+.dlbtn:hover{background:var(--green-dark)}.dlbtn:disabled{opacity:.6;cursor:wait}
+</style>
+</head>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogo-placeholder">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+        <rect x="2" y="2" width="30" height="30" rx="4" stroke="#1B2B52" stroke-width="1.5"/>
+        <rect x="6" y="6" width="22" height="10" rx="2" stroke="#1B2B52" stroke-width="1.5"/>
+        <rect x="6" y="20" width="22" height="8" rx="2" stroke="#1B2B52" stroke-width="1.5"/>
+        <line x1="2" y1="18" x2="32" y2="18" stroke="#1B2B52" stroke-width="1.5"/>
+      </svg>
+      <span>Logo de tu<br>certificadora aquí</span>
+    </div>
+    <div class="wtitle">Manejo de Alimentos</div>
+    <label class="flabel" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkReady()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()" disabled>Comenzar módulo</button>
+    <div class="wfoot-liaxa">
+      <svg width="22" height="22" viewBox="0 0 68 80" fill="none">
+        <polyline points="0,62 18,46 36,52 58,22" stroke="#1B2B52" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="58" cy="22" r="6" fill="#E8A020"/>
+      </svg>
+      <div style="width:2px;height:20px;background:#E8A020;border-radius:1px;flex-shrink:0"></div>
+      <span>LIAXA</span>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <span class="hlogos-client">Logo de tu certificadora aquí</span>
+    <div class="hsep"></div>
+    <svg width="22" height="26" viewBox="0 0 68 80" fill="none" style="flex-shrink:0">
+      <polyline points="0,62 18,46 36,52 58,22" stroke="#1B2B52" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="58" cy="22" r="6" fill="#E8A020"/>
+    </svg>
+    <div style="width:2px;height:22px;background:#E8A020;border-radius:1px;flex-shrink:0"></div>
+    <span class="stickybar-liaxa">LIAXA</span>
+    <div class="hsep"></div>
+    <div class="htitle">Manejo de Alimentos</div>
+    <span class="hchip" id="studentChip"></span>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody">
+    <div class="section">
+      <div class="stag">Certificación · Inocuidad alimentaria</div>
+      <h2>Manejo seguro de alimentos</h2>
+      <p>Tres escenarios interactivos que evalúan tu conocimiento de temperaturas seguras, contaminación cruzada y tiempos de exposición.</p>
+      <div class="callout"><p><strong>Zona de peligro:</strong> Entre 5°C y 60°C las bacterias se multiplican rápidamente. Los alimentos crudos siempre van debajo de los cocidos. La contaminación cruzada ocurre cuando utensilios o superficies tocan diferentes tipos de alimentos sin lavarse entre usos.</p></div>
+    </div>
+    <div id="scenariosContainer"></div>
+    <div class="section" id="resultSection" style="display:none">
+      <div class="rpanel">
+        <button class="dlbtn" id="dlBtn" onclick="generatePDF()">⬇ &nbsp;Descargar reporte PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* THEME */
+function toggleTheme(){
+  var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',n);
+  document.getElementById('themeBtn').textContent=n==='dark'?'☀️':'🌙';
+}
+
+/* HELPERS */
+function rndPick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function shuffle(arr){var a=arr.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+/* ══════════════════════════
+   SCENARIO GENERATORS
+══════════════════════════ */
+
+/* S0 — Temperature zones drag & drop */
+function makeS0(){
+  var sets=[
+    {
+      situation:'El siguiente refrigerador tiene cuatro zonas de almacenamiento. Los alimentos están colocados incorrectamente — algunos en temperatura incorrecta, otros en el orden equivocado. <strong>Arrastra cada alimento a la zona correcta.</strong>',
+      shelves:[
+        {id:'top',    label:'Estante superior', temp:'1–4°C', tempOk:true,  accepts:['cooked','dairy','fruit']},
+        {id:'middle', label:'Estante medio',     temp:'1–4°C', tempOk:true,  accepts:['dairy','fruit','veg']},
+        {id:'bottom', label:'Estante inferior',  temp:'1–4°C', tempOk:true,  accepts:['raw_meat','raw_fish','raw_poultry']},
+        {id:'door',   label:'Puerta',            temp:'6–8°C', tempOk:false, accepts:['condiments','drinks']}
+      ],
+      foods:[
+        {id:'chicken', label:'🍗 Pollo crudo',     type:'raw_poultry', correctShelf:'bottom', color:'#e8a020', startShelf:'top'},
+        {id:'salmon',  label:'🐟 Salmón crudo',    type:'raw_fish',    correctShelf:'bottom', color:'#e87040', startShelf:'middle'},
+        {id:'milk',    label:'🥛 Leche',            type:'dairy',       correctShelf:'middle', color:'#4a8ad4', startShelf:'door'},
+        {id:'salad',   label:'🥗 Ensalada lista',   type:'cooked',      correctShelf:'top',    color:'#2a9a5a', startShelf:'bottom'},
+        {id:'mayo',    label:'🫙 Mayonesa',          type:'condiments',  correctShelf:'door',   color:'#8a9ab0', startShelf:'middle'},
+      ]
+    },
+    {
+      situation:'Las zonas de este refrigerador tienen los alimentos mezclados incorrectamente. <strong>Arrastra cada alimento a su zona correcta de almacenamiento.</strong>',
+      shelves:[
+        {id:'top',    label:'Estante superior', temp:'1–4°C', tempOk:true,  accepts:['cooked','dairy']},
+        {id:'middle', label:'Estante medio',     temp:'1–4°C', tempOk:true,  accepts:['dairy','fruit','veg']},
+        {id:'bottom', label:'Estante inferior',  temp:'1–4°C', tempOk:true,  accepts:['raw_meat','raw_fish','raw_poultry']},
+        {id:'door',   label:'Puerta',            temp:'6–8°C', tempOk:false, accepts:['condiments','drinks']}
+      ],
+      foods:[
+        {id:'beef',    label:'🥩 Carne res cruda',  type:'raw_meat',    correctShelf:'bottom', color:'#c04030', startShelf:'top'},
+        {id:'shrimp',  label:'🍤 Camarones crudos', type:'raw_fish',    correctShelf:'bottom', color:'#e87040', startShelf:'middle'},
+        {id:'cheese',  label:'🧀 Queso',             type:'dairy',       correctShelf:'top',    color:'#d4a020', startShelf:'door'},
+        {id:'juice',   label:'🧃 Jugo embotellado',  type:'drinks',      correctShelf:'door',   color:'#e85040', startShelf:'top'},
+        {id:'pasta',   label:'🍝 Pasta cocida',      type:'cooked',      correctShelf:'top',    color:'#8a6030', startShelf:'bottom'},
+      ]
+    }
+  ];
+  var set=rndPick(sets);
+  return {type:'fridge', title:'Almacenamiento en refrigerador', set:set,
+    situation:set.situation,
+    hint:'Recuerda: crudos siempre en el estante inferior (debajo de cocidos y lácteos) para evitar goteo sobre otros alimentos. La puerta es la zona más cálida — solo condimentos y bebidas.'};
+}
+
+/* S1 — Cross-contamination cutting board */
+function makeS1(){
+  var sets=[
+    {
+      situation:'Observa la secuencia de preparación en la tabla de cortar. Identifica <strong>el momento exacto en que ocurre contaminación cruzada</strong> y elige la acción correcta.',
+      sequence:[
+        {step:1, icon:'🐟', text:'Se corta pescado crudo en la tabla', danger:false},
+        {step:2, icon:'🥬', text:'Sin lavar la tabla, se cortan vegetales para ensalada', danger:true, violation:'Contaminación cruzada: bacterias del pescado crudo pasan a los vegetales que se consumirán crudos'},
+        {step:3, icon:'🍋', text:'Se exprime limón sobre los vegetales', danger:false},
+      ],
+      dangerStep:2,
+      choices:[
+        {t:'La secuencia es correcta — el limón desinfecta los vegetales',correct:false,
+         fb:'Incorrecto. El limón no elimina bacterias patógenas como Salmonella o Listeria. La contaminación ocurrió en el paso 2: usar la misma tabla sin lavar después del pescado crudo.'},
+        {t:'Hay contaminación cruzada en el paso 2 — la tabla debió lavarse y desinfectarse antes de cortar vegetales',correct:true,
+         fb:'Correcto. Después de cortar pescado crudo, la tabla DEBE lavarse con agua caliente y jabón, y desinfectarse antes de usarse para alimentos que se consumirán sin cocción. Los vegetales de ensalada se comerán crudos.'},
+        {t:'El problema es el paso 3 — el limón acidifica los vegetales y crea riesgo',correct:false,
+         fb:'Incorrecto. El limón no representa un riesgo en este contexto. El problema ocurrió en el paso 2: los vegetales ya estaban contaminados con bacterias del pescado crudo antes de agregarles limón.'},
+        {t:'No hay problema — el pescado y los vegetales no se mezclan directamente',correct:false,
+         fb:'Incorrecto. La contaminación cruzada no requiere mezclar los alimentos directamente. La tabla actúa como vehículo: las bacterias del pescado crudo quedan en la superficie y se transfieren a los vegetales cuando se cortan en la misma tabla sin desinfectar.'}
+      ],
+      animCorrect:'sanitize', animWrong:'spread'
+    },
+    {
+      situation:'Observa la secuencia de preparación. Identifica <strong>dónde ocurre la contaminación cruzada</strong> y la acción correcta.',
+      sequence:[
+        {step:1, icon:'🥩', text:'Se marina carne de res cruda en un tazón', danger:false},
+        {step:2, icon:'🥄', text:'Se prueba la marinada con una cuchara y se regresa al tazón', danger:false},
+        {step:3, icon:'🍗', text:'Con la misma cuchara sin lavar se baña el pollo cocido listo para servir', danger:true, violation:'Contaminación cruzada: la cuchara que tocó carne cruda contamina el pollo ya cocido'},
+      ],
+      dangerStep:3,
+      choices:[
+        {t:'El paso 2 es el problema — no se debe probar la marinada con carne cruda',correct:false,
+         fb:'Incorrecto. Probar la marinada de carne cruda con una cuchara limpia no es el problema principal. El riesgo crítico está en el paso 3: usar esa cuchara sin lavar sobre el pollo cocido que se servirá directamente.'},
+        {t:'El paso 3 es el problema — la cuchara que tocó carne cruda contamina el pollo ya cocido',correct:true,
+         fb:'Correcto. La cuchara que estuvo en contacto con la marinada de carne cruda puede llevar bacterias al pollo cocido. Los utensilios deben lavarse y desinfectarse entre su uso con alimentos crudos y cocidos.'},
+        {t:'No hay problema — la marinada solo era para sabor',correct:false,
+         fb:'Incorrecto. La función de la marinada no elimina el riesgo. La cuchara usada con carne cruda puede transferir Salmonella, E. coli u otras bacterias al pollo cocido, que se comerá sin más cocción.'},
+        {t:'El problema es mezclar pollo y res en la misma preparación',correct:false,
+         fb:'Incorrecto. El problema no es la combinación de proteínas, sino el utensilio contaminado. Una cuchara que tocó carne cruda sin lavarse es el vector de contaminación cruzada hacia el alimento cocido.'}
+      ],
+      animCorrect:'sanitize', animWrong:'spread'
+    }
+  ];
+  var set=rndPick(sets);
+  return {type:'board', title:'Contaminación cruzada', set:set,
+    situation:set.situation, choices:set.choices,
+    hint:'La contaminación cruzada ocurre cuando bacterias viajan de un alimento a otro a través de superficies, utensilios o manos. Los alimentos crudos siempre son fuente potencial de bacterias.',
+    animCorrect:set.animCorrect, animWrong:set.animWrong};
+}
+
+/* S2 — Danger zone thermometer */
+function makeS2(){
+  var sets=[
+    {foodEmoji:'🍗', foodName:'pollo asado cocido',
+     cookTemp:75, exposureMinutes:rndPick([90,120,150]),
+     ambientTemp:rndPick([22,24,26,28]),
+     situation:'Un pollo asado cocido (temperatura interna al salir del horno: 75°C) lleva <strong>__TIME__</strong> minutos a temperatura ambiente de <strong>__AMBIENT__°C</strong>. Observa el termómetro que muestra su temperatura actual.',
+     choices:[
+       {t:'Servirlo inmediatamente — aún está caliente',correct:false,
+        fb:'Incorrecto. El tiempo de exposición supera el límite seguro de 2 horas en la zona de peligro (5–60°C). A temperatura ambiente el pollo cocido entra a la zona de peligro en menos de 1 hora. Después de __TIME__ minutos, el riesgo bacteriano es significativo.'},
+       {t:'Recalentarlo a mínimo 75°C internos y servir',correct:false,
+        fb:'Incorrecto. Recalentar puede matar bacterias activas, pero no elimina las toxinas que algunas bacterias (como Staphylococcus aureus) ya produjeron durante el tiempo de exposición. Después de __TIME__ minutos en zona de peligro, el riesgo es real.'},
+       {t:'Desecharlo — superó el tiempo seguro en zona de peligro',correct:true,
+        fb:'Correcto. El alimento lleva más de 2 horas en la zona de peligro (5–60°C). El límite seguro establecido por normas de inocuidad es máximo 2 horas acumuladas. Después de ese tiempo, el alimento debe desecharse aunque se recaliente.'},
+       {t:'Refrigerarlo ahora y consumirlo mañana',correct:false,
+        fb:'Incorrecto. Refrigerar no elimina las bacterias ni las toxinas que ya se produjeron durante __TIME__ minutos de exposición. Un alimento que superó el límite de tiempo en zona de peligro debe desecharse, no guardarse.'}
+      ]},
+    {foodEmoji:'🍲', foodName:'caldo de res cocido',
+     cookTemp:90, exposureMinutes:rndPick([100,130,160]),
+     ambientTemp:rndPick([20,23,25]),
+     situation:'Un caldo de res (temperatura al apagar la estufa: 90°C) lleva <strong>__TIME__</strong> minutos en la olla sin refrigerar a temperatura ambiente de <strong>__AMBIENT__°C</strong>.',
+     choices:[
+       {t:'Servirlo — un caldo tiene sal y eso lo conserva',correct:false,
+        fb:'Incorrecto. La sal en las concentraciones usadas en caldos no tiene efecto bacteriostático significativo. El tiempo en zona de peligro (__TIME__ minutos) supera el límite seguro de 2 horas.'},
+       {t:'Desecharlo — superó el tiempo seguro en zona de peligro',correct:true,
+        fb:'Correcto. El caldo lleva más de 2 horas enfriándose a través de la zona de peligro (5–60°C). Las bacterias se multiplican rápidamente en ese rango. El límite es 2 horas acumuladas; después de ese tiempo se descarta.'},
+       {t:'Hervirlo de nuevo por 10 minutos y servirlo',correct:false,
+        fb:'Incorrecto. Hervir mata bacterias activas pero no destruye toxinas termoestables producidas durante la exposición. Después de __TIME__ minutos en zona de peligro, el riesgo persiste aunque se recaliente.'},
+       {t:'Refrigerarlo inmediatamente y consumir en 24 horas',correct:false,
+        fb:'Incorrecto. El caldo ya estuvo __TIME__ minutos en zona de peligro. Refrigerarlo ahora no revierte el crecimiento bacteriano que ya ocurrió. Debe desecharse.'}
+      ]}
+  ];
+  var set=rndPick(sets);
+  // Calculate current temperature using Newton's cooling approximation
+  // T(t) = Tamb + (T0 - Tamb) * e^(-k*t), k≈0.008 for typical food in air
+  var k=0.0075;
+  var currentTemp=Math.round(set.ambientTemp+(set.cookTemp-set.ambientTemp)*Math.exp(-k*set.exposureMinutes));
+  var inDangerZone=currentTemp>=5&&currentTemp<=60;
+  var hoursExposed=(set.exposureMinutes/60).toFixed(1);
+
+  // Substitute values into text
+  function sub(s){
+    return s.replace(/__TIME__/g,set.exposureMinutes).replace(/__AMBIENT__/g,set.ambientTemp);
+  }
+  var choices=set.choices.map(function(c){return {t:c.t,correct:c.correct,fb:sub(c.fb)};});
+
+  return {type:'thermo', title:'Zona de peligro de temperatura',
+    foodEmoji:set.foodEmoji, foodName:set.foodName,
+    cookTemp:set.cookTemp, ambientTemp:set.ambientTemp,
+    exposureMinutes:set.exposureMinutes,
+    currentTemp:currentTemp, inDangerZone:inDangerZone,
+    hoursExposed:hoursExposed,
+    situation:sub(set.situation),
+    choices:choices,
+    hint:'La zona de peligro es 5°C a 60°C. El límite seguro de exposición acumulada en esa zona es de 2 horas. Después de ese tiempo el alimento debe desecharse sin importar su apariencia o temperatura actual.'};
+}
+
+/* STATE */
+var studentName='',scenarios=[],answers=[],answered=0,correct=0;
+var dragData={};
+var boardAnimRunning=false;
+var thermoInterval=null;
+
+function checkReady(){
+  document.getElementById('startBtn').disabled=
+    document.getElementById('sName').value.trim().length<2;
+}
+
+function startLesson(){
+  studentName=document.getElementById('sName').value.trim();
+  scenarios=[makeS0(),makeS1(),makeS2()];
+  answered=0;correct=0;answers=[];
+  buildScenarios();
+  document.getElementById('welcomeScreen').style.display='none';
+  document.getElementById('lessonScreen').style.display='block';
+  document.getElementById('studentChip').textContent=studentName;
+  var obs=new IntersectionObserver(function(e){
+    e.forEach(function(x){if(x.isIntersecting)x.target.classList.add('vis');});
+  },{threshold:.05});
+  document.querySelectorAll('.section').forEach(function(s){obs.observe(s);});
+}
+
+/* BUILD */
+function buildScenarios(){
+  var c=document.getElementById('scenariosContainer');
+  c.innerHTML='';
+  scenarios.forEach(function(sc,i){
+    answers.push({title:sc.title,correct:false,chosenText:'',feedback:'',hintUsed:false,type:sc.type});
+    var inner='<div class="pstmt">'+sc.situation+'</div>';
+
+    if(sc.type==='fridge') inner+=buildFridgeHTML(sc,i);
+    else if(sc.type==='board') inner+=buildBoardHTML(sc,i);
+    else inner+=buildThermoHTML(sc,i);
+
+    var sec=document.createElement('div');
+    sec.className='section';
+    sec.innerHTML='<div class="pcrd" id="pcrd'+i+'"><div class="phdr"><div class="pnum">'+(i+1)+'</div><div class="ptitle">'+sc.title+'</div></div><div class="pbody">'+inner+'</div></div>';
+    c.appendChild(sec);
+  });
+
+  setTimeout(function(){
+    scenarios.forEach(function(sc,i){
+      if(sc.type==='board') initBoardCanvas(i);
+      if(sc.type==='thermo') initThermoCanvas(i);
+      if(sc.type==='fridge') initFridgeDrag(i);
+    });
+  },80);
+}
+
+/* ══ FRIDGE DRAG & DROP ══ */
+function buildFridgeHTML(sc,i){
+  var set=sc.set;
+  // Foods tray
+  var foodsHTML='<div class="food-tray"><div class="food-tray-label">Alimentos para colocar</div><div class="food-items-wrap" id="foodTray'+i+'">';
+  set.foods.forEach(function(f){
+    foodsHTML+='<div class="food-item" id="fi_'+i+'_'+f.id+'" data-food="'+f.id+'" style="background:'+f.color+';color:#fff" draggable="true">'+f.label+'</div>';
+  });
+  foodsHTML+='</div></div>';
+
+  // Fridge
+  var fridgeHTML='<div class="fridge-body">';
+  set.shelves.forEach(function(sh){
+    fridgeHTML+=
+      '<div class="fridge-shelf">'+
+        '<div class="shelf-label">'+sh.label+
+          '<span class="shelf-temp '+(sh.tempOk?'ok':'danger')+'">'+sh.temp+'</span>'+
+        '</div>'+
+        '<div class="drop-zone empty-hint" id="dz_'+i+'_'+sh.id+'" data-shelf="'+sh.id+'"></div>'+
+      '</div>';
+  });
+  fridgeHTML+='</div>';
+
+  return (
+    '<div class="fridge-area">'+foodsHTML+fridgeHTML+'</div>'+
+    '<button class="check-btn" id="checkBtn'+i+'" onclick="checkFridge('+i+')" disabled>Verificar colocación</button>'+
+    '<div class="fridge-result" id="fridgeResult'+i+'"></div>'+
+    '<div class="mcfb" id="fb'+i+'"></div>'+
+    '<button class="hintbtn" id="hbtn'+i+'" onclick="showHint('+i+')">💡 Pista</button>'+
+    '<div class="hintbox" id="hbox'+i+'">'+sc.hint+'</div>'
+  );
+}
+
+function initFridgeDrag(scIdx){
+  var sc=scenarios[scIdx];
+  var set=sc.set;
+  dragData[scIdx]={placed:{}}; // foodId -> shelfId
+
+  set.foods.forEach(function(f){
+    var el=document.getElementById('fi_'+scIdx+'_'+f.id);
+    if(!el) return;
+    // Drag events
+    el.addEventListener('dragstart',function(e){
+      e.dataTransfer.setData('text',f.id+'|'+scIdx);
+    });
+    // Touch drag
+    el.addEventListener('touchstart',function(e){
+      el._touchStartX=e.touches[0].clientX;
+      el._touchStartY=e.touches[0].clientY;
+      el._dragging=true;
+      el.style.opacity='.7';
+    },{passive:true});
+    el.addEventListener('touchmove',function(e){
+      if(!el._dragging) return;
+      e.preventDefault();
+      var t=e.touches[0];
+      el.style.position='fixed';
+      el.style.zIndex='999';
+      el.style.left=(t.clientX-el.offsetWidth/2)+'px';
+      el.style.top=(t.clientY-el.offsetHeight/2)+'px';
+    },{passive:false});
+    el.addEventListener('touchend',function(e){
+      if(!el._dragging) return;
+      el._dragging=false;
+      el.style.opacity='';
+      el.style.position='';
+      el.style.zIndex='';
+      el.style.left='';
+      el.style.top='';
+      // Find drop target
+      var t=e.changedTouches[0];
+      var target=document.elementFromPoint(t.clientX,t.clientY);
+      var dz=target&&(target.classList.contains('drop-zone')?target:target.closest('.drop-zone'));
+      if(dz) dropFoodOnZone(scIdx,f.id,dz.getAttribute('data-shelf'));
+    });
+  });
+
+  set.shelves.forEach(function(sh){
+    var dz=document.getElementById('dz_'+scIdx+'_'+sh.id);
+    if(!dz) return;
+    dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag-over');});
+    dz.addEventListener('dragleave',function(){dz.classList.remove('drag-over');});
+    dz.addEventListener('drop',function(e){
+      e.preventDefault();
+      dz.classList.remove('drag-over');
+      var raw=e.dataTransfer.getData('text');
+      var parts=raw.split('|');
+      if(parseInt(parts[1])!==scIdx) return;
+      dropFoodOnZone(scIdx,parts[0],sh.id);
+    });
+  });
+}
+
+function dropFoodOnZone(scIdx,foodId,shelfId){
+  var sc=scenarios[scIdx];
+  var food=sc.set.foods.find(function(f){return f.id===foodId;});
+  if(!food||answers[scIdx].chosenText) return;
+
+  // Remove from previous zone if any
+  var prev=dragData[scIdx].placed[foodId];
+  if(prev){
+    var prevDz=document.getElementById('dz_'+scIdx+'_'+prev);
+    if(prevDz){
+      var existing=prevDz.querySelector('[data-food="'+foodId+'"]');
+      if(existing) existing.remove();
+    }
+  }
+  // Also remove from tray
+  var trayEl=document.getElementById('fi_'+scIdx+'_'+foodId);
+  if(trayEl&&trayEl.parentNode) trayEl.parentNode.removeChild(trayEl);
+
+  // Add to drop zone
+  var dz=document.getElementById('dz_'+scIdx+'_'+shelfId);
+  if(!dz) return;
+  dz.classList.remove('empty-hint');
+  var chip=document.createElement('div');
+  chip.className='food-item';
+  chip.setAttribute('data-food',foodId);
+  chip.style.background=food.color;
+  chip.style.color='#fff';
+  chip.textContent=food.label;
+  chip.draggable=true;
+  chip.addEventListener('dragstart',function(e){e.dataTransfer.setData('text',foodId+'|'+scIdx);});
+  dz.appendChild(chip);
+
+  dragData[scIdx].placed[foodId]=shelfId;
+
+  // Enable check button if all foods placed
+  var allPlaced=sc.set.foods.every(function(f){return dragData[scIdx].placed[f.id];});
+  var btn=document.getElementById('checkBtn'+scIdx);
+  if(btn) btn.disabled=!allPlaced;
+}
+
+function checkFridge(scIdx){
+  var sc=scenarios[scIdx];
+  var placed=dragData[scIdx].placed;
+  var correct_count=0,total=sc.set.foods.length;
+
+  sc.set.foods.forEach(function(f){
+    var shelfId=placed[f.id];
+    var isCorrect=shelfId===f.correctShelf;
+    if(isCorrect) correct_count++;
+    // Visual feedback on each chip
+    var dz=document.getElementById('dz_'+scIdx+'_'+shelfId);
+    if(dz){
+      var chip=dz.querySelector('[data-food="'+f.id+'"]');
+      if(chip) chip.classList.add(isCorrect?'correct-placed':'wrong-placed');
+    }
+  });
+
+  // Color drop zones
+  sc.set.shelves.forEach(function(sh){
+    var dz=document.getElementById('dz_'+scIdx+'_'+sh.id);
+    if(!dz) return;
+    var allCorrect=sc.set.foods.filter(function(f){return placed[f.id]===sh.id;})
+      .every(function(f){return f.correctShelf===sh.id;});
+    var anyPlaced=sc.set.foods.some(function(f){return placed[f.id]===sh.id;});
+    if(anyPlaced) dz.classList.add(allCorrect?'valid':'invalid');
+  });
+
+  var isAllCorrect=(correct_count===total);
+  var result=document.getElementById('fridgeResult'+scIdx);
+  var fb=document.getElementById('fb'+scIdx);
+
+  // Animate — shake wrong ones
+  if(!isAllCorrect){
+    sc.set.foods.forEach(function(f){
+      if(placed[f.id]!==f.correctShelf){
+        var dz=document.getElementById('dz_'+scIdx+'_'+placed[f.id]);
+        if(dz){var chip=dz.querySelector('[data-food="'+f.id+'"]');
+          if(chip){chip.style.animation='shake .4s ease';setTimeout(function(){chip.style.animation='';},500);}
+        }
+      }
+    });
+  }
+
+  if(result){
+    result.className='fridge-result show '+(isAllCorrect?'ok':'bad');
+    if(isAllCorrect){
+      result.textContent='✓ Correcto. Todos los alimentos están en su zona correcta. Los crudos en el estante inferior, lácteos y cocidos arriba, y condimentos en la puerta.';
+    } else {
+      var wrong=sc.set.foods.filter(function(f){return placed[f.id]!==f.correctShelf;}).map(function(f){return f.label;});
+      var corrHTML='Incorrectos: '+wrong.join(', ')+'. ';
+      sc.set.foods.filter(function(f){return placed[f.id]!==f.correctShelf;}).forEach(function(f){
+        var correctShelfObj=sc.set.shelves.find(function(sh){return sh.id===f.correctShelf;});
+        corrHTML+=f.label+' debe ir en '+correctShelfObj.label+'. ';
+      });
+      result.innerHTML='✗ '+corrHTML;
+    }
+  }
+
+  var btn=document.getElementById('checkBtn'+scIdx);
+  if(btn) btn.disabled=true;
+
+  answers[scIdx].correct=isAllCorrect;
+  answers[scIdx].chosenText=isAllCorrect?'Todos los alimentos colocados correctamente':correct_count+'/'+total+' correctos';
+  answers[scIdx].feedback=result?result.textContent:'';
+  if(isAllCorrect) correct++;
+  answered++;
+  document.getElementById('progFill').style.width=(answered/scenarios.length*100)+'%';
+  if(answered===scenarios.length) setTimeout(showResults,700);
+  document.getElementById('pcrd'+scIdx).classList.add(isAllCorrect?'ok':'bad');
+}
+
+/* shake animation */
+var styleEl=document.createElement('style');
+styleEl.textContent='@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}';
+document.head.appendChild(styleEl);
+
+/* ══ CUTTING BOARD CANVAS ══ */
+function buildBoardHTML(sc,i){
+  var set=sc.set;
+  var stepsHTML='<div style="margin:.8rem 0;display:flex;flex-direction:column;gap:.4rem">';
+  set.sequence.forEach(function(s){
+    stepsHTML+='<div style="display:flex;align-items:flex-start;gap:.6rem;padding:.55rem .8rem;background:var(--surface2);border-radius:8px;font-size:.86rem;border-left:3px solid '+(s.danger?'#b03010':'var(--border)')+'">'+
+      '<span style="font-size:1.2rem;flex-shrink:0">'+s.icon+'</span>'+
+      '<span style="color:var(--text2)"><strong>Paso '+s.step+':</strong> '+s.text+'</span>'+
+      (s.danger?'<span style="margin-left:auto;font-size:.72rem;color:#b03010;font-weight:700;flex-shrink:0">⚠ Riesgo</span>':'')+'</div>';
+  });
+  stepsHTML+='</div>';
+
+  var shuffled=shuffle(set.choices);
+  answers[i].shuffledChoices=shuffled;
+  var choicesHTML='<div class="pq">'+sc.situation.replace('Identifica','Respondiste — ya identificaste')+'</div>';
+  choicesHTML='<div class="pq">Identifica el problema y la acción correcta:</div>';
+  choicesHTML+='<div class="mcopts" id="opts'+i+'">';
+  shuffled.forEach(function(ch){
+    choicesHTML+='<div class="mcopt" onclick="handleChoice('+i+',this)" data-correct="'+(ch.correct?'1':'0')+'" data-fb="'+encodeURIComponent(ch.fb)+'" data-text="'+encodeURIComponent(ch.t)+'">'+ch.t+'</div>';
+  });
+  choicesHTML+='</div><div class="mcfb" id="fb'+i+'"></div>';
+
+  return (
+    stepsHTML+
+    '<div class="board-canvas-wrap"><canvas id="boardCanvas'+i+'" width="460" height="160"></canvas></div>'+
+    '<button class="hintbtn" id="hbtn'+i+'" onclick="showHint('+i+')">💡 Pista</button>'+
+    '<div class="hintbox" id="hbox'+i+'">'+sc.hint+'</div>'+
+    choicesHTML
+  );
+}
+
+function initBoardCanvas(scIdx){
+  var sc=scenarios[scIdx];
+  drawBoard(scIdx, 'neutral', 0);
+}
+
+function drawBoard(scIdx, state, progress){
+  var canvas=document.getElementById('boardCanvas'+scIdx);
+  if(!canvas) return;
+  var ctx=canvas.getContext('2d');
+  var W=canvas.width, H=canvas.height;
+  var dark=document.documentElement.getAttribute('data-theme')==='dark';
+  ctx.clearRect(0,0,W,H);
+
+  // Background
+  ctx.fillStyle=dark?'#18181a':'#f0f4f0';
+  ctx.fillRect(0,0,W,H);
+
+  // Cutting board
+  var bx=60,by=30,bw=W-120,bh=H-60;
+  ctx.fillStyle=dark?'#3a2810':'#c8a060';
+  ctx.beginPath();ctx.roundRect(bx,by,bw,bh,8);ctx.fill();
+  ctx.fillStyle=dark?'#4a3820':'#d4aa70';
+  // Wood grain lines
+  for(var g=0;g<6;g++){
+    ctx.fillRect(bx+8, by+12+g*14, bw-16, 3);
+  }
+
+  // Contamination spread animation
+  if(state==='spread'&&progress>0){
+    var grad=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,(bw/2)*progress);
+    grad.addColorStop(0,'rgba(176,48,16,0.6)');
+    grad.addColorStop(1,'rgba(176,48,16,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();ctx.roundRect(bx,by,bw,bh,8);ctx.fill();
+    if(progress>0.5){
+      ctx.fillStyle='rgba(176,48,16,'+(progress-0.5)*0.8+')';
+      ctx.font='bold 13px IBM Plex Sans,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('⚠ CONTAMINACIÓN CRUZADA',W/2,H/2+5);
+    }
+  }
+
+  // Sanitize animation
+  if(state==='sanitize'&&progress>0){
+    // Soap bubbles sweeping across
+    var sweepX=bx+bw*progress;
+    ctx.fillStyle='rgba(74,154,111,0.5)';
+    ctx.fillRect(bx,by,sweepX-bx,bh);
+    for(var b=0;b<8;b++){
+      var bub_x=bx+(sweepX-bx)*Math.random();
+      var bub_y=by+Math.random()*bh;
+      ctx.beginPath();
+      ctx.arc(bub_x,bub_y,4+Math.random()*6,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,255,255,0.7)';ctx.lineWidth=1.5;
+      ctx.stroke();
+    }
+    if(progress>0.85){
+      ctx.fillStyle='rgba(26,106,74,'+(progress-0.85)*6+')';
+      ctx.font='bold 13px IBM Plex Sans,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('✓ Tabla lavada y desinfectada',W/2,H/2+5);
+    }
+  }
+
+  // Food icons based on sequence
+  var sc=scenarios[scIdx];
+  if(sc&&sc.set&&sc.set.sequence){
+    sc.set.sequence.forEach(function(step,idx){
+      var x=bx+30+idx*(bw-60)/Math.max(sc.set.sequence.length-1,1);
+      ctx.font='28px serif';
+      ctx.textAlign='center';
+      ctx.fillText(step.icon,x,H/2+12);
+      if(step.danger&&state==='neutral'){
+        ctx.fillStyle='rgba(176,48,16,0.9)';
+        ctx.font='bold 11px IBM Plex Sans,sans-serif';
+        ctx.fillText('⚠',x+18,H/2-10);
+        ctx.fillStyle=dark?'#3a2810':'#c8a060'; // reset
+      }
+    });
+    // Arrows between steps
+    ctx.strokeStyle=dark?'rgba(255,255,255,.3)':'rgba(0,0,0,.2)';
+    ctx.lineWidth=1.5;
+    for(var ai=0;ai<sc.set.sequence.length-1;ai++){
+      var ax=bx+30+ai*(bw-60)/Math.max(sc.set.sequence.length-1,1)+22;
+      var ax2=bx+30+(ai+1)*(bw-60)/Math.max(sc.set.sequence.length-1,1)-22;
+      ctx.beginPath();ctx.moveTo(ax,H/2);ctx.lineTo(ax2,H/2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ax2-8,H/2-5);ctx.lineTo(ax2,H/2);ctx.lineTo(ax2-8,H/2+5);ctx.stroke();
+    }
+  }
+}
+
+function animateBoard(scIdx, state){
+  var start=null, dur=1400;
+  function frame(ts){
+    if(!start) start=ts;
+    var t=Math.min((ts-start)/dur,1);
+    var ease=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    drawBoard(scIdx,state,ease);
+    if(t<1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ══ THERMOMETER CANVAS ══ */
+function buildThermoHTML(sc,i){
+  var shuffled=shuffle(sc.choices);
+  answers[i].shuffledChoices=shuffled;
+
+  var timeInfo='<div class="thermo-info">'+
+    '<div style="font-size:.82rem;color:var(--text2);line-height:1.6;margin-bottom:.5rem">'+
+      '<strong>Alimento:</strong> '+sc.foodEmoji+' '+sc.foodName+'<br>'+
+      '<strong>Temperatura inicial:</strong> '+sc.cookTemp+'°C<br>'+
+      '<strong>Temperatura ambiente:</strong> '+sc.ambientTemp+'°C<br>'+
+      '<strong>Tiempo sin refrigerar:</strong> '+sc.exposureMinutes+' minutos ('+sc.hoursExposed+' horas)'+
+    '</div>'+
+    '<div class="thermo-reading '+(sc.inDangerZone?'danger':'warm')+'" id="thermoReading'+i+'">'+sc.currentTemp+'°C</div>'+
+    '<div class="time-display">Temperatura actual del alimento</div>'+
+    '<div class="danger-zone-label">⚠ Zona de peligro: 5°C – 60°C</div>'+
+  '</div>';
+
+  var choicesHTML='<div class="pq">Basándote en el tiempo de exposición y la temperatura actual, ¿qué debe hacerse con este alimento?</div>';
+  choicesHTML+='<button class="hintbtn" id="hbtn'+i+'" onclick="showHint('+i+')">💡 Pista</button>';
+  choicesHTML+='<div class="hintbox" id="hbox'+i+'">'+sc.hint+'</div>';
+  choicesHTML+='<div class="mcopts" id="opts'+i+'">';
+  shuffled.forEach(function(ch){
+    choicesHTML+='<div class="mcopt" onclick="handleChoice('+i+',this)" data-correct="'+(ch.correct?'1':'0')+'" data-fb="'+encodeURIComponent(ch.fb)+'" data-text="'+encodeURIComponent(ch.t)+'">'+ch.t+'</div>';
+  });
+  choicesHTML+='</div><div class="mcfb" id="fb'+i+'"></div>';
+
+  return (
+    '<div class="thermo-wrap">'+
+      '<div class="thermo-canvas-wrap"><canvas id="thermoCanvas'+i+'" width="80" height="220"></canvas></div>'+
+      timeInfo+
+    '</div>'+
+    choicesHTML
+  );
+}
+
+function initThermoCanvas(scIdx){
+  var sc=scenarios[scIdx];
+  // Animate thermometer from cookTemp down to currentTemp
+  animateThermo(scIdx, sc.cookTemp, sc.currentTemp, 1800);
+}
+
+function drawThermo(canvasId, temp){
+  var canvas=document.getElementById(canvasId);
+  if(!canvas) return;
+  var ctx=canvas.getContext('2d');
+  var W=canvas.width,H=canvas.height;
+  var dark=document.documentElement.getAttribute('data-theme')==='dark';
+  ctx.clearRect(0,0,W,H);
+
+  // Background
+  ctx.fillStyle=dark?'#18181a':'#f5f7fa';
+  ctx.fillRect(0,0,W,H);
+
+  // Thermometer tube
+  var tubeX=W/2, tubeTop=20, tubeBottom=H-30, tubeH=tubeBottom-tubeTop, tubeW=14;
+  // Bulb
+  ctx.fillStyle=dark?'#2a2a3e':'#dde8f8';
+  ctx.beginPath();ctx.arc(tubeX,tubeBottom,tubeW,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=dark?'#5a6a8a':'#8090b0';ctx.lineWidth=2;ctx.stroke();
+  // Tube background
+  ctx.fillStyle=dark?'#2a2a3e':'#dde8f8';
+  ctx.beginPath();ctx.roundRect(tubeX-tubeW/2,tubeTop,tubeW,tubeH,tubeW/2);ctx.fill();
+  ctx.strokeStyle=dark?'#5a6a8a':'#8090b0';ctx.lineWidth=2;ctx.stroke();
+
+  // Temperature scale: 0°C at bottom, 100°C at top
+  var minT=0, maxT=100;
+  var fillRatio=Math.max(0,Math.min(1,(temp-minT)/(maxT-minT)));
+  var fillHeight=tubeH*fillRatio;
+  var fillY=tubeBottom-fillHeight;
+
+  // Danger zone band (5–60°C)
+  var dz_bot=tubeBottom-tubeH*(5/100);
+  var dz_top=tubeBottom-tubeH*(60/100);
+  ctx.fillStyle='rgba(176,48,16,0.15)';
+  ctx.fillRect(tubeX-tubeW/2+2,dz_top,tubeW-4,dz_bot-dz_top);
+
+  // Mercury fill color
+  var mercuryColor=temp>60?'#e87040':temp>5?'#b03010':'#4a8ad4';
+  ctx.fillStyle=mercuryColor;
+  ctx.beginPath();ctx.roundRect(tubeX-tubeW/2+3,fillY,tubeW-6,fillHeight+tubeW/2,3);ctx.fill();
+  // Bulb fill
+  ctx.fillStyle=mercuryColor;
+  ctx.beginPath();ctx.arc(tubeX,tubeBottom,tubeW-3,0,Math.PI*2);ctx.fill();
+
+  // Tick marks and labels
+  ctx.fillStyle=dark?'#b0aa9e':'#3a4050';
+  ctx.font='9px IBM Plex Mono,monospace';
+  ctx.textAlign='right';
+  [0,20,40,60,80,100].forEach(function(t){
+    var ty=tubeBottom-tubeH*(t/100);
+    ctx.fillStyle=dark?'#3a3830':'#d4d9e3';
+    ctx.fillRect(tubeX+tubeW/2,ty-1,8,2);
+    ctx.fillStyle=dark?'#b0aa9e':'#3a4050';
+    ctx.fillText(t+'°',tubeX-tubeW/2-3,ty+3);
+  });
+
+  // Danger zone labels
+  ctx.fillStyle='rgba(176,48,16,0.7)';
+  ctx.font='7px IBM Plex Sans,sans-serif';
+  ctx.textAlign='left';
+  ctx.fillText('60°',tubeX+tubeW/2+4,tubeBottom-tubeH*0.60+3);
+  ctx.fillText('5°',tubeX+tubeW/2+4,tubeBottom-tubeH*0.05+3);
+
+  // Current temp label
+  ctx.fillStyle=mercuryColor;
+  ctx.font='bold 11px IBM Plex Mono,monospace';
+  ctx.textAlign='center';
+  ctx.fillText(Math.round(temp)+'°C',tubeX,fillY-6);
+}
+
+function animateThermo(scIdx, fromTemp, toTemp, duration){
+  var canvasId='thermoCanvas'+scIdx;
+  var start=null;
+  function frame(ts){
+    if(!start) start=ts;
+    var t=Math.min((ts-start)/duration,1);
+    var ease=1-Math.pow(1-t,3);
+    var temp=fromTemp+(toTemp-fromTemp)*ease;
+    drawThermo(canvasId,temp);
+    // Update reading display
+    var rd=document.getElementById('thermoReading'+scIdx);
+    if(rd){
+      rd.textContent=Math.round(temp)+'°C';
+      var isDanger=temp>=5&&temp<=60;
+      rd.className='thermo-reading '+(isDanger?'danger':'warm');
+    }
+    if(t<1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ══ CHOICE HANDLER ══ */
+function showHint(i){
+  document.getElementById('hbox'+i).classList.add('show');
+  document.getElementById('hbtn'+i).style.display='none';
+  answers[i].hintUsed=true;
+}
+
+function handleChoice(scIdx,el){
+  if(answers[scIdx].chosenText) return;
+  var isCorrect=el.getAttribute('data-correct')==='1';
+  var fb=decodeURIComponent(el.getAttribute('data-fb'));
+  var chosenText=decodeURIComponent(el.getAttribute('data-text'));
+
+  // Play board animation if board scenario
+  var sc=scenarios[scIdx];
+  if(sc.type==='board'){
+    var animType=isCorrect?sc.animCorrect:sc.animWrong;
+    animateBoard(scIdx,animType);
+  }
+  // Animate thermometer to danger zone if wrong (show temp creeping up to danger)
+  if(sc.type==='thermo'&&!isCorrect){
+    animateThermo(scIdx,sc.currentTemp,Math.min(sc.currentTemp+15,58),600);
+  }
+
+  document.querySelectorAll('#opts'+scIdx+' .mcopt').forEach(function(o){
+    o.classList.add('dis');
+    if(o.getAttribute('data-correct')==='1') o.classList.add('rc');
+  });
+  el.classList.add(isCorrect?'sc':'sw');
+  var fbEl=document.getElementById('fb'+scIdx);
+  fbEl.innerHTML='<strong>'+(isCorrect?'✓ Correcto':'✗ Incorrecto')+'.</strong> '+fb;
+  fbEl.className='mcfb show '+(isCorrect?'fbok':'fbbad');
+  document.getElementById('pcrd'+scIdx).classList.add(isCorrect?'ok':'bad');
+  document.getElementById('hbtn'+scIdx).style.display='none';
+  answers[scIdx].correct=isCorrect;
+  answers[scIdx].chosenText=chosenText;
+  answers[scIdx].feedback=fb;
+  if(isCorrect) correct++;
+  answered++;
+  document.getElementById('progFill').style.width=(answered/scenarios.length*100)+'%';
+  if(answered===scenarios.length) setTimeout(showResults,700);
+}
+
+function showResults(){
+  var rs=document.getElementById('resultSection');
+  rs.style.display='block';
+  rs.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* PDF */
+function generatePDF(){
+  var btn=document.getElementById('dlBtn');
+  btn.disabled=true;btn.textContent='Generando…';
+  setTimeout(function(){
+    try{buildPDF();}catch(e){console.error(e);}
+    btn.innerHTML='⬇ &nbsp;Descargar reporte PDF';btn.disabled=false;
+  },100);
+}
+function buildPDF(){
+  var doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+  var PW=210,PH=297,M=14,TW=PW-M*2;
+  var dateStr=new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'});
+  doc.setFillColor(232,160,32);doc.rect(0,0,PW,3,'F');
+  doc.setFillColor(27,43,82);doc.rect(0,3,PW,57,'F');
+  var bx=M,by=8,bw=36,bh=28;
+  doc.setFillColor(238,241,248);doc.roundedRect(bx,by,bw,bh,3,3,'F');
+  doc.setDrawColor(27,43,82);doc.setLineWidth(0.5);doc.setLineDashPattern([1.5,1.5],0);
+  doc.roundedRect(bx,by,bw,bh,3,3,'S');doc.setLineDashPattern([],0);
+  doc.setTextColor(27,43,82);doc.setFontSize(5.2);doc.setFont('helvetica','bold');
+  doc.text('Logo de tu',bx+bw/2,by+bh-4.5,{align:'center'});
+  doc.text('certificadora aqui',bx+bw/2,by+bh-1.5,{align:'center'});
+  var lx=PW-M-36,ly=10;
+  doc.setDrawColor(232,238,247);doc.setLineWidth(0.7);
+  doc.lines([[1.54,-1.54],[1.54,0.51],[1.55,-2.57]],lx+1.03,ly+6.17);
+  doc.setFillColor(232,160,32);doc.circle(lx+5.66,ly+2.57,0.9,'F');
+  doc.setDrawColor(232,160,32);doc.line(lx+8.23,ly+1.54,lx+8.23,ly+7.2);
+  doc.setTextColor(232,238,247);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text('LIAXA',lx+10,ly+6.8);
+  doc.setTextColor(232,238,247);doc.setFontSize(19);doc.setFont('helvetica','bold');
+  doc.text('Manejo de Alimentos',M,49);
+  doc.setTextColor(150,165,200);doc.setFontSize(8);doc.setFont('helvetica','normal');
+  doc.text(dateStr,M,57);
+  doc.setFillColor(237,240,245);doc.roundedRect(M,68,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
+  doc.text('CANDIDATO',M+4,75);doc.text('MÓDULO',130,75);
+  doc.setTextColor(20,24,32);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text(studentName,M+4,83);doc.text('Inocuidad alimentaria',130,83);
+  var pct=Math.round((correct/scenarios.length)*100);
+  var sc=pct>=70?[26,106,74]:pct>=50?[232,160,32]:[176,48,16];
+  doc.setFillColor(255,255,255);doc.roundedRect(M,96,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]);doc.setLineWidth(0.8);doc.roundedRect(M,96,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]);doc.setFontSize(40);doc.setFont('helvetica','bold');
+  doc.text(pct+'%',PW/2,120,{align:'center'});
+  doc.setTextColor(130,140,160);doc.setFontSize(8.5);doc.setFont('helvetica','normal');
+  doc.text(correct+' correcto(s) de '+scenarios.length+' escenarios',PW/2,127,{align:'center'});
+  doc.setFillColor(27,43,82);doc.setTextColor(255,255,255);
+  doc.setFontSize(7);doc.setFont('helvetica','bold');
+  doc.rect(M,138,TW,8,'F');doc.text('RESUMEN DE ESCENARIOS',M+4,144);
+  var sy=150;
+  answers.forEach(function(a,i){
+    if(sy+12>PH-15){doc.addPage();sy=20;}
+    doc.setFillColor(a.correct?232:255,a.correct?240:232,a.correct?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.circle(M+6,sy+5,2.5,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','bold');
+    doc.text(a.correct?'✓':'✗',M+4.5,sy+6.5);
+    doc.setTextColor(20,24,32);doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.text('Escenario '+(i+1)+': '+a.title,M+12,sy+6.5);
+    doc.setTextColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.text(a.correct?'Correcto':'Incorrecto',PW-M-24,sy+6.5);
+    sy+=12;
+  });
+  answers.forEach(function(a,i){
+    doc.addPage();
+    doc.setFillColor(27,43,82);doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(232,160,32);doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(232,160,32);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    doc.text('Logo de tu certificadora  ·  Manejo de Alimentos',M,10);
+    doc.setTextColor(232,238,247);doc.setFontSize(10.5);doc.setFont('helvetica','bold');
+    doc.text('Escenario '+(i+1)+'  —  '+a.title,M,17);
+    var wy=25;
+    var ch=doc.splitTextToSize('Respuesta: '+a.chosenText,TW-18);
+    var fb=doc.splitTextToSize('Retroalimentación: '+a.feedback,TW-18);
+    var eH=a.hintUsed?7:0;
+    var bH=10+ch.length*5.5+fb.length*5+eH+4;
+    doc.setFillColor(a.correct?232:255,a.correct?240:232,a.correct?232:228);
+    doc.roundedRect(M,wy,TW,bH,2,2,'F');
+    doc.setFillColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.circle(M+7,wy+8,3.5,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
+    doc.text(a.correct?'✓':'✗',M+5.2,wy+10.5);
+    var ay=wy+7;
+    doc.setTextColor(20,24,32);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
+    ch.forEach(function(ln,li){doc.text(ln,M+14,ay+li*5.5);});
+    ay+=ch.length*5.5+3;
+    doc.setTextColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');
+    fb.forEach(function(ln,li){doc.text(ln,M+14,ay+li*5);});
+    if(a.hintUsed){ay+=fb.length*5+2;doc.setTextColor(122,88,0);doc.setFontSize(7.5);doc.text('* Se utilizó la pista',M+14,ay);}
+  });
+  var pages=doc.internal.getNumberOfPages();
+  for(var p=1;p<=pages;p++){
+    doc.setPage(p);
+    doc.setFillColor(232,160,32);doc.rect(0,PH-3,PW,3,'F');
+    doc.setTextColor(130,140,160);doc.setFontSize(6.5);doc.setFont('helvetica','normal');
+    doc.text(studentName+'  ·  Manejo de Alimentos  ·  Página '+p+'/'+pages,PW/2,PH-5,{align:'center'});
+  }
+  doc.save('ReporteAlimentos_'+studentName.replace(/\s+/g,'_')+'.pdf');
+}
+</script>
+</body>
+</html>

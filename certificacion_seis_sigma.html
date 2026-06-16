@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Six Sigma — Liaxa</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#1B2B52;--green-dark:#0f2d5e;--green-bg:#e8eef7;
+  --gold:#E8A020;--gold-bg:#fdf3e7;
+  --bg:#f5f7fa;--surface:#fff;--surface2:#edf0f5;
+  --border:#d4d9e3;--text:#141820;--text2:#3a4050;--text3:#6a7080;
+  --ok:#1a6a4a;--ok-bg:rgba(26,106,74,.10);
+  --bad:#b03010;--bad-bg:rgba(176,48,16,.08);
+  --shadow:0 4px 24px rgba(27,43,82,.13);
+  --ucl:#b03010;--lcl:#2a6ab0;--mean:#1a6a4a;
+}
+[data-theme="dark"]{
+  --bg:#18181a;--surface:#242420;--surface2:#2e2e28;--border:#3a3830;
+  --text:#e8e4da;--text2:#b0aa9e;--text3:#7a7468;
+  --green:#5a8fd4;--green-dark:#8ab4e8;--green-bg:#1a2040;
+  --gold:#f0a050;--gold-bg:#281e0e;
+  --ok:#4a9a6f;--ok-bg:rgba(74,154,111,.15);
+  --bad:#c05030;--bad-bg:rgba(192,80,48,.13);
+  --shadow:0 4px 24px rgba(0,0,0,.35);
+}
+[data-theme="dark"] .wlogo-placeholder{border-color:var(--green);background:var(--green-bg)}
+[data-theme="dark"] .wlogo-placeholder span{color:var(--green)}
+[data-theme="dark"] .wfoot-liaxa span{color:var(--green)}
+[data-theme="dark"] .wfoot-liaxa svg polyline{stroke:var(--green)}
+[data-theme="dark"] .stickybar-liaxa{color:var(--green)}
+[data-theme="dark"] .mcopt{color:var(--text);background:var(--surface)}
+[data-theme="dark"] .mcopt:hover:not(.dis){background:var(--green-bg)}
+[data-theme="dark"] .mcopt.sc{color:var(--ok)!important}
+[data-theme="dark"] .mcopt.sw{color:var(--bad)!important}
+[data-theme="dark"] .mcopt.rc{color:var(--ok)!important}
+[data-theme="dark"] .data-table th{background:var(--green-dark)}
+[data-theme="dark"] .data-table td{border-color:var(--border)}
+[data-theme="dark"] .data-point{background:var(--surface2)}
+[data-theme="dark"] .data-point.outlier{background:rgba(176,48,16,.15)}
+[data-theme="dark"] .data-point.selected{background:var(--green-bg)}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+
+#welcomeScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem}
+.wcard{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:1.6rem 1.8rem 2rem;width:100%;max-width:400px;text-align:center;border-top:4px solid var(--gold)}
+.wlogo-placeholder{display:flex;align-items:center;justify-content:center;height:90px;border:2.5px dashed var(--green);border-radius:12px;background:var(--green-bg);flex-direction:column;gap:6px;margin-bottom:1.4rem}
+.wlogo-placeholder svg{opacity:.6}
+.wlogo-placeholder span{font-size:.68rem;font-weight:600;color:var(--green);letter-spacing:.06em;text-transform:uppercase;text-align:center;line-height:1.4}
+.wtitle{font-family:'Crimson Pro',serif;font-size:1.7rem;font-weight:700;margin-bottom:1.6rem;color:var(--text)}
+.flabel{display:block;font-size:.75rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;text-align:left}
+.finput{width:100%;padding:.7rem .9rem;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:.95rem;font-family:inherit;margin-bottom:1.1rem;transition:border-color .18s}
+.finput:focus{outline:none;border-color:var(--green)}
+.sbtn{width:100%;padding:.85rem;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;transition:background .18s;font-family:inherit}
+.sbtn:hover{background:var(--green-dark)}.sbtn:disabled{opacity:.45;cursor:not-allowed}
+.wfoot-liaxa{display:flex;justify-content:center;align-items:center;gap:.5rem;padding-top:1.2rem;margin-top:1.2rem;border-top:1px solid var(--border)}
+.wfoot-liaxa span{font-family:'Crimson Pro',serif;font-size:.95rem;font-weight:700;color:#1B2B52;letter-spacing:.04em}
+
+#lessonScreen{display:none}
+.stickybar{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:.5rem 1.2rem;display:flex;align-items:center;gap:.7rem;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.hlogos-client{font-size:.58rem;font-weight:600;color:var(--green);letter-spacing:.07em;text-transform:uppercase;border:1px dashed var(--border);border-radius:5px;padding:.18rem .5rem;flex-shrink:0}
+.hsep{width:1px;height:22px;background:var(--border);flex-shrink:0}
+.stickybar-liaxa{font-family:'Crimson Pro',Georgia,serif;font-size:1.1rem;font-weight:700;color:#1B2B52;letter-spacing:.02em;flex-shrink:0}
+.htitle{font-family:'Crimson Pro',serif;font-size:1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hchip{font-size:.7rem;background:var(--green-bg);color:var(--green-dark);padding:.2rem .65rem;border-radius:20px;white-space:nowrap;flex-shrink:0;margin-left:auto}
+.tbtn{background:none;border:1px solid var(--border);border-radius:7px;padding:.28rem .55rem;cursor:pointer;font-size:.82rem;color:var(--text2);flex-shrink:0}
+.progbar{height:3px;background:var(--border);position:fixed;top:47px;left:0;right:0;z-index:99}
+.progfill{height:100%;background:var(--green);width:0%;transition:width .4s}
+.lbody{max-width:740px;margin:0 auto;padding:4.5rem 1.2rem 4rem}
+.section{opacity:0;transform:translateY(16px);transition:opacity .48s,transform .48s;margin-bottom:2.8rem}
+.section.vis{opacity:1;transform:none}
+.stag{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.45rem}
+.section h2{font-family:'Crimson Pro',serif;font-size:1.55rem;font-weight:700;margin-bottom:.7rem}
+.section p{color:var(--text2);margin-bottom:.8rem;font-size:.92rem}
+.callout{background:var(--green-bg);border-left:4px solid var(--green);border-radius:0 10px 10px 0;padding:1rem 1.2rem;margin:1rem 0;font-size:.88rem}
+.callout p{margin-bottom:0;color:var(--text2)}
+.pcrd{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .25s;margin-bottom:1.3rem}
+.pcrd.ok{border-color:var(--ok)}.pcrd.bad{border-color:var(--bad)}
+.phdr{display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border)}
+.pnum{background:var(--green);color:#fff;width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:700;flex-shrink:0}
+.ptitle{font-weight:600;font-size:.88rem;color:var(--text)}
+.pbody{padding:1rem}
+.pstmt{background:var(--surface2);border-radius:8px;padding:.85rem .95rem;margin:.7rem 0;font-size:.88rem;color:var(--text2);border-left:3px solid var(--green)}
+.pq{font-size:.88rem;font-weight:600;margin:.8rem 0 .5rem;color:var(--text)}
+.mcopts{display:flex;flex-direction:column;gap:.45rem;margin-bottom:.6rem}
+.mcopt{padding:.75rem .85rem;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.86rem;transition:all .13s;user-select:none;line-height:1.5;color:var(--text);background:var(--surface)}
+.mcopt:hover:not(.dis){border-color:var(--green);background:var(--green-bg)}
+.mcopt.dis{cursor:default;pointer-events:none}
+.mcopt.sc{border-color:var(--ok)!important;background:var(--ok-bg)!important;color:var(--ok)!important}
+.mcopt.sw{border-color:var(--bad)!important;background:var(--bad-bg)!important;color:var(--bad)!important}
+.mcopt.rc{border-color:var(--ok)!important;background:var(--ok-bg)!important;color:var(--ok)!important}
+.mcfb{display:none;padding:.7rem .9rem;border-radius:8px;font-size:.83rem;margin-top:.3rem;line-height:1.6}
+.mcfb.show{display:block}
+.mcfb.fbok{background:var(--ok-bg);color:var(--ok)}
+.mcfb.fbbad{background:var(--bad-bg);color:var(--bad)}
+.hintbtn{background:none;border:1px solid var(--gold);color:var(--gold);border-radius:6px;padding:.28rem .65rem;font-size:.78rem;cursor:pointer;margin-bottom:.45rem;font-family:inherit}
+.hintbox{display:none;background:var(--gold-bg);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:.65rem .85rem;font-size:.83rem;color:var(--text2)}
+.hintbox.show{display:block}
+
+/* ── CONTROL CHART ── */
+.chart-wrap{border-radius:10px;overflow:hidden;margin:.8rem 0;position:relative}
+.chart-wrap canvas{display:block;width:100%;height:auto}
+.chart-legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.72rem;margin:.4rem 0 .7rem;color:var(--text3)}
+.legend-item{display:flex;align-items:center;gap:.3rem}
+.legend-dot{width:10px;height:3px;border-radius:2px}
+
+/* DATA TABLE */
+.data-table{width:100%;border-collapse:collapse;margin:.6rem 0;font-size:.82rem}
+.data-table th{background:var(--green);color:#fff;padding:.45rem .6rem;text-align:center;font-weight:600;font-size:.74rem}
+.data-table td{padding:.4rem .6rem;border-bottom:1px solid var(--border);text-align:center;font-family:'IBM Plex Mono',monospace;font-size:.8rem}
+.data-table tr.outlier td{background:rgba(176,48,16,.06);color:var(--bad);font-weight:700}
+.data-table tr.outlier-low td{background:rgba(42,106,176,.06);color:#2a6ab0;font-weight:700}
+
+/* DATA POINT SELECTOR */
+.data-points-wrap{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0}
+.data-point{padding:.35rem .65rem;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.82rem;transition:all .13s;background:var(--surface2);color:var(--text)}
+.data-point:hover:not(.dis){border-color:var(--green);background:var(--green-bg)}
+.data-point.outlier{border-color:var(--bad);color:var(--bad)}
+.data-point.outlier-low{border-color:#2a6ab0;color:#2a6ab0}
+.data-point.selected{border-color:var(--green);background:var(--green-bg);font-weight:700}
+.data-point.correct-pick{border-color:var(--ok)!important;background:var(--ok-bg)!important;color:var(--ok)!important}
+.data-point.wrong-pick{border-color:var(--bad)!important;background:var(--bad-bg)!important;color:var(--bad)!important}
+.data-point.dis{cursor:default;pointer-events:none}
+.pick-feedback{display:none;padding:.65rem .85rem;border-radius:8px;font-size:.83rem;margin-top:.4rem;line-height:1.6}
+.pick-feedback.show{display:block}
+.pick-feedback.ok{background:var(--ok-bg);color:var(--ok)}
+.pick-feedback.bad{background:var(--bad-bg);color:var(--bad)}
+.check-pick-btn{padding:.6rem 1.3rem;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .18s;margin-top:.5rem}
+.check-pick-btn:hover{background:var(--green-dark)}
+.check-pick-btn:disabled{opacity:.4;cursor:not-allowed}
+
+.rpanel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.8rem;text-align:center}
+.dlbtn{background:var(--green);color:#fff;border:none;border-radius:10px;padding:.8rem 1.8rem;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .18s;font-family:inherit}
+.dlbtn:hover{background:var(--green-dark)}.dlbtn:disabled{opacity:.6;cursor:wait}
+</style>
+</head>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogo-placeholder">
+      <svg width="34" height="28" viewBox="0 0 34 28" fill="none">
+        <path d="M2 22 L6 14 L10 16 L14 8 L18 18 L22 6 L26 12 L30 4" stroke="#1B2B52" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <line x1="2" y1="6" x2="32" y2="6" stroke="#b03010" stroke-width="1.2" stroke-dasharray="3,2"/>
+        <line x1="2" y1="14" x2="32" y2="14" stroke="#1a6a4a" stroke-width="1.2"/>
+        <line x1="2" y1="22" x2="32" y2="22" stroke="#2a6ab0" stroke-width="1.2" stroke-dasharray="3,2"/>
+      </svg>
+      <span>Logo de tu<br>certificadora aquí</span>
+    </div>
+    <div class="wtitle">Six Sigma</div>
+    <label class="flabel" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkReady()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()" disabled>Comenzar módulo</button>
+    <div class="wfoot-liaxa">
+      <svg width="22" height="22" viewBox="0 0 68 80" fill="none">
+        <polyline points="0,62 18,46 36,52 58,22" stroke="#1B2B52" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="58" cy="22" r="6" fill="#E8A020"/>
+      </svg>
+      <div style="width:2px;height:20px;background:#E8A020;border-radius:1px;flex-shrink:0"></div>
+      <span>LIAXA</span>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <span class="hlogos-client">Logo de tu certificadora aquí</span>
+    <div class="hsep"></div>
+    <svg width="22" height="26" viewBox="0 0 68 80" fill="none" style="flex-shrink:0">
+      <polyline points="0,62 18,46 36,52 58,22" stroke="#1B2B52" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="58" cy="22" r="6" fill="#E8A020"/>
+    </svg>
+    <div style="width:2px;height:22px;background:#E8A020;border-radius:1px;flex-shrink:0"></div>
+    <span class="stickybar-liaxa">LIAXA</span>
+    <div class="hsep"></div>
+    <div class="htitle">Six Sigma — Análisis de variación</div>
+    <span class="hchip" id="studentChip"></span>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody">
+    <div class="section">
+      <div class="stag">Certificación · Calidad y mejora continua</div>
+      <h2>Six Sigma — análisis de variación</h2>
+      <p>Six Sigma es una metodología para reducir la variación en procesos. Su herramienta central es la <strong>gráfica de control</strong>: muestra si un proceso opera dentro de sus límites estadísticos o si existe una causa especial de variación que requiere atención.</p>
+      <div class="callout"><p>
+        <strong>Límite de Control Superior (LCS):</strong> μ + 3σ — por encima indica causa especial.<br>
+        <strong>Límite de Control Inferior (LCI):</strong> μ − 3σ — por debajo también indica causa especial.<br>
+        <strong>Causa común:</strong> variación normal del proceso, dentro de los límites.<br>
+        <strong>Causa especial:</strong> evento anormal que requiere investigación. Señales: punto fuera de límites, 7 puntos seguidos del mismo lado de la media, o tendencia sostenida.
+      </p></div>
+    </div>
+    <div id="scenariosContainer"></div>
+    <div class="section" id="resultSection" style="display:none">
+      <div class="rpanel">
+        <button class="dlbtn" id="dlBtn" onclick="generatePDF()">⬇ &nbsp;Descargar reporte PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* THEME */
+function toggleTheme(){
+  var n=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',n);
+  document.getElementById('themeBtn').textContent=n==='dark'?'☀️':'🌙';
+  Object.keys(chartData).forEach(function(k){drawChart(parseInt(k));});
+}
+
+/* HELPERS */
+function rndInt(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function rndFloat(lo,hi,dec){return parseFloat((lo+Math.random()*(hi-lo)).toFixed(dec||2));}
+function rndPick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function shuffle(arr){var a=arr.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+/* ══ DATA GENERATOR ══ */
+/*
+  Generates a control chart dataset.
+  mode: 'high_outlier'  — one point above UCL
+        'low_outlier'   — one point below LCL
+        'run'           — 7+ consecutive points above mean (run rule)
+        'trend'         — 6 consecutive points trending up
+        'clean'         — all within limits, no patterns (common cause only)
+*/
+function generateData(process, n, mode){
+  var mean=process.mean, sigma=process.sigma;
+  var ucl=mean+3*sigma, lcl=mean-3*sigma;
+  var data=[];
+  // Normal points
+  for(var i=0;i<n;i++){
+    var v=mean+rndFloat(-1.8*sigma,1.8*sigma,process.dec);
+    data.push({v:parseFloat(v.toFixed(process.dec)),special:false});
+  }
+
+  if(mode==='high_outlier'){
+    var pos=rndInt(Math.floor(n*0.4),Math.floor(n*0.7));
+    data[pos].v=parseFloat((ucl+rndFloat(0.3*sigma,1.2*sigma,process.dec)).toFixed(process.dec));
+    data[pos].special=true; data[pos].type='high';
+  } else if(mode==='low_outlier'){
+    var pos2=rndInt(Math.floor(n*0.3),Math.floor(n*0.65));
+    data[pos2].v=parseFloat((lcl-rndFloat(0.3*sigma,1.0*sigma,process.dec)).toFixed(process.dec));
+    data[pos2].special=true; data[pos2].type='low';
+  } else if(mode==='run'){
+    // 7 consecutive above mean starting at a random point
+    var start=rndInt(3,n-9);
+    for(var r=start;r<start+7;r++){
+      data[r].v=parseFloat((mean+rndFloat(0.4*sigma,1.7*sigma,process.dec)).toFixed(process.dec));
+      data[r].special=true; data[r].type='run';
+    }
+  } else if(mode==='trend'){
+    var ts=rndInt(2,n-8);
+    for(var t=0;t<6;t++){
+      data[ts+t].v=parseFloat((mean-sigma+t*sigma*0.55+rndFloat(0,0.2*sigma,process.dec)).toFixed(process.dec));
+      data[ts+t].special=true; data[ts+t].type='trend';
+    }
+  }
+  return {data:data, mean:mean, ucl:ucl, lcl:lcl, sigma:sigma};
+}
+
+/* ══ SCENARIO GENERATORS ══ */
+var processes=[
+  {name:'tiempo de atención al cliente (minutos)', unit:'min', mean:8.5, sigma:1.2, dec:1, good:'menor',
+   context:'centro de llamadas'},
+  {name:'peso de producto empacado (gramos)',      unit:'g',   mean:500, sigma:8,   dec:0, good:'estable',
+   context:'línea de producción alimenticia'},
+  {name:'tiempo de entrega (días)',                unit:'días',mean:3.2, sigma:0.5, dec:1, good:'menor',
+   context:'servicio de paquetería'},
+  {name:'temperatura de proceso (°C)',              unit:'°C',  mean:85,  sigma:2.5, dec:1, good:'estable',
+   context:'planta de manufactura'},
+  {name:'defectos por lote (unidades)',             unit:'def.',mean:4.2, sigma:1.1, dec:0, good:'menor',
+   context:'control de calidad'}
+];
+
+function makeS0(){
+  // Spot the outlier — one clear out-of-control point, identify and classify
+  var proc=rndPick(processes);
+  var mode=rndPick(['high_outlier','low_outlier']);
+  var n=rndInt(14,18);
+  var ds=generateData(proc,n,mode);
+  var outlierIdx=ds.data.findIndex(function(d){return d.special;});
+  var isHigh=mode==='high_outlier';
+
+  return {
+    type:'spot_outlier',
+    title:'Identifica el punto fuera de control',
+    process:proc, ds:ds, n:n, mode:mode, outlierIdx:outlierIdx,
+    situation:'La siguiente gráfica de control muestra '+n+' mediciones de <strong>'+proc.name+'</strong> en un '+proc.context+'. <strong>Haz clic en el punto que está fuera de los límites de control</strong>, luego responde la pregunta.',
+    hint:'Busca el punto que está por encima del LCS (línea roja superior) o por debajo del LCI (línea azul inferior). Ese punto indica una causa especial de variación.',
+    question:'El punto que identificaste indica:',
+    choices:shuffle([
+      {t:'Una causa especial de variación — requiere investigación inmediata para identificar su origen',correct:true,
+       fb:'Correcto. Un punto fuera de los límites de control (±3σ) indica una causa especial de variación — algo anormal ocurrió en ese momento. El proceso Six Sigma requiere investigar y eliminar esa causa para restaurar la estabilidad del proceso.'},
+      {t:'Una causa común de variación — es normal y no requiere acción',correct:false,
+       fb:'Incorrecto. Las causas comunes producen puntos DENTRO de los límites de control. Un punto FUERA de los límites siempre indica una causa especial que requiere investigación. Actuar sobre causas comunes como si fueran especiales se llama "sobre-corrección" y aumenta la variación.'},
+      {t:'Un error de medición — debe descartarse del análisis',correct:false,
+       fb:'Incorrecto. No se deben descartar puntos fuera de control asumiendo que son errores de medición. Primero se investiga la causa. Si se confirma que fue un error real de medición, se documenta y se puede excluir, pero eso debe verificarse.'},
+      {t:'El proceso está mejorando en esa dirección',correct:false,
+       fb:'Incorrecto. Un punto fuera de los límites no indica mejora — indica inestabilidad. Incluso si la variación va en la dirección deseada (por ejemplo, menor tiempo de atención), un punto fuera del LCI requiere investigación porque señala que algo diferente ocurrió en el proceso.'}
+    ])
+  };
+}
+
+function makeS1(){
+  // Run rule — identify the run pattern and classify
+  var proc=rndPick(processes);
+  var mode=rndPick(['run','trend']);
+  var n=rndInt(16,20);
+  var ds=generateData(proc,n,mode);
+  var patternPoints=ds.data.map(function(d,i){return d.special?i:-1;}).filter(function(i){return i>=0;});
+
+  return {
+    type:'run_rule',
+    title:'Identifica el patrón de causa especial',
+    process:proc, ds:ds, n:n, mode:mode, patternPoints:patternPoints,
+    situation:'Esta gráfica de control de <strong>'+proc.name+'</strong> no tiene ningún punto fuera de los límites de control, pero aun así indica un proceso fuera de control estadístico. Observa el patrón de los puntos.',
+    hint:'Six Sigma usa reglas de patrón además de los límites: 7+ puntos consecutivos del mismo lado de la media = causa especial. 6+ puntos formando una tendencia continua (todos subiendo o bajando) = causa especial.',
+    question:mode==='run'
+      ? '¿Qué patrón observas y qué significa?'
+      : '¿Qué indica la tendencia sostenida en esta gráfica?',
+    choices:shuffle(mode==='run' ? [
+      {t:'7 puntos consecutivos por encima de la media — causa especial, el proceso se desplazó',correct:true,
+       fb:'Correcto. Aunque ningún punto supera los límites, 7 o más puntos consecutivos del mismo lado de la media tienen una probabilidad estadística menor al 1% de ocurrir por azar. Esto indica que el proceso se desplazó y opera en un nivel diferente — causa especial que requiere investigación.'},
+      {t:'Los puntos están dentro de los límites, por lo tanto el proceso está bajo control',correct:false,
+       fb:'Incorrecto. Estar dentro de los límites de control es necesario pero no suficiente para concluir que el proceso está bajo control. Las reglas de patrón de Six Sigma identifican causas especiales que los límites solos no detectan, como corridas de 7+ puntos del mismo lado de la media.'},
+      {t:'Es variación normal — los límites no han sido violados',correct:false,
+       fb:'Incorrecto. La regla de las 7 corridas es precisamente para detectar causas especiales que no violan los límites pero sí indican un cambio en el proceso. Esta corrida tiene menos del 1% de probabilidad de ocurrir por causas comunes.'},
+      {t:'El proceso mejoró — los puntos subieron hacia la media',correct:false,
+       fb:'Incorrecto. Una corrida de puntos del mismo lado de la media indica un desplazamiento del proceso, no una mejora controlada. Para confirmar una mejora real, el proceso debe ser intervenido deliberadamente y los nuevos límites recalculados.'}
+    ] : [
+      {t:'Tendencia sostenida de 6+ puntos — causa especial, algo está cambiando sistemáticamente en el proceso',correct:true,
+       fb:'Correcto. Seis o más puntos consecutivos formando una tendencia continua (todos subiendo o todos bajando) indican que algo está cambiando sistemáticamente en el proceso — desgaste de equipo, fatiga del operador, degradación de materia prima. Es una causa especial aunque ningún punto supere los límites.'},
+      {t:'Variación normal — las tendencias cortas son esperadas en cualquier proceso',correct:false,
+       fb:'Incorrecto. Una tendencia de 6+ puntos consecutivos en la misma dirección tiene una probabilidad muy baja (menos del 2%) de ocurrir por causas comunes. Indica un cambio sistemático en el proceso que debe identificarse e investigarse.'},
+      {t:'El proceso está mejorando — los valores se acercan al objetivo',correct:false,
+       fb:'Incorrecto. Una tendencia en la gráfica de control no confirma mejora — confirma inestabilidad. Para determinar si es mejora o deterioro hay que analizar la dirección de la tendencia en relación al objetivo del proceso. En cualquier caso, requiere investigación.'},
+      {t:'Los límites de control están mal calculados',correct:false,
+       fb:'Incorrecto. Una tendencia sostenida no sugiere error en los límites. Los límites se calculan correctamente con μ ± 3σ de datos históricos. La tendencia indica un cambio real en el proceso que debe investigarse.'}
+    ])
+  };
+}
+
+function makeS2(){
+  // Clean process — all common cause, identify and propose correct action
+  var proc=rndPick(processes);
+  var n=rndInt(15,20);
+  var ds=generateData(proc,n,'clean');
+  // Add some interesting variation but all within limits
+  ds.data.forEach(function(d){
+    // Small adjustments to make it visually interesting but clearly within limits
+    var nudge=rndFloat(-0.5,0.5,proc.dec);
+    d.v=parseFloat(Math.max(ds.lcl*0.98, Math.min(ds.ucl*0.98, d.v+nudge)).toFixed(proc.dec));
+  });
+
+  return {
+    type:'common_cause',
+    title:'Proceso bajo control — interpreta y actúa',
+    process:proc, ds:ds, n:n, mode:'clean',
+    situation:'Esta gráfica de control de <strong>'+proc.name+'</strong> muestra '+n+' mediciones recientes. Todos los puntos están dentro de los límites de control y no hay patrones especiales.',
+    hint:'Un proceso "bajo control estadístico" significa que opera de forma predecible. Las mejoras en un proceso bajo control requieren cambios sistémicos, no reacciones punto a punto.',
+    question:'¿Cuál es la conclusión correcta y la acción apropiada?',
+    choices:shuffle([
+      {t:'El proceso está bajo control estadístico — mejorar el desempeño requiere cambiar el sistema, no reaccionar a puntos individuales',correct:true,
+       fb:'Correcto. Un proceso bajo control estadístico es predecible y toda su variación proviene de causas comunes del sistema. Para mejorar el desempeño (reducir la media o la variación) se necesita un cambio deliberado del sistema: nuevo equipo, diferente proceso, mejor capacitación. Reaccionar a puntos individuales dentro de los límites se llama "tampering" y generalmente aumenta la variación.'},
+      {t:'El proceso tiene demasiada variación — hay que ajustarlo cada vez que se desvíe de la media',correct:false,
+       fb:'Incorrecto. Este comportamiento se llama "tampering" o sobre-ajuste. En un proceso bajo control, ajustar cada desviación de la media introduce más variación, no menos. Walter Shewhart demostró que intervenir en causas comunes tratándolas como especiales empeora el proceso.'},
+      {t:'No hay suficientes datos para sacar conclusiones — se necesitan más mediciones',correct:false,
+       fb:'Incorrecto. Con 15-20 puntos se tienen suficientes datos para evaluar la estabilidad estadística del proceso. La conclusión es clara: el proceso opera bajo causas comunes. Buscar más datos sin causa específica es dilación, no análisis.'},
+      {t:'El proceso está perfecto y no necesita mejora',correct:false,
+       fb:'Incorrecto. "Bajo control estadístico" no significa "óptimo". Significa predecible. Un proceso puede estar bajo control pero con demasiada variación o con una media alejada del objetivo. La mejora se logra cambiando el sistema deliberadamente, no interviniendo en puntos individuales.'}
+    ])
+  };
+}
+
+/* STATE */
+var studentName='',scenarios=[],answers=[],answered=0,correct=0;
+var chartData={};
+var selectedPoints={};
+var scProgress={};
+
+function checkReady(){
+  document.getElementById('startBtn').disabled=
+    document.getElementById('sName').value.trim().length<2;
+}
+function startLesson(){
+  studentName=document.getElementById('sName').value.trim();
+  scenarios=[makeS0(),makeS1(),makeS2()];
+  answered=0;correct=0;answers=[];chartData={};selectedPoints={};scProgress={};
+  buildScenarios();
+  document.getElementById('welcomeScreen').style.display='none';
+  document.getElementById('lessonScreen').style.display='block';
+  document.getElementById('studentChip').textContent=studentName;
+  var obs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting)x.target.classList.add('vis');});},{threshold:.05});
+  document.querySelectorAll('.section').forEach(function(s){obs.observe(s);});
+}
+
+/* BUILD */
+function buildScenarios(){
+  var c=document.getElementById('scenariosContainer');
+  c.innerHTML='';
+  scenarios.forEach(function(sc,i){
+    answers.push({title:sc.title,correct:false,chosenText:'',feedback:'',hintUsed:false,type:sc.type,simSummary:''});
+    var inner='<div class="pstmt">'+sc.situation+'</div>';
+
+    if(sc.type==='spot_outlier'){
+      inner+=buildSpotHTML(sc,i);
+    } else if(sc.type==='run_rule'){
+      inner+=buildRunHTML(sc,i);
+    } else {
+      inner+=buildCommonHTML(sc,i);
+    }
+
+    var sec=document.createElement('div');
+    sec.className='section';
+    sec.innerHTML='<div class="pcrd" id="pcrd'+i+'"><div class="phdr"><div class="pnum">'+(i+1)+'</div><div class="ptitle">'+sc.title+'</div></div><div class="pbody">'+inner+'</div></div>';
+    c.appendChild(sec);
+  });
+
+  setTimeout(function(){
+    scenarios.forEach(function(sc,i){
+      chartData[i]=sc.ds;
+      selectedPoints[i]=null;
+      drawChart(i);
+    });
+  },80);
+}
+
+function buildSpotHTML(sc,i){
+  var tableHTML=buildDataTable(sc,i);
+  var choicesHTML=buildChoicesBlock(sc.choices,i);
+  return (
+    '<div class="chart-wrap"><canvas id="chart_'+i+'" width="660" height="220" onclick="handleChartClick('+i+',event)"></canvas></div>'+
+    buildLegend()+
+    '<div style="font-size:.8rem;color:var(--text3);margin:.3rem 0 .6rem;text-align:center;font-style:italic">👆 Haz clic en el punto que está fuera de los límites de control</div>'+
+    '<div class="pick-feedback" id="pickfb_'+i+'"></div>'+
+    tableHTML+
+    '<div class="pq" id="q_'+i+'" style="display:none">'+sc.question+'</div>'+
+    '<button class="hintbtn" id="hbtn'+i+'" onclick="showHint('+i+')">💡 Pista</button>'+
+    '<div class="hintbox" id="hbox'+i+'">'+sc.hint+'</div>'+
+    '<div id="choicesWrap_'+i+'" style="display:none">'+choicesHTML+'</div>'
+  );
+}
+
+function buildRunHTML(sc,i){
+  var tableHTML=buildDataTable(sc,i);
+  var choicesHTML=buildChoicesBlock(sc.choices,i);
+  return (
+    '<div class="chart-wrap"><canvas id="chart_'+i+'" width="660" height="220"></canvas></div>'+
+    buildLegend()+
+    tableHTML+
+    '<div class="pq">'+sc.question+'</div>'+
+    '<button class="hintbtn" id="hbtn'+i+'" onclick="showHint('+i+')">💡 Pista</button>'+
+    '<div class="hintbox" id="hbox'+i+'">'+sc.hint+'</div>'+
+    choicesHTML
+  );
+}
+
+function buildCommonHTML(sc,i){
+  var tableHTML=buildDataTable(sc,i);
+  var choicesHTML=buildChoicesBlock(sc.choices,i);
+  return (
+    '<div class="chart-wrap"><canvas id="chart_'+i+'" width="660" height="220"></canvas></div>'+
+    buildLegend()+
+    tableHTML+
+    '<div class="pq">'+sc.question+'</div>'+
+    '<button class="hintbtn" id="hbtn'+i+'" onclick="showHint('+i+')">💡 Pista</button>'+
+    '<div class="hintbox" id="hbox'+i+'">'+sc.hint+'</div>'+
+    choicesHTML
+  );
+}
+
+function buildLegend(){
+  return '<div class="chart-legend">'+
+    '<div class="legend-item"><div class="legend-dot" style="background:#b03010;height:2px;border-top:2px dashed #b03010"></div><span>LCS (μ+3σ)</span></div>'+
+    '<div class="legend-item"><div class="legend-dot" style="background:#1a6a4a"></div><span>Media (μ)</span></div>'+
+    '<div class="legend-item"><div class="legend-dot" style="background:#2a6ab0;height:2px;border-top:2px dashed #2a6ab0"></div><span>LCI (μ−3σ)</span></div>'+
+    '<div class="legend-item"><div class="legend-dot" style="background:#1B2B52;width:8px;height:8px;border-radius:50%"></div><span>Medición</span></div>'+
+    '</div>';
+}
+
+function buildDataTable(sc,i){
+  var ds=sc.ds;
+  var html='<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>#</th><th>Valor ('+sc.process.unit+')</th><th>Estado</th></tr></thead><tbody>';
+  ds.data.forEach(function(d,idx){
+    var isOut=d.v>ds.ucl||d.v<ds.lcl;
+    var isSpecialPattern=d.special&&!isOut;
+    var rowClass=isOut?'outlier':(isSpecialPattern&&d.type==='low'?'outlier-low':'');
+    var estado=isOut?'⚠ Fuera de control':isSpecialPattern?'→ Patrón especial':'✓ Dentro de control';
+    html+='<tr class="'+rowClass+'"><td>'+(idx+1)+'</td><td>'+d.v+'</td><td>'+estado+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  return html;
+}
+
+function buildChoicesBlock(choices,i){
+  var html='<div class="mcopts" id="opts'+i+'">';
+  choices.forEach(function(ch){
+    html+='<div class="mcopt" onclick="handleChoice('+i+',this)" data-correct="'+(ch.correct?'1':'0')+'" data-fb="'+encodeURIComponent(ch.fb)+'" data-text="'+encodeURIComponent(ch.t)+'">'+ch.t+'</div>';
+  });
+  html+='</div><div class="mcfb" id="fb'+i+'"></div>';
+  return html;
+}
+
+/* DRAW CONTROL CHART */
+function drawChart(i, highlightIdx){
+  var canvas=document.getElementById('chart_'+i);
+  if(!canvas) return;
+  var ctx=canvas.getContext('2d');
+  var W=canvas.width, H=canvas.height;
+  var dark=document.documentElement.getAttribute('data-theme')==='dark';
+  var ds=chartData[i];
+  if(!ds) return;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=dark?'#18181a':'#f5f7fa';
+  ctx.fillRect(0,0,W,H);
+
+  var pad={l:52,r:16,t:20,b:32};
+  var cw=W-pad.l-pad.r, ch=H-pad.t-pad.b;
+  var n=ds.data.length;
+
+  // Y scale: extend 0.8 sigma beyond UCL/LCL
+  var ymin=ds.lcl-0.8*ds.sigma, ymax=ds.ucl+0.8*ds.sigma;
+  function xp(idx){return pad.l+cw*(idx/(n-1));}
+  function yp(v){return pad.t+ch*(1-(v-ymin)/(ymax-ymin));}
+
+  // Grid
+  ctx.strokeStyle=dark?'rgba(255,255,255,.05)':'rgba(0,0,0,.05)';
+  ctx.lineWidth=1;
+  var steps=5;
+  for(var g=0;g<=steps;g++){
+    var gv=ymin+(ymax-ymin)*g/steps;
+    var gy=yp(gv);
+    ctx.beginPath();ctx.moveTo(pad.l,gy);ctx.lineTo(W-pad.r,gy);ctx.stroke();
+    ctx.fillStyle=dark?'#7a7468':'#6a7080';
+    ctx.font='9px IBM Plex Mono,monospace';
+    ctx.textAlign='right';
+    ctx.fillText(gv.toFixed(ds.data[0]?1:0),pad.l-4,gy+3);
+  }
+
+  // X axis labels
+  ctx.fillStyle=dark?'#7a7468':'#6a7080';
+  ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='center';
+  for(var xi=0;xi<n;xi++){
+    if(n<=16||xi%2===0) ctx.fillText(xi+1,xp(xi),H-pad.b+14);
+  }
+
+  // UCL line
+  ctx.beginPath();ctx.setLineDash([6,3]);
+  ctx.moveTo(pad.l,yp(ds.ucl));ctx.lineTo(W-pad.r,yp(ds.ucl));
+  ctx.strokeStyle='#b03010';ctx.lineWidth=1.8;ctx.stroke();
+  ctx.fillStyle='#b03010';ctx.font='bold 9px IBM Plex Sans,sans-serif';ctx.textAlign='right';
+  ctx.fillText('LCS '+ds.ucl.toFixed(1),W-pad.r-2,yp(ds.ucl)-4);
+
+  // LCL line
+  ctx.beginPath();
+  ctx.moveTo(pad.l,yp(ds.lcl));ctx.lineTo(W-pad.r,yp(ds.lcl));
+  ctx.strokeStyle='#2a6ab0';ctx.lineWidth=1.8;ctx.stroke();
+  ctx.fillStyle='#2a6ab0';ctx.font='bold 9px IBM Plex Sans,sans-serif';ctx.textAlign='right';
+  ctx.fillText('LCI '+ds.lcl.toFixed(1),W-pad.r-2,yp(ds.lcl)+11);
+  ctx.setLineDash([]);
+
+  // Mean line
+  ctx.beginPath();
+  ctx.moveTo(pad.l,yp(ds.mean));ctx.lineTo(W-pad.r,yp(ds.mean));
+  ctx.strokeStyle='#1a6a4a';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#1a6a4a';ctx.font='bold 9px IBM Plex Sans,sans-serif';ctx.textAlign='right';
+  ctx.fillText('μ '+ds.mean.toFixed(1),W-pad.r-2,yp(ds.mean)-4);
+
+  // Zone shading (±1σ, ±2σ)
+  ctx.fillStyle=dark?'rgba(26,106,74,.05)':'rgba(26,106,74,.04)';
+  var zone1top=yp(ds.mean+ds.sigma), zone1bot=yp(ds.mean-ds.sigma);
+  ctx.fillRect(pad.l,zone1top,cw,zone1bot-zone1top);
+
+  // Data line
+  ctx.beginPath();
+  ctx.moveTo(xp(0),yp(ds.data[0].v));
+  for(var di=1;di<n;di++) ctx.lineTo(xp(di),yp(ds.data[di].v));
+  ctx.strokeStyle=dark?'rgba(90,143,212,.6)':'rgba(27,43,82,.4)';
+  ctx.lineWidth=1.5;ctx.stroke();
+
+  // Data points
+  ds.data.forEach(function(d,di){
+    var isOut=d.v>ds.ucl||d.v<ds.lcl;
+    var isPattern=d.special&&!isOut;
+    var isSelected=(selectedPoints[i]===di);
+    var isHighlight=(highlightIdx!==undefined&&highlightIdx===di);
+    var r=isSelected||isHighlight?7:5;
+    ctx.beginPath();ctx.arc(xp(di),yp(d.v),r,0,Math.PI*2);
+    var fill=isOut?(d.v>ds.ucl?'#b03010':'#2a6ab0'):
+             isPattern?'#E8A020':
+             dark?'#5a8fd4':'#1B2B52';
+    ctx.fillStyle=fill;
+    ctx.fill();
+    if(isSelected||isHighlight){
+      ctx.strokeStyle='#E8A020';ctx.lineWidth=2;ctx.stroke();
+    }
+    // Out-of-control label
+    if(isOut){
+      ctx.fillStyle=d.v>ds.ucl?'#b03010':'#2a6ab0';
+      ctx.font='bold 9px IBM Plex Sans,sans-serif';ctx.textAlign='center';
+      ctx.fillText(d.v.toFixed(1)+' ⚠',xp(di),yp(d.v)+(d.v>ds.ucl?-10:14));
+    }
+  });
+}
+
+/* CHART CLICK for spot_outlier */
+function handleChartClick(i, evt){
+  var sc=scenarios[i];
+  if(sc.type!=='spot_outlier') return;
+  if(answers[i].chosenText) return;
+  var canvas=document.getElementById('chart_'+i);
+  var rect=canvas.getBoundingClientRect();
+  var scaleX=canvas.width/rect.width;
+  var mx=(evt.clientX-rect.left)*scaleX;
+  var ds=chartData[i];
+  var n=ds.data.length;
+  var pad={l:52,r:16,t:20,b:32};
+  var cw=canvas.width-pad.l-pad.r;
+  function xp(idx){return pad.l+cw*(idx/(n-1));}
+
+  // Find nearest point
+  var nearest=-1, nearDist=999;
+  ds.data.forEach(function(d,di){
+    var dx=Math.abs(mx-xp(di));
+    if(dx<nearDist){nearDist=dx;nearest=di;}
+  });
+  if(nearest<0||nearDist>cw*0.12) return;
+
+  selectedPoints[i]=nearest;
+  drawChart(i,nearest);
+
+  var isOutlier=nearest===sc.outlierIdx;
+  var fb=document.getElementById('pickfb_'+i);
+  if(fb){
+    if(isOutlier){
+      fb.className='pick-feedback show ok';
+      fb.textContent='✓ Correcto — el punto '+( nearest+1)+' (valor: '+ds.data[nearest].v+' '+sc.process.unit+') está fuera del límite de control '+( ds.data[nearest].v>ds.ucl?'superior (LCS: '+ds.ucl.toFixed(1)+')':'inferior (LCI: '+ds.lcl.toFixed(1)+')')+'. Ahora responde la pregunta.';
+      document.getElementById('q_'+i).style.display='block';
+      document.getElementById('choicesWrap_'+i).style.display='block';
+      answers[i].simSummary='Punto identificado: #'+(nearest+1)+' ('+ds.data[nearest].v+' '+sc.process.unit+')';
+    } else {
+      fb.className='pick-feedback show bad';
+      fb.textContent='✗ Ese punto (#'+(nearest+1)+', valor '+ds.data[nearest].v+') está dentro de los límites de control. Busca el punto que cruza la línea roja (LCS) o azul (LCI).';
+    }
+  }
+}
+
+/* CHOICE HANDLERS */
+function showHint(i){
+  document.getElementById('hbox'+i).classList.add('show');
+  document.getElementById('hbtn'+i).style.display='none';
+  answers[i].hintUsed=true;
+}
+
+function handleChoice(scIdx,el){
+  if(answers[scIdx].chosenText) return;
+  var isCorrect=el.getAttribute('data-correct')==='1';
+  var fb=decodeURIComponent(el.getAttribute('data-fb'));
+  var chosenText=decodeURIComponent(el.getAttribute('data-text'));
+  document.querySelectorAll('#opts'+scIdx+' .mcopt').forEach(function(o){
+    o.classList.add('dis');
+    if(o.getAttribute('data-correct')==='1') o.classList.add('rc');
+  });
+  el.classList.add(isCorrect?'sc':'sw');
+  var fbEl=document.getElementById('fb'+scIdx);
+  fbEl.innerHTML='<strong>'+(isCorrect?'✓ Correcto':'✗ Incorrecto')+'.</strong> '+fb;
+  fbEl.className='mcfb show '+(isCorrect?'fbok':'fbbad');
+  document.getElementById('pcrd'+scIdx).classList.add(isCorrect?'ok':'bad');
+  document.getElementById('hbtn'+scIdx).style.display='none';
+  answers[scIdx].correct=isCorrect;
+  answers[scIdx].chosenText=chosenText;
+  answers[scIdx].feedback=fb;
+  if(isCorrect) correct++;
+  answered++;
+  document.getElementById('progFill').style.width=(answered/scenarios.length*100)+'%';
+  if(answered===scenarios.length) setTimeout(showResults,700);
+}
+
+function showResults(){
+  var rs=document.getElementById('resultSection');
+  rs.style.display='block';
+  rs.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+/* PDF */
+function generatePDF(){
+  var btn=document.getElementById('dlBtn');
+  btn.disabled=true;btn.textContent='Generando…';
+  setTimeout(function(){try{buildPDF();}catch(e){console.error(e);}
+    btn.innerHTML='⬇ &nbsp;Descargar reporte PDF';btn.disabled=false;},100);
+}
+function buildPDF(){
+  var doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+  var PW=210,PH=297,M=14,TW=PW-M*2;
+  var dateStr=new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'});
+  doc.setFillColor(232,160,32);doc.rect(0,0,PW,3,'F');
+  doc.setFillColor(27,43,82);doc.rect(0,3,PW,57,'F');
+  var bx=M,by=8,bw=36,bh=28;
+  doc.setFillColor(238,241,248);doc.roundedRect(bx,by,bw,bh,3,3,'F');
+  doc.setDrawColor(27,43,82);doc.setLineWidth(0.5);doc.setLineDashPattern([1.5,1.5],0);
+  doc.roundedRect(bx,by,bw,bh,3,3,'S');doc.setLineDashPattern([],0);
+  doc.setTextColor(27,43,82);doc.setFontSize(5.2);doc.setFont('helvetica','bold');
+  doc.text('Logo de tu',bx+bw/2,by+bh-4.5,{align:'center'});
+  doc.text('certificadora aqui',bx+bw/2,by+bh-1.5,{align:'center'});
+  var lx=PW-M-36,ly=10;
+  doc.setDrawColor(232,238,247);doc.setLineWidth(0.7);
+  doc.lines([[1.54,-1.54],[1.54,0.51],[1.55,-2.57]],lx+1.03,ly+6.17);
+  doc.setFillColor(232,160,32);doc.circle(lx+5.66,ly+2.57,0.9,'F');
+  doc.setDrawColor(232,160,32);doc.line(lx+8.23,ly+1.54,lx+8.23,ly+7.2);
+  doc.setTextColor(232,238,247);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text('LIAXA',lx+10,ly+6.8);
+  doc.setTextColor(232,238,247);doc.setFontSize(19);doc.setFont('helvetica','bold');
+  doc.text('Six Sigma — Análisis de variación',M,49);
+  doc.setTextColor(150,165,200);doc.setFontSize(8);doc.setFont('helvetica','normal');
+  doc.text(dateStr,M,57);
+  doc.setFillColor(237,240,245);doc.roundedRect(M,68,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
+  doc.text('CANDIDATO',M+4,75);doc.text('MÓDULO',130,75);
+  doc.setTextColor(20,24,32);doc.setFontSize(11);doc.setFont('helvetica','bold');
+  doc.text(studentName,M+4,83);doc.text('Six Sigma',130,83);
+  var pct=Math.round((correct/scenarios.length)*100);
+  var sc=pct>=70?[26,106,74]:pct>=50?[232,160,32]:[176,48,16];
+  doc.setFillColor(255,255,255);doc.roundedRect(M,96,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]);doc.setLineWidth(0.8);doc.roundedRect(M,96,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]);doc.setFontSize(40);doc.setFont('helvetica','bold');
+  doc.text(pct+'%',PW/2,120,{align:'center'});
+  doc.setTextColor(130,140,160);doc.setFontSize(8.5);doc.setFont('helvetica','normal');
+  doc.text(correct+' correcto(s) de '+scenarios.length+' escenarios',PW/2,127,{align:'center'});
+  doc.setFillColor(27,43,82);doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','bold');
+  doc.rect(M,138,TW,8,'F');doc.text('RESUMEN DE ESCENARIOS',M+4,144);
+  var sy=150;
+  answers.forEach(function(a,i){
+    if(sy+12>PH-15){doc.addPage();sy=20;}
+    doc.setFillColor(a.correct?232:255,a.correct?240:232,a.correct?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.circle(M+6,sy+5,2.5,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont('helvetica','bold');
+    doc.text(a.correct?'✓':'✗',M+4.5,sy+6.5);
+    doc.setTextColor(20,24,32);doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.text('Escenario '+(i+1)+': '+a.title,M+12,sy+6.5);
+    doc.setTextColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.text(a.correct?'Correcto':'Incorrecto',PW-M-24,sy+6.5);sy+=12;
+  });
+  answers.forEach(function(a,i){
+    doc.addPage();
+    doc.setFillColor(27,43,82);doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(232,160,32);doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(232,160,32);doc.setFontSize(7);doc.setFont('helvetica','normal');
+    doc.text('Logo de tu certificadora  ·  Six Sigma',M,10);
+    doc.setTextColor(232,238,247);doc.setFontSize(10.5);doc.setFont('helvetica','bold');
+    doc.text('Escenario '+(i+1)+'  —  '+a.title,M,17);
+    var wy=25;
+    if(a.simSummary){
+      doc.setFillColor(237,240,245);doc.roundedRect(M,wy,TW,10,2,2,'F');
+      doc.setTextColor(27,43,82);doc.setFontSize(7.5);doc.setFont('helvetica','bold');
+      doc.text('Interacción: '+a.simSummary,M+4,wy+6.5);
+      wy+=14;
+    }
+    var ch=doc.splitTextToSize('Respuesta: '+a.chosenText,TW-18);
+    var fb=doc.splitTextToSize('Retroalimentación: '+a.feedback,TW-18);
+    var eH=a.hintUsed?7:0;
+    var bH=10+ch.length*5.5+fb.length*5+eH+4;
+    doc.setFillColor(a.correct?232:255,a.correct?240:232,a.correct?232:228);
+    doc.roundedRect(M,wy,TW,bH,2,2,'F');
+    doc.setFillColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.circle(M+7,wy+8,3.5,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
+    doc.text(a.correct?'✓':'✗',M+5.2,wy+10.5);
+    var ay=wy+7;
+    doc.setTextColor(20,24,32);doc.setFontSize(8.5);doc.setFont('helvetica','bold');
+    ch.forEach(function(ln,li){doc.text(ln,M+14,ay+li*5.5);});
+    ay+=ch.length*5.5+3;
+    doc.setTextColor(a.correct?26:176,a.correct?106:48,a.correct?74:16);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');
+    fb.forEach(function(ln,li){doc.text(ln,M+14,ay+li*5);});
+    if(a.hintUsed){ay+=fb.length*5+2;doc.setTextColor(122,88,0);doc.setFontSize(7.5);doc.text('* Se utilizó la pista',M+14,ay);}
+  });
+  var pages=doc.internal.getNumberOfPages();
+  for(var p=1;p<=pages;p++){
+    doc.setPage(p);doc.setFillColor(232,160,32);doc.rect(0,PH-3,PW,3,'F');
+    doc.setTextColor(130,140,160);doc.setFontSize(6.5);doc.setFont('helvetica','normal');
+    doc.text(studentName+'  ·  Six Sigma  ·  Página '+p+'/'+pages,PW/2,PH-5,{align:'center'});
+  }
+  doc.save('ReporteSixSigma_'+studentName.replace(/\s+/g,'_')+'.pdf');
+}
+</script>
+</body>
+</html>
