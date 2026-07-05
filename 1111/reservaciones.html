@@ -302,12 +302,15 @@ const fmt12  = m => {
 const dateKey = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 const overlaps = (a1,a2,b1,b2) => a1 < b2 && b1 < a2;
 
-/* horario "9:00-19:00" → {open,close} en minutos; null si descansa */
-function empWindow(emp, weekday){
+/* horario "9:00-19:00" o turno partido "10:00-14:00, 16:00-18:00"
+   → lista de ventanas [{open,close},...]; lista vacía si descansa */
+function empWindows(emp, weekday){
   const h = emp.horario[DIA_KEY[weekday]];
-  if(!h) return null;
-  const [a,b] = h.split("-");
-  return { open: toMin(a.trim()), close: toMin(b.trim()) };
+  if(!h) return [];
+  return String(h).split(",").map(r=>{
+    const [a,b] = r.split("-");
+    return { open: toMin(a.trim()), close: toMin(b.trim()) };
+  });
 }
 const empById = id => CONFIG.empleados.find(e=>e.id===id);
 const qualified = () => CONFIG.empleados.filter(e=>e.servicios.includes(sel.svc.id));
@@ -417,7 +420,7 @@ function renderDays(){
   const emps = empsForSlotSearch();
   for(let i=0;i<CONFIG.bookingWindowDays;i++){
     const d = new Date(today); d.setDate(d.getDate()+i);
-    if(!emps.some(e=>empWindow(e, d.getDay()))) continue; // nadie trabaja
+   if(!emps.some(e=>empWindows(e, d.getDay()).length)) continue; // nadie trabaja
     const el = document.createElement("div");
     el.className = "day"; el.tabIndex = 0; el.setAttribute("role","button");
     el.innerHTML = `<div class="dname">${DIAS[d.getDay()]}</div>
@@ -453,8 +456,8 @@ function freeEmployeesAt(d, t, dur){
   if(negocioBlocked) return [];
 
   return empsForSlotSearch().filter(e=>{
-    const w = empWindow(e, d.getDay());
-    if(!w || t < w.open || t + dur > w.close) return false;
+    const fits = empWindows(e, d.getDay()).some(w => t >= w.open && t + dur <= w.close);
+    if(!fits) return false;
     const busy =
       dayB.some(b=>b.empleado===e.id && overlaps(t,t+dur,toMin(b.hora_inicio),toMin(b.hora_fin))) ||
       dayX.some(b=>b.empleado===e.id && overlaps(t,t+dur,toMin(b.hora_inicio),toMin(b.hora_fin)));
@@ -471,9 +474,10 @@ function renderSlots(d){
 
   /* rango total del día = min(open)–max(close) entre empleados relevantes */
   let open = 24*60, close = 0;
-  empsForSlotSearch().forEach(e=>{
-    const w = empWindow(e, d.getDay());
-    if(w){ open = Math.min(open, w.open); close = Math.max(close, w.close); }
+ empsForSlotSearch().forEach(e=>{
+    empWindows(e, d.getDay()).forEach(w=>{
+      open = Math.min(open, w.open); close = Math.max(close, w.close);
+    });
   });
 
   const slots = [];
