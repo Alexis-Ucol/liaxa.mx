@@ -149,10 +149,25 @@ footer{text-align:center;margin-top:40px;color:var(--c-texto-s);font-size:.8rem;
 footer a{color:var(--c-prim);text-decoration:none}
 
 /* Fullscreen loader */
-#loadScreen{position:fixed;inset:0;background:#1B2B52;z-index:100;
+#loadScreen{position:fixed;inset:0;background:var(--c-fondo);z-index:100;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
 #loadScreen.hide{opacity:0;transition:opacity .4s ease;pointer-events:none}
-.spin-logo{display:none}
+.spin-logo{box-shadow:0 8px 24px color-mix(in srgb,var(--c-prim) 30%,transparent)}
+/* which loader element is shown — driven by mode */
+.modo-liaxa   .spin-logo{display:none}
+.modo-cliente .liaxa-flip{display:none}
+/* how the logo is treated — driven by its own aspect ratio */
+.logo-cuadrado .spin-logo{width:72px;height:72px;border-radius:50%;object-fit:cover;
+  animation:spin-pulse 1.4s ease-in-out infinite}
+.logo-ancho    .spin-logo{width:auto;height:56px;border-radius:0;object-fit:contain;
+  animation:flipY 1.6s ease-in-out infinite}
+.logo-cuadrado .logo{border-radius:50%;object-fit:cover}
+.logo-ancho    .logo{border-radius:0;object-fit:contain}
+@keyframes spin-pulse{
+  0%{transform:rotate(0deg) scale(1)}
+  50%{transform:rotate(180deg) scale(1.08)}
+  100%{transform:rotate(360deg) scale(1)}
+}
 .liaxa-flip{
   font-family:'Georgia',serif;font-size:2.2rem;font-weight:700;
   color:#E8A020;letter-spacing:3px;
@@ -185,9 +200,10 @@ footer a{color:var(--c-prim);text-decoration:none}
   border-radius:13px;padding:14px;margin:4px 0 8px;animation:rise .25s ease}
 </style>
 </head>
-<body>
+<body class="modo-cliente logo-ancho">
 <div id="loadScreen">
   <span class="liaxa-flip">LIAXA</span>
+  <img class="spin-logo" id="spinLogo" alt="">
   <div class="load-label">Cargando…</div>
 </div>
 
@@ -392,12 +408,12 @@ footer a{color:var(--c-prim);text-decoration:none}
             <div class="hint">Impide reservar dentro de este margen. Ej: 120 = mínimo 2 horas antes.</div>
           </div>
           <div class="frow">
-            <label>Cerrar HOY después de la hora (vacío = no aplica)</label>
+            <label>Cerrar HOY después de la hora (— = no aplica)</label>
             <select id="cfCorteHoy"></select>
             <div class="hint">Ej: elige 3:00 pm → pasada esa hora ya no se reserva para hoy.</div>
           </div>
           <div class="frow">
-            <label>Cerrar MAÑANA después de la hora (vacío = no aplica)</label>
+            <label>Cerrar MAÑANA después de la hora (— = no aplica)</label>
             <select id="cfCorteManana"></select>
             <div class="hint">Ej: elige 8:00 pm → pasada esa hora, mañana también se cierra.</div>
           </div>
@@ -455,6 +471,7 @@ let editEmpId = null, editSvcId = null;
 (function applyTheme(){
   document.title = CONFIG.negocio.nombre + " — Administrador";
   $("logoImg").src = CONFIG.logoBase64;
+  $("spinLogo").src = CONFIG.logoBase64;
   $("logoImg").alt = CONFIG.negocio.nombre;
   $("bizName").textContent = CONFIG.negocio.nombre;
 })();
@@ -462,7 +479,6 @@ let editEmpId = null, editSvcId = null;
 const toMin  = h => { const p = String(h).split(":"); return +p[0]*60 + +p[1]; };
 CONFIG.dayStart = typeof CONFIG.dayStart === "number" ? CONFIG.dayStart : toMin(CONFIG.dayStart);
 CONFIG.dayEnd   = typeof CONFIG.dayEnd   === "number" ? CONFIG.dayEnd   : toMin(CONFIG.dayEnd);
-// Server Config overrides the stamped defaults once data loads.
 function applyServerConfig(){
   const c = DATA.config || {};
   if(c.dia_inicio) CONFIG.dayStart = toMin(c.dia_inicio);
@@ -1098,18 +1114,12 @@ $("btnBlockDay").addEventListener("click", async ()=>{
 $("refresh").addEventListener("click",()=>loadData(true));
 
 /* ==================== AJUSTES ==================== */
-// 0..23 -> "8:00 pm"
-function hourLabel(h){
-  const ap = h >= 12 ? "pm" : "am";
-  const h12 = (h % 12) || 12;
-  return h12 + ":00 " + ap;
-}
+function hourLabel(h){ const ap=h>=12?"pm":"am"; const h12=(h%12)||12; return h12+":00 "+ap; }
 function fillCorteSelect(sel){
   let html = '<option value="">— sin corte —</option>';
   for(let h=0; h<24; h++) html += `<option value="${h}">${hourLabel(h)}</option>`;
   sel.innerHTML = html;
 }
-
 function fillReglas(){
   fillCorteSelect($("cfCorteHoy"));
   fillCorteSelect($("cfCorteManana"));
@@ -1118,11 +1128,9 @@ function fillReglas(){
   $("cfCorteHoy").value    = (c.corte_hoy != null ? String(c.corte_hoy) : "");
   $("cfCorteManana").value = (c.corte_manana != null ? String(c.corte_manana) : "");
 }
-
 async function saveReglas(){
   const err = $("cfErr"); err.style.display="none";
   const cfg = {
-    // cfgSave_ validates every field, so we must send the current values of all of them
     slot_min:         DATA.config.slot_min || 30,
     dias_disponibles: DATA.config.dias_disponibles || 14,
     dia_inicio:       DATA.config.dia_inicio || "9:00",
@@ -1137,9 +1145,7 @@ async function saveReglas(){
   if(j.ok){
     const ok=$("cfConfirm"); ok.style.display="inline"; setTimeout(()=>ok.style.display="none",2500);
     await loadData(true);
-  }else{
-    err.textContent = j.error || "No se pudo guardar."; err.style.display="block";
-  }
+  }else{ err.textContent = j.error || "No se pudo guardar."; err.style.display="block"; }
 }
 
 function renderAjustes(){
