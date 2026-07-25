@@ -120,10 +120,25 @@ footer a{color:var(--c-prim);text-decoration:none}
 .loading{text-align:center;padding:60px 0;color:var(--c-texto-s)}
 
 /* Fullscreen loader */
-#loadScreen{position:fixed;inset:0;background:#1B2B52;z-index:100;
+#loadScreen{position:fixed;inset:0;background:var(--c-fondo);z-index:100;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
 #loadScreen.hide{opacity:0;transition:opacity .4s ease;pointer-events:none}
-.spin-logo{display:none}
+.spin-logo{box-shadow:0 8px 24px color-mix(in srgb,var(--c-prim) 30%,transparent)}
+/* which loader element is shown — driven by mode */
+.modo-liaxa   .spin-logo{display:none}
+.modo-cliente .liaxa-flip{display:none}
+/* how the logo is treated — driven by its own aspect ratio */
+.logo-cuadrado .spin-logo{width:72px;height:72px;border-radius:50%;object-fit:cover;
+  animation:spin-pulse 1.4s ease-in-out infinite}
+.logo-ancho    .spin-logo{width:auto;height:56px;border-radius:0;object-fit:contain;
+  animation:flipY 1.6s ease-in-out infinite}
+.logo-cuadrado .logo{border-radius:50%;object-fit:cover}
+.logo-ancho    .logo{border-radius:0;object-fit:contain}
+@keyframes spin-pulse{
+  0%{transform:rotate(0deg) scale(1)}
+  50%{transform:rotate(180deg) scale(1.08)}
+  100%{transform:rotate(360deg) scale(1)}
+}
 .liaxa-flip{
   font-family:'Georgia',serif;font-size:2.2rem;font-weight:700;
   color:#E8A020;letter-spacing:3px;
@@ -142,9 +157,10 @@ footer a{color:var(--c-prim);text-decoration:none}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
-<body>
+<body class="modo-cliente logo-ancho">
 <div id="loadScreen">
   <span class="liaxa-flip">LIAXA</span>
+  <img class="spin-logo" id="spinLogo" alt="">
   <div class="load-label">Cargando…</div>
 </div>
 
@@ -249,6 +265,7 @@ let sel = { cat:null, item:null, emp:null, date:null, time:null, candidates:[] }
 (function applyTheme(){
   document.title = CONFIG.negocio.nombre + " — Reservaciones";
   $("logoImg").src = CONFIG.logoBase64;
+  $("spinLogo").src = CONFIG.logoBase64;
   $("logoImg").alt = CONFIG.negocio.nombre;
   $("bizName").textContent = CONFIG.negocio.nombre;
   $("bizTagline").textContent = CONFIG.negocio.tagline;
@@ -420,24 +437,16 @@ function renderEmployees(){
   });
 }
 
-/* ---------- ventana de anticipacion (buffer + cortes) ----------
-   Devuelve el instante mas temprano en que se puede reservar. */
+/* ---------- ventana de anticipacion (buffer + cortes) ---------- */
 function earliestBookable(){
   const now = new Date();
   let earliest = new Date(now.getTime() + (SCFG.buffer_min||0)*60000);
   const startOfDay = k => { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+k); return d; };
-  if(SCFG.corte_hoy != null && now.getHours() >= SCFG.corte_hoy){
-    const t = startOfDay(1); if(t > earliest) earliest = t;
-  }
-  if(SCFG.corte_manana != null && now.getHours() >= SCFG.corte_manana){
-    const t = startOfDay(2); if(t > earliest) earliest = t;
-  }
+  if(SCFG.corte_hoy != null && now.getHours() >= SCFG.corte_hoy){ const x=startOfDay(1); if(x>earliest) earliest=x; }
+  if(SCFG.corte_manana != null && now.getHours() >= SCFG.corte_manana){ const x=startOfDay(2); if(x>earliest) earliest=x; }
   return earliest;
 }
-function dayHasBookableFloor(d, floor){
-  const end = new Date(d); end.setHours(23,59,59,999);
-  return end >= floor;
-}
+function dayHasBookableFloor(d, floor){ const end=new Date(d); end.setHours(23,59,59,999); return end>=floor; }
 
 /* ---------- paso 4: días ---------- */
 function empsForSlotSearch(){
