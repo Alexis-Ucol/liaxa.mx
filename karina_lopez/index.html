@@ -192,7 +192,7 @@ footer a{color:var(--c-prim);text-decoration:none}
     </section>
 
     <section class="step" id="stepDay">
-      <div class="step-label"><span class="spark">✦</span> Elige el día</div>
+      <div class="step-label"><span class="spark">✦</span> <span id="dayLabel">Elige el día</span></div>
       <div class="days" id="dayStrip"></div>
     </section>
 
@@ -352,7 +352,7 @@ async function loadData(){
   $("booking").style.display = "block";
   $("loadScreen").classList.add("hide");
   setTimeout(()=>{ $("loadScreen").style.display="none"; }, 420);
-  renderServices();
+  startFlow();
 }
 
 /* ---------- navegación ---------- */
@@ -363,6 +363,60 @@ function resetFrom(step){
 }
 
 /* ---------- paso 1: categorías ---------- */
+// Total individual services across all categories (a category may hold several).
+function allServiceItems(){
+  const out = [];
+  CATEGORIAS.forEach(c => c.items.forEach(it => out.push({cat:c, it})));
+  return out;
+}
+
+// Adaptive entry: skip any step that has only one option, and frame the
+// single-service / single-person business cleanly. All from live data —
+// no config. Re-derives every load, so adding staff/services later just works.
+function startFlow(){
+  const items = allServiceItems();
+  const staff = EMPLEADOS;  // already filtered to active in parseEmpleados
+
+  // hide every step to start; we reveal the right entry step below
+  ["stepSvc","stepSub","stepEmp","stepDay","stepTime"].forEach(s=>$(s).classList.remove("on"));
+
+  // --- service dimension ---
+  if(items.length === 1){
+    // exactly one service in the whole business: auto-select it, no chooser
+    const {cat, it} = items[0];
+    sel.cat = cat;
+    sel.item = { nombre: itemLabel(cat, it), duracion: it.duracion, precio: it.precio };
+  }
+
+  // --- staff dimension ---
+  const soloStaff = staff.length === 1;
+  if(soloStaff){
+    sel.emp = staff[0].id;
+    // quiet "con <name>" under the header, so it stays personal without a step
+  }
+
+  // --- choose the entry step ---
+  if(items.length !== 1){
+    // multiple services: normal service chooser first
+    renderServices();
+    $("stepSvc").classList.add("on");
+    return;
+  }
+  // one service is already selected. Next real choice is staff (if >1).
+  if(!soloStaff){
+    renderEmployees();
+    $("stepEmp").classList.add("on");
+    go("stepEmp");
+    return;
+  }
+  // one service AND one person: no choices left — straight to the calendar,
+  // framed as "Agenda tu cita".
+  $("dayLabel").textContent = "Agenda tu cita";
+  renderDays();
+  $("stepDay").classList.add("on");
+  go("stepDay");
+}
+
 function renderServices(){
   $("svcGrid").innerHTML = CATEGORIAS.map(c=>{
     const single = c.items.length === 1;
@@ -418,6 +472,17 @@ function renderEmployees(){
   const q = qualified();
   if(!q.length){
     $("empGrid").innerHTML = `<div class="empty-msg" style="grid-column:1/-1">Por el momento nadie ofrece este servicio. Elige otro ✦</div>`;
+    return;
+  }
+  // Only one person can do this service: no choice to make. Auto-select and
+  // jump to the calendar, showing "con <name>" for context instead of a step.
+  if(q.length === 1){
+    sel.emp = q[0].id;
+    resetFrom("stepDay");
+    renderDays();
+    $("stepEmp").classList.remove("on");
+    $("stepDay").classList.add("on");
+    go("stepDay");
     return;
   }
   let html = "";
