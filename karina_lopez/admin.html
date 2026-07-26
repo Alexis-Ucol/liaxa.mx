@@ -229,8 +229,7 @@ footer a{color:var(--c-prim);text-decoration:none}
       </div>
 
       <div class="bar">
-        <input type="text" id="dateRange" placeholder="Selecciona un rango" readonly style="flex:1;cursor:pointer">
-        <button class="icon-btn" id="refresh" title="Actualizar">⟳</button>
+        <input type="text" id="dateRange" placeholder="Selecciona un rango" readonly style="flex:1;cursor:pointer;text-align:center">
       </div>
 
       <div class="card">
@@ -615,7 +614,7 @@ async function loadData(silent){
     fillBlockSelects();
     renderNuevaCita();
   }catch(e){
-    $("loadScreen").querySelector(".load-label").textContent="Sin conexión. Presiona ⟳ para reintentar.";
+    $("loadScreen").querySelector(".load-label").textContent="Sin conexión. Recarga la página para reintentar.";
     return;
   }
   $("mainHeader").style.display="flex";
@@ -972,6 +971,19 @@ const fpBlock = flatpickr($("bDateRange"), {
   disableMobile: true, minDate: "today"
 });
 
+// "Hoy" / "Mañana" for the next two days, otherwise the full date.
+function relDayLabel(d){
+  const t0 = new Date(); t0.setHours(0,0,0,0);
+  const dd = new Date(d);  dd.setHours(0,0,0,0);
+  const diff = Math.round((dd - t0) / 86400000);
+  // Hoy/Mañana lead, with the date beside them so the owner never has to
+  // work out "what's tomorrow's date". Other days keep the full weekday+date.
+  const fecha = d.toLocaleDateString("es-MX",{day:"numeric",month:"long"});
+  if(diff === 0) return "Hoy · " + fecha;
+  if(diff === 1) return "Mañana · " + fecha;
+  return d.toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"});
+}
+
 function renderCitas(){
   const sel = fpCitas.selectedDates;
   const from = sel.length >= 1 ? dateKey(sel[0]) : dateKey(new Date());
@@ -991,7 +1003,7 @@ function renderCitas(){
 
   $("citasList").innerHTML = citas.length ? Object.keys(byDate).sort().map(fecha=>{
     const d = new Date(fecha+"T12:00:00");
-    const dLabel = d.toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"});
+    const dLabel = relDayLabel(d);
     const rows = byDate[fecha].map(b=>`
       <div class="cita" id="citaRow_${b.id}">
         <div class="hora">${fmt12(toMin(b.hora_inicio))}</div>
@@ -1113,7 +1125,6 @@ $("btnBlockDay").addEventListener("click", async ()=>{
   else { toast(fechas.length>1 ? `${fechas.length} días bloqueados` : "Día bloqueado"); await loadData(); }
 });
 
-$("refresh").addEventListener("click",()=>loadData(true));
 
 /* ==================== AJUSTES ==================== */
 function hourLabel(h){ const ap=h>=12?"pm":"am"; const h12=(h%12)||12; return h12+":00 "+ap; }
