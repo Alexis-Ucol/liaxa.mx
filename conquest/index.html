@@ -870,21 +870,27 @@
 
   /* ---------- Comunicación con la hoja ---------- */
 
-  /* google.script.run sólo existe cuando la página la sirve Apps Script.
+  /* google.script.run sólo existe cuando la página la sirve Apps Script, y
+     aparece unos milisegundos después de cargar el documento. Por eso se
+     comprueba en cada llamada y no una sola vez al arrancar.
      Si el archivo se abre directamente, la aplicación corre con datos de
      muestra para poder revisar el diseño sin tocar la hoja. */
-  var SIN_SERVIDOR = (typeof google === 'undefined' ||
-                      typeof google.script === 'undefined' ||
-                      typeof google.script.run === 'undefined');
+  function hayServidor(){
+    return (typeof google !== 'undefined' &&
+            typeof google.script !== 'undefined' &&
+            typeof google.script.run !== 'undefined');
+  }
 
   function servidor(funcion, argumentos, exito, fallo){
-    if (!SIN_SERVIDOR){
+    if (hayServidor()){
       var llamada = google.script.run
         .withSuccessHandler(exito)
         .withFailureHandler(fallo);
       llamada[funcion].apply(llamada, argumentos);
       return;
     }
+    // Sin Apps Script: datos de muestra
+    $('avisoMuestra').classList.add('visible');
     setTimeout(function(){
       try { exito(muestra(funcion, argumentos)); }
       catch (e) { fallo(e); }
@@ -1343,13 +1349,23 @@
 
   /* Arranque */
 
-  if (SIN_SERVIDOR) $('avisoMuestra').classList.add('visible');
+  function arrancar(){
+    cargar(false);
+    setInterval(function(){ cargar(true); }, 25000);
+    window.addEventListener('focus', function(){ cargar(true); });
+  }
 
-  dibujar();
-  cargar(false);
-  setInterval(function(){ cargar(true); }, 25000);
+  dibujar();   // muestra el cargador mientras aparece google.script.run
 
-  window.addEventListener('focus', function(){ cargar(true); });
+  if (location.protocol === 'file:'){
+    arrancar();                       // archivo local: no hay nada que esperar
+  } else {
+    var esperas = 0;
+    (function esperarServidor(){
+      if (hayServidor() || esperas++ > 60){ arrancar(); return; }
+      setTimeout(esperarServidor, 50);
+    })();
+  }
 
 })();
 </script>
