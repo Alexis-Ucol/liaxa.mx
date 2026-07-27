@@ -664,6 +664,8 @@
     <h2 id="tituloPin">Renovar plan</h2>
     <p class="sub" id="subPin"></p>
     <div class="error-campo" id="errorPin"></div>
+    <label for="renovarTotal">Plan nuevo</label>
+    <input id="renovarTotal" type="number" min="1" max="60" inputmode="numeric">
     <label for="campoPin">PIN</label>
     <input id="campoPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
     <div class="acciones">
@@ -908,7 +910,7 @@
     visita:     ['id'],
     deshacer:   ['id'],
     archivar:   ['id', 'pin'],
-    renovar:    ['id', 'pin'],
+    renovar:    ['id', 'pin', 'total'],
     agregar:    ['nombre', 'total', 'restantes', 'pin'],
     cambiarPin: ['pinActual', 'pinNuevo']
   };
@@ -1003,6 +1005,8 @@
     if (funcion === 'renovar'){
       if (String(args[1]).trim() !== '1234') return { ok:false, error:'PIN incorrecto.' };
       if (!m) return { ok:false, error:'Miembro no encontrado.' };
+      var nuevoTotal = parseInt(args[2], 10);
+      if (nuevoTotal >= 1) m.total = nuevoTotal;
       m.usadas = 0;
       m.fechas = [];
       return { ok:true, nombre:m.nombre, restantes:m.total, fechas:[] };
@@ -1181,9 +1185,8 @@
     if (renov){
       idRenovar = renov.dataset.renovar;
       var m = buscarMiembro(idRenovar);
-      $('subPin').textContent = m
-        ? 'Se dará un plan nuevo de ' + m.total + ' visitas a ' + m.nombre + '.'
-        : '';
+      $('subPin').textContent = m ? 'Renovar el plan de ' + m.nombre + '.' : '';
+      $('renovarTotal').value = m ? m.total : 10;
       $('campoPin').value = '';
       errorEn('errorPin', '');
       abrir('ventanaPin');
@@ -1302,13 +1305,15 @@
 
   $('confirmarPin').addEventListener('click', function(){
     var pin = $('campoPin').value.trim();
+    var total = parseInt($('renovarTotal').value, 10);
+    if (!(total >= 1)){ errorEn('errorPin', 'El plan debe ser de al menos 1 visita.'); return; }
     if (pin.length < 4){ errorEn('errorPin', 'El PIN es de 4 dígitos.'); return; }
 
     var boton = this;
     boton.disabled = true;
     boton.textContent = 'Renovando…';
 
-    servidor('renovar', [idRenovar, pin],
+    servidor('renovar', [idRenovar, pin, total],
       function(r){
         boton.disabled = false;
         boton.textContent = 'Renovar';
