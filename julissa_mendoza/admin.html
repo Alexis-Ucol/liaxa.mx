@@ -22,13 +22,17 @@ body{font-family:'Jost',sans-serif;background:var(--c-fondo);color:var(--c-texto
 
 header{display:flex;align-items:center;gap:14px;margin-bottom:20px}
 .logo{width:auto;height:calc(40px * var(--logo-scale));border-radius:0;object-fit:contain;}
-.header-text{flex:1}
-h1{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:700;line-height:1.2;display:flex;align-items:center;gap:8px}
+.header-text{flex:1;min-width:0}
+h1{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:700;line-height:1.2;display:flex;align-items:center;gap:8px;min-width:0;overflow-wrap:anywhere}
 .sub{color:var(--c-texto-s);font-size:.8rem;letter-spacing:2px;text-transform:uppercase}
 .gear-btn{background:none;border:1.5px solid var(--c-linea);border-radius:8px;padding:4px 7px;
   cursor:pointer;font-size:.85rem;color:var(--c-texto-s);line-height:1;transition:all .2s;flex-shrink:0}
 .gear-btn:hover{border-color:var(--c-prim);color:var(--c-prim)}
 .gear-btn.on{border-color:var(--c-prim);background:var(--c-prim);color:#fff}
+@media(max-width:520px){
+  h1{font-size:1.15rem}
+  .logo{max-width:38vw}
+}
 
 .pinbox{max-width:320px;margin:80px auto;text-align:center}
 .pinbox h2{font-family:'Playfair Display',serif;margin-bottom:18px}
@@ -142,6 +146,10 @@ select:focus, input:focus{outline:none;border-color:var(--c-prim)}
   border:1.5px solid var(--c-linea);border-radius:10px;padding:8px 12px;cursor:pointer;
   font-size:.9rem;text-transform:none;letter-spacing:0;color:var(--c-texto)}
 .checks input{accent-color:var(--c-prim-f)}
+.vis-row{display:flex;align-items:center;gap:10px;padding:11px 0;font-size:.95rem;cursor:pointer;
+  border-bottom:1px solid var(--c-linea)}
+.vis-row:last-of-type{border-bottom:none}
+.vis-row input{accent-color:var(--c-prim-f);width:18px;height:18px;flex-shrink:0}
 .hgrid{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:center}
 .hgrid .dlab{font-size:.85rem;color:var(--c-texto-s);text-transform:uppercase;letter-spacing:1px}
 .hgrid input{width:100%}
@@ -407,8 +415,8 @@ footer a{color:var(--c-prim);text-decoration:none}
             <input type="number" id="sfDur" min="5" step="5" placeholder="60">
           </div>
           <div class="frow">
-            <label>Precio (MXN)</label>
-            <input type="number" id="sfPrecio" min="0" step="10" placeholder="350">
+            <label>Precio (MXN · opcional)</label>
+            <input type="number" id="sfPrecio" min="0" step="10" placeholder="Sin precio">
           </div>
           <div class="fbtns">
             <button class="btn" id="sfSave">Guardar</button>
@@ -416,6 +424,22 @@ footer a{color:var(--c-prim);text-decoration:none}
           </div>
           <div class="f-err" id="sfErr"></div>
         </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="collapse-hdr" id="hdrVista">
+          <h3 style="margin:0"><span class="spark">✦</span> <span class="grow">Visualización para clientes</span></h3>
+          <span class="chev">▾</span>
+        </div>
+        <div class="collapse-body" id="bodyVista">
+          <label class="vis-row"><input type="checkbox" id="cfMostrarDur"> Mostrar la duración de cada servicio</label>
+          <label class="vis-row"><input type="checkbox" id="cfMostrarPrecio"> Mostrar el precio de cada servicio</label>
+          <div class="hint" style="margin-top:8px">Desmárcalos para ocultar esa información en la página de reservación de tus clientes. Tu panel no cambia: aquí siempre ves duración y precio.</div>
+          <div class="fbtns">
+            <button class="btn" id="cfVistaSave">Guardar</button>
+            <span id="cfVistaConfirm" style="display:none;color:var(--exito);font-size:.9rem;font-weight:600;align-self:center">✓ Guardado</span>
+          </div>
         </div>
       </div>
 
@@ -484,6 +508,10 @@ const CONFIG = {
 /* ╚══════════════ FIN DE LA CONFIGURACIÓN ══════════════════╝ */
 
 const $ = id => document.getElementById(id);
+// El precio es opcional: sólo se considera "puesto" si es un número > 0.
+const hayPrecio = p => p!=="" && p!=null && !isNaN(Number(p)) && Number(p) > 0;
+// Un "mostrar_*" se considera activo salvo que esté explícitamente apagado.
+const cfgShow = v => !(v===false || v==="NO" || v==="no" || v===0 || v==="0");
 const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 const DIA_KEY = ["lun","mar","mie","jue","vie","sab","dom"];
 const DIA_NOM = { lun:"Lun", mar:"Mar", mie:"Mié", jue:"Jue", vie:"Vie", sab:"Sáb", dom:"Dom" };
@@ -690,8 +718,10 @@ initCollapse("hdrNuevaCita","bodyNuevaCita");
 initCollapse("hdrBloquear","bodyBloquear");
 initCollapse("hdrEmpleados","bodyEmpleados");
 initCollapse("hdrServicios","bodyServicios");
+initCollapse("hdrVista","bodyVista");
 initCollapse("hdrReglas","bodyReglas");
-$("cfSave").addEventListener("click", saveReglas);
+$("cfSave").addEventListener("click", ()=>saveReglas($("cfConfirm")));
+$("cfVistaSave").addEventListener("click", ()=>saveReglas($("cfVistaConfirm")));
 
 /* open agendar section when editing */
 function openNuevaCitaSection(){
@@ -1246,25 +1276,28 @@ function fillReglas(){
   $("cfBuffer").value      = (c.buffer_min != null ? c.buffer_min : 0);
   $("cfCorteHoy").value    = (c.corte_hoy != null ? String(c.corte_hoy) : "");
   $("cfCorteManana").value = (c.corte_manana != null ? String(c.corte_manana) : "");
+  $("cfMostrarDur").checked    = cfgShow(c.mostrar_duracion);
+  $("cfMostrarPrecio").checked = cfgShow(c.mostrar_precio);
 }
-async function saveReglas(){
+async function saveReglas(confirmEl){
+  confirmEl = (confirmEl && confirmEl.style) ? confirmEl : $("cfConfirm");
   const err = $("cfErr"); err.style.display="none";
   const cfg = {
     slot_min:         DATA.config.slot_min || 30,
     dias_disponibles: DATA.config.dias_disponibles || 14,
     dia_inicio:       DATA.config.dia_inicio || "9:00",
     dia_fin:          DATA.config.dia_fin || "19:00",
-    mostrar_duracion: DATA.config.mostrar_duracion === false ? "NO" : "SI",
-    mostrar_precio:   DATA.config.mostrar_precio === false ? "NO" : "SI",
+    mostrar_duracion: $("cfMostrarDur").checked ? "SI" : "NO",
+    mostrar_precio:   $("cfMostrarPrecio").checked ? "SI" : "NO",
     buffer_min:       $("cfBuffer").value === "" ? "0" : $("cfBuffer").value,
     corte_hoy:        $("cfCorteHoy").value,
     corte_manana:     $("cfCorteManana").value
   };
   const j = await post({ action:"cfg_save", cfg });
   if(j.ok){
-    const ok=$("cfConfirm"); ok.style.display="inline"; setTimeout(()=>ok.style.display="none",2500);
+    confirmEl.style.display="inline"; setTimeout(()=>confirmEl.style.display="none",2500);
     await loadData(true);
-  }else{ err.textContent = j.error || "No se pudo guardar."; err.style.display="block"; }
+  }else{ err.textContent = j.error || "No se pudo guardar."; err.style.display="block"; toast(j.error || "No se pudo guardar."); }
 }
 
 function renderAjustes(){
@@ -1416,7 +1449,7 @@ function renderSvcList(){
       return `<div class="item-row ${inact?'inactivo':''}" data-svc-row="${s.id}">
         <div>
           <div class="t">${esc(s.categoria)}${s.nombre?" · "+esc(s.nombre):""} ${inact?'<span class="tag off">inactivo</span>':''}</div>
-          <div class="d">${s.duracion_min} min · $${s.precio} MXN</div>
+          <div class="d">${s.duracion_min} min${hayPrecio(s.precio) ? " · $"+Number(s.precio)+" MXN" : ""}</div>
         </div>
         <div style="display:flex;gap:6px">
           <button class="mini suave" data-sedit="${s.id}">Editar</button>
@@ -1469,7 +1502,7 @@ function openSvcForm(id){
     </div>
     <div class="frow"><label>Tipo (opcional)</label><input type="text" class="sf-nombre" placeholder="" value="${s?esc(s.nombre):""}"></div>
     <div class="frow"><label>Duración (minutos)</label><input type="number" class="sf-dur" min="5" step="5" placeholder="60" value="${s?s.duracion_min:""}"></div>
-    <div class="frow"><label>Precio (MXN)</label><input type="number" class="sf-precio" min="0" step="10" placeholder="350" value="${s?s.precio:""}"></div>
+    <div class="frow"><label>Precio (MXN · opcional)</label><input type="number" class="sf-precio" min="0" step="10" placeholder="Sin precio" value="${s&&hayPrecio(s.precio)?s.precio:""}"></div>
     <div class="fbtns"><button class="btn sf-save-btn">Guardar</button><button class="btn claro sf-cancel-btn">Cancelar</button></div>
     <div class="f-err sf-err-msg" style="display:none"></div>
   </div>`;
@@ -1504,11 +1537,11 @@ function bindInlineSvcForm(container, svcId){
     if(!categoria){ err.textContent="Elige o escribe la categoría."; err.style.display="block"; return; }
     const dur = Number(container.querySelector(".sf-dur").value);
     if(!dur||dur<5){ err.textContent="Escribe la duración."; err.style.display="block"; return; }
-    const precio = container.querySelector(".sf-precio").value;
-    if(precio===""||isNaN(Number(precio))){ err.textContent="Escribe el precio."; err.style.display="block"; return; }
+    const precio = container.querySelector(".sf-precio").value.trim();
+    if(precio!=="" && isNaN(Number(precio))){ err.textContent="El precio debe ser un número (o déjalo vacío)."; err.style.display="block"; return; }
     const prev = DATA.servicios.find(x=>x.id===svcId);
     const svc = { id:svcId, categoria, nombre:container.querySelector(".sf-nombre").value.trim(),
-      duracion_min:dur, precio:Number(precio), activo: prev?prev.activo:"SI" };
+      duracion_min:dur, precio: precio==="" ? "" : Number(precio), activo: prev?prev.activo:"SI" };
     const j = await post({action:"svc_save", svc});
     if(j.ok){ toast("Servicio guardado"); container.style.display="none"; editSvcId=null; await loadData(); }
     else { err.textContent=j.error; err.style.display="block"; }
@@ -1530,11 +1563,11 @@ $("sfSave").addEventListener("click", async ()=>{
   if(!categoria){ err.textContent="Elige o escribe la categoría."; err.style.display="block"; return; }
   const dur = Number($("sfDur").value);
   if(!dur || dur < 5){ err.textContent="Escribe la duración en minutos."; err.style.display="block"; return; }
-  const precio = $("sfPrecio").value;
-  if(precio === "" || isNaN(Number(precio))){ err.textContent="Escribe el precio."; err.style.display="block"; return; }
+  const precio = $("sfPrecio").value.trim();
+  if(precio !== "" && isNaN(Number(precio))){ err.textContent="El precio debe ser un número (o déjalo vacío)."; err.style.display="block"; return; }
 
   const svc = { categoria, nombre: $("sfNombre").value.trim(),
-    duracion_min: dur, precio: Number(precio), activo: "SI" };
+    duracion_min: dur, precio: precio==="" ? "" : Number(precio), activo: "SI" };
   if(editSvcId){
     const prev = DATA.servicios.find(x=>x.id===editSvcId);
     svc.id = editSvcId;
