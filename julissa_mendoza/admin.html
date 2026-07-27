@@ -145,6 +145,16 @@ select:focus, input:focus{outline:none;border-color:var(--c-prim)}
 .hgrid{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:center}
 .hgrid .dlab{font-size:.85rem;color:var(--c-texto-s);text-transform:uppercase;letter-spacing:1px}
 .hgrid input{width:100%}
+.hor-cell{display:flex;flex-direction:column;gap:6px}
+.hor-toggle{display:inline-flex;align-items:center;gap:6px;font-size:.9rem;color:var(--c-texto);cursor:pointer}
+.hor-ranges{display:flex;flex-direction:column;gap:6px}
+.hor-range{display:flex;align-items:center;gap:6px}
+.hor-range select{flex:1;min-width:0;padding:8px 6px;border:1.5px solid var(--c-linea);border-radius:10px;
+  font-family:'Jost',sans-serif;font-size:.9rem;color:var(--c-texto);background:var(--c-crema)}
+.hor-dash{color:var(--c-texto-s)}
+.hor-rm{border:none;background:none;color:var(--peligro);font-size:1.2rem;cursor:pointer;padding:0 4px;line-height:1}
+.hor-add{align-self:flex-start;border:none;background:none;color:var(--c-prim-f);font-size:.85rem;cursor:pointer;padding:2px 0}
+.hgrid{align-items:start}
 .fbtns{display:flex;gap:8px;margin-top:14px}
 .f-err{color:var(--peligro);font-size:.88rem;margin-top:10px;display:none}
 .hint{font-size:.8rem;color:var(--c-texto-s);margin-top:4px}
@@ -198,7 +208,12 @@ footer a{color:var(--c-prim);text-decoration:none}
   animation:rise .3s ease}
 /* Flatpickr theme overrides */
 .flatpickr-calendar{font-family:'Jost',sans-serif;border:1.5px solid var(--c-linea);
-  border-radius:16px;box-shadow:0 8px 24px rgba(70,36,47,.10);padding:6px}
+  border-radius:16px;box-shadow:0 8px 24px rgba(70,36,47,.10);padding:6px;
+  width:auto;max-width:none;box-sizing:content-box}
+/* let the 7-day grid size naturally so the last column isn't clipped */
+.flatpickr-calendar .dayContainer{width:auto;min-width:0;max-width:none}
+.flatpickr-rContainer,.flatpickr-days{width:auto}
+.flatpickr-day{max-width:none}
 .flatpickr-day.selected,.flatpickr-day.startRange,.flatpickr-day.endRange{
   background:var(--c-prim-f) !important;border-color:var(--c-prim-f) !important;color:#fff}
 .flatpickr-day.inRange{background:var(--c-suave) !important;border-color:var(--c-suave) !important;color:var(--c-texto)}
@@ -355,7 +370,7 @@ footer a{color:var(--c-prim);text-decoration:none}
           <div class="frow">
             <label>Horario (vacío = descansa · turno partido con coma)</label>
             <div class="hgrid" id="efHorario"></div>
-            <div class="hint">Ejemplos: 9:00-19:00 &nbsp;·&nbsp; 10:00-14:00, 16:00-18:00</div>
+            <div class="hint">Marca “Abierto” y elige las horas. Usa “+ Agregar turno” para un horario partido (con descanso a media jornada).</div>
           </div>
           <div class="fbtns">
             <button class="btn" id="efSave">Guardar</button>
@@ -472,6 +487,91 @@ const $ = id => document.getElementById(id);
 const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 const DIA_KEY = ["lun","mar","mie","jue","vie","sab","dom"];
 const DIA_NOM = { lun:"Lun", mar:"Mar", mie:"Mié", jue:"Jue", vie:"Vie", sab:"Sáb", dom:"Dom" };
+
+// ---- AM/PM schedule pickers (produce the SAME stored string the parser reads) ----
+function _timeOptsHTML(selMin){
+  let html="";
+  for(let m=0;m<24*60;m+=15){
+    let h=Math.floor(m/60), mm=String(m%60).padStart(2,"0");
+    const ap=h>=12?"pm":"am", h12=h%12||12;
+    html += `<option value="${m}"${m===selMin?" selected":""}>${h12}:${mm} ${ap}</option>`;
+  }
+  return html;
+}
+// stored string "9:00-19:00" or "10:00-14:00, 16:00-18:00" -> [{open,close}] in minutes
+function horParse(str){
+  if(!str || !String(str).trim()) return [];
+  return String(str).split(",").map(r=>{
+    const [a,b]=r.split("-");
+    return { open: toMin(a.trim()), close: toMin(b.trim()) };
+  });
+}
+// [{open,close}] -> stored string (byte-compatible with what empWindows expects)
+function horSerialize(ranges){
+  if(!ranges.length) return "";
+  return ranges.map(r=> toHHMM(r.open)+"-"+toHHMM(r.close)).join(", ");
+}
+// Build one day's picker cell. dataDia carries the day key; state lives in the DOM.
+function horCellHTML(diaKey, str){
+  const ranges = horParse(str);
+  const abierto = ranges.length > 0;
+  const r1 = ranges[0] || { open:540, close:1140 };   // default 9:00–19:00
+  const r2 = ranges[1] || null;
+  const rangeRow = (r, idx, removable) => `
+    <div class="hor-range" data-idx="${idx}">
+      <select class="hor-open">${_timeOptsHTML(r.open)}</select>
+      <span class="hor-dash">–</span>
+      <select class="hor-close">${_timeOptsHTML(r.close)}</select>
+      ${removable ? `<button type="button" class="hor-rm" title="Quitar turno">×</button>` : ``}
+    </div>`;
+  return `
+    <div class="hor-cell" data-dia="${diaKey}">
+      <label class="hor-toggle"><input type="checkbox" class="hor-abierto" ${abierto?"checked":""}> Abierto</label>
+      <div class="hor-ranges" style="${abierto?"":"display:none"}">
+        ${rangeRow(r1,0,false)}
+        ${r2 ? rangeRow(r2,1,true) : ``}
+      </div>
+      <button type="button" class="hor-add" style="${abierto && !r2 ? "":"display:none"}">+ Agregar turno</button>
+    </div>`;
+}
+// Read a rendered cell back into the stored string.
+function horCellValue(cell){
+  const abierto = cell.querySelector(".hor-abierto").checked;
+  if(!abierto) return "";
+  const ranges = [...cell.querySelectorAll(".hor-range")].map(rr=>({
+    open: Number(rr.querySelector(".hor-open").value),
+    close: Number(rr.querySelector(".hor-close").value)
+  }));
+  return horSerialize(ranges);
+}
+// Wire toggle / add / remove behaviour on a container holding hor-cells.
+function bindHorCells(container){
+  container.querySelectorAll(".hor-cell").forEach(cell=>{
+    const rangesBox = cell.querySelector(".hor-ranges");
+    const addBtn = cell.querySelector(".hor-add");
+    cell.querySelector(".hor-abierto").addEventListener("change", e=>{
+      const on = e.target.checked;
+      rangesBox.style.display = on ? "" : "none";
+      addBtn.style.display = (on && cell.querySelectorAll(".hor-range").length<2) ? "" : "none";
+    });
+    addBtn.addEventListener("click", ()=>{
+      if(cell.querySelectorAll(".hor-range").length>=2) return;
+      const wrap=document.createElement("div");
+      wrap.innerHTML = `<div class="hor-range" data-idx="1">
+        <select class="hor-open">${_timeOptsHTML(840)}</select>
+        <span class="hor-dash">–</span>
+        <select class="hor-close">${_timeOptsHTML(1080)}</select>
+        <button type="button" class="hor-rm" title="Quitar turno">×</button></div>`;
+      const row = wrap.firstElementChild;
+      rangesBox.appendChild(row);
+      addBtn.style.display="none";
+      row.querySelector(".hor-rm").addEventListener("click", ()=>{ row.remove(); addBtn.style.display=""; });
+    });
+    cell.querySelectorAll(".hor-rm").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ btn.closest(".hor-range").remove(); addBtn.style.display=""; });
+    });
+  });
+}
 
 let DATA = { bookings: [], blocks: [], empleados: [], servicios: [], config: {} };
 let editEmpId = null, editSvcId = null;
@@ -1229,8 +1329,7 @@ function openEmpForm(id){
     || `<div class="hint">Primero agrega servicios en la sección de abajo.</div>`;
   const horGrid = DIA_KEY.map(d=>`
     <div class="dlab">${DIA_NOM[d]}</div>
-    <input type="text" class="ef-hor-inp" data-dia="${d}" value="${e ? esc(e[d]||"") : (d==="dom" ? "" : "9:00-19:00")}"
-      placeholder="vacío = descansa">`).join("");
+    ${horCellHTML(d, e ? (e[d]||"") : (d==="dom" ? "" : "9:00-19:00"))}`).join("");
 
   const html = `<div class="form show" style="margin-top:0;margin-bottom:4px;border-radius:13px">
     <div class="f-title">${title}</div>
@@ -1238,7 +1337,7 @@ function openEmpForm(id){
     <div class="frow"><label>Servicios que realiza</label><div class="checks ef-svcs-wrap">${svcChecks}</div></div>
     <div class="frow"><label>Horario (vacío = descansa · turno partido con coma)</label>
       <div class="hgrid ef-hor-grid">${horGrid}</div>
-      <div class="hint">Ejemplos: 9:00-19:00 &nbsp;·&nbsp; 10:00-14:00, 16:00-18:00</div>
+      <div class="hint">Marca “Abierto” y elige las horas. Usa “+ Agregar turno” para un horario partido (con descanso a media jornada).</div>
     </div>
     <div class="fbtns"><button class="btn ef-save-btn">Guardar</button><button class="btn claro ef-cancel-btn">Cancelar</button></div>
     <div class="f-err ef-err-msg" style="display:none"></div>
@@ -1246,13 +1345,14 @@ function openEmpForm(id){
 
   if(id){
     const slot = document.getElementById("empInline_"+id);
-    if(slot){ slot.innerHTML = html; slot.style.display="block"; slot.querySelector(".ef-nombre-inp").focus(); bindInlineEmpForm(slot, id); }
+    if(slot){ slot.innerHTML = html; slot.style.display="block"; slot.querySelector(".ef-nombre-inp").focus(); bindHorCells(slot); bindInlineEmpForm(slot, id); }
   } else {
     // new emp: use the legacy #empForm
     $("empFormTitle").textContent = title;
     $("efNombre").value = "";
     $("efServicios").innerHTML = svcChecks;
     $("efHorario").innerHTML = horGrid;
+    bindHorCells($("efHorario"));
     $("efErr").style.display="none";
     $("empForm").classList.add("show");
     $("efNombre").focus();
@@ -1268,7 +1368,7 @@ function bindInlineEmpForm(container, empId){
     const emp = { id:empId, nombre, servicios };
     const prev = DATA.empleados.find(x=>x.id===empId);
     emp.activo = prev ? prev.activo : "SI";
-    container.querySelectorAll(".ef-hor-inp").forEach(i=>{ emp[i.dataset.dia] = i.value.trim(); });
+    container.querySelectorAll(".hor-cell").forEach(cell=>{ emp[cell.dataset.dia] = horCellValue(cell); });
     const j = await post({action:"emp_save", emp});
     if(j.ok){ toast("Personal guardado"); container.style.display="none"; editEmpId=null; await loadData(); }
     else { err.textContent=j.error; err.style.display="block"; }
@@ -1290,7 +1390,7 @@ $("efSave").addEventListener("click", async ()=>{
     emp.id = editEmpId;
     emp.activo = prev ? prev.activo : "SI";
   }
-  $("efHorario").querySelectorAll("input[data-dia]").forEach(i=>{ emp[i.dataset.dia] = i.value.trim(); });
+  $("efHorario").querySelectorAll(".hor-cell").forEach(cell=>{ emp[cell.dataset.dia] = horCellValue(cell); });
 
   const j = await post({action:"emp_save", emp});
   if(j.ok){
