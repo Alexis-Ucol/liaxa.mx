@@ -616,7 +616,7 @@
 
 <div class="aviso-conexion" id="avisoConexion">Sin conexión con la hoja. Los datos pueden no estar actualizados.</div>
 
-<div class="aviso-conexion" id="avisoMuestra">Modo de muestra: este archivo se abrió sin conexión con la hoja. Los cambios no se guardan.</div>
+<div class="aviso-conexion" id="avisoMuestra">Modo de muestra: falta pegar la URL de la aplicación web en el archivo. Los cambios no se guardan.</div>
 
 <main class="lista" id="lista" aria-live="polite"></main>
 
@@ -704,6 +704,14 @@
 <script>
 (function(){
   'use strict';
+
+  /* ==================================================================
+     CONFIGURACIÓN
+     Pega aquí la URL de la aplicación web de Apps Script.
+     Termina en /exec y se obtiene en: Implementar › Gestionar
+     implementaciones. Es lo único que hay que cambiar por cliente.
+     ================================================================== */
+  var API = 'https://script.google.com/macros/s/AKfycbzHfcu2TsQRykRNXzzVgDWzjP0rP8UFjc-5T70aszkm2yrUa9TuXIpKbQZTwRUpFu8zVQ/exec';
 
   var miembros = [];
   var filtro = '';
@@ -870,31 +878,44 @@
 
   /* ---------- Comunicación con la hoja ---------- */
 
-  /* google.script.run sólo existe cuando la página la sirve Apps Script, y
-     aparece unos milisegundos después de cargar el documento. Por eso se
-     comprueba en cada llamada y no una sola vez al arrancar.
-     Si el archivo se abre directamente, la aplicación corre con datos de
-     muestra para poder revisar el diseño sin tocar la hoja. */
+  /* Mientras no se pegue la URL, la aplicación corre con datos de muestra
+     para poder revisar el diseño sin tocar la hoja. */
   function hayServidor(){
-    return (typeof google !== 'undefined' &&
-            typeof google.script !== 'undefined' &&
-            typeof google.script.run !== 'undefined');
+    return /^https:\/\/script\.google\.com\//.test(API);
   }
 
+  /* Los parámetros que espera cada acción del script. */
+  var PARAMETROS = {
+    listar:     [],
+    visita:     ['id'],
+    deshacer:   ['id'],
+    archivar:   ['id'],
+    renovar:    ['id', 'pin'],
+    agregar:    ['nombre', 'total', 'restantes'],
+    cambiarPin: ['pinActual', 'pinNuevo']
+  };
+
   function servidor(funcion, argumentos, exito, fallo){
-    if (hayServidor()){
-      var llamada = google.script.run
-        .withSuccessHandler(exito)
-        .withFailureHandler(fallo);
-      llamada[funcion].apply(llamada, argumentos);
+    if (!hayServidor()){
+      $('avisoMuestra').classList.add('visible');
+      setTimeout(function(){
+        try { exito(muestra(funcion, argumentos)); }
+        catch (e) { fallo(e); }
+      }, 260);
       return;
     }
-    // Sin Apps Script: datos de muestra
-    $('avisoMuestra').classList.add('visible');
-    setTimeout(function(){
-      try { exito(muestra(funcion, argumentos)); }
-      catch (e) { fallo(e); }
-    }, 260);
+
+    var nombres = PARAMETROS[funcion] || [];
+    var url = API + '?action=' + encodeURIComponent(funcion);
+    for (var i = 0; i < nombres.length; i++){
+      url += '&' + nombres[i] + '=' + encodeURIComponent(argumentos[i]);
+    }
+    url += '&t=' + Date.now();          // evita respuestas guardadas en caché
+
+    fetch(url, { method: 'GET', redirect: 'follow' })
+      .then(function(r){ return r.json(); })
+      .then(function(datos){ exito(datos); })
+      .catch(function(err){ fallo(err); });
   }
 
   /* ---------- Datos de muestra ---------- */
@@ -1355,17 +1376,8 @@
     window.addEventListener('focus', function(){ cargar(true); });
   }
 
-  dibujar();   // muestra el cargador mientras aparece google.script.run
-
-  if (location.protocol === 'file:'){
-    arrancar();                       // archivo local: no hay nada que esperar
-  } else {
-    var esperas = 0;
-    (function esperarServidor(){
-      if (hayServidor() || esperas++ > 60){ arrancar(); return; }
-      setTimeout(esperarServidor, 50);
-    })();
-  }
+  dibujar();   // muestra el cargador mientras llega la primera respuesta
+  arrancar();
 
 })();
 </script>
