@@ -1496,11 +1496,10 @@ function openSvcForm(id){
   const html = `<div class="form show" style="margin-top:0;margin-bottom:4px;border-radius:13px">
     <div class="f-title">${title}</div>
     <div class="frow">
-      <label>Categoría</label>
-      <select class="sf-cat-sel">${catOpts}</select>
-      <input type="text" class="sf-cat-new" placeholder="Nombre de la nueva categoría" style="display:none;margin-top:8px">
+      <label>Nombre del servicio</label>
+      <input type="text" class="sf-cat-name" placeholder="Ej. Consulta general" value="${s?esc(s.categoria):""}">
     </div>
-    <div class="frow"><label>Tipo (opcional)</label><input type="text" class="sf-nombre" placeholder="" value="${s?esc(s.nombre):""}"></div>
+    <div class="frow"><label>Tipo o variante (opcional)</label><input type="text" class="sf-nombre" placeholder="" value="${s?esc(s.nombre):""}"></div>
     <div class="frow"><label>Duración (minutos)</label><input type="number" class="sf-dur" min="5" step="5" placeholder="60" value="${s?s.duracion_min:""}"></div>
     <div class="frow"><label>Precio (MXN · opcional)</label><input type="number" class="sf-precio" min="0" step="10" placeholder="Sin precio" value="${s&&hayPrecio(s.precio)?s.precio:""}"></div>
     <div class="fbtns"><button class="btn sf-save-btn">Guardar</button><button class="btn claro sf-cancel-btn">Cancelar</button></div>
@@ -1511,11 +1510,6 @@ function openSvcForm(id){
     const slot = document.getElementById("svcInline_"+id);
     if(slot){
       slot.innerHTML = html; slot.style.display="block";
-      const catSel = slot.querySelector(".sf-cat-sel");
-      if(s) catSel.value = s.categoria;
-      catSel.addEventListener("change",()=>{
-        slot.querySelector(".sf-cat-new").style.display = catSel.value==="__nueva__"?"block":"none";
-      });
       bindInlineSvcForm(slot, id);
     }
   } else {
@@ -1532,19 +1526,28 @@ function openSvcForm(id){
 function bindInlineSvcForm(container, svcId){
   container.querySelector(".sf-save-btn").addEventListener("click", async ()=>{
     const err = container.querySelector(".sf-err-msg");
-    let categoria = container.querySelector(".sf-cat-sel").value;
-    if(categoria==="__nueva__") categoria = container.querySelector(".sf-cat-new").value.trim();
-    if(!categoria){ err.textContent="Elige o escribe la categoría."; err.style.display="block"; return; }
+    const categoria = container.querySelector(".sf-cat-name").value.trim();
+    if(!categoria){ err.textContent="Escribe el nombre del servicio."; err.style.display="block"; return; }
     const dur = Number(container.querySelector(".sf-dur").value);
     if(!dur||dur<5){ err.textContent="Escribe la duración."; err.style.display="block"; return; }
     const precio = container.querySelector(".sf-precio").value.trim();
     if(precio!=="" && isNaN(Number(precio))){ err.textContent="El precio debe ser un número (o déjalo vacío)."; err.style.display="block"; return; }
     const prev = DATA.servicios.find(x=>x.id===svcId);
+    // If the service name changed, rename every subtype in the same group too.
+    const renaming = prev && prev.categoria !== categoria;
+    const siblings = renaming
+      ? DATA.servicios.filter(x=>x.categoria_id===prev.categoria_id && x.id!==svcId)
+      : [];
+    if(siblings.length && !confirm(`Este servicio tiene ${siblings.length+1} tipos. Se renombrarán todos a "${categoria}". ¿Continuar?`)) return;
     const svc = { id:svcId, categoria, nombre:container.querySelector(".sf-nombre").value.trim(),
       duracion_min:dur, precio: precio==="" ? "" : Number(precio), activo: prev?prev.activo:"SI" };
     const j = await post({action:"svc_save", svc});
-    if(j.ok){ toast("Servicio guardado"); container.style.display="none"; editSvcId=null; await loadData(); }
-    else { err.textContent=j.error; err.style.display="block"; }
+    if(!j.ok){ err.textContent=j.error; err.style.display="block"; return; }
+    for(const sib of siblings){
+      await post({action:"svc_save", svc:{ id:sib.id, categoria, nombre:sib.nombre,
+        duracion_min:sib.duracion_min, precio:sib.precio, activo:sib.activo }});
+    }
+    toast("Servicio guardado"); container.style.display="none"; editSvcId=null; await loadData();
   });
   container.querySelector(".sf-cancel-btn").addEventListener("click",()=>{ container.style.display="none"; editSvcId=null; });
 }
