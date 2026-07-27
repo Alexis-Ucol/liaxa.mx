@@ -674,6 +674,21 @@
   </div>
 </div>
 
+<!-- PIN para quitar -->
+<div class="fondo" id="ventanaQuitar">
+  <div class="ventana" role="dialog" aria-modal="true" aria-labelledby="tituloQuitar">
+    <h2 id="tituloQuitar">Quitar de la lista</h2>
+    <p class="sub" id="subQuitar"></p>
+    <div class="error-campo" id="errorQuitar"></div>
+    <label for="campoPinQuitar">PIN</label>
+    <input id="campoPinQuitar" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+    <div class="acciones">
+      <button class="btn-secundario" id="cancelarQuitar">Cancelar</button>
+      <button class="btn-principal" id="confirmarQuitar">Quitar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Cambio de PIN -->
 <div class="fondo" id="ventanaCambioPin">
   <div class="ventana" role="dialog" aria-modal="true" aria-labelledby="tituloCambio">
@@ -721,6 +736,7 @@
   var pendientes = {};
   var temporizadorToast = null;
   var idRenovar = null;
+  var idQuitar = null;
   var cargando = true;
 
   var $ = function(id){ return document.getElementById(id); };
@@ -891,7 +907,7 @@
     listar:     [],
     visita:     ['id'],
     deshacer:   ['id'],
-    archivar:   ['id'],
+    archivar:   ['id', 'pin'],
     renovar:    ['id', 'pin'],
     agregar:    ['nombre', 'total', 'restantes', 'pin'],
     cambiarPin: ['pinActual', 'pinNuevo']
@@ -1003,6 +1019,7 @@
     }
 
     if (funcion === 'archivar'){
+      if (String(args[1]).trim() !== '1234') return { ok:false, error:'PIN incorrecto.' };
       if (!m) return { ok:false, error:'Miembro no encontrado.' };
       m.activo = false;
       return { ok:true, nombre:m.nombre };
@@ -1179,22 +1196,16 @@
 
     var quitar = e.target.closest('[data-quitar]');
     if (quitar){
-      var id = quitar.dataset.quitar;
-      var p = buscarMiembro(id);
-      if (!p) return;
-      if (!confirm('¿Quitar a ' + p.nombre + ' de la lista?\n\nSus datos se conservan en la hoja por si regresa.')) return;
-      servidor('archivar', [id],
-        function(r){
-          if (r && r.ok){
-            mostrarToast(r.nombre + ' ya no aparece en la lista.', null, false);
-            cargar(true);
-          } else {
-            mostrarToast((r && r.error) || 'No se pudo quitar.', null, true);
-          }
-        },
-        function(){
-          mostrarToast('No se pudo quitar. Revisa la conexión.', null, true);
-        });
+      idQuitar = quitar.dataset.quitar;
+      var pq = buscarMiembro(idQuitar);
+      if (!pq) return;
+      $('subQuitar').textContent =
+        'Se quitará a ' + pq.nombre + ' de la lista. Sus datos se conservan por si regresa.';
+      $('campoPinQuitar').value = '';
+      errorEn('errorQuitar', '');
+      abrir('ventanaQuitar');
+      setTimeout(function(){ $('campoPinQuitar').focus(); }, 60);
+      return;
     }
   });
 
@@ -1320,6 +1331,44 @@
 
   $('campoPin').addEventListener('keydown', function(e){
     if (e.key === 'Enter') $('confirmarPin').click();
+  });
+
+  /* Quitar */
+
+  $('cancelarQuitar').addEventListener('click', function(){ cerrar('ventanaQuitar'); idQuitar = null; });
+
+  $('confirmarQuitar').addEventListener('click', function(){
+    var pin = $('campoPinQuitar').value.trim();
+    if (pin.length < 4){ errorEn('errorQuitar', 'El PIN es de 4 dígitos.'); return; }
+
+    var boton = this;
+    boton.disabled = true;
+    boton.textContent = 'Quitando…';
+
+    servidor('archivar', [idQuitar, pin],
+      function(r){
+        boton.disabled = false;
+        boton.textContent = 'Quitar';
+        if (r && r.ok){
+          cerrar('ventanaQuitar');
+          idQuitar = null;
+          mostrarToast(r.nombre + ' ya no aparece en la lista.', null, false);
+          cargar(true);
+        } else {
+          errorEn('errorQuitar', (r && r.error) || 'No se pudo quitar.');
+          $('campoPinQuitar').value = '';
+          $('campoPinQuitar').focus();
+        }
+      },
+      function(){
+        boton.disabled = false;
+        boton.textContent = 'Quitar';
+        errorEn('errorQuitar', 'No se pudo guardar. Revisa la conexión.');
+      });
+  });
+
+  $('campoPinQuitar').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') $('confirmarQuitar').click();
   });
 
   /* Cambio de PIN */
