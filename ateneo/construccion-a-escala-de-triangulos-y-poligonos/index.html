@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Construcción a Escala de Triángulos y Polígonos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Construcción a Escala de Triángulos y Polígonos</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 2° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Construcción a Escala de Triángulos y Polígonos</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#84246c', primaryDark:'#431136', primaryBg:'#f5e8f2',
+  accent:'#585858', accentBg:'#ededed',
+  darkPrimary:'#bb4ea0', darkPrimaryDark:'#dd7dc5', darkPrimaryBg:'#360f2d',
+  darkAccent:'#9f9f9f', darkAccentBg:'#191919',
+  pBR:132, pBG:36, pBB:108, pAR:88, pAG:88, pAB:88,
+  logoLeftB64:'data:image/jpeg;base64,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TqTOn87Zqb85xtx6+i6x25kbCyKOGFhOSyGIRNJ7QAFwbax0gldFA6YfBndC0yDow8jI9qgUihk4lVaJ8dkZSmO01TZH1T+CEWQdUEndsIG30L23ypiqJbBJDPBUxjSOnYX08wnaHdpBPSNitT7c1+OEjimxnBmiEuPRkbEbbWNADYoYw14kY1kLWBrxzgY39qkZxWTyW+rvFyhBc6e8XK1Sau/Lmgs9jgfYvbQPFko9Io49s8FRTUtK1u+SoLCBjtyS71FXk27OctjIL+EcDGCDJ/iOzf27+1fQtw3lkZOuJMujBOuNxzjf0Hego9h17PcrZwtFPb6atpWW2rkmkbIyoqtpa7YTz5G3d7VpbB5oXhbQNOA9jJGhweGyMDwHDs6V72jAQcrjVHQuUQcALlEQEREBERAREQEREBERAREQEREBeealZINoC9CIIl1paHazPNIOwtOCuxlATjXe94G7WeSpJEHTFTtZuAXbhcogIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAipyIlcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORB//2Q==', logoRightB64:'', logoAlt:'Instituto Ateneo de Colima',
+  guideTitle:{ es:'Construcción a Escala de Triángulos y Polígonos', en:'Scale Construction of Triangles and Polygons' },
+  courseName:{ es:'Matemáticas · 2° de Secundaria', en:'Mathematics · 2° de Secundaria' }, filePrefix:'mat2_t06_g02'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'mat2_t06_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Construcción a Escala de Triángulos y Polígonos','wcourse':'Matemáticas · 2° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Scale Construction of Triangles and Polygons','wcourse':'Mathematics · 2° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'mat2_t06_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'mat2_t06_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'mat2_t06_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'mat2_t06_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = (LANG==='es' ? 'Generando PDF…' : 'Generating PDF…');
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString(LANG==='es'?'es-MX':'en-US', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + currentAttempt(name, group) + '|' + correctCount + '|' + total;
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text(LANG==='es'?'ALUMNO':'STUDENT', M+4, 79); doc.text(LANG==='es'?'GRUPO':'GROUP', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(LANG==='es' ? (correctCount+' correcta(s) de '+total+' preguntas') : (correctCount+' correct out of '+total+' questions'), PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text(LANG==='es'?'RESUMEN DE PROBLEMAS':'PROBLEM SUMMARY', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text(LANG==='es'?'RESUMEN DE PROBLEMAS (continuación)':'PROBLEM SUMMARY (continued)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text((LANG==='es'?'Problema ':'Problem ')+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok ? (LANG==='es'?'Correcto':'Correct') : (LANG==='es'?'Incorrecto':'Incorrect'), PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text((LANG==='es'?'Problema ':'Problem ')+(i+1)+(LANG==='es'?' de ':' of ')+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(LANG==='es'?'PREGUNTA':'QUESTION', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize((LANG==='es'?'Alumno: ':'Student: ')+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize((LANG==='es'?'Correcto: ':'Correct: ')+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize((LANG==='es'?'Solución: ':'Solution: ')+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text(LANG==='es'?'TRABAJO DEL ALUMNO':'STUDENT WORK', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+(LANG==='es'?'  ·  Código: ':'  ·  Code: ')+code+(LANG==='es'?'  ·  Página ':'  ·  Page ')+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('mat2_t06_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;' + t('btn-pdf');
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson - OVERRIDE IN EACH GUIDE
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+
+  /* ── helpers ─────────────────────────────────────────────────────── */
+  function L(o){ if(o===null||o===undefined) return ''; if(typeof o==='string') return o; return (o[LANG]!==undefined ? o[LANG] : o.es); }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function pk(a){ return a[Math.floor(rng()*a.length)]; }
+  function cssv(n){ try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || 'transparent'; } catch(e){ return 'transparent'; } }
+  function dg(v){ return v+'°'; }
+  function n1(v){ var r=Math.round(v*100)/100; return (r===Math.round(r)) ? String(Math.round(r)) : String(r); }
+  function cm(v){ return n1(v)+' cm'; }
+  function F(){ return '700 11px "IBM Plex Sans", sans-serif'; }
+
+  var BTN  = 'min-height:44px;min-width:44px;padding:.55rem 1.1rem;border-radius:8px;border:1.5px solid var(--green);background:var(--green);color:#fff;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer';
+  var BTN2 = 'min-height:44px;min-width:44px;padding:.45rem .9rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:.9rem;font-weight:600;cursor:pointer';
+  var CHIP = 'min-height:44px;padding:.5rem .8rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;text-align:left';
+
+  function fbSet(id, ok, html){
+    var e=document.getElementById(id); if(!e) return;
+    e.className='mcfb show'; e.innerHTML=html;
+    e.style.background = ok ? 'var(--ok-bg)' : 'var(--gold-bg)';
+    e.style.color      = ok ? 'var(--ok)'    : 'var(--text2)';
+  }
+  function sec(tag,title,html){
+    var d=document.createElement('div'); d.className='section';
+    d.innerHTML='<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+html;
+    LB.appendChild(d); return d;
+  }
+  function widget(kind, html){
+    var d=document.createElement('div');
+    d.className = kind+'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.innerHTML = html;
+    LB.appendChild(d); return d;
+  }
+  function addProb(p){
+    var so = shuffle(p.options, rng);
+    problems.push({
+      title:p.title, questionText:p.q, fn:(p.fn||''), hint:p.hint, explanation:p.exp,
+      options:so, correctIdx:so.indexOf(p.correct), showWork:!!p.showWork,
+      studentChoice:null, pendingChoice:null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+  function optN(correct, cands, suf){
+    suf = (suf===undefined ? '' : suf);
+    var out=[correct], i, c;
+    for (i=0;i<cands.length && out.length<4;i++){
+      c = Math.round(cands[i]);
+      if (c>0 && out.indexOf(c)<0) out.push(c);
+    }
+    var d=1;
+    while (out.length<4 && d<600){
+      if (out.indexOf(correct+d)<0) out.push(correct+d);
+      else if (correct-d>0 && out.indexOf(correct-d)<0) out.push(correct-d);
+      d++;
+    }
+    return out.map(function(v){ return v+suf; });
+  }
+  function optT(correct, others){
+    var out=[correct];
+    for (var i=0;i<others.length && out.length<4;i++){ if (out.indexOf(others[i])<0) out.push(others[i]); }
+    return out;
+  }
+  function cvSetup(cv, H){
+    var dpr=window.devicePixelRatio||1, W=cv.clientWidth||320;
+    cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+    var g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+    return { g:g, W:W, H:H };
+  }
+  function listCm(a){ return a.map(function(v){ return n1(v)+' cm'; }).join(', ').replace(/, ([^,]*)$/, L({es:' y $1', en:' and $1'})); }
+  function listM(a){  return a.map(function(v){ return n1(v)+' m';  }).join(', ').replace(/, ([^,]*)$/, L({es:' y $1', en:' and $1'})); }
+
+  /* ══════════════════════════════════════════════════════════════════
+     SECCIÓN 1 - El factor de escala
+     ══════════════════════════════════════════════════════════════════ */
+  sec(L({es:'Concepto 1', en:'Concept 1'}),
+      L({es:'Todas las medidas por un mismo número', en:'Every measurement by one same number'}),
+    '<p>'+L({es:'Una copia a escala no es un dibujo que se parece al original: es el mismo dibujo con todas sus longitudes multiplicadas por un mismo número. Ese número es el factor de escala y se descubre comparando un lado de la copia con el lado que le corresponde en el original. Si el factor pasa de uno, la copia crece; si se queda por debajo de uno, la copia se encoge; y si vale exactamente uno, las dos figuras son la misma. Los lados correspondientes son los que ocupan el mismo lugar en las dos figuras, no los que se parecen a simple vista.',
+             en:'A scale copy is not a drawing that looks like the original: it is the same drawing with every one of its lengths multiplied by one same number. That number is the scale factor and it is discovered by comparing a side of the copy with the side matching it in the original. If the factor goes past one, the copy grows; if it stays below one, the copy shrinks; and if it is exactly one, the two figures are the same. Matching sides are the ones sitting in the same place in both figures, not the ones that look alike at first glance.'})+'</p>'+
+    '<p>'+L({es:'Lo delicado está en la palabra mismo. Basta con que un solo lado desobedezca al factor para que la figura deje de ser copia y pase a ser una deformación: se alarga por un lado y se queda corta por el otro. Por eso, después de sacar el factor con una pareja de lados que se corresponden, conviene probarlo con otra pareja. Si el mismo número funciona en todas las parejas, el dibujo está bien construido; si falla en una, allí está el error.',
+             en:'The delicate part is the word same. It takes a single side disobeying the factor for the figure to stop being a copy and turn into a distortion: it stretches on one side and falls short on the other. That is why, after working out the factor with one pair of matching sides, it is worth testing it on another pair. If the same number works on every pair, the drawing is well built; if it fails on one, that is where the mistake is.'})+'</p>'+
+    '<div class="rules-grid">'+
+      '<div class="rcard"><div class="rname">'+L({es:'El factor',en:'The factor'})+'</div><div class="rform">'+L({es:'copia ÷ original',en:'copy ÷ original'})+'</div><div class="rnote">'+L({es:'Sale de una pareja de lados que se corresponden.',en:'It comes from one pair of matching sides.'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Mayor que 1',en:'Greater than 1'})+'</div><div class="rform">'+L({es:'la copia crece',en:'the copy grows'})+'</div><div class="rnote">'+L({es:'Es una ampliación de la figura original.',en:'It is an enlargement of the original figure.'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Menor que 1',en:'Less than 1'})+'</div><div class="rform">'+L({es:'la copia se encoge',en:'the copy shrinks'})+'</div><div class="rnote">'+L({es:'Es la reducción que hace caber un terreno en la hoja.',en:'It is the reduction that fits a plot onto the sheet.'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Todos los lados',en:'Every side'})+'</div><div class="rform">'+L({es:'el mismo factor',en:'the same factor'})+'</div><div class="rnote">'+L({es:'Uno solo que falle rompe la copia.',en:'A single one failing breaks the copy.'})+'</div></div>'+
+    '</div>'+
+    '<div class="callout"><p>'+L({es:'El error más común es sumar en vez de multiplicar. Agregar dos centímetros a cada lado también agranda la figura, pero engorda mucho a los lados cortos y casi nada a los largos, así que la forma se pierde por el camino.',
+                                  en:'The commonest mistake is adding instead of multiplying. Adding two centimetres to every side also makes the figure bigger, but it fattens the short sides a lot and the long ones almost nothing, so the shape gets lost along the way.'})+'</p></div>');
+
+  /* ── W1: ajusta el factor (3 rondas) ── */
+  var w1R = [];
+  (function(){
+    var pool = shuffle([[8,5],[6,15],[4,20],[6,25],[5,30],[10,15],[12,5],[8,25],[10,5],[4,25]], rng);
+    for (var i=0;i<3;i++){ w1R.push({ s:pool[i][0], v:pool[i][1], t:pool[i][0]*pool[i][1]/10 }); }
+  })();
+  widget('factor',
+    '<div class="stag">'+L({es:'Ajusta el factor',en:'Adjust the factor'})+'</div>'+
+    '<h2>'+L({es:'Lleva la copia a la medida pedida',en:'Bring the copy to the required measurement'})+'</h2>'+
+    '<p>'+L({es:'La figura verde es el original y la dorada es tu copia. El deslizador decide por cuánto se multiplica cada longitud, y la copia responde al instante. Abajo, la raya punteada marca justo lo que debe medir el lado de la copia: muévete hasta que la copia se pare exactamente sobre esa raya.',
+             en:'The green figure is the original and the golden one is your copy. The slider decides what every length gets multiplied by, and the copy answers at once. Below, the dashed line marks exactly what the side of the copy has to measure: move until the copy lands right on that line.'})+'</p>'+
+    '<div class="gcrd">'+
+      '<div style="font-size:.85rem;color:var(--text2);margin-bottom:.7rem" id="w1goal"></div>'+
+      '<div class="cvwrap"><canvas id="w1cv" style="display:block;width:100%;height:226px"></canvas></div>'+
+      '<div class="cg" style="margin-top:.9rem"><label>'+L({es:'Factor de escala: ',en:'Scale factor: '})+'<span class="cval" id="w1kv">×1</span></label>'+
+        '<input type="range" id="w1k" min="5" max="30" step="5" value="10"></div>'+
+      '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem">'+
+        '<button id="w1dn" style="'+BTN2+'">'+L({es:'Menos',en:'Less'})+'</button>'+
+        '<button id="w1up" style="'+BTN2+'">'+L({es:'Más',en:'More'})+'</button>'+
+        '<button id="w1chk" style="'+BTN+'">'+L({es:'Comprobar',en:'Check'})+'</button>'+
+      '</div>'+
+      '<div class="metrics" style="margin-top:.9rem">'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Lado del original',en:'Side of the original'})+'</div><div class="mnum cs" id="w1a">-</div></div>'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Lado de tu copia',en:'Side of your copy'})+'</div><div class="mnum ps" id="w1b">-</div></div>'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Medida pedida',en:'Required measure'})+'</div><div class="mnum ts" id="w1c">-</div></div>'+
+      '</div>'+
+      '<div class="mcfb" id="w1fb"></div>'+
+    '</div>');
+
+  (function(){
+    var round=0, tries=0, done=false, busy=false;
+    var myCv = document.getElementById('w1cv');
+    function R(){ return w1R[Math.min(round,2)]; }
+    function G(){ var e=document.getElementById('w1k'); return e ? parseInt(e.value,10) : 10; }
+    function draw(){
+      var cv=document.getElementById('w1cv'); if(!cv || cv!==myCv) return;
+      var st=cvSetup(cv,226), g=st.g, W=st.W, H=st.H;
+      var r=R(), k=G()/10, copy=r.s*k;
+      var widest = r.s*3;
+      var baseY = H-48;
+      var px = Math.min((W-56)/(r.s + widest + 3), (baseY-18)/(0.72*widest));
+      function tri(x, len, fill, stroke, lbl){
+        var w=len*px, apex=x+0.36*w, hy=baseY-0.72*w;
+        g.fillStyle=fill;
+        g.beginPath(); g.moveTo(x,baseY); g.lineTo(x+w,baseY); g.lineTo(apex,hy); g.closePath(); g.fill();
+        g.strokeStyle=stroke; g.lineWidth=2.2; g.stroke();
+        g.fillStyle=stroke; g.font=F(); g.textAlign='center'; g.textBaseline='top';
+        g.fillText(lbl, x+w/2, baseY+5);
+      }
+      tri(22, r.s, cssv('--green-bg'), cssv('--green'), n1(r.s)+' cm');
+      var cx = 22 + r.s*px + 20;
+      tri(cx, copy, cssv('--gold-bg'), cssv('--gold'), n1(copy)+' cm');
+      g.strokeStyle=cssv('--text3'); g.lineWidth=2.4; g.setLineDash([5,4]);
+      g.beginPath(); g.moveTo(cx, baseY+22); g.lineTo(cx + r.t*px, baseY+22); g.stroke();
+      g.setLineDash([]);
+      g.fillStyle=cssv('--text3'); g.font='500 10px "IBM Plex Sans", sans-serif';
+      g.textAlign='left'; g.textBaseline='top';
+      g.fillText(L({es:'pedido: ',en:'required: '})+n1(r.t)+' cm', cx, baseY+27);
+    }
+    function update(){
+      var r=R(), k=G()/10, e;
+      e=document.getElementById('w1kv'); if(e) e.textContent='×'+n1(k);
+      e=document.getElementById('w1a');  if(e) e.textContent=n1(r.s)+' cm';
+      e=document.getElementById('w1b');
+      if(e){ e.textContent=n1(r.s*k)+' cm'; e.style.color = (Math.abs(r.s*k-r.t)<0.001 ? 'var(--ok)' : 'var(--gold)'); }
+      e=document.getElementById('w1c');  if(e) e.textContent=n1(r.t)+' cm';
+      e=document.getElementById('w1goal');
+      if(e) e.innerHTML=L({es:'Ronda '+(round+1)+' de 3: el lado marcado del original mide <strong>'+n1(r.s)+' cm</strong> y en la copia debe quedar en <strong>'+n1(r.t)+' cm</strong>.',
+                           en:'Round '+(round+1)+' of 3: the marked side of the original measures <strong>'+n1(r.s)+' cm</strong> and in the copy it has to end up at <strong>'+n1(r.t)+' cm</strong>.'});
+      draw();
+    }
+    function nextRound(){
+      round++; busy=false;
+      if (round>=3){ done=true; return; }
+      tries=0;
+      var sl=document.getElementById('w1k'); if(sl) sl.value='10';
+      update();
+    }
+    function check(){
+      if (done||busy) return;
+      var r=R(), k=G()/10, copy=r.s*k;
+      if (Math.abs(copy-r.t)<0.001){
+        fbSet('w1fb', true, L({es:'🎉 Justo en la medida. Con el factor ×'+n1(k)+', el lado de '+n1(r.s)+' cm queda en '+n1(r.t)+' cm.'+(round===2?' Las tres rondas quedaron listas.':' Va la siguiente ronda.'),
+                               en:'🎉 Right on the measure. With factor ×'+n1(k)+', the side of '+n1(r.s)+' cm ends up at '+n1(r.t)+' cm.'+(round===2?' All three rounds are done.':' On to the next round.')}));
+        busy=true; setTimeout(nextRound, 80); return;
+      }
+      tries++;
+      if (tries>=3){
+        var sl=document.getElementById('w1k'); if(sl) sl.value=String(r.v);
+        update();
+        fbSet('w1fb', true, L({es:'El factor era ×'+n1(r.v/10)+'. Se obtiene comparando la medida pedida con la del original: '+n1(r.t)+' ÷ '+n1(r.s)+' = '+n1(r.v/10)+'.',
+                               en:'The factor was ×'+n1(r.v/10)+'. It comes from comparing the required measure with the original one: '+n1(r.t)+' ÷ '+n1(r.s)+' = '+n1(r.v/10)+'.'}));
+        busy=true; setTimeout(nextRound, 80); return;
+      }
+      fbSet('w1fb', false, (copy>r.t)
+        ? L({es:'Tu copia llegó a '+n1(copy)+' cm y se pasó de los '+n1(r.t)+' cm pedidos: el multiplicador estiró de más. Baja el factor.',
+             en:'Your copy reached '+n1(copy)+' cm and went past the '+n1(r.t)+' cm required: the multiplier stretched too far. Lower the factor.'})
+        : L({es:'Tu copia se quedó en '+n1(copy)+' cm, todavía por debajo de los '+n1(r.t)+' cm pedidos. Sube el factor.',
+             en:'Your copy stopped at '+n1(copy)+' cm, still short of the '+n1(r.t)+' cm required. Raise the factor.'}));
+    }
+    var sl0=document.getElementById('w1k'); if(sl0) sl0.addEventListener('input', update);
+    var bu=document.getElementById('w1up');
+    if (bu) bu.addEventListener('click', function(){ var s=document.getElementById('w1k'); if(s){ s.value=String(Math.min(30, parseInt(s.value,10)+5)); update(); } });
+    var bd=document.getElementById('w1dn');
+    if (bd) bd.addEventListener('click', function(){ var s=document.getElementById('w1k'); if(s){ s.value=String(Math.max(5, parseInt(s.value,10)-5)); update(); } });
+    var cb=document.getElementById('w1chk'); if(cb) cb.addEventListener('click', check);
+    setTimeout(update, 90);
+    window.addEventListener('resize', function(){ if(document.getElementById('w1cv')===myCv) draw(); });
+  })();
+
+  /* ── P1 ── */
+  var p1v = pk([0,1]);
+  var p1q, p1exp, p1corr, p1opts, p1title, p1hint;
+  if (p1v===0){
+    var t1 = pk([[4,6,7],[5,7,9],[6,8,9],[4,5,6],[5,6,8],[6,7,10]]);
+    var k1 = pk([2,3,4]);
+    var a1=t1[0], b1=t1[1], c1=t1[2], ac1=a1*k1, res1=c1*k1;
+    p1corr = res1+' cm';
+    p1opts = optN(res1, [c1+(ac1-a1), b1*k1, c1], ' cm');
+    p1title = L({es:'El lado que falta en la copia', en:'The missing side of the copy'});
+    p1q = L({es:'Un triángulo tiene lados de '+a1+' cm, '+b1+' cm y '+c1+' cm. En una copia a escala, el lado que corresponde al de '+a1+' cm mide '+ac1+' cm. ¿Cuánto mide en esa copia el lado que corresponde al de '+c1+' cm?',
+             en:'A triangle has sides of '+a1+' cm, '+b1+' cm and '+c1+' cm. In a scale copy, the side matching the '+a1+' cm one measures '+ac1+' cm. How much does the side matching the '+c1+' cm one measure in that copy?'});
+    p1exp = L({es:'El lado de '+a1+' cm terminó en '+ac1+' cm, así que cada longitud se multiplicó por '+ac1+' ÷ '+a1+' = '+k1+'. Al lado de '+c1+' cm le toca el mismo trato: '+c1+' × '+k1+' = '+res1+' cm.',
+               en:'The '+a1+' cm side ended up at '+ac1+' cm, so every length was multiplied by '+ac1+' ÷ '+a1+' = '+k1+'. The '+c1+' cm side gets the same treatment: '+c1+' × '+k1+' = '+res1+' cm.'});
+    p1hint = L({es:'Empieza por la única pareja de lados de la que conoces las dos medidas: ella te dice por cuánto se multiplicó todo.',
+                en:'Start with the only pair of sides where you know both measurements: it tells you what everything was multiplied by.'});
+  } else {
+    var b2 = pk([[3,5,6],[4,6,7],[5,7,8],[4,5,7]]);
+    var m2 = pk([3,4,5,6]);
+    var r0=b2[0]*m2, r1=b2[1]*m2, r2=b2[2]*m2;
+    p1corr = b2[2]+' cm';
+    p1opts = optN(b2[2], [b2[1], b2[2]+m2, r2/2], ' cm');
+    p1title = L({es:'Del terreno al plano', en:'From the plot to the plan'});
+    p1q = L({es:'Un terreno triangular mide '+r0+' m, '+r1+' m y '+r2+' m de lado. En el plano, el lado de '+r0+' m aparece dibujado con '+b2[0]+' cm. ¿Cuánto mide en el plano el lado que corresponde al de '+r2+' m?',
+             en:'A triangular plot has sides of '+r0+' m, '+r1+' m and '+r2+' m. On the plan, the '+r0+' m side is drawn with '+b2[0]+' cm. How much does the side matching the '+r2+' m one measure on the plan?'});
+    p1exp = L({es:'El lado de '+r0+' m ocupa '+b2[0]+' cm, así que cada centímetro del plano vale '+r0+' ÷ '+b2[0]+' = '+m2+' metros. El lado de '+r2+' m necesita entonces '+r2+' ÷ '+m2+' = '+b2[2]+' cm.',
+               en:'The '+r0+' m side takes up '+b2[0]+' cm, so each centimetre of the plan is worth '+r0+' ÷ '+b2[0]+' = '+m2+' metres. The '+r2+' m side then needs '+r2+' ÷ '+m2+' = '+b2[2]+' cm.'});
+    p1hint = L({es:'Averigua primero cuántos metros representa un centímetro del plano usando el único lado que aparece en las dos medidas.',
+                en:'First work out how many metres one centimetre of the plan stands for, using the only side that appears in both measurements.'});
+  }
+  addProb({ title:p1title, q:p1q, hint:p1hint, exp:p1exp, correct:p1corr, options:p1opts, showWork:true });
+
+  /* ── P2 ── */
+  var p2v = pk([0,1]);
+  var p2q, p2exp, p2corr, p2opts, p2title, p2hint;
+  if (p2v===0){
+    var w2 = pk([6,8,10]), h2 = w2 + pk([4,6]);
+    var kk2 = pk([15,20,25])/10;
+    var cw2 = w2*kk2, ch2 = h2*kk2, d2 = cw2-w2;
+    p2corr = L({es:n1(cw2)+' cm de ancho y '+n1(ch2)+' cm de alto', en:n1(cw2)+' cm wide and '+n1(ch2)+' cm tall'});
+    p2opts = optT(p2corr, [
+      L({es:(w2+d2)+' cm de ancho y '+(h2+d2)+' cm de alto', en:(w2+d2)+' cm wide and '+(h2+d2)+' cm tall'}),
+      L({es:n1(cw2)+' cm de ancho y '+n1(ch2+2)+' cm de alto', en:n1(cw2)+' cm wide and '+n1(ch2+2)+' cm tall'}),
+      L({es:n1(cw2+1)+' cm de ancho y '+n1(ch2-1)+' cm de alto', en:n1(cw2+1)+' cm wide and '+n1(ch2-1)+' cm tall'})
+    ]);
+    p2title = L({es:'La copia bien hecha', en:'The copy done right'});
+    p2q = L({es:'Un rectángulo mide '+w2+' cm de ancho y '+h2+' cm de alto. ¿Cuál de estos rectángulos es una copia a escala suya?',
+             en:'A rectangle measures '+w2+' cm wide and '+h2+' cm tall. Which of these rectangles is a scale copy of it?'});
+    p2exp = L({es:'En la copia correcta el ancho pasa de '+w2+' a '+n1(cw2)+' cm y el alto de '+h2+' a '+n1(ch2)+' cm; las dos medidas quedaron multiplicadas por '+n1(kk2)+'. En las demás opciones cada medida cambió por su cuenta, así que el rectángulo salió más gordo o más flaco que el original.',
+               en:'In the correct copy the width goes from '+w2+' to '+n1(cw2)+' cm and the height from '+h2+' to '+n1(ch2)+' cm; both measurements were multiplied by '+n1(kk2)+'. In the other options each measurement changed on its own, so the rectangle came out fatter or thinner than the original.'});
+    p2hint = L({es:'Compara los anchos entre sí y los altos entre sí, y fíjate si en las dos parejas aparece el mismo número.',
+                en:'Compare the widths with each other and the heights with each other, and see whether the same number shows up in both pairs.'});
+  } else {
+    var t3 = pk([[4,6,8],[6,8,10],[4,6,10],[6,10,12]]);
+    var g3=[t3[0]*1.5, t3[1]*1.5, t3[2]*1.5];
+    p2corr = listCm(g3);
+    p2opts = optT(p2corr, [
+      listCm([t3[0]+2, t3[1]+2, t3[2]+2]),
+      listCm([g3[0], g3[1], g3[2]+3]),
+      listCm([t3[0]*2, g3[1], g3[2]])
+    ]);
+    p2title = L({es:'El trío que sí es copia', en:'The trio that really is a copy'});
+    p2q = L({es:'Un triángulo tiene lados de '+t3[0]+' cm, '+t3[1]+' cm y '+t3[2]+' cm. ¿Cuál de estos tríos de medidas corresponde a una copia a escala suya?',
+             en:'A triangle has sides of '+t3[0]+' cm, '+t3[1]+' cm and '+t3[2]+' cm. Which of these trios of measurements belongs to a scale copy of it?'});
+    p2exp = L({es:'En el trío correcto los tres lados quedaron multiplicados por 1.5: '+t3[0]+' × 1.5 = '+n1(g3[0])+', '+t3[1]+' × 1.5 = '+n1(g3[1])+' y '+t3[2]+' × 1.5 = '+n1(g3[2])+'. En los otros tríos hay al menos un lado que no siguió al mismo número, y con eso la figura deja de ser copia.',
+               en:'In the correct trio the three sides were multiplied by 1.5: '+t3[0]+' × 1.5 = '+n1(g3[0])+', '+t3[1]+' × 1.5 = '+n1(g3[1])+' and '+t3[2]+' × 1.5 = '+n1(g3[2])+'. In the other trios there is at least one side that did not follow the same number, and that alone stops the figure from being a copy.'});
+    p2hint = L({es:'Ve lado por lado y pregunta cuántas veces cabe la medida original en la nueva: el resultado debe repetirse en los tres.',
+                en:'Go side by side and ask how many times the original measurement fits into the new one: the result has to repeat in all three.'});
+  }
+  addProb({ title:p2title, q:p2q, hint:p2hint, exp:p2exp, correct:p2corr, options:p2opts, showWork:false });
+
+  /* ══════════════════════════════════════════════════════════════════
+     SECCIÓN 2 - Los datos que hacen falta para construir
+     ══════════════════════════════════════════════════════════════════ */
+  sec(L({es:'Concepto 2', en:'Concept 2'}),
+      L({es:'Tres datos y el compás', en:'Three pieces of data and the compass'}),
+    '<p>'+L({es:'Construir un triángulo no es trazar tres rayas al tanteo: hay que saber qué datos alcanzan. Con los tres lados alcanza, y el procedimiento es siempre el mismo: se dibuja uno de ellos como base, se abre el compás con la medida del segundo lado y se traza un arco desde un extremo, se abre con la del tercero y se traza otro arco desde el otro extremo, y donde los dos arcos se cruzan está el vértice que faltaba. También alcanza con dos lados y el ángulo que forman entre ellos, o con dos ángulos y el lado que va entre los dos.',
+             en:'Building a triangle is not drawing three lines by guesswork: you have to know which data are enough. The three sides are enough, and the procedure is always the same: one of them is drawn as the base, the compass is opened to the second side and an arc is drawn from one end, it is opened to the third side and another arc is drawn from the other end, and where the two arcs cross sits the missing vertex. Two sides and the angle they form between them are also enough, and so are two angles and the side running between them.'})+'</p>'+
+    '<p>'+L({es:'Tres ángulos, en cambio, no alcanzan. Fijan la forma pero dejan el tamaño en libertad, y por eso todos los triángulos que salen con esos tres ángulos son copias a escala unos de otros. Antes de tomar el compás conviene además revisar si los tres lados pueden juntarse: los dos más cortos, sumados, tienen que superar al más largo. Si apenas lo igualan, los arcos se tocan encima de la base y la figura se aplasta en una línea; si se quedan por debajo, los arcos ni siquiera llegan a cruzarse. Al construir a escala esta revisión se hace una sola vez, porque si el trío original cierra, el trío multiplicado por el mismo factor también cierra.',
+             en:'Three angles, on the other hand, are not enough. They fix the shape but leave the size free, and that is why every triangle coming out of those three angles is a scale copy of the others. Before picking up the compass it is also worth checking whether the three sides can meet: the two shorter ones together have to beat the longest one. If they only equal it, the arcs touch on top of the base and the figure flattens into a line; if they fall below it, the arcs never even reach each other. When building to scale this check is done once only, because if the original trio closes, the trio multiplied by the same factor closes too.'})+'</p>'+
+    '<div class="rules-grid">'+
+      '<div class="rcard"><div class="rname">'+L({es:'Tres lados',en:'Three sides'})+'</div><div class="rform">'+L({es:'base y dos arcos',en:'base and two arcs'})+'</div><div class="rnote">'+L({es:'El cruce de los arcos da el tercer vértice.',en:'The crossing of the arcs gives the third vertex.'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Dos lados',en:'Two sides'})+'</div><div class="rform">'+L({es:'con el ángulo de en medio',en:'with the angle in between'})+'</div><div class="rnote">'+L({es:'El transportador coloca el segundo lado.',en:'The protractor places the second side.'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Tres ángulos',en:'Three angles'})+'</div><div class="rform">'+L({es:'forma sí, tamaño no',en:'shape yes, size no'})+'</div><div class="rnote">'+L({es:'Salen infinitas copias a escala.',en:'Infinitely many scale copies come out.'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Antes de trazar',en:'Before drawing'})+'</div><div class="rform">'+L({es:'corto + corto > largo',en:'short + short > long'})+'</div><div class="rnote">'+L({es:'Si no se cumple, los arcos no se cruzan.',en:'If it fails, the arcs do not cross.'})+'</div></div>'+
+    '</div>');
+
+  /* ── W2: los arcos que se cruzan (3 rondas) ── */
+  var w2R = [];
+  (function(){
+    var pool = shuffle([[9,5],[10,6],[11,7],[12,5],[10,4],[13,8],[12,7],[11,6]], rng);
+    for (var i=0;i<3;i++){ w2R.push({ b:pool[i][0], a:pool[i][1], c:pool[i][0]-pool[i][1]+1 }); }
+  })();
+  widget('arcs',
+    '<div class="stag">'+L({es:'Cruza los arcos',en:'Cross the arcs'})+'</div>'+
+    '<h2>'+L({es:'La medida más corta que todavía cierra',en:'The shortest measurement that still closes'})+'</h2>'+
+    '<p>'+L({es:'La base ya está trazada y desde su extremo izquierdo sale un arco con el segundo lado, que tampoco se mueve. El deslizador abre el compás para el tercer lado y su arco crece o se encoge contigo. Mientras los dos arcos no se toquen no hay vértice y no hay triángulo. Busca la abertura entera más pequeña con la que la figura ya cierra.',
+             en:'The base is already drawn and from its left end an arc comes out with the second side, which does not move either. The slider opens the compass for the third side and its arc grows or shrinks with you. As long as the two arcs do not touch there is no vertex and no triangle. Look for the smallest whole opening with which the figure already closes.'})+'</p>'+
+    '<div class="gcrd">'+
+      '<div style="font-size:.85rem;color:var(--text2);margin-bottom:.7rem" id="w2goal"></div>'+
+      '<div class="cvwrap"><canvas id="w2cv" style="display:block;width:100%;height:212px"></canvas></div>'+
+      '<div class="cg" style="margin-top:.9rem"><label>'+L({es:'Tercer lado: ',en:'Third side: '})+'<span class="cval" id="w2cv2">2 cm</span></label>'+
+        '<input type="range" id="w2c" min="1" max="20" step="1" value="2"></div>'+
+      '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem">'+
+        '<button id="w2dn" style="'+BTN2+'">'+L({es:'Menos',en:'Less'})+'</button>'+
+        '<button id="w2up" style="'+BTN2+'">'+L({es:'Más',en:'More'})+'</button>'+
+        '<button id="w2chk" style="'+BTN+'">'+L({es:'Comprobar',en:'Check'})+'</button>'+
+      '</div>'+
+      '<div class="metrics" style="margin-top:.9rem">'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Base',en:'Base'})+'</div><div class="mnum cs" id="w2b">-</div></div>'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Segundo lado',en:'Second side'})+'</div><div class="mnum cs" id="w2a">-</div></div>'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Los dos cortos suman',en:'The two short ones add up to'})+'</div><div class="mnum ts" id="w2s">-</div></div>'+
+      '</div>'+
+      '<div class="mcfb" id="w2fb"></div>'+
+    '</div>');
+
+  (function(){
+    var round=0, tries=0, done=false, busy=false;
+    var myCv = document.getElementById('w2cv');
+    function R(){ return w2R[Math.min(round,2)]; }
+    function G(){ var e=document.getElementById('w2c'); return e ? parseInt(e.value,10) : 2; }
+    function draw(){
+      var cv=document.getElementById('w2cv'); if(!cv || cv!==myCv) return;
+      var st=cvSetup(cv,212), g=st.g, W=st.W, H=st.H;
+      var r=R(), c=G();
+      var baseY=H-38, ax=32;
+      var px = Math.min((W-64)/r.b, (baseY-24)/Math.max(r.a, Math.min(c, r.a+r.b)));
+      var bx = ax + r.b*px;
+      var ra = r.a*px, rc = c*px;
+      g.strokeStyle=cssv('--border'); g.lineWidth=1.6;
+      g.beginPath(); g.arc(ax, baseY, ra, -Math.PI*0.98, -0.02); g.stroke();
+      g.beginPath(); g.arc(bx, baseY, rc, -Math.PI*0.98, -0.02); g.stroke();
+      g.strokeStyle=cssv('--green'); g.lineWidth=3;
+      g.beginPath(); g.moveTo(ax,baseY); g.lineTo(bx,baseY); g.stroke();
+      var xx = (r.b*r.b + r.a*r.a - c*c)/(2*r.b);
+      var yy2 = r.a*r.a - xx*xx;
+      if (yy2 > 0.0001){
+        var px2 = ax + xx*px, py2 = baseY - Math.sqrt(yy2)*px;
+        g.fillStyle=cssv('--green-bg');
+        g.beginPath(); g.moveTo(ax,baseY); g.lineTo(bx,baseY); g.lineTo(px2,py2); g.closePath(); g.fill();
+        g.strokeStyle=cssv('--green'); g.lineWidth=2.4; g.stroke();
+        g.fillStyle=cssv('--gold'); g.beginPath(); g.arc(px2,py2,5,0,Math.PI*2); g.fill();
+      } else {
+        g.strokeStyle=cssv('--gold'); g.lineWidth=2.6;
+        g.beginPath(); g.arc(ax, baseY, ra, -Math.PI*0.6, -Math.PI*0.25); g.stroke();
+        g.beginPath(); g.arc(bx, baseY, rc, -Math.PI*0.75, -Math.PI*0.4); g.stroke();
+      }
+      g.fillStyle=cssv('--green-dark'); g.font=F(); g.textAlign='center'; g.textBaseline='top';
+      g.fillText(n1(r.b)+' cm', (ax+bx)/2, baseY+6);
+      g.fillStyle=cssv('--text3'); g.font='500 10px "IBM Plex Sans", sans-serif';
+      g.textAlign='left';  g.fillText(n1(r.a)+' cm', ax-6, baseY-ra-16);
+      g.textAlign='right'; g.fillText(n1(c)+' cm', bx+6, baseY-rc-16);
+    }
+    function update(){
+      var r=R(), c=G(), e;
+      e=document.getElementById('w2cv2'); if(e) e.textContent=n1(c)+' cm';
+      e=document.getElementById('w2b');   if(e) e.textContent=n1(r.b)+' cm';
+      e=document.getElementById('w2a');   if(e) e.textContent=n1(r.a)+' cm';
+      e=document.getElementById('w2s');
+      if(e){ var s=r.a+c; e.textContent=n1(s)+' cm'; e.style.color = (s>r.b ? 'var(--ok)' : 'var(--gold)'); }
+      e=document.getElementById('w2goal');
+      if(e) e.innerHTML=L({es:'Ronda '+(round+1)+' de 3: la base mide <strong>'+n1(r.b)+' cm</strong> y el segundo lado <strong>'+n1(r.a)+' cm</strong>. Encuentra el tercer lado entero más corto que ya cierra la figura.',
+                           en:'Round '+(round+1)+' of 3: the base measures <strong>'+n1(r.b)+' cm</strong> and the second side <strong>'+n1(r.a)+' cm</strong>. Find the shortest whole third side that already closes the figure.'});
+      draw();
+    }
+    function nextRound(){
+      round++; busy=false;
+      if (round>=3){ done=true; return; }
+      tries=0;
+      var sl=document.getElementById('w2c'); if(sl) sl.value='2';
+      update();
+    }
+    function check(){
+      if (done||busy) return;
+      var r=R(), c=G();
+      if (c===r.c){
+        fbSet('w2fb', true, L({es:'🎉 Ahí está el cruce. Con '+n1(r.a)+' cm y '+n1(c)+' cm los dos lados cortos suman '+n1(r.a+c)+' cm y por fin superan a la base de '+n1(r.b)+' cm.'+(round===2?' Las tres rondas quedaron listas.':' Va la siguiente ronda.'),
+                               en:'🎉 There is the crossing. With '+n1(r.a)+' cm and '+n1(c)+' cm the two short sides add up to '+n1(r.a+c)+' cm and at last beat the base of '+n1(r.b)+' cm.'+(round===2?' All three rounds are done.':' On to the next round.')}));
+        busy=true; setTimeout(nextRound, 80); return;
+      }
+      tries++;
+      if (tries>=3){
+        var sl=document.getElementById('w2c'); if(sl) sl.value=String(r.c);
+        update();
+        fbSet('w2fb', true, L({es:'Era '+n1(r.c)+' cm. Con '+n1(r.b-r.a)+' cm los dos cortos apenas empatan con la base y los arcos se tocan sobre ella; la primera medida entera que ya la supera es '+n1(r.c)+' cm.',
+                               en:'It was '+n1(r.c)+' cm. With '+n1(r.b-r.a)+' cm the two short ones only tie with the base and the arcs touch on top of it; the first whole measurement that already beats it is '+n1(r.c)+' cm.'}));
+        busy=true; setTimeout(nextRound, 80); return;
+      }
+      if (c < r.c){
+        fbSet('w2fb', false, L({es:'Con '+n1(c)+' cm los dos lados cortos suman '+n1(r.a+c)+' cm y no llegan a la base de '+n1(r.b)+' cm: los arcos se quedan separados. Alarga el tercer lado.',
+                                en:'With '+n1(c)+' cm the two short sides add up to '+n1(r.a+c)+' cm and do not reach the base of '+n1(r.b)+' cm: the arcs stay apart. Lengthen the third side.'}));
+      } else if (c >= r.a+r.b){
+        fbSet('w2fb', false, L({es:'Con '+n1(c)+' cm el tercer lado se pasó tanto que ahora son la base y el segundo lado los que se quedan cortos, y los arcos vuelven a separarse. Acórtalo bastante.',
+                                en:'With '+n1(c)+' cm the third side overshot so far that now the base and the second side are the ones falling short, and the arcs come apart again. Shorten it by a good deal.'}));
+      } else {
+        fbSet('w2fb', false, L({es:'Con '+n1(c)+' cm la figura sí cierra, pero todavía sobra: se busca la medida entera más corta que aún alcance a cruzar los arcos. Acórtalo.',
+                                en:'With '+n1(c)+' cm the figure does close, but there is room to spare: what is wanted is the shortest whole measurement that still gets the arcs to cross. Shorten it.'}));
+      }
+    }
+    var sl0=document.getElementById('w2c'); if(sl0) sl0.addEventListener('input', update);
+    var bu=document.getElementById('w2up');
+    if (bu) bu.addEventListener('click', function(){ var s=document.getElementById('w2c'); if(s){ s.value=String(Math.min(20, parseInt(s.value,10)+1)); update(); } });
+    var bd=document.getElementById('w2dn');
+    if (bd) bd.addEventListener('click', function(){ var s=document.getElementById('w2c'); if(s){ s.value=String(Math.max(1, parseInt(s.value,10)-1)); update(); } });
+    var cb=document.getElementById('w2chk'); if(cb) cb.addEventListener('click', check);
+    setTimeout(update, 90);
+    window.addEventListener('resize', function(){ if(document.getElementById('w2cv')===myCv) draw(); });
+  })();
+
+  /* ── P3 ── */
+  var p3a = pk([5,6,7,8]), p3b = pk([10,11,12,13]);
+  var p3v = pk([0,1]);
+  var p3q, p3exp, p3corr, p3opts, p3title, p3hint;
+  if (p3v===0){
+    var r3 = p3b-p3a+1;
+    p3corr = r3+' cm';
+    p3opts = optN(r3, [p3b-p3a, p3a+p3b, p3b], ' cm');
+    p3title = L({es:'El tercer lado más corto', en:'The shortest third side'});
+    p3q = L({es:'Se va a construir un triángulo y dos de sus lados medirán '+p3a+' cm y '+p3b+' cm. Si el tercero debe medir un número entero de centímetros, ¿cuál es la medida más corta con la que la figura todavía se puede construir?',
+             en:'A triangle is going to be built and two of its sides will measure '+p3a+' cm and '+p3b+' cm. If the third one has to measure a whole number of centimetres, what is the shortest measurement with which the figure can still be built?'});
+    p3exp = L({es:'Los dos lados cortos, juntos, tienen que superar al más largo. Con un tercer lado de '+(p3b-p3a)+' cm la suma sería '+(p3b-p3a)+' + '+p3a+' = '+p3b+' cm, exactamente la del lado largo, y los arcos se tocarían encima de él sin formar figura. La primera medida entera que ya lo supera es '+r3+' cm.',
+               en:'The two short sides together have to beat the longest one. With a third side of '+(p3b-p3a)+' cm the sum would be '+(p3b-p3a)+' + '+p3a+' = '+p3b+' cm, exactly the long side, and the arcs would touch on top of it without forming a figure. The first whole measurement that already beats it is '+r3+' cm.'});
+    p3hint = L({es:'Piensa en el momento justo en que los dos lados cortos apenas alcanzan a acostarse sobre el largo, y da un paso más allá.',
+                en:'Think of the exact moment when the two short sides only just lie down along the long one, and take one step past it.'});
+  } else {
+    var r3b = p3a+p3b-1;
+    p3corr = r3b+' cm';
+    p3opts = optN(r3b, [p3a+p3b, p3b, p3b-p3a+1], ' cm');
+    p3title = L({es:'El tercer lado más largo', en:'The longest third side'});
+    p3q = L({es:'Se va a construir un triángulo y dos de sus lados medirán '+p3a+' cm y '+p3b+' cm. Si el tercero debe medir un número entero de centímetros, ¿cuál es la medida más larga con la que la figura todavía se puede construir?',
+             en:'A triangle is going to be built and two of its sides will measure '+p3a+' cm and '+p3b+' cm. If the third one has to measure a whole number of centimetres, what is the longest measurement with which the figure can still be built?'});
+    p3exp = L({es:'Ahora el tercer lado es el largo, y los otros dos son los cortos: '+p3a+' + '+p3b+' = '+(p3a+p3b)+' cm. Si el tercero midiera justo '+(p3a+p3b)+' cm, los dos se acostarían sobre él sin dejar altura. La mayor medida entera que se queda por debajo es '+r3b+' cm.',
+               en:'Now the third side is the long one and the other two are the short ones: '+p3a+' + '+p3b+' = '+(p3a+p3b)+' cm. If the third measured exactly '+(p3a+p3b)+' cm, those two would lie down along it leaving no height. The largest whole measurement staying below it is '+r3b+' cm.'});
+    p3hint = L({es:'Reúne los dos lados que ya tienes y pregúntate hasta dónde puede estirarse el tercero antes de que esos dos se queden sin poder levantarse.',
+                en:'Put together the two sides you already have and ask how far the third can stretch before those two are left unable to rise.'});
+  }
+  addProb({ title:p3title, q:p3q, hint:p3hint, exp:p3exp, correct:p3corr, options:p3opts, showWork:true });
+
+  /* ── P4 ── */
+  var p4v = pk([0,1]);
+  var p4q, p4exp, p4corr, p4opts, p4title, p4hint;
+  if (p4v===0){
+    p4corr = L({es:'Le saldrá con la forma correcta, pero de cualquier tamaño', en:'It will come out with the right shape, but at any size'});
+    p4opts = optT(p4corr, [
+      L({es:'Le saldrá del tamaño correcto, pero con otra forma', en:'It will come out at the right size, but with another shape'}),
+      L({es:'No podrá trazar ningún triángulo con esos datos', en:'No triangle at all can be drawn with those data'}),
+      L({es:'Le saldrá un triángulo con ángulos distintos a los anotados', en:'A triangle with angles different from the noted ones will come out'})
+    ]);
+    p4title = L({es:'Los datos del pizarrón', en:'The data from the board'});
+    p4q = L({es:'Un alumno quiere copiar en su cuaderno el triángulo del pizarrón, pero solo alcanzó a anotar la medida de sus tres ángulos interiores. ¿Qué le va a pasar al dibujo?',
+             en:'A student wants to copy the triangle from the board into a notebook, but only managed to note down the measures of its three interior angles. What is going to happen to the drawing?'});
+    p4exp = L({es:'Con los tres ángulos anotados el alumno puede trazar los lados en la inclinación correcta, pero nada le dice dónde cortarlos: cada largo que elija da un triángulo distinto en tamaño. Todos esos triángulos son copias a escala unos de otros, así que la forma es la del pizarrón aunque el tamaño no lo sea.',
+               en:'With the three angles noted the student can draw the sides at the right slant, but nothing says where to cut them: every length chosen gives a triangle of a different size. All those triangles are scale copies of one another, so the shape is the one on the board even if the size is not.'});
+    p4hint = L({es:'Pregúntate qué dato del pizarrón se perdió al anotar solo aberturas y ninguna longitud.',
+                en:'Ask yourself which piece of information from the board was lost by noting down only openings and no lengths.'});
+  } else {
+    var bad4 = pk([[3,5,9],[4,6,11],[5,6,12],[2,7,10]]);
+    p4corr = L({es:'Los dos arcos no llegan a cruzarse y la figura no cierra', en:'The two arcs never cross and the figure does not close'});
+    p4opts = optT(p4corr, [
+      L({es:'Sale un triángulo muy alargado, pero válido', en:'A very stretched triangle comes out, but a valid one'}),
+      L({es:'Sale un triángulo con un ángulo recto', en:'A triangle with a right angle comes out'}),
+      L({es:'Salen dos triángulos distintos con esas medidas', en:'Two different triangles come out with those measurements'})
+    ]);
+    p4title = L({es:'El trío que no funciona', en:'The trio that does not work'});
+    p4q = L({es:'Un alumno traza una base de '+bad4[2]+' cm y abre el compás para los otros dos lados, que según sus datos miden '+bad4[0]+' cm y '+bad4[1]+' cm. ¿Qué ocurre al intentar levantar el triángulo?',
+             en:'A student draws a base of '+bad4[2]+' cm and opens the compass for the other two sides, which according to the data measure '+bad4[0]+' cm and '+bad4[1]+' cm. What happens when trying to raise the triangle?'});
+    p4exp = L({es:'Los dos lados cortos juntos dan '+bad4[0]+' + '+bad4[1]+' = '+(bad4[0]+bad4[1])+' cm, y la base mide '+bad4[2]+' cm, así que se quedan cortos. Cada arco alcanza hasta donde le da su medida y entre los dos queda un hueco: no hay punto de cruce y por lo tanto no hay tercer vértice.',
+               en:'The two short sides together give '+bad4[0]+' + '+bad4[1]+' = '+(bad4[0]+bad4[1])+' cm, and the base measures '+bad4[2]+' cm, so they fall short. Each arc reaches as far as its own measurement allows and a gap is left between them: there is no crossing point and therefore no third vertex.'});
+    p4hint = L({es:'Antes de imaginar el dibujo, junta las dos medidas menores y compáralas con la base.',
+                en:'Before picturing the drawing, add the two smaller measurements together and compare them with the base.'});
+  }
+  addProb({ title:p4title, q:p4q, hint:p4hint, exp:p4exp, correct:p4corr, options:p4opts, showWork:false });
+
+  /* ══════════════════════════════════════════════════════════════════
+     SECCIÓN 3 - Polígonos regulares desde el centro
+     ══════════════════════════════════════════════════════════════════ */
+  sec(L({es:'Concepto 3', en:'Concept 3'}),
+      L({es:'Repartir la vuelta para construir', en:'Sharing out the turn in order to build'}),
+    '<p>'+L({es:'Un polígono regular se construye desde su centro. Se traza una circunferencia, se marca un punto de arranque y se reparte la vuelta completa en tantas partes iguales como lados vaya a tener la figura. Cada una de esas partes es un ángulo central, y al unir cada marca con la siguiente los lados salen iguales sin necesidad de medirlos uno por uno. Con seis marcas cada ángulo central se lleva sesenta grados; con ocho marcas se lleva cuarenta y cinco. Entre más vértices se repartan la vuelta, menos le toca a cada uno.',
+             en:'A regular polygon is built from its centre. A circle is drawn, a starting point is marked and the full turn is shared out into as many equal parts as the figure will have sides. Each of those parts is a central angle, and joining every mark to the next one makes the sides come out equal with no need to measure them one by one. With six marks each central angle takes sixty degrees; with eight marks it takes forty five. The more vertices share the turn, the less each one gets.'})+'</p>'+
+    '<p>'+L({es:'Para construir la misma figura a escala solo se cambia el radio de la circunferencia. Un radio mayor da un polígono mayor, con lados más largos, pero con exactamente los mismos ángulos: el central no depende del tamaño sino de en cuántas partes se cortó la vuelta. Junto al ángulo central viaja el ángulo interior, que es lo que le falta al central para completar el ángulo llano, y también se queda igual al cambiar de tamaño.',
+             en:'To build the same figure to scale, only the radius of the circle changes. A bigger radius gives a bigger polygon, with longer sides, but with exactly the same angles: the central one does not depend on the size but on how many parts the turn was cut into. Travelling with the central angle is the interior angle, which is what the central one needs to complete the straight angle, and it stays the same when the size changes too.'})+'</p>'+
+    '<div class="rules-grid">'+
+      '<div class="rcard"><div class="rname">'+L({es:'Ángulo central',en:'Central angle'})+'</div><div class="rform">360° ÷ '+L({es:'lados',en:'sides'})+'</div><div class="rnote">'+L({es:'La vuelta completa repartida entre los vértices.',en:'The full turn shared among the vertices.'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Ángulo interior',en:'Interior angle'})+'</div><div class="rform">180° − '+L({es:'central',en:'central'})+'</div><div class="rnote">'+L({es:'Lo que le falta al central para el ángulo llano.',en:'What the central one lacks to reach the straight angle.'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Para agrandar',en:'To enlarge'})+'</div><div class="rform">'+L({es:'radio mayor',en:'bigger radius'})+'</div><div class="rnote">'+L({es:'Los lados crecen todos por igual.',en:'The sides all grow alike.'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Los ángulos',en:'The angles'})+'</div><div class="rform">'+L({es:'no dependen del radio',en:'do not depend on the radius'})+'</div><div class="rnote">'+L({es:'Dependen de cuántos vértices hay.',en:'They depend on how many vertices there are.'})+'</div></div>'+
+    '</div>');
+
+  /* ── W3: constructor de polígono regular (3 rondas) ── */
+  var NL = [3,4,5,6,8,9,10,12];
+  var w3R = shuffle([90,72,60,45,40,36,30], rng).slice(0,3);
+  widget('regular',
+    '<div class="stag">'+L({es:'Reparte la vuelta',en:'Share out the turn'})+'</div>'+
+    '<h2>'+L({es:'Construye el polígono que se pide',en:'Build the polygon being asked for'})+'</h2>'+
+    '<p>'+L({es:'El deslizador cambia cuántos vértices se reparten la circunferencia. La cuña dorada es el ángulo central que le toca a cada uno, y se abre o se cierra al instante según cuántos vértices haya. Ajusta el reparto hasta que la cuña mida justo lo que se pide.',
+             en:'The slider changes how many vertices share the circle. The golden wedge is the central angle each one gets, and it opens or closes at once depending on how many vertices there are. Adjust the sharing until the wedge measures exactly what is asked for.'})+'</p>'+
+    '<div class="gcrd">'+
+      '<div style="font-size:.85rem;color:var(--text2);margin-bottom:.7rem" id="w3goal"></div>'+
+      '<div class="cvwrap"><canvas id="w3cv" style="display:block;width:100%;height:236px"></canvas></div>'+
+      '<div class="cg" style="margin-top:.9rem"><label>'+L({es:'Vértices repartidos: ',en:'Vertices sharing the turn: '})+'<span class="cval" id="w3nv">5</span></label>'+
+        '<input type="range" id="w3n" min="0" max="7" step="1" value="2"></div>'+
+      '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem">'+
+        '<button id="w3dn" style="'+BTN2+'">'+L({es:'Menos',en:'Fewer'})+'</button>'+
+        '<button id="w3up" style="'+BTN2+'">'+L({es:'Más',en:'More'})+'</button>'+
+        '<button id="w3chk" style="'+BTN+'">'+L({es:'Comprobar',en:'Check'})+'</button>'+
+      '</div>'+
+      '<div class="metrics" style="margin-top:.9rem">'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Lados',en:'Sides'})+'</div><div class="mnum cs" id="w3a">-</div></div>'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Ángulo central',en:'Central angle'})+'</div><div class="mnum ps" id="w3b">-</div></div>'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Ángulo interior',en:'Interior angle'})+'</div><div class="mnum ts" id="w3c">-</div></div>'+
+      '</div>'+
+      '<div class="mcfb" id="w3fb"></div>'+
+    '</div>');
+
+  (function(){
+    var round=0, tries=0, done=false, busy=false;
+    var myCv = document.getElementById('w3cv');
+    function T(){ return w3R[Math.min(round,2)]; }
+    function G(){ var e=document.getElementById('w3n'); return NL[e ? parseInt(e.value,10) : 2]; }
+    function draw(){
+      var cv=document.getElementById('w3cv'); if(!cv || cv!==myCv) return;
+      var st=cvSetup(cv,236), g=st.g, W=st.W, H=st.H;
+      var n=G(), cx=W/2, cy=H/2+4, R0=Math.min(W,H)/2-38;
+      var i, ang, x, y;
+      g.strokeStyle=cssv('--border'); g.lineWidth=1.4; g.setLineDash([4,4]);
+      g.beginPath(); g.arc(cx,cy,R0,0,Math.PI*2); g.stroke(); g.setLineDash([]);
+      g.fillStyle=cssv('--gold-bg');
+      g.beginPath(); g.moveTo(cx,cy); g.arc(cx,cy,R0*0.42,-Math.PI/2,-Math.PI/2+2*Math.PI/n); g.closePath(); g.fill();
+      g.strokeStyle=cssv('--gold'); g.lineWidth=2; g.stroke();
+      g.fillStyle=cssv('--green-bg'); g.beginPath();
+      for (i=0;i<n;i++){
+        ang = -Math.PI/2 + i*2*Math.PI/n;
+        x = cx + R0*Math.cos(ang); y = cy + R0*Math.sin(ang);
+        if (i===0) g.moveTo(x,y); else g.lineTo(x,y);
+      }
+      g.closePath(); g.fill();
+      g.strokeStyle=cssv('--green'); g.lineWidth=2.4; g.stroke();
+      g.strokeStyle=cssv('--green-dark'); g.lineWidth=1.1;
+      for (i=0;i<n;i++){
+        ang = -Math.PI/2 + i*2*Math.PI/n;
+        g.beginPath(); g.moveTo(cx,cy); g.lineTo(cx+R0*Math.cos(ang), cy+R0*Math.sin(ang)); g.stroke();
+      }
+      for (i=0;i<n;i++){
+        ang = -Math.PI/2 + i*2*Math.PI/n;
+        g.fillStyle=cssv('--gold');
+        g.beginPath(); g.arc(cx+R0*Math.cos(ang), cy+R0*Math.sin(ang), 3.4, 0, Math.PI*2); g.fill();
+      }
+      var mid = -Math.PI/2 + Math.PI/n;
+      g.fillStyle=cssv('--gold'); g.font='700 12px "IBM Plex Sans", sans-serif';
+      g.textAlign='center'; g.textBaseline='middle';
+      g.fillText(dg(n1(360/n)), cx + R0*0.6*Math.cos(mid), cy + R0*0.6*Math.sin(mid));
+      g.fillStyle=cssv('--text3'); g.font='500 10px "IBM Plex Sans", sans-serif';
+      g.textAlign='center'; g.textBaseline='top';
+      g.fillText(L({es:'centro',en:'centre'}), cx, cy+6);
+    }
+    function update(){
+      var n=G(), e;
+      e=document.getElementById('w3nv'); if(e) e.textContent=String(n);
+      e=document.getElementById('w3a');  if(e) e.textContent=String(n);
+      e=document.getElementById('w3b');
+      if(e){ e.textContent=dg(n1(360/n)); e.style.color = (360/n===T() ? 'var(--ok)' : 'var(--gold)'); }
+      e=document.getElementById('w3c');  if(e) e.textContent=dg(n1(180-360/n));
+      e=document.getElementById('w3goal');
+      if(e) e.innerHTML=L({es:'Ronda '+(round+1)+' de 3: construye el polígono regular cuyo ángulo central mide <strong>'+dg(T())+'</strong>.',
+                           en:'Round '+(round+1)+' of 3: build the regular polygon whose central angle measures <strong>'+dg(T())+'</strong>.'});
+      draw();
+    }
+    function nextRound(){
+      round++; busy=false;
+      if (round>=3){ done=true; return; }
+      tries=0;
+      var sl=document.getElementById('w3n'); if(sl) sl.value='2';
+      update();
+    }
+    function check(){
+      if (done||busy) return;
+      var n=G(), c=360/n, tg=T();
+      if (c===tg){
+        fbSet('w3fb', true, L({es:'🎉 Exacto. Con '+n+' vértices la vuelta se parte en '+n+' ángulos centrales de '+dg(tg)+' y cada lado sale igual a los demás.'+(round===2?' Las tres rondas quedaron listas.':' Va la siguiente ronda.'),
+                               en:'🎉 Exactly. With '+n+' vertices the turn splits into '+n+' central angles of '+dg(tg)+' and every side comes out equal to the rest.'+(round===2?' All three rounds are done.':' On to the next round.')}));
+        busy=true; setTimeout(nextRound, 80); return;
+      }
+      tries++;
+      if (tries>=3){
+        var idx = NL.indexOf(Math.round(360/tg));
+        var sl=document.getElementById('w3n'); if(sl && idx>=0) sl.value=String(idx);
+        update();
+        fbSet('w3fb', true, L({es:'Eran '+Math.round(360/tg)+' vértices: la vuelta completa de 360° repartida en partes de '+dg(tg)+' cabe '+360+' ÷ '+tg+' = '+Math.round(360/tg)+' veces.',
+                               en:'It was '+Math.round(360/tg)+' vertices: the full turn of 360° shared into parts of '+dg(tg)+' fits '+360+' ÷ '+tg+' = '+Math.round(360/tg)+' times.'}));
+        busy=true; setTimeout(nextRound, 80); return;
+      }
+      fbSet('w3fb', false, (c>tg)
+        ? L({es:'Tu cuña mide '+dg(n1(c))+', más abierta que los '+dg(tg)+' pedidos: con pocos vértices a cada uno le toca demasiado. Reparte la vuelta entre más.',
+             en:'Your wedge measures '+dg(n1(c))+', wider than the '+dg(tg)+' asked for: with few vertices each one gets too much. Share the turn among more.'})
+        : L({es:'Tu cuña mide '+dg(n1(c))+', más cerrada que los '+dg(tg)+' pedidos: con tantos vértices a cada uno le toca muy poco. Reparte la vuelta entre menos.',
+             en:'Your wedge measures '+dg(n1(c))+', tighter than the '+dg(tg)+' asked for: with so many vertices each one gets very little. Share the turn among fewer.'}));
+    }
+    var sl0=document.getElementById('w3n'); if(sl0) sl0.addEventListener('input', update);
+    var bu=document.getElementById('w3up');
+    if (bu) bu.addEventListener('click', function(){ var s=document.getElementById('w3n'); if(s){ s.value=String(Math.min(7, parseInt(s.value,10)+1)); update(); } });
+    var bd=document.getElementById('w3dn');
+    if (bd) bd.addEventListener('click', function(){ var s=document.getElementById('w3n'); if(s){ s.value=String(Math.max(0, parseInt(s.value,10)-1)); update(); } });
+    var cb=document.getElementById('w3chk'); if(cb) cb.addEventListener('click', check);
+    setTimeout(update, 90);
+    window.addEventListener('resize', function(){ if(document.getElementById('w3cv')===myCv) draw(); });
+  })();
+
+  /* ── P5 ── */
+  var PG = [[4,90],[5,72],[6,60],[8,45],[9,40],[10,36],[12,30]];
+  var g5 = pk(PG);
+  var p5v = pk([0,1]);
+  var p5q, p5exp, p5corr, p5opts, p5title, p5hint;
+  if (p5v===0){
+    p5corr = g5[0]+L({es:' lados',en:' sides'});
+    p5opts = optN(g5[0], [g5[0]+2, g5[0]-1, Math.round(180/g5[1])], L({es:' lados',en:' sides'}));
+    p5title = L({es:'Cuántos vértices caben', en:'How many vertices fit'});
+    p5q = L({es:'Para construir un polígono regular se reparte la vuelta completa de la circunferencia en ángulos centrales iguales de '+dg(g5[1])+'. ¿Cuántos lados va a tener la figura terminada?',
+             en:'To build a regular polygon the full turn of the circle is shared out into equal central angles of '+dg(g5[1])+'. How many sides will the finished figure have?'});
+    p5exp = L({es:'Cada vértice se lleva un ángulo central de '+dg(g5[1])+' y entre todos completan la vuelta: 360 ÷ '+g5[1]+' = '+g5[0]+'. La figura tendrá '+g5[0]+' vértices y, por lo tanto, '+g5[0]+' lados iguales.',
+               en:'Each vertex takes a central angle of '+dg(g5[1])+' and together they complete the turn: 360 ÷ '+g5[1]+' = '+g5[0]+'. The figure will have '+g5[0]+' vertices and therefore '+g5[0]+' equal sides.'});
+    p5hint = L({es:'Piensa cuántas veces cabe esa abertura dentro de una vuelta completa.',
+                en:'Think about how many times that opening fits inside one full turn.'});
+  } else {
+    p5corr = dg(g5[1]);
+    p5opts = optN(g5[1], [180-g5[1], g5[1]*2, Math.round(g5[1]/2)], '°');
+    p5title = L({es:'La cuña de cada vértice', en:'The wedge of each vertex'});
+    p5q = L({es:'Se quiere construir un polígono regular de '+g5[0]+' lados marcando sus vértices sobre una circunferencia. ¿Cuánto debe medir el ángulo central que separa dos marcas seguidas?',
+             en:'A regular polygon with '+g5[0]+' sides is to be built by marking its vertices on a circle. How much does the central angle separating two consecutive marks have to measure?'});
+    p5exp = L({es:'Los '+g5[0]+' vértices se reparten la vuelta completa en partes iguales: 360 ÷ '+g5[0]+' = '+dg(g5[1])+' para cada uno.',
+               en:'The '+g5[0]+' vertices share the full turn in equal parts: 360 ÷ '+g5[0]+' = '+dg(g5[1])+' for each one.'});
+    p5hint = L({es:'La vuelta completa se reparte por igual entre todas las marcas, así que fíjate en cuántas marcas hay.',
+                en:'The full turn is shared equally among all the marks, so look at how many marks there are.'});
+  }
+  addProb({ title:p5title, q:p5q, hint:p5hint, exp:p5exp, correct:p5corr, options:p5opts, showWork:true });
+
+  /* ── P6 ── */
+  var g6 = pk([[4,90],[5,72],[6,60],[10,36],[12,30]]);
+  var g6b = pk([[4,90],[5,72],[10,36],[12,30]]);
+  var p6v = pk([0,1]);
+  var p6q, p6exp, p6corr, p6opts, p6title, p6hint;
+  if (p6v===0){
+    var f6 = pk([2,3,4]);
+    p6corr = dg(g6[1]);
+    p6opts = optN(g6[1], [Math.round(g6[1]/f6), g6[1]*f6, 180-g6[1], Math.round(g6[1]*1.5), g6[1]*2], '°');
+    p6title = L({es:'La cuña de la ampliación', en:'The wedge of the enlargement'});
+    p6q = L({es:'Un polígono regular de '+g6[0]+' lados se vuelve a construir con un radio '+f6+' veces mayor, así que cada lado del nuevo dibujo queda '+f6+' veces más largo. ¿Cuánto mide el ángulo central del nuevo dibujo?',
+             en:'A regular polygon with '+g6[0]+' sides is built again with a radius '+f6+' times bigger, so every side of the new drawing comes out '+f6+' times longer. How much does the central angle of the new drawing measure?'});
+    p6exp = L({es:'El nuevo dibujo sigue teniendo '+g6[0]+' vértices repartiéndose la misma vuelta completa, y eso es lo único que decide el ángulo central: 360 ÷ '+g6[0]+' = '+dg(g6[1])+'. El radio más grande alarga los lados, pero no abre ni cierra las cuñas.',
+               en:'The new drawing still has '+g6[0]+' vertices sharing the same full turn, and that is the only thing deciding the central angle: 360 ÷ '+g6[0]+' = '+dg(g6[1])+'. The bigger radius lengthens the sides, but it neither opens nor closes the wedges.'});
+    p6hint = L({es:'Pregúntate si al agrandar la circunferencia cambia el número de partes en que quedó cortada la vuelta.',
+                en:'Ask yourself whether enlarging the circle changes the number of parts the turn was cut into.'});
+  } else {
+    p6corr = L({es:'Sigue midiendo '+dg(g6b[1]), en:'It still measures '+dg(g6b[1])});
+    p6opts = optT(p6corr, [
+      L({es:'Se reduce a la mitad, '+dg(g6b[1]/2), en:'It halves, down to '+dg(g6b[1]/2)}),
+      L({es:'Se duplica, hasta '+dg(g6b[1]*2),    en:'It doubles, up to '+dg(g6b[1]*2)}),
+      L({es:'Pasa a medir '+dg(180-g6b[1]),       en:'It becomes '+dg(180-g6b[1])})
+    ]);
+    p6title = L({es:'La copia reducida', en:'The reduced copy'});
+    p6q = L({es:'Un polígono regular de '+g6b[0]+' lados se vuelve a dibujar a escala, con todos sus lados de la mitad de largo. ¿Qué ocurre con su ángulo central?',
+             en:'A regular polygon with '+g6b[0]+' sides is drawn again to scale, with all its sides half as long. What happens to its central angle?'});
+    p6exp = L({es:'Reducir los lados a la mitad encoge la circunferencia, pero la vuelta completa sigue partida entre los mismos '+g6b[0]+' vértices: 360 ÷ '+g6b[0]+' = '+dg(g6b[1])+'. El ángulo central no mide longitudes, mide reparto.',
+               en:'Halving the sides shrinks the circle, but the full turn is still split among the same '+g6b[0]+' vertices: 360 ÷ '+g6b[0]+' = '+dg(g6b[1])+'. The central angle does not measure lengths, it measures sharing.'});
+    p6hint = L({es:'Fíjate en qué dato de la figura cambió al reducirla y en cuál se quedó exactamente igual.',
+                en:'Look at which piece of the figure changed when it was reduced and which one stayed exactly the same.'});
+  }
+  addProb({ title:p6title, q:p6q, hint:p6hint, exp:p6exp, correct:p6corr, options:p6opts, showWork:false });
+
+  /* ══════════════════════════════════════════════════════════════════
+     SECCIÓN 4 - Cuadriláteros e irregulares: la diagonal como andamio
+     ══════════════════════════════════════════════════════════════════ */
+  sec(L({es:'Concepto 4', en:'Concept 4'}),
+      L({es:'La diagonal sostiene la copia', en:'The diagonal holds the copy up'}),
+    '<p>'+L({es:'Cuatro lados no bastan para fijar un cuadrilátero. Si se arma con varillas y tornillos, la figura se dobla como una puerta sin que ninguno de sus lados cambie de medida, y por eso dos cuadriláteros con los mismos cuatro lados pueden verse muy distintos. La pieza que le falta es la diagonal: al trazarla, el cuadrilátero queda partido en dos triángulos, y un triángulo con sus tres lados conocidos ya no se mueve.',
+             en:'Four sides are not enough to fix a quadrilateral. If it is put together with rods and screws, the figure swings like a door without any of its sides changing measurement, and that is why two quadrilaterals with the same four sides can look very different. The missing piece is the diagonal: once it is drawn, the quadrilateral is split into two triangles, and a triangle with its three sides known no longer moves.'})+'</p>'+
+    '<p>'+L({es:'De ahí sale el modo de copiar a escala un cuadrilátero: se multiplica por el factor cada lado y también la diagonal, y se levantan los dos triángulos uno tras otro con la misma técnica de los arcos. Con un polígono irregular de más lados el procedimiento es el mismo, repetido: desde un solo vértice salen las diagonales que lo parten en triángulos, se multiplican todas las medidas por el factor y se van armando los triángulos en orden. Las diagonales obedecen al factor igual que los lados, porque también son segmentos de la figura.',
+             en:'From there comes the way to copy a quadrilateral to scale: every side is multiplied by the factor and so is the diagonal, and the two triangles are raised one after the other with the same arc technique. With an irregular polygon of more sides the procedure is the same, repeated: from a single vertex come the diagonals splitting it into triangles, all the measurements are multiplied by the factor and the triangles are assembled in order. Diagonals obey the factor just like the sides, because they are segments of the figure too.'})+'</p>'+
+    '<div class="callout"><p>'+L({es:'Conviene armar los triángulos en el orden en que comparten la diagonal: el primero deja lista la línea sobre la que se apoya el segundo, y así el dibujo no se descuadra al final.',
+                                  en:'It pays to assemble the triangles in the order in which they share the diagonal: the first one leaves ready the line the second leans on, and that way the drawing does not go crooked at the end.'})+'</p></div>');
+
+  /* ── W4: empareja original y copia ── */
+  var w4k = pk([15,20,25,30])/10;
+  var w4b = pk([[4,6,8,10],[6,8,10,14],[4,8,12,16],[6,10,12,16]]);
+  var w4lbl = [ {es:'lado AB',en:'side AB'}, {es:'lado BC',en:'side BC'}, {es:'lado CD',en:'side CD'}, {es:'diagonal AC',en:'diagonal AC'} ];
+  var w4ord = shuffle([0,1,2,3], rng);
+  var w4W = widget('match',
+    '<div class="stag">'+L({es:'Empareja las medidas',en:'Match the measurements'})+'</div>'+
+    '<h2>'+L({es:'Cada medida del original con la que le toca en la copia',en:'Each measurement of the original with the one it gets in the copy'})+'</h2>'+
+    '<p>'+L({es:'Un cuadrilátero ABCD se copia con un factor de ×'+n1(w4k)+', y la diagonal AC viaja con el mismo factor que los lados. Toca una medida del original y luego la medida de la copia que le corresponde. Si la pareja es correcta las dos quedan fijas; si no, puedes volver a intentarlo.',
+             en:'A quadrilateral ABCD is copied with a factor of ×'+n1(w4k)+', and the diagonal AC travels with the same factor as the sides. Tap a measurement of the original and then the copy measurement matching it. If the pair is right both lock in place; if not, you can try again.'})+'</p>'+
+    '<div class="gcrd"><div id="w4grid"></div><div class="mcfb" id="w4fb"></div></div>');
+
+  (function(){
+    var st = { sel:null, lock:[false,false,false,false], tries:0, done:false };
+    var grid = document.getElementById('w4grid');
+    function render(){
+      if (!grid) return;
+      var left = w4b.map(function(v,i){
+        var on = st.lock[i], sel = (st.sel===i);
+        return '<button data-side="l" data-i="'+i+'" style="'+CHIP+
+          (on ? ';border-color:var(--ok);background:var(--ok-bg);color:var(--ok);cursor:default' : (sel ? ';border-color:var(--gold);background:var(--gold-bg)' : ''))+
+          '">'+L(w4lbl[i])+': '+n1(v)+' cm</button>';
+      }).join('');
+      var right = w4ord.map(function(j){
+        var on = st.lock[j];
+        return '<button data-side="r" data-i="'+j+'" style="'+CHIP+';text-align:center'+
+          (on ? ';border-color:var(--ok);background:var(--ok-bg);color:var(--ok);cursor:default' : '')+
+          '">'+n1(w4b[j]*w4k)+' cm</button>';
+      }).join('');
+      grid.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem">'+
+          '<div><div class="mlbl" style="margin-bottom:.4rem">'+L({es:'Original',en:'Original'})+'</div>'+
+            '<div style="display:flex;flex-direction:column;gap:.45rem">'+left+'</div></div>'+
+          '<div><div class="mlbl" style="margin-bottom:.4rem">'+L({es:'Copia',en:'Copy'})+'</div>'+
+            '<div style="display:flex;flex-direction:column;gap:.45rem">'+right+'</div></div>'+
+        '</div>';
+    }
+    function allDone(){ return st.lock.every(function(v){ return v; }); }
+    function onClick(ev){
+      if (st.done) return;
+      var b = ev.target;
+      while (b && b !== grid && !b.getAttribute('data-side')) b = b.parentNode;
+      if (!b || b===grid || !b.getAttribute('data-side')) return;
+      var i = parseInt(b.getAttribute('data-i'),10);
+      if (st.lock[i]) return;
+      if (b.getAttribute('data-side')==='l'){ st.sel = (st.sel===i ? null : i); render(); return; }
+      if (st.sel===null){
+        fbSet('w4fb', false, L({es:'Elige primero una medida del original y después su pareja en la copia.',
+                                en:'First choose a measurement of the original and then its partner in the copy.'}));
+        return;
+      }
+      var orig = w4b[st.sel], got = w4b[i]*w4k, want = orig*w4k;
+      if (i===st.sel){
+        st.lock[i]=true; st.sel=null; render();
+        if (allDone()){
+          st.done=true;
+          fbSet('w4fb', true, L({es:'🎉 Las cuatro parejas quedaron armadas. Con el mismo factor ×'+n1(w4k)+' se copian los lados y también la diagonal, y por eso los dos triángulos encajan.',
+                                 en:'🎉 All four pairs are assembled. The same factor ×'+n1(w4k)+' copies the sides and the diagonal too, and that is why the two triangles fit together.'}));
+        } else {
+          fbSet('w4fb', true, L({es:'Correcto: '+n1(orig)+' × '+n1(w4k)+' = '+n1(want)+' cm. Sigue con otra medida.',
+                                 en:'Correct: '+n1(orig)+' × '+n1(w4k)+' = '+n1(want)+' cm. Carry on with another measurement.'}));
+        }
+        return;
+      }
+      st.tries++;
+      if (st.tries>=3){
+        st.lock=[true,true,true,true]; st.sel=null; st.done=true; render();
+        fbSet('w4fb', true, L({es:'Estas son las parejas: cada medida del original se multiplica por ×'+n1(w4k)+' y ninguna se queda fuera, ni siquiera la diagonal.',
+                               en:'These are the pairs: every measurement of the original is multiplied by ×'+n1(w4k)+' and none is left out, not even the diagonal.'}));
+        return;
+      }
+      fbSet('w4fb', false, (got>want)
+        ? L({es:n1(got)+' cm es demasiado para '+n1(orig)+' cm: con este factor esa medida se queda en '+n1(want)+' cm. Prueba una copia más corta.',
+             en:n1(got)+' cm is too much for '+n1(orig)+' cm: with this factor that measurement lands on '+n1(want)+' cm. Try a shorter copy.'})
+        : L({es:n1(got)+' cm se queda corto para '+n1(orig)+' cm: con este factor esa medida llega hasta '+n1(want)+' cm. Prueba una copia más larga.',
+             en:n1(got)+' cm falls short for '+n1(orig)+' cm: with this factor that measurement reaches '+n1(want)+' cm. Try a longer copy.'}));
+    }
+    render();
+    if (grid) grid.addEventListener('click', onClick);
+  })();
+
+  /* ── P7 ── */
+  var p7v = pk([0,1]);
+  var p7q, p7exp, p7corr, p7opts, p7title, p7hint;
+  if (p7v===0){
+    var s7 = pk([8,10,12]), k7 = pk([20,25,30])/10, d7 = pk([14,16,18]);
+    var cs7 = s7*k7, cd7 = d7*k7;
+    p7corr = n1(cd7)+' cm';
+    p7opts = optN(cd7, [d7+(cs7-s7), Math.round(d7/k7), d7], ' cm');
+    p7title = L({es:'La diagonal de la copia', en:'The diagonal of the copy'});
+    p7q = L({es:'Un cuadrilátero tiene un lado de '+s7+' cm y una diagonal de '+d7+' cm. En una copia a escala ese lado mide '+n1(cs7)+' cm. ¿Cuánto mide la diagonal en la copia?',
+             en:'A quadrilateral has a side of '+s7+' cm and a diagonal of '+d7+' cm. In a scale copy that side measures '+n1(cs7)+' cm. How much does the diagonal measure in the copy?'});
+    p7exp = L({es:'El lado pasó de '+s7+' a '+n1(cs7)+' cm, así que el factor es '+n1(cs7)+' ÷ '+s7+' = '+n1(k7)+'. La diagonal es un segmento más de la figura y sigue el mismo factor: '+d7+' × '+n1(k7)+' = '+n1(cd7)+' cm.',
+               en:'The side went from '+s7+' to '+n1(cs7)+' cm, so the factor is '+n1(cs7)+' ÷ '+s7+' = '+n1(k7)+'. The diagonal is one more segment of the figure and follows the same factor: '+d7+' × '+n1(k7)+' = '+n1(cd7)+' cm.'});
+    p7hint = L({es:'Saca el factor con la única pareja completa que te dan y aplícaselo después al segmento que une dos vértices opuestos.',
+                en:'Work out the factor with the only complete pair you are given and then apply it to the segment joining two opposite vertices.'});
+  } else {
+    var m7 = pk([4,5,6]), sc7 = pk([4,5]), dc7 = sc7 + pk([2,3]);
+    var sr7 = sc7*m7, dr7 = dc7*m7;
+    p7corr = dc7+' cm';
+    p7opts = optN(dc7, [dr7, sc7, dc7+m7], ' cm');
+    p7title = L({es:'La diagonal en el plano', en:'The diagonal on the plan'});
+    p7q = L({es:'Un terreno con forma de cuadrilátero tiene un lado de '+sr7+' m y una diagonal de '+dr7+' m. En el plano ese lado aparece con '+sc7+' cm. ¿Cuánto mide la diagonal en el plano?',
+             en:'A quadrilateral shaped plot has a side of '+sr7+' m and a diagonal of '+dr7+' m. On the plan that side appears with '+sc7+' cm. How much does the diagonal measure on the plan?'});
+    p7exp = L({es:'El lado de '+sr7+' m ocupa '+sc7+' cm, así que cada centímetro del plano vale '+sr7+' ÷ '+sc7+' = '+m7+' metros. La diagonal de '+dr7+' m necesita entonces '+dr7+' ÷ '+m7+' = '+dc7+' cm.',
+               en:'The side of '+sr7+' m takes up '+sc7+' cm, so each centimetre of the plan is worth '+sr7+' ÷ '+sc7+' = '+m7+' metres. The diagonal of '+dr7+' m then needs '+dr7+' ÷ '+m7+' = '+dc7+' cm.'});
+    p7hint = L({es:'Descubre primero cuántos metros representa cada centímetro del plano y usa ese mismo dato para el segmento interior.',
+                en:'First find out how many metres each centimetre of the plan stands for and use that same figure for the inner segment.'});
+  }
+  addProb({ title:p7title, q:p7q, hint:p7hint, exp:p7exp, correct:p7corr, options:p7opts, showWork:true });
+
+  /* ── P8 ── */
+  var q8 = pk([[2,3,4,5],[3,4,5,6],[2,4,5,7],[3,5,6,8]]);
+  var m8 = pk([3,4,5]);
+  var real8 = q8.map(function(v){ return v*m8; });
+  var p8v = pk([0,1]);
+  var p8q, p8exp, p8corr, p8opts, p8title, p8hint;
+  if (p8v===0){
+    p8corr = listCm(q8);
+    p8opts = optT(p8corr, [
+      listCm(real8.map(function(v){ return v-m8; })),
+      listCm(real8.map(function(v){ return v*m8; })),
+      listCm([q8[0], q8[1], q8[2], q8[3]+1])
+    ]);
+    p8title = L({es:'El cuadrilátero en la hoja', en:'The quadrilateral on the sheet'});
+    p8q = L({es:'Un terreno con forma de cuadrilátero tiene lados de '+listM(real8)+'. Se dibuja en una hoja usando un centímetro por cada '+m8+' metros. ¿Qué medidas tendrán los lados del dibujo?',
+             en:'A quadrilateral shaped plot has sides of '+listM(real8)+'. It is drawn on a sheet using one centimetre for every '+m8+' metres. What measurements will the sides of the drawing have?'});
+    p8exp = L({es:'Cada medida del terreno se reparte entre '+m8+' para saber cuánto ocupa en el papel: '+real8[0]+' ÷ '+m8+' = '+q8[0]+', '+real8[1]+' ÷ '+m8+' = '+q8[1]+', '+real8[2]+' ÷ '+m8+' = '+q8[2]+' y '+real8[3]+' ÷ '+m8+' = '+q8[3]+'. Los cuatro lados del dibujo miden '+listCm(q8)+'.',
+               en:'Each measurement of the plot is shared out among '+m8+' to know how much room it takes on paper: '+real8[0]+' ÷ '+m8+' = '+q8[0]+', '+real8[1]+' ÷ '+m8+' = '+q8[1]+', '+real8[2]+' ÷ '+m8+' = '+q8[2]+' and '+real8[3]+' ÷ '+m8+' = '+q8[3]+'. The four sides of the drawing measure '+listCm(q8)+'.'});
+    p8hint = L({es:'Trabaja lado por lado con el mismo trato para todos, y desconfía de las opciones donde un solo lado se sale del patrón.',
+                en:'Work side by side giving all of them the same treatment, and distrust the options where a single side breaks the pattern.'});
+  } else {
+    p8corr = listM(real8);
+    p8opts = optT(p8corr, [
+      listM(q8.map(function(v){ return v+m8; })),
+      listM(real8.map(function(v){ return v*m8; })),
+      listM([real8[0], real8[1], real8[2], real8[3]+m8])
+    ]);
+    p8title = L({es:'Del dibujo al terreno', en:'From the drawing to the plot'});
+    p8q = L({es:'En un plano, un terreno con forma de cuadrilátero aparece con lados de '+listCm(q8)+'. El plano se hizo con un centímetro por cada '+m8+' metros. ¿Qué medidas tienen los lados del terreno real?',
+             en:'On a plan, a quadrilateral shaped plot appears with sides of '+listCm(q8)+'. The plan was made with one centimetre for every '+m8+' metres. What measurements do the sides of the real plot have?'});
+    p8exp = L({es:'Cada centímetro del plano vale '+m8+' metros, así que cada medida del dibujo se multiplica por '+m8+': '+q8[0]+' × '+m8+' = '+real8[0]+', '+q8[1]+' × '+m8+' = '+real8[1]+', '+q8[2]+' × '+m8+' = '+real8[2]+' y '+q8[3]+' × '+m8+' = '+real8[3]+'. Los lados del terreno miden '+listM(real8)+'.',
+               en:'Each centimetre of the plan is worth '+m8+' metres, so each drawing measurement is multiplied by '+m8+': '+q8[0]+' × '+m8+' = '+real8[0]+', '+q8[1]+' × '+m8+' = '+real8[1]+', '+q8[2]+' × '+m8+' = '+real8[2]+' and '+q8[3]+' × '+m8+' = '+real8[3]+'. The sides of the plot measure '+listM(real8)+'.'});
+    p8hint = L({es:'Aplica a los cuatro lados el mismo trato y revisa que ninguna opción trate a uno de ellos distinto de los demás.',
+                en:'Give the four sides the same treatment and check that no option treats one of them differently from the rest.'});
+  }
+  addProb({ title:p8title, q:p8q, hint:p8hint, exp:p8exp, correct:p8corr, options:p8opts, showWork:false });
+
+  /* ── W5: reflexión ── */
+  var R5 = [
+    { es:'Dibuja el plan de construcción de un triángulo cuyos lados reales miden 12 m, 16 m y 20 m, reducido para que quepa en tu cuaderno. Anota qué factor elegiste y por qué ese y no otro.',
+      en:'Draw the construction plan of a triangle whose real sides measure 12 m, 16 m and 20 m, reduced so that it fits in your notebook. Write down which factor you chose and why that one and not another.' },
+    { es:'Explica con tus palabras cómo copiarías a escala un cuadrilátero irregular usando solo regla y compás. Puedes hacer el croquis y numerar los pasos.',
+      en:'Explain in your own words how you would copy an irregular quadrilateral to scale using only ruler and compass. You may sketch it and number the steps.' },
+    { es:'Un compañero copió un triángulo sumando 3 cm a cada lado en vez de multiplicar. Dibuja el original y su resultado, y explica qué se echó a perder.',
+      en:'A classmate copied a triangle by adding 3 cm to each side instead of multiplying. Draw the original and the result, and explain what was ruined.' },
+    { es:'Describe cómo construirías un hexágono regular grande a partir de uno pequeño ya dibujado, sin volver a medir los ángulos.',
+      en:'Describe how you would build a large regular hexagon starting from a small one already drawn, without measuring the angles again.' }
+  ];
+  var pick5 = pk(R5);
+  widget('reflect',
+    '<div class="stag">'+L({es:'Tu turno',en:'Your turn'})+'</div>'+
+    '<h2>'+L({es:'El plan antes del trazo',en:'The plan before the drawing'})+'</h2>'+
+    '<p>'+L(pick5)+'</p>'+
+    '<div class="wtabs">'+
+      '<button class="wtab active" data-rt="type">'+t('tab-type')+'</button>'+
+      '<button class="wtab" data-rt="draw">'+t('tab-draw')+'</button>'+
+    '</div>'+
+    '<div class="wpanel active" id="w5_type"><textarea class="wtextarea" id="w5ta" placeholder="'+t('ph-work')+'"></textarea></div>'+
+    '<div class="wpanel" id="w5_draw">'+
+      '<div class="cvwrap">'+
+        '<canvas class="dcanvas" id="w5cv"></canvas>'+
+        '<div class="ctoolbar">'+
+          '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>'+
+          '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>'+
+          '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>'+
+          '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>'+
+          '<div class="cdot" data-color="#1a1a16" style="background:#1a1a16"></div>'+
+          '<div class="cdot" data-color="#8b2500" style="background:#8b2500"></div>'+
+          '<div class="cdot" data-color="#1d4e89" style="background:#1d4e89"></div>'+
+          '<button class="clrbtn">'+t('btn-clear')+'</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<button id="w5save" style="'+BTN+';margin-top:.7rem">'+L({es:'Guardar',en:'Save'})+'</button>'+
+    '<div class="mcfb" id="w5fb"></div>');
+
+  (function(){
+    var inited=false;
+    var tabs = document.querySelectorAll('.reflectwrap .wtab');
+    Array.prototype.forEach.call(tabs, function(b){
+      b.addEventListener('click', function(){
+        var which = b.getAttribute('data-rt');
+        ['type','draw'].forEach(function(p){
+          var el=document.getElementById('w5_'+p); if(el) el.classList.toggle('active', p===which);
+        });
+        Array.prototype.forEach.call(tabs, function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        if (which==='draw' && !inited){
+          inited=true;
+          setTimeout(function(){ var c=document.getElementById('w5cv'); if(c) initCanvas(c); }, 60);
+        }
+      });
+    });
+    var sv=document.getElementById('w5save');
+    if (sv) sv.addEventListener('click', function(){
+      fbSet('w5fb', true, L({es:'✓ Guardado. Un buen plan de construcción se reconoce porque cualquiera podría seguirlo y obtener la misma figura.',
+                             en:'✓ Saved. A good construction plan is recognised because anyone could follow it and get the same figure.'}));
+    });
+  })();
+
+  /* ══════════════════════════════════════════════════════════════════
+     CIERRE
+     ══════════════════════════════════════════════════════════════════ */
+  sec(L({es:'Cierre', en:'Closing'}),
+      L({es:'Las piezas trabajando juntas', en:'The pieces working together'}),
+    '<p>'+L({es:'Las dos últimas situaciones no traen ningún dato de más y piden dos etapas: primero sale el número que relaciona las dos figuras, y solo con él se llega a lo que se pregunta. Conviene anotar ese resultado intermedio antes de seguir adelante.',
+             en:'The last two situations bring no spare information and ask for two stages: first comes the number relating the two figures, and only with it can the question be reached. It is worth writing that intermediate result down before carrying on.'})+'</p>');
+
+  /* ── P9 ── */
+  var p9v = pk([0,1]);
+  var p9q, p9exp, p9corr, p9opts, p9title, p9hint;
+  if (p9v===0){
+    var t9 = pk([[6,9,12],[5,7,8],[4,6,9],[7,9,11],[5,8,9]]);
+    var k9 = pk([3,4]);
+    var per9 = t9[0]+t9[1]+t9[2], res9 = per9*k9, c9 = t9[0]*k9;
+    p9corr = res9+' cm';
+    p9opts = optN(res9, [per9+(c9-t9[0]), per9, res9+t9[0]], ' cm');
+    p9title = L({es:'El contorno de la ampliación', en:'The outline of the enlargement'});
+    p9q = L({es:'Un triángulo tiene lados de '+t9[0]+' cm, '+t9[1]+' cm y '+t9[2]+' cm. Se amplía a escala y el lado de '+t9[0]+' cm queda en '+c9+' cm. ¿Cuánto mide el contorno completo de la copia?',
+             en:'A triangle has sides of '+t9[0]+' cm, '+t9[1]+' cm and '+t9[2]+' cm. It is enlarged to scale and the '+t9[0]+' cm side ends up at '+c9+' cm. How long is the complete outline of the copy?'});
+    p9exp = L({es:'El lado de '+t9[0]+' cm quedó en '+c9+' cm, así que el factor es '+c9+' ÷ '+t9[0]+' = '+k9+'. El contorno del original mide '+t9[0]+' + '+t9[1]+' + '+t9[2]+' = '+per9+' cm, y como es una suma de lados sigue al mismo factor: '+per9+' × '+k9+' = '+res9+' cm.',
+               en:'The '+t9[0]+' cm side ended up at '+c9+' cm, so the factor is '+c9+' ÷ '+t9[0]+' = '+k9+'. The outline of the original measures '+t9[0]+' + '+t9[1]+' + '+t9[2]+' = '+per9+' cm, and being a sum of sides it follows the same factor: '+per9+' × '+k9+' = '+res9+' cm.'});
+    p9hint = L({es:'Necesitas dos cosas en este orden: primero el número que relaciona las dos figuras y después el contorno del original.',
+                en:'You need two things in this order: first the number relating the two figures and then the outline of the original.'});
+  } else {
+    var k9b = pk([3,4,5]);
+    var perO = pk([18,21,24,27]);
+    var perC = perO*k9b;
+    p9corr = perO+' cm';
+    p9opts = optN(perO, [perC-k9b, Math.round(perC/2), perC], ' cm');
+    p9title = L({es:'De vuelta al original', en:'Back to the original'});
+    p9q = L({es:'La copia a escala de un triángulo tiene un contorno de '+perC+' cm, y cada lado de esa copia resultó '+k9b+' veces más largo que el del original. ¿Cuánto mide el contorno del triángulo original?',
+             en:'The scale copy of a triangle has an outline of '+perC+' cm, and each side of that copy came out '+k9b+' times longer than the original one. How long is the outline of the original triangle?'});
+    p9exp = L({es:'Si cada lado de la copia es '+k9b+' veces el del original, la suma de los tres también lo es. Para regresar hay que deshacer esa multiplicación: '+perC+' ÷ '+k9b+' = '+perO+' cm.',
+               en:'If each side of the copy is '+k9b+' times the original one, the sum of the three is too. To go back that multiplication has to be undone: '+perC+' ÷ '+k9b+' = '+perO+' cm.'});
+    p9hint = L({es:'El contorno es una suma de lados, así que le pasa lo mismo que a cada lado; solo que aquí el camino va de la copia al original.',
+                en:'The outline is a sum of sides, so the same thing happens to it as to each side; only here the road goes from the copy to the original.'});
+  }
+  addProb({ title:p9title, q:p9q, hint:p9hint, exp:p9exp, correct:p9corr, options:p9opts, showWork:true });
+
+  /* ── P10 ── */
+  var g10 = pk([[5,72],[6,60],[8,45],[9,40],[10,36],[12,30]]);
+  var sd10 = pk([2,3,4]), m10 = pk([3,4,5]);
+  var p10v = pk([0,1]);
+  var p10q, p10exp, p10corr, p10opts, p10title, p10hint;
+  if (p10v===0){
+    var perD = g10[0]*sd10, perR = perD*m10;
+    p10corr = perR+' m';
+    p10opts = optN(perR, [perD, g10[0]*m10, g10[0]*(sd10+m10), sd10*m10*2, perD+m10], ' m');
+    p10title = L({es:'Del plano al terreno completo', en:'From the plan to the whole plot'});
+    p10q = L({es:'En un plano aparece un terreno con forma de polígono regular: cada lado del dibujo mide '+sd10+' cm y su ángulo central mide '+dg(g10[1])+'. Cada centímetro del plano representa '+m10+' metros. ¿Cuánto mide el contorno completo del terreno real?',
+              en:'On a plan there is a plot shaped like a regular polygon: each side of the drawing measures '+sd10+' cm and its central angle measures '+dg(g10[1])+'. Each centimetre of the plan stands for '+m10+' metres. How long is the complete outline of the real plot?'});
+    p10exp = L({es:'La vuelta completa se repartió en 360 ÷ '+g10[1]+' = '+g10[0]+' partes, así que la figura tiene '+g10[0]+' lados iguales y en el dibujo su contorno mide '+g10[0]+' × '+sd10+' = '+perD+' cm. Cada centímetro vale '+m10+' metros, de modo que el contorno real es '+perD+' × '+m10+' = '+perR+' metros.',
+                en:'The full turn was shared into 360 ÷ '+g10[1]+' = '+g10[0]+' parts, so the figure has '+g10[0]+' equal sides and in the drawing its outline measures '+g10[0]+' × '+sd10+' = '+perD+' cm. Each centimetre is worth '+m10+' metres, so the real outline is '+perD+' × '+m10+' = '+perR+' metres.'});
+    p10hint = L({es:'El ángulo central te dice cuántos lados hay; con eso arma el contorno del dibujo y hasta el final pásalo al terreno.',
+                 en:'The central angle tells you how many sides there are; with that build the outline of the drawing and only at the end take it to the plot.'});
+  } else {
+    var perR2 = g10[0]*sd10*m10, ladoR2 = sd10*m10;
+    p10corr = sd10+' cm';
+    p10opts = optN(sd10, [ladoR2, g10[0], sd10*2, sd10+m10, ladoR2+m10], ' cm');
+    p10title = L({es:'El lado que hay que trazar', en:'The side to be drawn'});
+    p10q = L({es:'Un terreno con forma de polígono regular tiene un contorno de '+perR2+' m y su ángulo central mide '+dg(g10[1])+'. Se va a dibujar usando un centímetro por cada '+m10+' metros. ¿Cuánto debe medir cada lado del dibujo?',
+              en:'A plot shaped like a regular polygon has an outline of '+perR2+' m and its central angle measures '+dg(g10[1])+'. It is going to be drawn using one centimetre for every '+m10+' metres. How much does each side of the drawing have to measure?'});
+    p10exp = L({es:'El ángulo central indica cuántas partes tiene la vuelta: 360 ÷ '+g10[1]+' = '+g10[0]+' lados iguales. Cada lado real mide entonces '+perR2+' ÷ '+g10[0]+' = '+ladoR2+' metros, y en el papel ocupa '+ladoR2+' ÷ '+m10+' = '+sd10+' cm.',
+                en:'The central angle shows how many parts the turn has: 360 ÷ '+g10[1]+' = '+g10[0]+' equal sides. Each real side then measures '+perR2+' ÷ '+g10[0]+' = '+ladoR2+' metres, and on paper it takes up '+ladoR2+' ÷ '+m10+' = '+sd10+' cm.'});
+    p10hint = L({es:'Cuenta primero cuántos lados iguales se reparten el contorno y deja la reducción al papel para el último paso.',
+                 en:'First count how many equal sides share the outline and leave the reduction to paper for the last step.'});
+  }
+  addProb({ title:p10title, q:p10q, hint:p10hint, exp:p10exp, correct:p10corr, options:p10opts, showWork:true });
+}
+</script>
+</body>
+</html>

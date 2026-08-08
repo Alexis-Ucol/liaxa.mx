@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polígonos Regulares con Regla y Compás</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── INTERACTIVE WIDGETS ── */
+.iwrap { background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--gold); border-radius:12px; padding:1.1rem 1.1rem 1.2rem; }
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:700; margin-bottom:.4rem; }
+.iw-goal { font-size:.92rem; color:var(--text); font-weight:600; margin-bottom:.5rem; }
+.iw-sub { font-size:.79rem; color:var(--text3); margin-bottom:.75rem; }
+.ivcanvas { display:block; width:100%; height:250px; background:var(--surface); }
+.iw-ctrl { display:flex; align-items:center; gap:.6rem; margin:.85rem 0 .5rem; }
+.iw-ctrl input[type=range] { flex:1; accent-color:var(--green); min-height:34px; }
+.iw-btn { min-width:44px; min-height:44px; border:1.5px solid var(--border); background:var(--surface2); color:var(--text); border-radius:9px; font-size:1.05rem; font-weight:700; cursor:pointer; font-family:inherit; }
+.iw-btn:hover { border-color:var(--green); color:var(--green); }
+.iw-read { font-family:'IBM Plex Mono',monospace; font-size:.8rem; color:var(--green-dark); background:var(--green-bg); border-radius:8px; padding:.45rem .7rem; text-align:center; }
+.rverify-btn { margin-top:.85rem; min-height:44px; padding:.55rem 1.25rem; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:.86rem; font-weight:600; cursor:pointer; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.rfb { min-height:1.35rem; margin-top:.6rem; font-size:.85rem; color:var(--text2); }
+.tl-list, .tsl-bins, .tsl-chips { display:flex; flex-wrap:wrap; gap:.5rem; margin:.75rem 0; }
+.tl-list { flex-direction:column; }
+.tl-chip { border:1.5px solid var(--border); border-radius:9px; padding:.5rem .8rem; cursor:pointer; background:var(--surface2); font-size:.83rem; min-height:44px; display:flex; align-items:center; gap:.55rem; color:var(--text); }
+.tl-chip.sel { border-color:var(--gold); background:var(--gold-bg); }
+.tl-chip.locked { cursor:default; }
+.tl-num { font-family:'IBM Plex Mono',monospace; color:var(--text3); font-weight:700; }
+.tsl-bin { border:1.5px solid var(--border); border-radius:9px; padding:.5rem .75rem; background:var(--surface2); color:var(--text); cursor:pointer; font-size:.8rem; font-family:inherit; min-height:44px; }
+.tsl-bin:hover { border-color:var(--green); color:var(--green); }
+.tsl-chip { border:1.5px solid var(--gold); background:var(--gold-bg); color:var(--text); border-radius:20px; padding:.4rem .85rem; font-size:.79rem; cursor:pointer; min-height:38px; display:flex; align-items:center; }
+.tsl-chip.fixed { border-color:var(--green); background:var(--green-bg); cursor:default; }
+.tsl-sum { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.92rem; color:var(--green-dark); text-align:center; margin-top:.45rem; }
+.reflect-prompt { font-size:.92rem; color:var(--text2); margin:.4rem 0 .85rem; }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--gold-bg); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ivcanvas { height: 230px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+  .iwrap { padding: .85rem .8rem 1rem; }
+  .tsl-bin { font-size: .76rem; padding: .45rem .6rem; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from the rebrand step -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Polígonos Regulares con Regla y Compás</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 2° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 2A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Polígonos Regulares con Regla y Compás</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ <span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. The downstream build substitutes these exact
+   fields (BRAND_FIELDS / RGB_FIELDS / logo*); :root/dark stay as fallback.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#1a4a8a', primaryDark:'#0c2547', primaryBg:'#e7edf6',
+  accent:'#e07b1a', accentBg:'#fbeddf',
+  darkPrimary:'#437bc6', darkPrimaryDark:'#74a5e6', darkPrimaryBg:'#0c203a',
+  darkAccent:'#ed9e51', darkAccentBg:'#291909',
+  pBR:26, pBG:74, pBB:138, pAR:224, pAG:123, pAB:26,
+  logoLeftB64:'data:image/jpeg;base64,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7XZq+CvdGds5HGCYfMbOv/UvJx7IL66/wY/klsORwmfy5Ldcads0jXepbzgkOHfr017dxpNebDYrVFfpb6yiiFxljET59dS0f7j2G/kPZUj+nhBK2SikLM5F7i351wrrf1AZonR1kYfjBtY3/Oliu6mggpqdkFNDHDDG3lZHG0Na0ewA6BfoiL0q82s2+ParczCcboNDklurpifUFkLmj+0P5BSTwWW5lLwShqw0B1fcKiZ5135XeUP0jXoeJ3hhfeJmO2uksFZboKigqnTFlYXNEgcA06e0O5dDZ1o76dQprwmxJuC8O7Pi3ntqH0MGppWN02SRzi55A9uZx18l0HzM7k2MHN1TbE7vJedrKTsjZGNMY1o9gNL6Vc8VMkuxulDiGKSPF3qyJJXsOjFH6df4d62T6AfMKa45QVNts8FJWXGe41LRuWomPV7j30PQew9lxIqtss74mA2bueV+n16rry0higZK8i7thzt1+nTqvRRefkl0jstirLtLE+WOliMjmMOi4D0G14XD3OaPMn1raWhqKX7IGF3mlp5ubm7a/wA1bvqoWTNhc74nbBaMpZnwuma34W7lS1ERWFXREREREREREREREREREREREREREREREREREREREREUH41337lwiojik5amvP2aLXcA9Xn+iCPxCzi6nnbSR1ZjcIJJHRsk9C5oaXD6gPb+asDj7ezc8xZbInc0Ftj8vQ9ZX6Lv05R9QVLMqwo0vBWno2Rbrrc0Vsmh1Ljsyj6AOP8ARC+f6rHJqtVMWfxiGPqN/wC/Je+0uSPS6SESfylPodv681NuGd8/ugwu3173804j8qo9xI3od/XofxX9zzLqLEKGnq66lqahk8pjaIeXYOt9dkeyrDw53wwXStsEr/2dS37RAD2D29HD6luj/sr3PEn/AHt2v+eH+o5dyPVHv0fvLD8bRbxBt67+K4r9LY3V+7PHwON/Ai/pt4LvruL+OwWSmr4oKmaoqC7VIC3njDSRt5BIaDrp3J9lyWnjTYqmsZDX26roYnHXnEiRrfm4DqB9AVHuDHD+13y1S3u+ROqInSmOngDy1vw/vOOjs9egG/Q/LXLxswe245FR3azxOgpp5DBLCXlwa/Rc0jez1Ad0+QXOdXawKUVt28NgbWyR18fkdlfbQ6Oao0dncVzm+Aenh8xur6hljmhZNFI2SORocx7T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7MKvNJfMZoa+jewtdE1r2NP/AHbwAHNPsQV+eZZVacUtzKy6PefMeGRxRAOkefXQJHQDqTv9SAqIkxTiHitdIy3U10bz9PNtznPZIB6nl6/0gF9W/Bs6ym6NlucFdCHdJKq4lwLR8g74j8gBr6K9++1hjELYHdrttj6/mPmqP7HRiUzOnHZb75+n5n5K78IzC3ZdBUz22mrIo6d7WONRG1vMSN9NOPb1+oUjXkYjj1BjNkitdvaeRnxPkd+9I893H5/8l669PSiYQt7c3fzsvM1RhMzuwFmcroiIrCgREREREREREREREREREREREREREREREREREREREREREVNccMvyufObFwswKqZb7xdoXVdZcnt5vslMOYbaPc8juvfoANc2xJFEZHcIWj3hguVcqKh4eGvGHErtQ3bF+JtTk480fb7ffppGwys9eU7fyn06AEdOp1pfXELIs4zjizJwuwi7HHKW2UrKm+3SMc0rHPa1zYmHp6Ob2IJJd1AaQZhTBx+FwI3J6KPtiBluVeyLOGRf9IXAq4Wm/V2bXDMcQqqtlJcobjszU3N2kY5xcfRx7gbABHUETXDr9davxL5pY5brUz2mmtNHNS0rn7ijc5rC5zR6E8347WHUxA4mm4tf1A/tGzXPCRYq2kVO3K+3uPxZUmPMutW2zvxQ1LqISHyjL5sg5+X+VoDr8lCfCnnWW1uWVFqy68Vtypr1Sy1FolqZvM5XU0xZLGPUEhwdr2aCs90dwF99gD5/6TtxxBtlphFmKoz3K7v4pbXT0V6rIcTdd5rTFSxzaiqH00AdMS3sfjkHX6ey7PEpxCzC2Z7T0eE1NUKbFKNl3vscDtNma+aNrYn9OoDTsj+S9zv4em4oXl7WXGRf6fmy1NS0NLrbGy0ii47HcqS82Wiu9BIJaStp2VEDx/Ex7Q4H8iuxUiLbqzuiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIipPjlYMnsnESw8W8QtUl6ntlM6hudtjG5Jac8xDmAAkkc7t6BP7vQjauxFJFKY3XC0kZxiyo6n40Zdk91oLThHC++xzyvH2upvsDqenp2ep5m73+JBOugPpw8QqHLuGnGOq4n4/YanIrJe6aOnvVFRtJmikY1rRI1oBOtMaQe2y8HWwVf6KYVDWn4WC1rEZyozE4jLsrNeZXfJePlXbMPteGXzH8YirI6q8XC7QeS9zG9o2Deiep6Akk8p6AHfRdcjqMA8SOW3yow/KrtQVttpKaCS2W50zeZscZPxHQI6a6E9VoxFsKoD4eH4bWtfrbn4LBgJzxZVE0v3hePFLZMnjsd3pLfV4S089TSOZ5L3SSO8qQ9WtkAI23e1XNlsGVWXgXY8ytFjrW5Ji2R1c8FM+jk82SnqD5cgDAA4g8zD09Gla8RZbWFtgG4x5C/3uhp78/z8CzE3Erlh964JCa2XGc2+O53C8zw0r5PLmljjkfzkDod8zQDrfLpcWD8M+J2bW3I8uflIxQ5dPMK23Vlp8yV8ALmNY8vILW8pLQPYA+2tVIs9/fbAF+u/Mn7n0WO7NJ3x+BVD4WXX63YVX4ZkVFWQVeN3CSjimmhe2OogLiWOjc4ac3fMBr0DVbyIqssnaPL7Wupo2cDQ1ERFGt0RERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERF/9k=', logoRightB64:'', logoAlt:'Prepa Anáhuac Colima',
+  guideTitle:{ es:'Polígonos Regulares con Regla y Compás', en:'Regular Polygons with Ruler and Compass' },
+  courseName:{ es:'Matemáticas · 2° de Secundaria', en:'Mathematics · Grade 2 Secondary' },
+  filePrefix:'mat2_t07_g01'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10): ES/EN, full rebuild + answer replay.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'mat2_t07_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Polígonos Regulares con Regla y Compás','wcourse':'Matemáticas · 2° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Regular Polygons with Ruler and Compass','wcourse':'Mathematics · Grade 2 Secondary',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'mat2_t07_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'mat2_t07_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'mat2_t07_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'mat2_t07_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+  if (typeof window.redrawWidgets === 'function') window.redrawWidgets();
+}
+(function() {
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  if (!tb) return;
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER: two-tap confirmation (Rule 6)
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm, used by restoreSession and setLang to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD ONE CARD: inline construction, per-problem showWork branch (Rule 5)
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF (Rule 12)
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF...';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString(LANG === 'es' ? 'es-MX' : 'en-US', { dateStyle:'long', timeStyle:'short' });
+
+  var att = currentAttempt(name, group);
+  var raw = name + '|' + group + '|' + att + '|' + total;
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  var L = (LANG === 'es')
+    ? { student:'ALUMNO', group:'GRUPO', of:' correcta(s) de ', qs:' preguntas', summary:'RESUMEN DE PROBLEMAS',
+        cont:'RESUMEN DE PROBLEMAS (continuacion)', prob:'Problema ', pOf:' de ', ok:'Correcto', bad:'Incorrecto',
+        question:'PREGUNTA', work:'TRABAJO DEL ALUMNO', chose:'Alumno: ', corr:'Correcto: ', sol:'Solucion: ', codeLbl:'Codigo: ', page:'Pagina ' }
+    : { student:'STUDENT', group:'GROUP', of:' correct out of ', qs:' questions', summary:'PROBLEM SUMMARY',
+        cont:'PROBLEM SUMMARY (continued)', prob:'Problem ', pOf:' of ', ok:'Correct', bad:'Incorrect',
+        question:'QUESTION', work:'STUDENT WORK', chose:'Student: ', corr:'Correct: ', sol:'Solution: ', codeLbl:'Code: ', page:'Page ' };
+
+  // ── PDF COLORS: from SCHOOL (Rule 16) ──
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/→/g,'->').replace(/−/g,'-').replace(/²/g,'^2')
+      .replace(/³/g,'^3').replace(/×/g,'x').replace(/÷/g,'/')
+      .replace(/≠/g,'!=').replace(/≤/g,'<=').replace(/≥/g,'>=')
+      .replace(/√/g,'sqrt').replace(/π/g,'pi').replace(/…/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   The rebrand step fills these and uncomments the addImage calls.
+  // var logoLeftB64  = SCHOOL.logoLeftB64;
+  // var logoRightB64 = SCHOOL.logoRightB64;
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA mark, right side of the white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text(L.student, M+4, 79); doc.text(L.group, 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+L.of+total+L.qs, PW/2, 131, {align:'center'});
+
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text(L.summary, M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text(L.cont, M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'x':'-', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(L.prob+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?L.ok:L.bad, PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text(L.prob+(i+1)+L.pOf+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(L.question, M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize(L.chose+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize(L.corr+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize(L.sol+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'x':'-', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text(L.work, M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer with verification code on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  '+L.codeLbl+code+'  ·  '+L.page+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save(SCHOOL.filePrefix + '_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ ' + t('btn-pdf');
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ════════════════════════════════════════════════════════════════════════
+   GUIDE CONTENT: geometry helpers, manipulatives and buildLesson
+   ════════════════════════════════════════════════════════════════════════ */
+var WIDGET_REDRAW = [];
+window.redrawWidgets = function(){ WIDGET_REDRAW.forEach(function(f){ try { f(); } catch(e){} }); };
+
+function cssVar(n){ var v=''; try { v = getComputedStyle(document.documentElement).getPropertyValue(n); } catch(e){} return (v||'').trim(); }
+
+function fmt(x){ return String(Math.round(x*100)/100); }
+
+function addSection(tag, title, html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+html;
+  document.getElementById('lessonBody').appendChild(d);
+}
+
+function shuffleOpts(opts, correct, rng){
+  var a = opts.slice();
+  for (var i = a.length-1; i > 0; i--){ var j = Math.floor(rng()*(i+1)); var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+  return { opts:a, idx:a.indexOf(correct) };
+}
+
+function permOf(n, rng){
+  var a = []; for (var i=0;i<n;i++) a.push(i);
+  for (var k=a.length-1;k>0;k--){ var j=Math.floor(rng()*(k+1)); var tmp=a[k]; a[k]=a[j]; a[j]=tmp; }
+  var sorted = true; for (var q=0;q<n;q++) if (a[q]!==q) sorted = false;
+  if (sorted){ var s=a[0]; a[0]=a[n-1]; a[n-1]=s; }
+  return a;
+}
+
+function fitCanvas(cv, hh){
+  var dpr = window.devicePixelRatio || 1;
+  var w = cv.clientWidth || 320;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(hh*dpr);
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return { ctx:ctx, w:w, h:hh };
+}
+
+/* ── MANIPULATIVE 1: digital compass, split the circle into equal arcs ── */
+function buildCompas(rng){
+  var TG = [{n:4,ia:90},{n:5,ia:108},{n:6,ia:120},{n:8,ia:135},{n:9,ia:140},{n:10,ia:144},{n:12,ia:150}];
+  var rounds = shuffle(TG, rng).slice(0,3);
+  var es = (LANG === 'es');
+  var st = { n:3, r:0, tries:0, lock:false, done:false };
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap cmpwrap section';
+  wrap.setAttribute('data-widget', 'compas');
+  wrap.id = 'compasW';
+  wrap.innerHTML =
+    '<div class="iw-tag">'+(es?'Compás digital':'Digital compass')+'</div>'+
+    '<div class="iw-goal" id="cmpGoal"></div>'+
+    '<div class="iw-sub">'+(es?'Mueve el control para repartir más o menos marcas sobre la circunferencia: el trazo se rehace al instante.':'Move the control to spread more or fewer marks around the circle: the drawing redraws instantly.')+'</div>'+
+    '<div class="cvwrap"><canvas class="ivcanvas" id="cmpCv"></canvas></div>'+
+    '<div class="iw-ctrl">'+
+      '<button class="iw-btn" onclick="cmpStep(-1)">−</button>'+
+      '<input type="range" min="3" max="12" step="1" value="3" id="cmpRange" oninput="cmpSet(this.value)">'+
+      '<button class="iw-btn" onclick="cmpStep(1)">+</button>'+
+    '</div>'+
+    '<div class="iw-read" id="cmpRead"></div>'+
+    '<button class="rverify-btn" onclick="cmpCheck()">'+(es?'Verificar':'Check')+'</button>'+
+    '<div class="rfb" id="cmpFb"></div>';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function draw(){
+    var cv = document.getElementById('cmpCv'); if (!cv) return;
+    var f = fitCanvas(cv, cv.clientHeight || 250), ctx = f.ctx, w = f.w, hh = f.h;
+    ctx.clearRect(0,0,w,hh);
+    var cx = w/2, cy = hh/2, R = Math.min(w,hh)/2 - 26;
+    ctx.strokeStyle = cssVar('--border'); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath();
+    for (var i=0;i<st.n;i++){
+      var a = -Math.PI/2 + i*2*Math.PI/st.n;
+      var x = cx + R*Math.cos(a), y = cy + R*Math.sin(a);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = cssVar('--green-bg'); ctx.fill();
+    ctx.strokeStyle = cssVar('--green'); ctx.lineWidth = 2.5; ctx.stroke();
+    var a0 = -Math.PI/2, a1 = -Math.PI/2 + 2*Math.PI/st.n;
+    ctx.strokeStyle = cssVar('--gold'); ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+R*Math.cos(a0), cy+R*Math.sin(a0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+R*Math.cos(a1), cy+R*Math.sin(a1)); ctx.stroke();
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx,cy,R*0.30,a0,a1); ctx.stroke();
+    ctx.fillStyle = cssVar('--gold');
+    for (var k=0;k<st.n;k++){
+      var ak = -Math.PI/2 + k*2*Math.PI/st.n;
+      ctx.beginPath(); ctx.arc(cx+R*Math.cos(ak), cy+R*Math.sin(ak), 3.6, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle = cssVar('--text');
+    ctx.beginPath(); ctx.arc(cx,cy,2.6,0,Math.PI*2); ctx.fill();
+    ctx.font = '600 12px IBM Plex Sans, sans-serif'; ctx.textAlign = 'center';
+    var am = (a0+a1)/2;
+    ctx.fillStyle = cssVar('--gold');
+    ctx.fillText(fmt(360/st.n)+'°', cx + R*0.47*Math.cos(am), cy + R*0.47*Math.sin(am) + 4);
+  }
+  WIDGET_REDRAW.push(draw);
+
+  function readout(){
+    var el = document.getElementById('cmpRead'); if (!el) return;
+    el.textContent = (es ? 'Lados: ' : 'Sides: ') + st.n + '    ' + (es ? 'ángulo central: ' : 'central angle: ') + fmt(360/st.n) + '°';
+  }
+  function goalText(){
+    var el = document.getElementById('cmpGoal'); if (!el || st.r >= rounds.length) return;
+    var g = rounds[st.r];
+    el.textContent = es
+      ? 'Reto ' + (st.r+1) + ' de 3: construye un polígono regular cuyo ángulo interior mida ' + g.ia + '°.'
+      : 'Challenge ' + (st.r+1) + ' of 3: build a regular polygon whose interior angle is ' + g.ia + '°.';
+  }
+  function advance(ms){
+    st.lock = true;
+    setTimeout(function(){
+      st.r++; st.tries = 0;
+      var fb = document.getElementById('cmpFb');
+      if (st.r >= rounds.length){
+        st.done = true;
+        if (fb) fb.innerHTML = '<span style="color:var(--ok);font-weight:700">'+(es?'Ya dominas el reparto de la circunferencia con el compás.':'You now control how the compass splits the circle.')+'</span>';
+        return;
+      }
+      st.lock = false; st.n = 3;
+      var rg = document.getElementById('cmpRange'); if (rg) rg.value = 3;
+      if (fb) fb.textContent = '';
+      goalText(); draw(); readout();
+    }, ms);
+  }
+
+  window.cmpSet = function(v){ if (st.lock||st.done) return; st.n = parseInt(v,10)||3; draw(); readout(); };
+  window.cmpStep = function(d){
+    if (st.lock||st.done) return;
+    st.n = Math.max(3, Math.min(12, st.n + d));
+    var rg = document.getElementById('cmpRange'); if (rg) rg.value = st.n;
+    draw(); readout();
+  };
+  window.cmpCheck = function(){
+    if (st.lock||st.done) return;
+    var g = rounds[st.r], fb = document.getElementById('cmpFb');
+    var ia = 180 - 360/st.n;
+    if (Math.abs(ia - g.ia) < 0.001){
+      fb.innerHTML = '<span style="color:var(--ok);font-weight:700">🎉 '+(es
+        ? '¡Exacto! Con ' + st.n + ' lados el ángulo interior mide ' + g.ia + '°.'
+        : 'Exactly! With ' + st.n + ' sides the interior angle is ' + g.ia + '°.')+'</span>';
+      advance(1400); return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      st.n = g.n;
+      var rg = document.getElementById('cmpRange'); if (rg) rg.value = st.n;
+      draw(); readout();
+      fb.textContent = es
+        ? 'Con ' + g.n + ' lados el ángulo central mide ' + fmt(360/g.n) + '° y el interior ' + g.ia + '°. Observa: mientras más lados repartes, más se abre el ángulo interior.'
+        : 'With ' + g.n + ' sides the central angle is ' + fmt(360/g.n) + '° and the interior angle is ' + g.ia + '°. Notice: the more sides you spread, the wider the interior angle.';
+      advance(2600); return;
+    }
+    fb.textContent = (ia < g.ia)
+      ? (es ? 'Tu polígono todavía cierra demasiado. Reparte más marcas y vuelve a verificar.' : 'Your polygon is still too sharp. Spread more marks and check again.')
+      : (es ? 'Ahora se abre de más. Quita marcas y vuelve a verificar.' : 'Now it opens too much. Remove marks and check again.');
+  };
+
+  goalText();
+  setTimeout(function(){ draw(); readout(); }, 70);
+}
+
+/* ── MANIPULATIVE 2: close a mosaic vertex with regular tiles ── */
+function buildTeselado(rng){
+  var es = (LANG === 'es');
+  var P = [
+    { a:60,  nm: es?'Triángulo':'Triangle' },
+    { a:90,  nm: es?'Cuadrado':'Square' },
+    { a:108, nm: es?'Pentágono':'Pentagon' },
+    { a:120, nm: es?'Hexágono':'Hexagon' },
+    { a:135, nm: es?'Octágono':'Octagon' },
+    { a:150, nm: es?'Dodecágono':'Dodecagon' }
+  ];
+  var RS = [ {s:4,sol:[4,1]}, {s:5,sol:[5,0]}, {s:3,sol:[3,3]}, {s:1,sol:[1,1,1]}, {s:0,sol:[0,0,0,0,0]} ];
+  var rounds = shuffle(RS, rng).slice(0,3);
+  var st = { r:0, placed:[rounds[0].s], over:0, lock:false, done:false };
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap tslwrap section';
+  wrap.setAttribute('data-widget', 'teselado');
+  wrap.id = 'teseladoW';
+  wrap.innerHTML =
+    '<div class="iw-tag">'+(es?'Vértice del mosaico':'Mosaic vertex')+'</div>'+
+    '<div class="iw-goal" id="tslGoal"></div>'+
+    '<div class="iw-sub">'+(es?'Toca una pieza para agregarla al vértice. Toca una pieza ya colocada para quitarla.':'Tap a tile to add it to the vertex. Tap a placed tile to remove it.')+'</div>'+
+    '<div class="cvwrap"><canvas class="ivcanvas" id="tslCv"></canvas></div>'+
+    '<div class="tsl-bins">'+ P.map(function(p,i){
+        return '<button class="tsl-bin" onclick="tslPick('+i+')">'+p.nm+' '+p.a+'°</button>';
+      }).join('') +'</div>'+
+    '<div class="tsl-chips" id="tslChips"></div>'+
+    '<div class="tsl-sum" id="tslSum"></div>'+
+    '<div class="rfb" id="tslFb"></div>';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function total(){ return st.placed.reduce(function(s,i){ return s + P[i].a; }, 0); }
+
+  function draw(){
+    var cv = document.getElementById('tslCv'); if (!cv) return;
+    var f = fitCanvas(cv, cv.clientHeight || 250), ctx = f.ctx, w = f.w, hh = f.h;
+    ctx.clearRect(0,0,w,hh);
+    var cx = w/2, cy = hh/2, RR = Math.min(w,hh)/2 - 20;
+    var cols = [cssVar('--green'), cssVar('--gold'), cssVar('--green-dark')];
+    var acc = 0;
+    for (var i=0;i<st.placed.length;i++){
+      var ang = P[st.placed[i]].a;
+      var b0 = (-90+acc)*Math.PI/180, b1 = (-90+acc+ang)*Math.PI/180;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,RR,b0,b1); ctx.closePath();
+      ctx.globalAlpha = (acc >= 360) ? 0.30 : 0.80;
+      ctx.fillStyle = cols[i % 3]; ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = cssVar('--surface'); ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = cssVar('--surface');
+      ctx.font = '700 11px IBM Plex Sans, sans-serif'; ctx.textAlign = 'center';
+      var bm = (b0+b1)/2;
+      ctx.fillText(ang+'°', cx + RR*0.66*Math.cos(bm), cy + RR*0.66*Math.sin(bm) + 4);
+      acc += ang;
+    }
+    if (acc < 360){
+      var g0 = (-90+acc)*Math.PI/180, g1 = (270)*Math.PI/180;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,RR,g0,g1); ctx.closePath();
+      ctx.fillStyle = cssVar('--surface2'); ctx.fill();
+      ctx.strokeStyle = cssVar('--border'); ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = cssVar('--text3');
+      ctx.font = '600 11px IBM Plex Sans, sans-serif'; ctx.textAlign = 'center';
+      var gm = (g0+g1)/2;
+      ctx.fillText((360-acc)+'°', cx + RR*0.66*Math.cos(gm), cy + RR*0.66*Math.sin(gm) + 4);
+    }
+    ctx.strokeStyle = (acc > 360) ? cssVar('--bad') : cssVar('--green');
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx,cy,RR,0,Math.PI*2); ctx.stroke();
+  }
+  WIDGET_REDRAW.push(draw);
+
+  function chips(){
+    var el = document.getElementById('tslChips'); if (!el) return;
+    el.innerHTML = st.placed.map(function(pi,pos){
+      var cls = 'tsl-chip' + (pos===0 ? ' fixed' : '');
+      var cl = (pos===0 || st.lock) ? '' : ' onclick="tslDrop('+pos+')"';
+      return '<div class="'+cls+'"'+cl+'>'+P[pi].nm+' '+P[pi].a+'°</div>';
+    }).join('');
+  }
+  function goalText(){
+    var el = document.getElementById('tslGoal'); if (!el || st.r >= rounds.length) return;
+    var seedName = P[rounds[st.r].s].nm.toLowerCase();
+    el.textContent = es
+      ? 'Reto ' + (st.r+1) + ' de 3: en el vértice ya hay un ' + seedName + '. Agrega piezas hasta cerrar la vuelta completa.'
+      : 'Challenge ' + (st.r+1) + ' of 3: the vertex already holds one ' + seedName + '. Add tiles until the full turn closes.';
+  }
+  function next(ms){
+    setTimeout(function(){
+      st.r++; st.over = 0;
+      var fb = document.getElementById('tslFb');
+      if (st.r >= rounds.length){
+        st.done = true; st.lock = true;
+        if (fb) fb.innerHTML = '<span style="color:var(--ok);font-weight:700">'+(es?'Ya sabes leer un vértice de mosaico: todo depende de sumar 360°.':'You can now read a mosaic vertex: it all comes down to adding up to 360°.')+'</span>';
+        return;
+      }
+      st.lock = false;
+      st.placed = [rounds[st.r].s];
+      if (fb) fb.textContent = '';
+      goalText(); update();
+    }, ms);
+  }
+  function reveal(){
+    var g = rounds[st.r];
+    st.placed = [g.s].concat(g.sol);
+    st.lock = true;
+    chips(); draw();
+    var sum = document.getElementById('tslSum');
+    if (sum) sum.textContent = (es?'Suma en el vértice: ':'Vertex total: ') + '360° / 360°';
+    var fb = document.getElementById('tslFb');
+    if (fb) fb.textContent = es
+      ? 'Esta combinación sí cierra: sus ángulos interiores suman justo una vuelta completa.'
+      : 'This combination does close: its interior angles add up to exactly one full turn.';
+    next(2600);
+  }
+  function update(){
+    var tt = total();
+    var sum = document.getElementById('tslSum'), fb = document.getElementById('tslFb');
+    if (sum) sum.textContent = (es?'Suma en el vértice: ':'Vertex total: ') + tt + '° / 360°';
+    chips(); draw();
+    if (st.lock || st.done) return;
+    if (tt === 360){
+      st.lock = true;
+      if (fb) fb.innerHTML = '<span style="color:var(--ok);font-weight:700">🎉 '+(es?'¡El vértice cierra exacto! Este grupo de piezas sí cubre el plano.':'The vertex closes exactly! This set of tiles does cover the plane.')+'</span>';
+      next(1700); return;
+    }
+    if (tt > 360){
+      st.over++;
+      if (fb) fb.textContent = es
+        ? 'Te pasaste por ' + (tt-360) + '°: las piezas se traslapan. Quita una y prueba con otra más pequeña.'
+        : 'You went over by ' + (tt-360) + '°: the tiles overlap. Remove one and try a smaller tile.';
+      if (st.over >= 3) reveal();
+      return;
+    }
+    if (fb) fb.textContent = es
+      ? 'Falta un hueco de ' + (360-tt) + '° para cerrar la vuelta.'
+      : 'A gap of ' + (360-tt) + '° is still open.';
+  }
+
+  window.tslPick = function(i){ if (st.lock||st.done) return; st.placed.push(i); update(); };
+  window.tslDrop = function(pos){ if (st.lock||st.done||pos===0) return; st.placed.splice(pos,1); update(); };
+
+  goalText();
+  setTimeout(function(){ update(); }, 70);
+}
+
+/* ── MANIPULATIVE 3: order the ruler and compass construction steps ── */
+function buildPasos(rng){
+  var es = (LANG === 'es');
+  var SETS = [
+    { title: es?'Hexágono regular a partir del radio':'Regular hexagon from the radius',
+      steps: es
+        ? ['Traza una circunferencia con centro O y radio r.',
+           'Marca sobre ella un punto A cualquiera.',
+           'Con la misma abertura r, apoya la punta en A y corta la circunferencia en B.',
+           'Repite el corte desde cada marca nueva hasta dar la vuelta completa.',
+           'Une con la regla las seis marcas consecutivas.']
+        : ['Draw a circle with centre O and radius r.',
+           'Mark any point A on the circle.',
+           'Keeping the same opening r, place the point on A and cut the circle at B.',
+           'Repeat the cut from each new mark until the turn is complete.',
+           'Join the six consecutive marks with the ruler.'] },
+    { title: es?'Cuadrado a partir de un diámetro':'Square from a diameter',
+      steps: es
+        ? ['Traza una circunferencia con centro O.',
+           'Traza con la regla un diámetro AC que pase por O.',
+           'Con el compás traza dos arcos iguales, uno desde A y otro desde C.',
+           'Une con la regla los dos cruces de esos arcos: la recta corta la circunferencia en B y D.',
+           'Une A, B, C y D con la regla.']
+        : ['Draw a circle with centre O.',
+           'Use the ruler to draw a diameter AC through O.',
+           'With the compass draw two equal arcs, one from A and one from C.',
+           'Join the two arc crossings with the ruler: the line cuts the circle at B and D.',
+           'Join A, B, C and D with the ruler.'] }
+  ];
+  var set = SETS[Math.floor(rng()*SETS.length)];
+  var st = { order: permOf(set.steps.length, rng), sel:null, tries:0, done:false };
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap stpwrap section';
+  wrap.setAttribute('data-widget', 'construccion');
+  wrap.id = 'pasosW';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function render(){
+    var chips = st.order.map(function(ei,pos){
+      var cls = 'tl-chip' + (st.sel===pos ? ' sel' : '') + (st.done ? ' locked' : '');
+      var cl = st.done ? '' : ' onclick="stpTap('+pos+')"';
+      return '<div class="'+cls+'"'+cl+'><span class="tl-num">'+(pos+1)+'</span>'+set.steps[ei]+'</div>';
+    }).join('');
+    wrap.innerHTML =
+      '<div class="iw-tag">'+(es?'Orden de trazo':'Construction order')+'</div>'+
+      '<div class="iw-goal">'+set.title+'</div>'+
+      '<div class="iw-sub">'+(es?'Acomoda los pasos del primero al último. Toca dos pasos para intercambiarlos.':'Put the steps in order from first to last. Tap two steps to swap them.')+'</div>'+
+      '<div class="tl-list">'+chips+'</div>'+
+      (st.done ? '' : '<button class="rverify-btn" onclick="stpCheck()">'+(es?'Verificar':'Check')+'</button>')+
+      '<div class="rfb" id="stpFb"></div>';
+  }
+  window.stpTap = function(pos){
+    if (st.done) return;
+    if (st.sel === null) st.sel = pos;
+    else if (st.sel === pos) st.sel = null;
+    else { var tmp = st.order[st.sel]; st.order[st.sel] = st.order[pos]; st.order[pos] = tmp; st.sel = null; }
+    render();
+  };
+  window.stpCheck = function(){
+    var ok = true;
+    for (var i=0;i<st.order.length;i++) if (st.order[i] !== i) ok = false;
+    if (ok){
+      st.done = true; render();
+      document.getElementById('stpFb').innerHTML = '<span style="color:var(--ok);font-weight:700">🎉 '+(es?'¡Orden correcto! Cada paso deja lista la herramienta del siguiente.':'Correct order! Each step sets up the tool for the next one.')+'</span>';
+      return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      st.order = set.steps.map(function(_,i){ return i; });
+      st.done = true; render();
+      document.getElementById('stpFb').textContent = es
+        ? 'Este es el orden correcto. Fíjate en qué necesita cada paso para poder hacerse.'
+        : 'This is the correct order. Notice what each step needs before it can be done.';
+      return;
+    }
+    var bad = 0;
+    for (var k=0;k<st.order.length;k++){ if (st.order[k] !== k){ bad = k; break; } }
+    render();
+    document.getElementById('stpFb').textContent = es
+      ? 'Todavía no. Revisa el paso ' + (bad+1) + ': ¿ya tienes lo que ese trazo necesita?'
+      : 'Not yet. Check step ' + (bad+1) + ': do you already have what that stroke needs?';
+  };
+  render();
+}
+
+/* ── MANIPULATIVE 4: sketch or write your own reasoning ── */
+function buildReflect(rng){
+  var es = (LANG === 'es');
+  var PROMPTS = [
+    { es:'Dibuja una circunferencia y explica, paso a paso, cómo colocarías los seis vértices de un hexágono regular usando solo el compás abierto al radio.',
+      en:'Draw a circle and explain, step by step, how you would place the six vertices of a regular hexagon using only the compass opened to the radius.' },
+    { es:'Diseña un mosaico mezclando dos tipos de polígonos regulares. Dibuja uno de sus vértices y escribe por qué sus ángulos cierran la vuelta.',
+      en:'Design a mosaic mixing two kinds of regular polygons. Draw one of its vertices and write why its angles close the turn.' },
+    { es:'Explica con tus palabras por qué el pentágono regular se puede construir con regla y compás pero no puede cubrir el plano por sí solo.',
+      en:'Explain in your own words why a regular pentagon can be built with ruler and compass yet cannot cover the plane on its own.' }
+  ];
+  var p = PROMPTS[Math.floor(rng()*PROMPTS.length)];
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap reflectwrap section';
+  wrap.setAttribute('data-widget', 'reflect');
+  wrap.id = 'reflectW';
+  wrap.innerHTML =
+    '<div class="iw-tag">'+(es?'Tu trazo':'Your sketch')+'</div>'+
+    '<div class="reflect-prompt">'+p[LANG]+'</div>'+
+    '<div class="wtabs">'+
+      '<button class="wtab active" onclick="reflectTab(\'type\',this)">'+(es?'⌨️ Escribir':'⌨️ Write')+'</button>'+
+      '<button class="wtab" onclick="reflectTab(\'draw\',this)">'+(es?'✏️ Dibujar':'✏️ Sketch')+'</button>'+
+    '</div>'+
+    '<div class="wpanel active" id="reflect_type"><textarea class="wtextarea" id="reflectTa" placeholder="'+(es?'Tu respuesta...':'Your answer...')+'"></textarea></div>'+
+    '<div class="wpanel" id="reflect_draw">'+
+      '<div class="cvwrap">'+
+        '<canvas class="dcanvas" id="reflectCv"></canvas>'+
+        '<div class="ctoolbar">'+
+          '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>'+
+          '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>'+
+          '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>'+
+          '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>'+
+          '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>'+
+          '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>'+
+          '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>'+
+          '<button class="clrbtn">'+t('btn-clear')+'</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<button class="rverify-btn" onclick="reflectSave()">'+(es?'Guardar mi trazo':'Save my sketch')+'</button>'+
+    '<div class="rfb" id="reflectFb"></div>';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  window.reflectTab = function(which, btn){
+    ['type','draw'].forEach(function(k){
+      var el = document.getElementById('reflect_'+k);
+      if (el) el.classList.toggle('active', k === which);
+    });
+    var w = document.getElementById('reflectW');
+    if (w) w.querySelectorAll('.wtab').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    if (which === 'draw') setTimeout(function(){ var c = document.getElementById('reflectCv'); if (c && !c.width) initCanvas(c); }, 60);
+  };
+  window.reflectSave = function(){
+    var fb = document.getElementById('reflectFb'); if (!fb) return;
+    fb.innerHTML = '<span style="color:var(--ok);font-weight:700">✓ '+(es
+      ? 'Guardado. Buen razonamiento: aquí hay más de un camino válido.'
+      : 'Saved. Good reasoning: there is more than one valid path here.')+'</span>';
+  };
+}
+
+/* ── graded problem builder: pushes and renders one card inline (Rule 1/5) ── */
+function addProblem(rng, spec){
+  var sh = shuffleOpts(spec.options, spec.correct, rng);
+  problems.push({
+    title: spec.title,
+    questionText: spec.q,
+    fn: '',
+    options: sh.opts,
+    correctIdx: sh.idx,
+    hint: spec.hint,
+    explanation: spec.exp,
+    showWork: !!spec.showWork,
+    studentChoice: null,
+    pendingChoice: null
+  });
+  var idx = problems.length - 1;
+  buildOneCard(problems[idx], idx);
+}
+
+/* ================================================
+   buildLesson: concept, manipulative, graded problem, interleaved
+   ================================================ */
+function buildLesson(rng) {
+  problems = [];
+  WIDGET_REDRAW = [];
+  var lb = document.getElementById('lessonBody');
+  lb.innerHTML = '';
+  var es = (LANG === 'es');
+  var C  = es ? 'Concepto ' : 'Concept ';
+
+  /* ── CONCEPT 1 ───────────────────────────────────────────────── */
+  addSection(C + '1',
+    es ? 'La circunferencia reparte los vértices' : 'The circle spreads the vertices',
+    es
+    ? '<p>Un polígono regular tiene todos sus lados iguales y todos sus ángulos iguales. Por eso siempre cabe exactamente dentro de una circunferencia: sus vértices quedan repartidos a la misma distancia unos de otros sobre ella.</p>'+
+      '<p>Ahí está la idea de toda construcción con regla y compás. Con el compás abres el radio y trazas la circunferencia; después repartes sobre ella tantas marcas como lados quieras; al final unes las marcas con la regla. Lo único que cambia de un polígono a otro es en cuántas partes iguales partiste la vuelta.</p>'+
+      '<div class="callout"><p><strong>Ángulo central:</strong> es el que se forma en el centro entre dos radios que llegan a marcas vecinas. La vuelta completa mide 360° y se reparte en partes iguales, una por cada lado del polígono.</p></div>'
+    : '<p>A regular polygon has all its sides equal and all its angles equal. That is why it always fits exactly inside a circle: its vertices sit evenly spaced around it.</p>'+
+      '<p>That is the idea behind every ruler and compass construction. With the compass you open the radius and draw the circle; then you spread as many marks around it as you want sides; finally you join the marks with the ruler. The only thing that changes from one polygon to another is how many equal parts you cut the turn into.</p>'+
+      '<div class="callout"><p><strong>Central angle:</strong> the angle at the centre between two radii reaching neighbouring marks. A full turn is 360° and it splits into equal parts, one per side of the polygon.</p></div>');
+
+  buildCompas(rng);
+
+  var P1V = [
+    { opts:['45','40','60','36'], ans:'45',
+      es:{ t:'El compás reparte la vuelta', q:'Ana traza una circunferencia y marca sobre ella 8 puntos igualmente separados para inscribir un octágono regular. ¿Cuántos grados mide el ángulo central que abarca cada arco?',
+           h:'La vuelta completa mide 360 grados y se reparte en tantas partes iguales como lados tenga el polígono.',
+           e:'La vuelta completa se reparte en 8 partes iguales: 360 ÷ 8 = 45. Cada arco abarca un ángulo central de 45 grados.' },
+      en:{ t:'The compass splits the turn', q:'Ana draws a circle and marks 8 evenly spaced points on it to inscribe a regular octagon. How many degrees does the central angle of each arc measure?',
+           h:'A full turn is 360 degrees and it splits into as many equal parts as the polygon has sides.',
+           e:'The full turn splits into 8 equal parts: 360 ÷ 8 = 45. Each arc spans a central angle of 45 degrees.' } },
+    { opts:['36','40','30','45'], ans:'36',
+      es:{ t:'El compás reparte la vuelta', q:'Ana traza una circunferencia y marca sobre ella 10 puntos igualmente separados para inscribir un decágono regular. ¿Cuántos grados mide el ángulo central que abarca cada arco?',
+           h:'La vuelta completa mide 360 grados y se reparte en tantas partes iguales como lados tenga el polígono.',
+           e:'La vuelta completa se reparte en 10 partes iguales: 360 ÷ 10 = 36. Cada arco abarca un ángulo central de 36 grados.' },
+      en:{ t:'The compass splits the turn', q:'Ana draws a circle and marks 10 evenly spaced points on it to inscribe a regular decagon. How many degrees does the central angle of each arc measure?',
+           h:'A full turn is 360 degrees and it splits into as many equal parts as the polygon has sides.',
+           e:'The full turn splits into 10 equal parts: 360 ÷ 10 = 36. Each arc spans a central angle of 36 degrees.' } },
+    { opts:['30','36','24','45'], ans:'30',
+      es:{ t:'El compás reparte la vuelta', q:'Ana traza una circunferencia y marca sobre ella 12 puntos igualmente separados para inscribir un dodecágono regular. ¿Cuántos grados mide el ángulo central que abarca cada arco?',
+           h:'La vuelta completa mide 360 grados y se reparte en tantas partes iguales como lados tenga el polígono.',
+           e:'La vuelta completa se reparte en 12 partes iguales: 360 ÷ 12 = 30. Cada arco abarca un ángulo central de 30 grados.' },
+      en:{ t:'The compass splits the turn', q:'Ana draws a circle and marks 12 evenly spaced points on it to inscribe a regular dodecagon. How many degrees does the central angle of each arc measure?',
+           h:'A full turn is 360 degrees and it splits into as many equal parts as the polygon has sides.',
+           e:'The full turn splits into 12 equal parts: 360 ÷ 12 = 30. Each arc spans a central angle of 30 degrees.' } }
+  ];
+  var p1 = P1V[Math.floor(rng()*P1V.length)];
+  addProblem(rng, { title:p1[LANG].t, q:p1[LANG].q, hint:p1[LANG].h, exp:p1[LANG].e, options:p1.opts, correct:p1.ans, showWork:true });
+
+  var P2V = [
+    { opts:['15','12','18','24'], ans:'15',
+      es:{ t:'De los arcos al número de lados', q:'Beto repartió marcas igualmente separadas sobre una circunferencia y cada arco quedó de 24 grados. ¿Cuántos lados tendrá el polígono regular que obtenga al unir todas las marcas?',
+           h:'Pregúntate cuántas veces cabe el ángulo de cada arco dentro de la vuelta completa.',
+           e:'La vuelta completa se reparte en arcos de 24 grados: 360 ÷ 24 = 15. El polígono tiene 15 lados.' },
+      en:{ t:'From arcs to number of sides', q:'Beto spread evenly separated marks around a circle and each arc came out at 24 degrees. How many sides will the regular polygon have once he joins all the marks?',
+           h:'Ask yourself how many times the angle of one arc fits inside the full turn.',
+           e:'The full turn splits into arcs of 24 degrees: 360 ÷ 24 = 15. The polygon has 15 sides.' } },
+    { opts:['9','8','10','12'], ans:'9',
+      es:{ t:'De los arcos al número de lados', q:'Beto repartió marcas igualmente separadas sobre una circunferencia y cada arco quedó de 40 grados. ¿Cuántos lados tendrá el polígono regular que obtenga al unir todas las marcas?',
+           h:'Pregúntate cuántas veces cabe el ángulo de cada arco dentro de la vuelta completa.',
+           e:'La vuelta completa se reparte en arcos de 40 grados: 360 ÷ 40 = 9. El polígono tiene 9 lados.' },
+      en:{ t:'From arcs to number of sides', q:'Beto spread evenly separated marks around a circle and each arc came out at 40 degrees. How many sides will the regular polygon have once he joins all the marks?',
+           h:'Ask yourself how many times the angle of one arc fits inside the full turn.',
+           e:'The full turn splits into arcs of 40 degrees: 360 ÷ 40 = 9. The polygon has 9 sides.' } },
+    { opts:['18','20','15','24'], ans:'18',
+      es:{ t:'De los arcos al número de lados', q:'Beto repartió marcas igualmente separadas sobre una circunferencia y cada arco quedó de 20 grados. ¿Cuántos lados tendrá el polígono regular que obtenga al unir todas las marcas?',
+           h:'Pregúntate cuántas veces cabe el ángulo de cada arco dentro de la vuelta completa.',
+           e:'La vuelta completa se reparte en arcos de 20 grados: 360 ÷ 20 = 18. El polígono tiene 18 lados.' },
+      en:{ t:'From arcs to number of sides', q:'Beto spread evenly separated marks around a circle and each arc came out at 20 degrees. How many sides will the regular polygon have once he joins all the marks?',
+           h:'Ask yourself how many times the angle of one arc fits inside the full turn.',
+           e:'The full turn splits into arcs of 20 degrees: 360 ÷ 20 = 18. The polygon has 18 sides.' } }
+  ];
+  var p2 = P2V[Math.floor(rng()*P2V.length)];
+  addProblem(rng, { title:p2[LANG].t, q:p2[LANG].q, hint:p2[LANG].h, exp:p2[LANG].e, options:p2.opts, correct:p2.ans, showWork:true });
+
+  /* ── CONCEPT 2 ───────────────────────────────────────────────── */
+  addSection(C + '2',
+    es ? 'Del centro a la esquina' : 'From the centre to the corner',
+    (es
+    ? '<p>Cada lado del polígono, junto con los dos radios que llegan a sus extremos, forma un triángulo isósceles. Los dos ángulos de la base son iguales entre sí y, junto con el ángulo central, completan 180°.</p>'+
+      '<p>El ángulo interior del polígono, el que ves en cada esquina, está armado con dos de esos ángulos de base: uno del triángulo de la izquierda y otro del de la derecha. Por eso el ángulo interior y el ángulo central siempre se reparten una media vuelta.</p>'
+    : '<p>Each side of the polygon, together with the two radii reaching its ends, forms an isosceles triangle. The two base angles are equal to each other and, together with the central angle, they complete 180°.</p>'+
+      '<p>The interior angle of the polygon, the one you see at each corner, is made of two of those base angles: one from the triangle on the left and one from the triangle on the right. That is why the interior angle and the central angle always share a half turn.</p>')+
+    '<div class="rules-grid">'+
+      '<div class="rcard"><div class="rname">'+(es?'Ángulo central':'Central angle')+'</div><div class="rform">360° ÷ n</div><div class="rnote">'+(es?'La vuelta partida en n arcos iguales.':'The turn cut into n equal arcs.')+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+(es?'Ángulo interior':'Interior angle')+'</div><div class="rform">180° − 360° ÷ n</div><div class="rnote">'+(es?'Lo que le sobra a la media vuelta.':'What is left over from the half turn.')+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+(es?'Ángulo exterior':'Exterior angle')+'</div><div class="rform">360° ÷ n</div><div class="rnote">'+(es?'Mide igual que el central.':'It measures the same as the central angle.')+'</div></div>'+
+    '</div>');
+
+  var P3V = [
+    { opts:['150','144','156','135'], ans:'150',
+      es:{ t:'La esquina del dodecágono', q:'Un dodecágono regular inscrito en una circunferencia tiene 12 lados iguales. ¿Cuántos grados mide cada uno de sus ángulos interiores?',
+           h:'Primero obtén el ángulo central y luego réstalo de la media vuelta.',
+           e:'El ángulo central mide 360 ÷ 12 = 30 grados, y el interior es lo que le falta a la media vuelta: 180 − 30 = 150.' },
+      en:{ t:'The corner of a dodecagon', q:'A regular dodecagon inscribed in a circle has 12 equal sides. How many degrees does each of its interior angles measure?',
+           h:'First get the central angle, then subtract it from the half turn.',
+           e:'The central angle is 360 ÷ 12 = 30 degrees, and the interior angle is what the half turn has left: 180 − 30 = 150.' } },
+    { opts:['140','144','135','150'], ans:'140',
+      es:{ t:'La esquina del eneágono', q:'Un eneágono regular inscrito en una circunferencia tiene 9 lados iguales. ¿Cuántos grados mide cada uno de sus ángulos interiores?',
+           h:'Primero obtén el ángulo central y luego réstalo de la media vuelta.',
+           e:'El ángulo central mide 360 ÷ 9 = 40 grados, y el interior es lo que le falta a la media vuelta: 180 − 40 = 140.' },
+      en:{ t:'The corner of a nonagon', q:'A regular nonagon inscribed in a circle has 9 equal sides. How many degrees does each of its interior angles measure?',
+           h:'First get the central angle, then subtract it from the half turn.',
+           e:'The central angle is 360 ÷ 9 = 40 degrees, and the interior angle is what the half turn has left: 180 − 40 = 140.' } },
+    { opts:['162','160','164','158'], ans:'162',
+      es:{ t:'La esquina del icoságono', q:'Un icoságono regular inscrito en una circunferencia tiene 20 lados iguales. ¿Cuántos grados mide cada uno de sus ángulos interiores?',
+           h:'Primero obtén el ángulo central y luego réstalo de la media vuelta.',
+           e:'El ángulo central mide 360 ÷ 20 = 18 grados, y el interior es lo que le falta a la media vuelta: 180 − 18 = 162.' },
+      en:{ t:'The corner of an icosagon', q:'A regular icosagon inscribed in a circle has 20 equal sides. How many degrees does each of its interior angles measure?',
+           h:'First get the central angle, then subtract it from the half turn.',
+           e:'The central angle is 360 ÷ 20 = 18 degrees, and the interior angle is what the half turn has left: 180 − 18 = 162.' } }
+  ];
+  var p3 = P3V[Math.floor(rng()*P3V.length)];
+  addProblem(rng, { title:p3[LANG].t, q:p3[LANG].q, hint:p3[LANG].h, exp:p3[LANG].e, options:p3.opts, correct:p3.ans, showWork:true });
+
+  var P4V = [
+    { opts:['15','14','16','12'], ans:'15',
+      es:{ t:'Del ángulo interior al trazo', q:'Carla mide una pieza de mosaico con forma de polígono regular y encuentra que cada ángulo interior mide 156 grados. ¿Cuántos lados tiene esa pieza?',
+           h:'Del ángulo interior puedes regresar al central restándolo de la media vuelta, y con el central sabes en cuántos arcos se partió la circunferencia.',
+           e:'El ángulo central mide 180 − 156 = 24 grados, y la vuelta completa se reparte en 360 ÷ 24 = 15 arcos, así que la pieza tiene 15 lados.' },
+      en:{ t:'From interior angle to construction', q:'Carla measures a mosaic tile shaped like a regular polygon and finds that each interior angle is 156 degrees. How many sides does the tile have?',
+           h:'From the interior angle you can go back to the central one by subtracting it from the half turn, and the central angle tells you how many arcs the circle was cut into.',
+           e:'The central angle is 180 − 156 = 24 degrees, and the full turn splits into 360 ÷ 24 = 15 arcs, so the tile has 15 sides.' } },
+    { opts:['10','9','12','8'], ans:'10',
+      es:{ t:'Del ángulo interior al trazo', q:'Carla mide una pieza de mosaico con forma de polígono regular y encuentra que cada ángulo interior mide 144 grados. ¿Cuántos lados tiene esa pieza?',
+           h:'Del ángulo interior puedes regresar al central restándolo de la media vuelta, y con el central sabes en cuántos arcos se partió la circunferencia.',
+           e:'El ángulo central mide 180 − 144 = 36 grados, y la vuelta completa se reparte en 360 ÷ 36 = 10 arcos, así que la pieza tiene 10 lados.' },
+      en:{ t:'From interior angle to construction', q:'Carla measures a mosaic tile shaped like a regular polygon and finds that each interior angle is 144 degrees. How many sides does the tile have?',
+           h:'From the interior angle you can go back to the central one by subtracting it from the half turn, and the central angle tells you how many arcs the circle was cut into.',
+           e:'The central angle is 180 − 144 = 36 degrees, and the full turn splits into 360 ÷ 36 = 10 arcs, so the tile has 10 sides.' } },
+    { opts:['18','20','16','15'], ans:'18',
+      es:{ t:'Del ángulo interior al trazo', q:'Carla mide una pieza de mosaico con forma de polígono regular y encuentra que cada ángulo interior mide 160 grados. ¿Cuántos lados tiene esa pieza?',
+           h:'Del ángulo interior puedes regresar al central restándolo de la media vuelta, y con el central sabes en cuántos arcos se partió la circunferencia.',
+           e:'El ángulo central mide 180 − 160 = 20 grados, y la vuelta completa se reparte en 360 ÷ 20 = 18 arcos, así que la pieza tiene 18 lados.' },
+      en:{ t:'From interior angle to construction', q:'Carla measures a mosaic tile shaped like a regular polygon and finds that each interior angle is 160 degrees. How many sides does the tile have?',
+           h:'From the interior angle you can go back to the central one by subtracting it from the half turn, and the central angle tells you how many arcs the circle was cut into.',
+           e:'The central angle is 180 − 160 = 20 degrees, and the full turn splits into 360 ÷ 20 = 18 arcs, so the tile has 18 sides.' } }
+  ];
+  var p4 = P4V[Math.floor(rng()*P4V.length)];
+  addProblem(rng, { title:p4[LANG].t, q:p4[LANG].q, hint:p4[LANG].h, exp:p4[LANG].e, options:p4.opts, correct:p4.ans, showWork:true });
+
+  /* ── CONCEPT 3 ───────────────────────────────────────────────── */
+  addSection(C + '3',
+    es ? 'Regla y compás, según lo que te den' : 'Ruler and compass, according to what you are given',
+    es
+    ? '<p>La construcción cambia según la información de partida. Si te dan el radio, el hexágono sale casi solo: al mantener la abertura del compás igual al radio, cada cuerda que trazas mide lo mismo que el radio, así que el triángulo formado por dos radios y esa cuerda tiene sus tres lados iguales.</p>'+
+      '<p>Si lo que te dan es un diámetro y quieres un cuadrado, necesitas dos radios perpendiculares al diámetro: los consigues trazando arcos iguales desde los dos extremos y uniendo sus cruces. Y si ya tienes un polígono inscrito, partir cada ángulo central en dos duplica el número de lados: del cuadrado sale el octágono, del hexágono el dodecágono.</p>'+
+      '<div class="callout"><p><strong>Un mismo compás, tres caminos:</strong> partir de la abertura igual al radio, partir de un diámetro y su mediatriz, o partir de un polígono ya trazado y bisecar sus ángulos centrales.</p></div>'
+    : '<p>The construction changes with the information you start from. If you are given the radius, the hexagon almost builds itself: keeping the compass opening equal to the radius, every chord you draw measures the same as the radius, so the triangle formed by two radii and that chord has three equal sides.</p>'+
+      '<p>If what you are given is a diameter and you want a square, you need two radii perpendicular to that diameter: you get them by drawing equal arcs from both ends and joining their crossings. And if you already have an inscribed polygon, cutting each central angle in two doubles the number of sides: the square gives the octagon, the hexagon gives the dodecagon.</p>'+
+      '<div class="callout"><p><strong>One compass, three routes:</strong> start from an opening equal to the radius, start from a diameter and its perpendicular bisector, or start from a polygon already drawn and bisect its central angles.</p></div>');
+
+  buildPasos(rng);
+
+  var P5V = [
+    { es:{ t:'La abertura que no cambia', q:'Beto abre el compás exactamente al radio de su circunferencia y, partiendo de un punto de ella, va marcando arcos consecutivos hasta dar la vuelta. Al unir las marcas con la regla, ¿qué figura obtiene?',
+           o:['Un hexágono regular','Un pentágono regular','Un octágono regular','Un triángulo equilátero'], a:'Un hexágono regular',
+           h:'Los dos radios y la cuerda que une dos marcas vecinas forman un triángulo con sus tres lados iguales.',
+           e:'Como la cuerda mide lo mismo que el radio, ese triángulo es equilátero y su ángulo central mide 60 grados. La vuelta completa se reparte entonces en 360 ÷ 60 = 6 arcos, así que las marcas son seis y la figura es un hexágono regular.' },
+      en:{ t:'The opening that never changes', q:'Beto opens the compass exactly to the radius of his circle and, starting from a point on it, marks consecutive arcs all the way around. Joining the marks with the ruler, which figure does he get?',
+           o:['A regular hexagon','A regular pentagon','A regular octagon','An equilateral triangle'], a:'A regular hexagon',
+           h:'The two radii and the chord joining two neighbouring marks form a triangle with three equal sides.',
+           e:'Since the chord measures the same as the radius, that triangle is equilateral and its central angle is 60 degrees. The full turn then splits into 360 ÷ 60 = 6 arcs, so there are six marks and the figure is a regular hexagon.' } },
+    { es:{ t:'Saltar marcas con la regla', q:'Beto ya tiene sobre su circunferencia las seis marcas del hexágono regular y ahora quiere un triángulo equilátero inscrito en esa misma circunferencia, sin volver a usar el compás. ¿Qué debe hacer con la regla?',
+           o:['Unir las marcas saltando una cada vez','Unir todas las marcas consecutivas','Unir cada marca con el centro','Unir solo tres marcas seguidas'], a:'Unir las marcas saltando una cada vez',
+           h:'El ángulo central del triángulo equilátero es el doble del que separa dos marcas vecinas del hexágono.',
+           e:'El triángulo equilátero necesita ángulos centrales de 120 grados, es decir el doble de los 60 grados que separan dos marcas vecinas. Por eso se une una marca sí y la siguiente no, y quedan tres vértices repartidos por igual.' },
+      en:{ t:'Skipping marks with the ruler', q:'Beto already has the six marks of the regular hexagon on his circle and now wants an equilateral triangle inscribed in that same circle, without using the compass again. What should he do with the ruler?',
+           o:['Join the marks skipping one each time','Join every consecutive mark','Join each mark to the centre','Join only three marks in a row'], a:'Join the marks skipping one each time',
+           h:'The central angle of an equilateral triangle is twice the one separating two neighbouring hexagon marks.',
+           e:'The equilateral triangle needs central angles of 120 degrees, twice the 60 degrees between two neighbouring marks. So you join one mark, skip the next, and three evenly spread vertices are left.' } }
+  ];
+  var p5 = P5V[Math.floor(rng()*P5V.length)];
+  addProblem(rng, { title:p5[LANG].t, q:p5[LANG].q, hint:p5[LANG].h, exp:p5[LANG].e, options:p5[LANG].o, correct:p5[LANG].a, showWork:false });
+
+  var P6V = [
+    { es:{ t:'Del diámetro al cuadrado', q:'Sobre una circunferencia con centro O, Lucía ya trazó con la regla un diámetro AC y quiere inscribir un cuadrado usando solo regla y compás. ¿Qué trazo le da los dos vértices que le faltan?',
+           o:['La mediatriz del diámetro AC','La tangente a la circunferencia en el punto A','Una paralela a AC trazada por el punto O','La bisectriz del ángulo inscrito en el punto A'], a:'La mediatriz del diámetro AC',
+           h:'Los cuatro ángulos centrales del cuadrado son iguales, así que los radios que faltan deben ser perpendiculares al diámetro que ya tiene.',
+           e:'La mediatriz de AC pasa por O y es perpendicular a AC, así que corta la circunferencia en dos puntos B y D que dejan cuatro ángulos centrales de 90 grados. Uniendo A, B, C y D queda el cuadrado inscrito.' },
+      en:{ t:'From diameter to square', q:'On a circle with centre O, Lucía has already drawn a diameter AC with the ruler and wants to inscribe a square using only ruler and compass. Which stroke gives her the two missing vertices?',
+           o:['The perpendicular bisector of diameter AC','The tangent to the circle at point A','A line through O parallel to AC','The bisector of the inscribed angle at point A'], a:'The perpendicular bisector of diameter AC',
+           h:'The four central angles of a square are equal, so the missing radii must be perpendicular to the diameter she already has.',
+           e:'The perpendicular bisector of AC passes through O and is perpendicular to AC, so it cuts the circle at two points B and D leaving four central angles of 90 degrees. Joining A, B, C and D gives the inscribed square.' } },
+    { es:{ t:'Duplicar los lados', q:'Lucía ya tiene un cuadrado inscrito en su circunferencia y quiere un octágono regular inscrito en esa misma circunferencia. ¿Qué construcción con regla y compás le da los cuatro vértices que faltan?',
+           o:['Trazar las bisectrices de los cuatro ángulos centrales','Trazar las dos diagonales del cuadrado','Trazar las tangentes en los cuatro vértices del cuadrado','Duplicar la abertura del compás y repetir el cuadrado'], a:'Trazar las bisectrices de los cuatro ángulos centrales',
+           h:'Pasar de un polígono al que tiene el doble de lados equivale a partir en dos partes iguales cada ángulo central.',
+           e:'El cuadrado tiene ángulos centrales de 90 grados. Al partirlos por la mitad quedan ocho ángulos centrales de 45 grados, y esas bisectrices cortan la circunferencia justo en los cuatro vértices nuevos del octágono regular.' },
+      en:{ t:'Doubling the sides', q:'Lucía already has a square inscribed in her circle and wants a regular octagon inscribed in that same circle. Which ruler and compass construction gives her the four missing vertices?',
+           o:['Drawing the bisectors of the four central angles','Drawing the two diagonals of the square','Drawing the tangents at the four vertices of the square','Doubling the compass opening and repeating the square'], a:'Drawing the bisectors of the four central angles',
+           h:'Going from a polygon to the one with twice as many sides means cutting each central angle into two equal parts.',
+           e:'The square has central angles of 90 degrees. Cutting them in half leaves eight central angles of 45 degrees, and those bisectors cut the circle exactly at the four new vertices of the regular octagon.' } }
+  ];
+  var p6 = P6V[Math.floor(rng()*P6V.length)];
+  addProblem(rng, { title:p6[LANG].t, q:p6[LANG].q, hint:p6[LANG].h, exp:p6[LANG].e, options:p6[LANG].o, correct:p6[LANG].a, showWork:false });
+
+  /* ── CONCEPT 4 ───────────────────────────────────────────────── */
+  addSection(C + '4',
+    es ? 'Teselados: cerrar la vuelta sin huecos' : 'Tessellations: closing the turn with no gaps',
+    es
+    ? '<p>Un teselado cubre el plano con piezas que no dejan huecos ni se traslapan. La condición está siempre en los vértices: las piezas que llegan a un mismo punto tienen que completar exactamente una vuelta, ni un grado de más ni uno de menos.</p>'+
+      '<p>Por eso, de todos los polígonos regulares, solo tres cubren el plano ellos solos: el triángulo equilátero, el cuadrado y el hexágono regular. Sus ángulos interiores caben un número entero de veces en la vuelta completa. Los demás siempre dejan un sobrante.</p>'
+    : '<p>A tessellation covers the plane with tiles that leave no gaps and never overlap. The condition always lives at the vertices: the tiles meeting at one point must complete exactly one turn, not a degree more and not a degree less.</p>'+
+      '<p>That is why, out of all regular polygons, only three cover the plane on their own: the equilateral triangle, the square and the regular hexagon. Their interior angles fit a whole number of times into the full turn. The rest always leave something over.</p>');
+
+  buildTeselado(rng);
+
+  var P7V = [
+    { es:{ t:'La pieza que no sirve', q:'Marisa quiere cubrir un piso plano usando piezas de un solo tipo de polígono regular, sin huecos ni traslapes. ¿Cuál de estas piezas no le sirve?',
+           o:['El pentágono regular','El triángulo equilátero','El cuadrado','El hexágono regular'], a:'El pentágono regular',
+           h:'Alrededor de cada vértice las piezas deben completar exactamente una vuelta.',
+           e:'El ángulo interior del pentágono regular mide 108 grados: tres pentágonos suman 324 grados y dejan un hueco, y cuatro suman 432 grados y se traslapan. Los otros tres sí caben un número entero de veces en la vuelta.' },
+      en:{ t:'The tile that does not work', q:'Marisa wants to cover a flat floor using tiles of a single kind of regular polygon, with no gaps and no overlaps. Which of these tiles is no good?',
+           o:['The regular pentagon','The equilateral triangle','The square','The regular hexagon'], a:'The regular pentagon',
+           h:'Around every vertex the tiles must complete exactly one turn.',
+           e:'The interior angle of a regular pentagon is 108 degrees: three pentagons add up to 324 degrees and leave a gap, and four add up to 432 degrees and overlap. The other three do fit a whole number of times into the turn.' } },
+    { es:{ t:'El hueco que siempre aparece', q:'Al colocar pentágonos regulares alrededor de un mismo punto siempre queda un hueco o un traslape. ¿Cuál es la razón?',
+           o:['Su ángulo interior no cabe un número entero de veces en la vuelta','Sus lados no tienen todos la misma longitud','No se puede construir con regla y compás','Tiene un número impar de lados'], a:'Su ángulo interior no cabe un número entero de veces en la vuelta',
+           h:'Compara el ángulo interior del pentágono con los 360 grados de la vuelta completa.',
+           e:'El ángulo interior del pentágono regular mide 108 grados. Tres pentágonos suman 324 grados y dejan 36 grados libres, y cuatro suman 432 grados y se traslapan. Solo el triángulo, el cuadrado y el hexágono tienen ángulos interiores que caben un número entero de veces en la vuelta.' },
+      en:{ t:'The gap that always shows up', q:'When you place regular pentagons around one point there is always a gap or an overlap. What is the reason?',
+           o:['Its interior angle does not fit a whole number of times into the turn','Its sides are not all the same length','It cannot be built with ruler and compass','It has an odd number of sides'], a:'Its interior angle does not fit a whole number of times into the turn',
+           h:'Compare the interior angle of the pentagon with the 360 degrees of a full turn.',
+           e:'The interior angle of a regular pentagon is 108 degrees. Three pentagons add up to 324 degrees and leave 36 degrees free, and four add up to 432 degrees and pile on top of each other. Only the triangle, the square and the hexagon have interior angles that fit a whole number of times into the turn.' } }
+  ];
+  var p7 = P7V[Math.floor(rng()*P7V.length)];
+  addProblem(rng, { title:p7[LANG].t, q:p7[LANG].q, hint:p7[LANG].h, exp:p7[LANG].e, options:p7[LANG].o, correct:p7[LANG].a, showWork:false });
+
+  /* ── CONCEPT 5 ───────────────────────────────────────────────── */
+  addSection(C + '5',
+    es ? 'Mezclar piezas en el mismo vértice' : 'Mixing tiles at the same vertex',
+    es
+    ? '<p>Si mezclas polígonos regulares de distinto tipo, el vértice se puede cerrar de muchas más maneras. La condición no cambia: los ángulos interiores que concurren en un vértice deben sumar la vuelta completa.</p>'+
+      '<p>Así aparecen los mosaicos de octágonos con cuadrados, o los de dodecágonos con triángulos, que se ven en pisos y azulejos. Todos ellos se trazan con la misma regla y el mismo compás, partiendo de una circunferencia y repartiendo marcas.</p>'
+    : '<p>If you mix regular polygons of different kinds, the vertex can be closed in many more ways. The condition does not change: the interior angles meeting at a vertex must add up to the full turn.</p>'+
+      '<p>That is where mosaics of octagons with squares, or dodecagons with triangles, come from, the ones you see on floors and tiles. All of them are drawn with the same ruler and the same compass, starting from a circle and spreading marks.</p>');
+
+  buildReflect(rng);
+
+  var P8V = [
+    { opts:['90','108','120','60'], ans:'90',
+      es:{ t:'La pieza que falta en el vértice', q:'En un vértice de cierto mosaico concurren dos octágonos regulares y un polígono regular más, sin huecos ni traslapes. ¿Cuántos grados mide el ángulo interior de ese tercer polígono?',
+           h:'Los ángulos interiores que llegan a un vértice deben sumar una vuelta completa.',
+           e:'El ángulo interior del octágono regular mide 135 grados, así que dos octágonos aportan 270 grados. Para completar la vuelta falta 360 − 270 = 90.' },
+      en:{ t:'The missing tile at the vertex', q:'At one vertex of a mosaic there meet two regular octagons and one more regular polygon, with no gaps and no overlaps. How many degrees does the interior angle of that third polygon measure?',
+           h:'The interior angles reaching a vertex must add up to a full turn.',
+           e:'The interior angle of a regular octagon is 135 degrees, so two octagons contribute 270 degrees. To complete the turn what is missing is 360 − 270 = 90.' } },
+    { opts:['150','120','135','144'], ans:'150',
+      es:{ t:'La pieza que falta en el vértice', q:'En un vértice de cierto mosaico concurren un triángulo equilátero y dos polígonos regulares iguales entre sí, sin huecos ni traslapes. ¿Cuántos grados mide el ángulo interior de cada uno de esos dos polígonos?',
+           h:'Los ángulos interiores que llegan a un vértice deben sumar una vuelta completa.',
+           e:'El triángulo equilátero aporta 60 grados, así que a los dos polígonos iguales les quedan 300 grados entre los dos: 300 ÷ 2 = 150.' },
+      en:{ t:'The missing tile at the vertex', q:'At one vertex of a mosaic there meet an equilateral triangle and two regular polygons equal to each other, with no gaps and no overlaps. How many degrees does the interior angle of each of those two polygons measure?',
+           h:'The interior angles reaching a vertex must add up to a full turn.',
+           e:'The equilateral triangle contributes 60 degrees, so the two equal polygons share 300 degrees between them: 300 ÷ 2 = 150.' } },
+    { opts:['120','90','108','135'], ans:'120',
+      es:{ t:'La pieza que falta en el vértice', q:'En un vértice de cierto mosaico concurren dos triángulos equiláteros y dos polígonos regulares iguales entre sí, sin huecos ni traslapes. ¿Cuántos grados mide el ángulo interior de cada uno de esos dos polígonos?',
+           h:'Los ángulos interiores que llegan a un vértice deben sumar una vuelta completa.',
+           e:'Los dos triángulos aportan 120 grados y quedan 240 grados para los dos polígonos iguales: 240 ÷ 2 = 120.' },
+      en:{ t:'The missing tile at the vertex', q:'At one vertex of a mosaic there meet two equilateral triangles and two regular polygons equal to each other, with no gaps and no overlaps. How many degrees does the interior angle of each of those two polygons measure?',
+           h:'The interior angles reaching a vertex must add up to a full turn.',
+           e:'The two triangles contribute 120 degrees and 240 degrees are left for the two equal polygons: 240 ÷ 2 = 120.' } }
+  ];
+  var p8 = P8V[Math.floor(rng()*P8V.length)];
+  addProblem(rng, { title:p8[LANG].t, q:p8[LANG].q, hint:p8[LANG].h, exp:p8[LANG].e, options:p8.opts, correct:p8.ans, showWork:true });
+
+  var P9V = [
+    { es:{ t:'La combinación que cierra', q:'¿Cuál de estas combinaciones de polígonos regulares rodea por completo un vértice, sin dejar hueco ni traslaparse?',
+           o:['Un cuadrado y dos octágonos regulares','Un cuadrado y dos hexágonos regulares','Dos pentágonos regulares y un cuadrado','Tres pentágonos regulares'], a:'Un cuadrado y dos octágonos regulares',
+           h:'Suma los ángulos interiores de las piezas de cada combinación y compárala con la vuelta completa.',
+           e:'El cuadrado aporta 90 grados y cada octágono regular 135 grados: 90 + 135 + 135 = 360, así que ese vértice cierra exacto. Las otras combinaciones dan 330, 306 y 324 grados.' },
+      en:{ t:'The combination that closes', q:'Which of these combinations of regular polygons goes all the way around a vertex, leaving no gap and no overlap?',
+           o:['A square and two regular octagons','A square and two regular hexagons','Two regular pentagons and a square','Three regular pentagons'], a:'A square and two regular octagons',
+           h:'Add the interior angles of the tiles in each combination and compare with the full turn.',
+           e:'The square contributes 90 degrees and each regular octagon 135 degrees: 90 + 135 + 135 = 360, so that vertex closes exactly. The other combinations give 330, 306 and 324 degrees.' } },
+    { es:{ t:'La combinación que cierra', q:'¿Cuál de estas combinaciones de polígonos regulares rodea por completo un vértice, sin dejar hueco ni traslaparse?',
+           o:['Un triángulo equilátero y dos dodecágonos regulares','Un cuadrado y dos dodecágonos regulares','Dos triángulos equiláteros y un decágono regular','Un hexágono regular y dos octágonos regulares'], a:'Un triángulo equilátero y dos dodecágonos regulares',
+           h:'Suma los ángulos interiores de las piezas de cada combinación y compárala con la vuelta completa.',
+           e:'El triángulo equilátero aporta 60 grados y cada dodecágono regular 150 grados: 60 + 150 + 150 = 360, así que ese vértice cierra exacto. Las otras combinaciones dan 390, 264 y 390 grados.' },
+      en:{ t:'The combination that closes', q:'Which of these combinations of regular polygons goes all the way around a vertex, leaving no gap and no overlap?',
+           o:['An equilateral triangle and two regular dodecagons','A square and two regular dodecagons','Two equilateral triangles and a regular decagon','A regular hexagon and two regular octagons'], a:'An equilateral triangle and two regular dodecagons',
+           h:'Add the interior angles of the tiles in each combination and compare with the full turn.',
+           e:'The equilateral triangle contributes 60 degrees and each regular dodecagon 150 degrees: 60 + 150 + 150 = 360, so that vertex closes exactly. The other combinations give 390, 264 and 390 degrees.' } }
+  ];
+  var p9 = P9V[Math.floor(rng()*P9V.length)];
+  addProblem(rng, { title:p9[LANG].t, q:p9[LANG].q, hint:p9[LANG].h, exp:p9[LANG].e, options:p9[LANG].o, correct:p9[LANG].a, showWork:true });
+
+  var P10V = [
+    { opts:['6','5','4','8'], ans:'6',
+      es:{ t:'Piezas alrededor de un punto', q:'Un mosaico se arma colocando triángulos equiláteros iguales alrededor de un mismo punto, sin huecos ni traslapes. ¿Cuántos triángulos hacen falta para cerrar ese vértice?',
+           h:'Divide la vuelta completa entre el ángulo interior de la pieza.',
+           e:'Cada triángulo equilátero aporta un ángulo interior de 60 grados y la vuelta completa mide 360 grados: 360 ÷ 60 = 6.' },
+      en:{ t:'Tiles around a point', q:'A mosaic is assembled by placing equal equilateral triangles around one point, with no gaps and no overlaps. How many triangles are needed to close that vertex?',
+           h:'Divide the full turn by the interior angle of the tile.',
+           e:'Each equilateral triangle contributes an interior angle of 60 degrees and the full turn is 360 degrees: 360 ÷ 60 = 6.' } },
+    { opts:['4','3','5','6'], ans:'4',
+      es:{ t:'Piezas alrededor de un punto', q:'Un mosaico se arma colocando cuadrados iguales alrededor de un mismo punto, sin huecos ni traslapes. ¿Cuántos cuadrados hacen falta para cerrar ese vértice?',
+           h:'Divide la vuelta completa entre el ángulo interior de la pieza.',
+           e:'Cada cuadrado aporta un ángulo interior de 90 grados y la vuelta completa mide 360 grados: 360 ÷ 90 = 4.' },
+      en:{ t:'Tiles around a point', q:'A mosaic is assembled by placing equal squares around one point, with no gaps and no overlaps. How many squares are needed to close that vertex?',
+           h:'Divide the full turn by the interior angle of the tile.',
+           e:'Each square contributes an interior angle of 90 degrees and the full turn is 360 degrees: 360 ÷ 90 = 4.' } },
+    { opts:['3','4','2','6'], ans:'3',
+      es:{ t:'Piezas alrededor de un punto', q:'Un mosaico se arma colocando hexágonos regulares iguales alrededor de un mismo punto, sin huecos ni traslapes. ¿Cuántos hexágonos hacen falta para cerrar ese vértice?',
+           h:'Divide la vuelta completa entre el ángulo interior de la pieza.',
+           e:'Cada hexágono regular aporta un ángulo interior de 120 grados y la vuelta completa mide 360 grados: 360 ÷ 120 = 3.' },
+      en:{ t:'Tiles around a point', q:'A mosaic is assembled by placing equal regular hexagons around one point, with no gaps and no overlaps. How many hexagons are needed to close that vertex?',
+           h:'Divide the full turn by the interior angle of the tile.',
+           e:'Each regular hexagon contributes an interior angle of 120 degrees and the full turn is 360 degrees: 360 ÷ 120 = 3.' } }
+  ];
+  var p10 = P10V[Math.floor(rng()*P10V.length)];
+  addProblem(rng, { title:p10[LANG].t, q:p10[LANG].q, hint:p10[LANG].h, exp:p10[LANG].e, options:p10.opts, correct:p10.ans, showWork:true });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,2255 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Métodos de Separación de Mezclas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── LAB WIDGETS (topic manipulatives) ── */
+.labtitle { font-family:'Crimson Pro',serif; font-size:1.05rem; font-weight:700; margin-bottom:.15rem; }
+.labsub { font-size:.79rem; color:var(--text3); margin-bottom:.7rem; }
+.wcanvas { display:block; width:100%; height:220px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); touch-action:none; }
+.fbline { margin-top:.6rem; font-size:.83rem; min-height:1.35rem; color:var(--text2); }
+.fbline.good { color:var(--ok); font-weight:600; }
+.fbline.warn { color:var(--gold); }
+.fbline.bad  { color:var(--bad); }
+.tally { font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text3); margin-top:.55rem; }
+.qprompt { font-size:.86rem; font-weight:600; margin:.75rem 0 .4rem; }
+.slrow { margin:.7rem 0 .2rem; }
+.slrow label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.slrow input[type=range] { width:100%; accent-color:var(--green); min-height:28px; }
+.chiprow { display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.6rem; }
+.samplename { font-family:'IBM Plex Mono',monospace; font-size:.82rem; color:var(--green-dark); font-weight:500; margin-bottom:.4rem; }
+.revealbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.6rem .8rem; font-size:.82rem; color:var(--text2); margin-top:.6rem; }
+.revealbox.show { display:block; }
+.legend { display:flex; gap:.8rem; flex-wrap:wrap; font-size:.72rem; color:var(--text3); margin-top:.5rem; }
+.lgdot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:.3rem; vertical-align:middle; }
+@media (max-width:600px){ .wcanvas { height:200px; } .mtab { min-height:34px; } }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Métodos de Separación de Mezclas</div>
+    <div class="wcourse" id="wcourse-el">Química · 3° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Métodos de Separación de Mezclas</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c246c', primaryDark:'#07184c', primaryBg:'#e6eaf7',
+  accent:'#8484b4', accentBg:'#e9e9f1',
+  darkPrimary:'#385ed1', darkPrimaryDark:'#6a8bf0', darkPrimaryBg:'#08153e',
+  darkAccent:'#8787b7', darkAccentBg:'#14141e',
+  pBR:12, pBG:36, pBB:108, pAR:132, pAG:132, pAB:180,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'Instituto Colon',
+  guideTitle:{ es:'Métodos de Separación de Mezclas', en:'Methods for Separating Mixtures' },
+  courseName:{ es:'Química · 3° de Secundaria', en:'Chemistry · Secondary 3' }, filePrefix:'qui3_t03_g02'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'qui3_t03_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Métodos de Separación de Mezclas','wcourse':'Química · 3° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Methods for Separating Mixtures','wcourse':'Chemistry · Secondary 3',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'qui3_t03_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'qui3_t03_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'qui3_t03_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'qui3_t03_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('qui3_t03_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   CONTENT HELPERS (bilingual resolution, shuffling, DOM builders)
+   ================================================ */
+function L(o){
+  if (o === null || o === undefined) return '';
+  if (typeof o === 'string' || typeof o === 'number') return o;
+  return (o[LANG] !== undefined) ? o[LANG] : o.es;
+}
+function shuffleArr(a, rng){
+  var c = a.slice();
+  for (var i=c.length-1;i>0;i--){ var j=Math.floor(rng()*(i+1)); var t=c[i]; c[i]=c[j]; c[j]=t; }
+  return c;
+}
+function shuffleOpts(opts, ci, rng){
+  var pairs = opts.map(function(o,i){ return { o:o, i:i }; });
+  for (var k=pairs.length-1;k>0;k--){ var j=Math.floor(rng()*(k+1)); var t=pairs[k]; pairs[k]=pairs[j]; pairs[j]=t; }
+  var out=[], idx=0;
+  pairs.forEach(function(e,n){ out.push(e.o); if (e.i===ci) idx=n; });
+  return { options:out, idx:idx };
+}
+function probObj(v, rng){
+  var sh = shuffleOpts(L(v.opts), v.ci, rng);
+  return { title:L(v.title), questionText:L(v.stmt), fn:v.fn||'', showWork:!!v.sw,
+           hint:L(v.hint), explanation:L(v.exp), options:sh.options, correctIdx:sh.idx };
+}
+function cssv(name){
+  try { var v = getComputedStyle(document.documentElement).getPropertyValue(name); return (v||'').trim() || 'gray'; }
+  catch(e){ return 'gray'; }
+}
+function elt(tag, cls, html){
+  var d = document.createElement(tag);
+  if (cls) d.className = cls;
+  if (html !== undefined) d.innerHTML = html;
+  return d;
+}
+function addSection(tag, title, bodyHtml){
+  var s = elt('div','section','<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+bodyHtml);
+  document.getElementById('lessonBody').appendChild(s);
+  return s;
+}
+function labCard(host, title, sub, inner){
+  var c = elt('div','gcrd','<div class="labtitle">'+title+'</div><div class="labsub">'+sub+'</div>'+(inner||''));
+  host.appendChild(c);
+  return c;
+}
+/* canvas palette (Canvas 2D cannot read CSS variables; Rule 14 canvas exception) */
+var CV_FLUID   = '#bcd3ea';
+var CV_FLUID2  = '#e3c98a';
+var CV_SOLID   = '#9a8055';
+var CV_VAPOR   = '#a98fd0';
+var CV_SPECK   = '#8fb0cd';
+var CV_GLASS   = '#7f8c99';
+var CV_HOT     = '#c0562e';
+var CV_PIG     = ['#d4a017','#2f6fb0','#b03a2e'];
+
+/* ── WIDGET 1: lupa clasificadora (homogénea / heterogénea) ── */
+function widgetLupa(rng, host){
+  var SAMPLES = [
+    { name:{es:'Agua de mar ya filtrada', en:'Seawater, already filtered'}, homo:true,
+      why:{es:'La sal está disuelta en el agua: por más aumento que uses, el campo se ve parejo. Es una disolución, una sola fase.',
+           en:'The salt is dissolved in the water: no matter the zoom, the field looks even. It is a solution, a single phase.'} },
+    { name:{es:'Aderezo de aceite y vinagre recién agitado', en:'Freshly shaken oil and vinegar dressing'}, homo:false,
+      why:{es:'Al aumentar aparecen gotas de aceite dentro del vinagre: el aceite es la fase dispersa y el vinagre la fase dispersante.',
+           en:'Zooming in shows oil droplets inside the vinegar: the oil is the dispersed phase and the vinegar the dispersing phase.'} },
+    { name:{es:'Acero inoxidable pulido', en:'Polished stainless steel'}, homo:true,
+      why:{es:'Es una aleación: hierro, cromo y níquel quedaron repartidos de manera uniforme, sin zonas distinguibles.',
+           en:'It is an alloy: iron, chromium and nickel ended up evenly spread, with no distinguishable zones.'} },
+    { name:{es:'Gelatina con trozos de durazno', en:'Gelatin with peach pieces'}, homo:false,
+      why:{es:'Los trozos de fruta se ven como zonas separadas del gel que los rodea: hay más de una fase.',
+           en:'The fruit pieces show up as zones separate from the gel around them: there is more than one phase.'} },
+    { name:{es:'Aire limpio dentro de un frasco', en:'Clean air inside a jar'}, homo:true,
+      why:{es:'Nitrógeno, oxígeno y otros gases están mezclados molécula con molécula: ninguna superficie los separa.',
+           en:'Nitrogen, oxygen and other gases are mixed molecule by molecule: no surface separates them.'} },
+    { name:{es:'Agua de lluvia con arena en suspensión', en:'Rainwater with suspended sand'}, homo:false,
+      why:{es:'Los granos de arena siguen enteros dentro del agua: se ven como partículas sueltas, no disueltas.',
+           en:'The sand grains stay whole inside the water: they look like loose particles, not dissolved ones.'} }
+  ];
+  var rounds = shuffleArr(SAMPLES, rng).slice(0,4);
+  var blobs = rounds.map(function(){
+    var a=[]; for (var i=0;i<16;i++){ a.push({ x:0.08+rng()*0.84, y:0.08+rng()*0.84, r:0.45+rng()*0.7 }); } return a;
+  });
+  var ri=0, tries=0, solved=0, done=false;
+  var card = labCard(host,
+    L({es:'Lupa clasificadora', en:'Sorting magnifier'}),
+    L({es:'Sube el aumento y observa el campo antes de decidir cómo es la muestra.',
+       en:'Raise the zoom and watch the field before deciding what the sample is.'}),
+    '<div class="samplename" id="lpName"></div>'+
+    '<canvas class="wcanvas" id="lpCv"></canvas>'+
+    '<div class="slrow"><label id="lpZlbl"></label><input type="range" id="lpZ" min="1" max="12" value="1"></div>'+
+    '<div class="qprompt" id="lpQ"></div>'+
+    '<div class="mtabs"><button class="mtab" id="lpHo"></button><button class="mtab" id="lpHe"></button></div>'+
+    '<div class="fbline" id="lpFb"></div><div class="revealbox" id="lpRv"></div><div class="tally" id="lpTa"></div>');
+  function q(sel){ return card.querySelector(sel); }
+  function draw(){
+    var cv = q('#lpCv'); if (!cv) return;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 210, dpr = window.devicePixelRatio || 1;
+    cv.width = w*dpr; cv.height = h*dpr;
+    var ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+    var z = parseInt(q('#lpZ').value,10) || 1;
+    var idx = Math.min(ri, rounds.length-1);
+    var s = rounds[idx], bl = blobs[idx];
+    var cx=w/2, cy=h/2, R=Math.min(w,h)*0.42;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.clip();
+    ctx.fillStyle = CV_FLUID; ctx.fillRect(cx-R,cy-R,2*R,2*R);
+    if (s.homo){
+      ctx.fillStyle = CV_SPECK;
+      for (var i=0;i<260;i++){
+        var a=((i*37)%101)/101, b=((i*61)%97)/97;
+        ctx.fillRect(cx-R+a*2*R, cy-R+b*2*R, 1.3, 1.3);
+      }
+    } else {
+      ctx.fillStyle = CV_FLUID2;
+      bl.forEach(function(p){
+        ctx.beginPath(); ctx.arc(cx-R+p.x*2*R, cy-R+p.y*2*R, p.r*z*1.5, 0, Math.PI*2); ctx.fill();
+      });
+    }
+    ctx.restore();
+    ctx.strokeStyle = cssv('--green'); ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle = cssv('--text3'); ctx.font = '11px "IBM Plex Sans", sans-serif';
+    ctx.fillText(L({es:'aumento',en:'zoom'})+' x'+z, 8, 15);
+  }
+  function tally(){
+    q('#lpTa').textContent = L({es:'Muestras resueltas: ',en:'Samples solved: '}) + solved + ' / ' + rounds.length;
+  }
+  function renderRound(){
+    if (ri >= rounds.length){
+      done = true;
+      q('#lpName').textContent = L({es:'Recorrido completo', en:'Full run complete'});
+      q('#lpFb').className = 'fbline good';
+      q('#lpFb').textContent = L({es:'Ya distingues una sola fase de varias fases con la vista.',
+                                  en:'You can now tell one phase from several phases by eye.'});
+      tally(); return;
+    }
+    q('#lpName').textContent = L(rounds[ri].name);
+    q('#lpZ').value = 1;
+    q('#lpFb').textContent = ''; q('#lpFb').className = 'fbline';
+    q('#lpRv').className = 'revealbox'; q('#lpRv').innerHTML = '';
+    tries = 0; tally(); draw();
+  }
+  function answer(saysHomo){
+    if (done || ri >= rounds.length) return;
+    var s = rounds[ri], fb = q('#lpFb');
+    var z = parseInt(q('#lpZ').value,10) || 1;
+    if (saysHomo === s.homo){
+      solved++; ri++;
+      fb.className = 'fbline good';
+      fb.textContent = L({es:'Bien: ',en:'Right: '}) + L(s.why);
+      tally(); setTimeout(renderRound, 1600); return;
+    }
+    tries++;
+    if (tries >= 3){
+      var rv = q('#lpRv'); rv.className = 'revealbox show';
+      rv.innerHTML = '<strong>'+ L(s.homo ? {es:'Era homogénea.',en:'It was homogeneous.'} : {es:'Era heterogénea.',en:'It was heterogeneous.'}) +'</strong> ' + L(s.why);
+      ri++; setTimeout(renderRound, 2600); return;
+    }
+    fb.className = 'fbline warn';
+    if (s.homo){
+      fb.textContent = z < 8
+        ? L({es:'Antes de decidir, lleva el aumento al máximo: si el campo sigue parejo, no hay dos fases que ver.',
+             en:'Before deciding, push the zoom to the top: if the field stays even, there are no two phases to see.'})
+        : L({es:'Estás en el aumento máximo y el campo se ve parejo, sin zonas distintas. Vuelve a elegir.',
+             en:'You are at maximum zoom and the field looks even, with no distinct zones. Choose again.'});
+    } else {
+      fb.textContent = z < 8
+        ? L({es:'Sube el aumento: hay detalles que no se distinguen con poca amplificación.',
+             en:'Raise the zoom: some details do not show up at low magnification.'})
+        : L({es:'Con este aumento ya se distinguen manchas separadas del líquido de fondo. Vuelve a elegir.',
+             en:'At this zoom you can already tell separate patches from the background liquid. Choose again.'});
+    }
+  }
+  q('#lpZlbl').textContent = L({es:'Aumento de la lupa', en:'Magnifier zoom'});
+  q('#lpQ').textContent   = L({es:'¿Cómo es esta muestra?', en:'What is this sample like?'});
+  q('#lpHo').textContent  = L({es:'Homogénea', en:'Homogeneous'});
+  q('#lpHe').textContent  = L({es:'Heterogénea', en:'Heterogeneous'});
+  q('#lpZ').addEventListener('input', draw);
+  q('#lpHo').addEventListener('click', function(){ answer(true); });
+  q('#lpHe').addEventListener('click', function(){ answer(false); });
+  renderRound();
+  setTimeout(draw, 120);
+}
+
+/* ── WIDGET 2: mesa de separación (elige el método según la propiedad física) ── */
+function widgetMesa(rng, host){
+  var LB = {
+    paper:{es:'papel filtro',en:'filter paper'}, solid:{es:'sólido',en:'solid'},
+    liquid:{es:'líquido',en:'liquid'}, mix:{es:'mezcla',en:'mixture'},
+    heat:{es:'calor',en:'heat'}, vapor:{es:'vapor',en:'vapour'},
+    lid:{es:'tapa fría',en:'cold lid'}, front:{es:'frente',en:'front'},
+    done:{es:'separado',en:'separated'}, same:{es:'sin separar',en:'not separated'}
+  };
+  var METHODS = [
+    { k:'filtracion',   name:{es:'Filtración',en:'Filtration'},
+      act:{es:'Pasaste la mezcla por papel filtro.', en:'You poured the mixture through filter paper.'} },
+    { k:'decantacion',  name:{es:'Decantación',en:'Decanting'},
+      act:{es:'Dejaste reposar y abriste la llave del embudo.', en:'You let it settle and opened the funnel tap.'} },
+    { k:'evaporacion',  name:{es:'Evaporación',en:'Evaporation'},
+      act:{es:'Calentaste la mezcla en un recipiente abierto.', en:'You heated the mixture in an open dish.'} },
+    { k:'sublimacion',  name:{es:'Sublimación',en:'Sublimation'},
+      act:{es:'Calentaste con una tapa fría encima.', en:'You heated it with a cold lid on top.'} },
+    { k:'cromatografia',name:{es:'Cromatografía',en:'Chromatography'},
+      act:{es:'Colocaste una tira de papel con la muestra en el disolvente.', en:'You set a paper strip with the sample into the solvent.'} }
+  ];
+  var MIX = [
+    { name:{es:'Agua de lluvia con arena', en:'Rainwater with sand'}, k:'filtracion',
+      prop:{es:'la arena no se disuelve y sus granos son mucho más grandes que los poros de un papel',
+            en:'the sand does not dissolve and its grains are far larger than the pores of a paper'},
+      win:{es:'La arena se queda en el papel y el agua limpia cae al vaso.',
+           en:'The sand stays on the paper and clean water drips into the beaker.'} },
+    { name:{es:'Agua con sal disuelta', en:'Water with dissolved salt'}, k:'evaporacion',
+      prop:{es:'la sal ya está disuelta y solo el agua puede irse en forma de vapor',
+            en:'the salt is already dissolved and only the water can leave as vapour'},
+      win:{es:'El agua se va como vapor y la sal queda seca en el fondo.',
+           en:'The water leaves as vapour and the salt stays dry at the bottom.'} },
+    { name:{es:'Aceite y agua en el mismo frasco', en:'Oil and water in one jar'}, k:'decantacion',
+      prop:{es:'los dos líquidos no se mezclan y el más denso se queda abajo',
+            en:'the two liquids do not mix and the denser one stays at the bottom'},
+      win:{es:'El agua sale por la llave y el aceite queda arriba.',
+           en:'The water leaves through the tap and the oil stays on top.'} },
+    { name:{es:'Arena mezclada con cristales de yodo', en:'Sand mixed with iodine crystals'}, k:'sublimacion',
+      prop:{es:'el yodo pasa de sólido a gas al calentarse y la arena no cambia',
+            en:'iodine goes from solid to gas when heated and the sand does not change'},
+      win:{es:'El vapor de yodo se deposita en la tapa fría y la arena queda en el fondo.',
+           en:'Iodine vapour settles on the cold lid and the sand stays at the bottom.'} },
+    { name:{es:'Una gota de tinta negra de plumón', en:'A drop of black marker ink'}, k:'cromatografia',
+      prop:{es:'sus pigmentos están disueltos y cada uno se pega al papel con distinta fuerza',
+            en:'its pigments are dissolved and each one clings to the paper with a different strength'},
+      win:{es:'Los pigmentos suben distancias distintas y se ven como manchas separadas.',
+           en:'The pigments climb different distances and show up as separate patches.'} }
+  ];
+  var rounds = shuffleArr(MIX, rng).slice(0,3);
+  var ri=0, tries=0, solved=0, done=false, lastK='filtracion', lastOk=false;
+  var btns = METHODS.map(function(m){ return '<button class="mtab" data-k="'+m.k+'">'+L(m.name)+'</button>'; }).join('');
+  var card = labCard(host,
+    L({es:'Mesa de separación', en:'Separation bench'}),
+    L({es:'Lee la mezcla, elige un montaje y observa qué pasa en la mesa.',
+       en:'Read the mixture, choose a setup and watch what happens on the bench.'}),
+    '<div class="samplename" id="msName"></div>'+
+    '<canvas class="wcanvas" id="msCv"></canvas>'+
+    '<div class="qprompt" id="msQ"></div>'+
+    '<div class="mtabs" id="msBtns">'+btns+'</div>'+
+    '<div class="fbline" id="msFb"></div><div class="revealbox" id="msRv"></div><div class="tally" id="msTa"></div>');
+  function q(sel){ return card.querySelector(sel); }
+  function ctx2(){
+    var cv = q('#msCv'); if (!cv) return null;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 210, dpr = window.devicePixelRatio || 1;
+    cv.width = w*dpr; cv.height = h*dpr;
+    var c = cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,w,h);
+    c.lineWidth = 2; c.font = '10.5px "IBM Plex Sans", sans-serif';
+    return { c:c, w:w, h:h };
+  }
+  function beaker(c,x,y,bw,bh,level,fill,dots){
+    c.strokeStyle = CV_GLASS; c.strokeRect(x,y,bw,bh);
+    var lh = Math.max(0, bh*level);
+    if (lh > 2){ c.fillStyle = fill; c.fillRect(x+1.5, y+bh-lh, bw-3, lh-1.5); }
+    if (dots > 0){
+      c.fillStyle = CV_SOLID;
+      for (var i=0;i<dots;i++){
+        c.beginPath(); c.arc(x+7+((i*11)%(bw-14)), y+bh-5-((i*5)%Math.max(5,lh-6)), 1.9, 0, Math.PI*2); c.fill();
+      }
+    }
+  }
+  function scene(mk, ok, t){
+    var s = ctx2(); if (!s) return;
+    var c=s.c, w=s.w, h=s.h;
+    var txt = cssv('--text2');
+    c.strokeStyle = CV_GLASS;
+    if (mk === 'filtracion'){
+      c.beginPath(); c.moveTo(w*0.20,28); c.lineTo(w*0.46,28); c.lineTo(w*0.33,78); c.closePath(); c.stroke();
+      c.fillStyle = ok ? CV_SOLID : CV_FLUID2;
+      c.beginPath(); c.moveTo(w*0.24,36); c.lineTo(w*0.42,36); c.lineTo(w*0.33,62); c.closePath(); c.fill();
+      c.strokeStyle = CV_GLASS; c.beginPath(); c.moveTo(w*0.33,78); c.lineTo(w*0.33,96); c.stroke();
+      c.fillStyle = CV_FLUID;
+      for (var d=0;d<3;d++){
+        var dy = 96 + ((t*70 + d*18) % 44);
+        c.beginPath(); c.arc(w*0.33, dy, 2.6, 0, Math.PI*2); c.fill();
+      }
+      beaker(c, w*0.20, 142, w*0.26, 52, 0.15+0.6*t, CV_FLUID, ok ? 0 : 6);
+      c.fillStyle = txt; c.fillText(L(LB.paper), w*0.50, 44);
+      c.fillText(L(ok ? LB.done : LB.same), w*0.50, 172);
+    } else if (mk === 'decantacion'){
+      c.strokeRect(w*0.22, 26, w*0.20, 80);
+      c.fillStyle = CV_FLUID2; c.fillRect(w*0.22+1.5, 28, w*0.20-3, 30);
+      var bot = 44*(1-t);
+      c.fillStyle = ok ? CV_FLUID : CV_FLUID2;
+      if (bot > 1) c.fillRect(w*0.22+1.5, 104-bot, w*0.20-3, bot);
+      c.strokeStyle = CV_GLASS; c.beginPath(); c.moveTo(w*0.32,106); c.lineTo(w*0.32,120); c.stroke();
+      beaker(c, w*0.20, 142, w*0.26, 52, 0.12+0.55*t, ok ? CV_FLUID : CV_FLUID2, ok ? 0 : 5);
+      c.fillStyle = txt; c.fillText(L(LB.mix), w*0.46, 44);
+      c.fillText(L(ok ? LB.done : LB.same), w*0.50, 172);
+    } else if (mk === 'evaporacion'){
+      var lev = 0.75*(1-t);
+      beaker(c, w*0.18, 60, w*0.32, 60, lev, CV_FLUID, ok ? Math.round(10*t) : 4);
+      c.fillStyle = CV_HOT;
+      for (var f=0;f<5;f++){
+        c.beginPath(); c.moveTo(w*0.20+f*10, 132); c.lineTo(w*0.23+f*10, 122); c.lineTo(w*0.26+f*10, 132); c.fill();
+      }
+      c.fillStyle = CV_SPECK;
+      for (var v=0;v<6;v++){
+        var vy = 56 - ((t*60 + v*10) % 42);
+        c.beginPath(); c.arc(w*0.24+v*12, vy, 2.2, 0, Math.PI*2); c.fill();
+      }
+      c.fillStyle = txt; c.fillText(L(LB.vapor), w*0.56, 30); c.fillText(L(LB.heat), w*0.20, 148);
+      c.fillText(L(ok ? LB.done : LB.same), w*0.56, 108);
+    } else if (mk === 'sublimacion'){
+      c.strokeStyle = CV_GLASS; c.beginPath(); c.moveTo(w*0.16,34); c.lineTo(w*0.52,34); c.stroke();
+      c.fillStyle = CV_VAPOR;
+      if (ok) c.fillRect(w*0.22, 26, w*0.24*t, 6);
+      for (var g=0;g<7;g++){
+        var gy = 110 - ((t*80 + g*12) % 70);
+        c.beginPath(); c.arc(w*0.22+g*11, gy, 2.3, 0, Math.PI*2); c.fill();
+      }
+      beaker(c, w*0.18, 118, w*0.32, 46, 0.5, ok ? CV_SOLID : CV_VAPOR, 8);
+      c.fillStyle = CV_HOT;
+      for (var f2=0;f2<5;f2++){
+        c.beginPath(); c.moveTo(w*0.20+f2*11, 176); c.lineTo(w*0.235+f2*11, 166); c.lineTo(w*0.27+f2*11, 176); c.fill();
+      }
+      c.fillStyle = txt; c.fillText(L(LB.lid), w*0.56, 32); c.fillText(L(LB.heat), w*0.20, 190);
+      c.fillText(L(ok ? LB.done : LB.same), w*0.56, 140);
+    } else {
+      c.strokeStyle = CV_GLASS; c.strokeRect(w*0.30, 24, w*0.16, 150);
+      c.fillStyle = CV_FLUID; c.fillRect(w*0.30+1.5, 158, w*0.16-3, 14);
+      var front = 130*t;
+      c.strokeStyle = CV_SPECK; c.beginPath();
+      c.moveTo(w*0.30, 158-front); c.lineTo(w*0.46, 158-front); c.stroke();
+      var aff = ok ? [0.85,0.55,0.25] : [0.5,0.5,0.5];
+      for (var p=0;p<3;p++){
+        c.fillStyle = CV_PIG[p];
+        c.beginPath(); c.arc(w*0.38, 152 - front*aff[p], 5.2, 0, Math.PI*2); c.fill();
+      }
+      c.fillStyle = txt; c.fillText(L(LB.front), w*0.50, 158-front);
+      c.fillText(L(ok ? LB.done : LB.same), w*0.50, 60);
+    }
+  }
+  function animate(mk, ok){
+    lastK = mk; lastOk = ok;
+    var t0 = null;
+    function step(ts){
+      if (!card.isConnected) return;
+      if (t0 === null) t0 = ts;
+      var t = Math.min(1, (ts - t0)/1200);
+      scene(mk, ok, t);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  function tally(){
+    q('#msTa').textContent = L({es:'Mezclas resueltas: ',en:'Mixtures solved: '}) + solved + ' / ' + rounds.length;
+  }
+  function renderRound(){
+    if (ri >= rounds.length){
+      done = true;
+      q('#msName').textContent = L({es:'Mesa despejada', en:'Bench cleared'});
+      q('#msFb').className = 'fbline good';
+      q('#msFb').textContent = L({es:'Cada método aprovechó una propiedad física distinta de la mezcla.',
+                                  en:'Each method took advantage of a different physical property of the mixture.'});
+      tally(); return;
+    }
+    q('#msName').textContent = L(rounds[ri].name);
+    q('#msFb').textContent = ''; q('#msFb').className = 'fbline';
+    q('#msRv').className = 'revealbox'; q('#msRv').innerHTML = '';
+    tries = 0; tally(); scene('filtracion', false, 0);
+  }
+  function choose(k){
+    if (done || ri >= rounds.length) return;
+    var mix = rounds[ri], fb = q('#msFb');
+    var m = METHODS.filter(function(x){ return x.k===k; })[0];
+    if (k === mix.k){
+      solved++; ri++;
+      animate(k, true);
+      fb.className = 'fbline good';
+      fb.textContent = L(m.act) + ' ' + L(mix.win);
+      tally(); setTimeout(renderRound, 2000); return;
+    }
+    animate(k, false);
+    tries++;
+    if (tries >= 3){
+      var good = METHODS.filter(function(x){ return x.k===mix.k; })[0];
+      var rv = q('#msRv'); rv.className = 'revealbox show';
+      rv.innerHTML = '<strong>'+L(good.name)+'.</strong> ' + L(mix.win);
+      ri++; setTimeout(renderRound, 2800); return;
+    }
+    fb.className = 'fbline warn';
+    fb.textContent = L(m.act) + ' ' +
+      L({es:'La mezcla salió igual. Fíjate en que aquí ', en:'The mixture came out unchanged. Notice that here '}) +
+      L(mix.prop) + '.';
+  }
+  q('#msQ').textContent = L({es:'¿Qué montaje pones en la mesa?', en:'Which setup do you put on the bench?'});
+  q('#msBtns').querySelectorAll('.mtab').forEach(function(b){
+    b.addEventListener('click', function(){ choose(b.getAttribute('data-k')); });
+  });
+  renderRound();
+  setTimeout(function(){ scene('filtracion', false, 0); }, 120);
+}
+
+/* ── WIDGET 3: columna con termómetro (punto de ebullición) ── */
+function widgetDestila(rng, host){
+  var PAIRS = [
+    { a:{es:'alcohol',en:'alcohol'}, abp:78, b:{es:'agua',en:'water'}, bbp:100 },
+    { a:{es:'acetona',en:'acetone'}, abp:56, b:{es:'agua',en:'water'}, bbp:100 }
+  ];
+  var rounds = shuffleArr(PAIRS, rng);
+  var ri=0, tries=0, solved=0, done=false, col=0;
+  var card = labCard(host,
+    L({es:'Columna con termómetro', en:'Column with thermometer'}),
+    L({es:'Mueve la temperatura y observa qué llega al colector.',
+       en:'Move the temperature and watch what reaches the collector.'}),
+    '<div class="samplename" id="dsName"></div>'+
+    '<canvas class="wcanvas" id="dsCv"></canvas>'+
+    '<div class="slrow"><label id="dsLbl"></label><input type="range" id="dsT" min="20" max="115" value="20"></div>'+
+    '<div class="metrics">'+
+      '<div class="metric"><div class="mlbl" id="dsM1l"></div><div class="mnum ts" id="dsM1"></div></div>'+
+      '<div class="metric"><div class="mlbl" id="dsM2l"></div><div class="mnum cs" id="dsM2"></div></div>'+
+      '<div class="metric"><div class="mlbl" id="dsM3l"></div><div class="mnum ps" id="dsM3"></div></div>'+
+    '</div>'+
+    '<div class="qprompt" id="dsQ"></div>'+
+    '<div class="mtabs"><button class="mtab" id="dsGo"></button></div>'+
+    '<div class="fbline" id="dsFb"></div><div class="revealbox" id="dsRv"></div><div class="tally" id="dsTa"></div>');
+  function q(sel){ return card.querySelector(sel); }
+  function pr(){ return rounds[Math.min(ri, rounds.length-1)]; }
+  function temp(){ return parseInt(q('#dsT').value,10) || 20; }
+  function state(){
+    var p = pr(), t = temp();
+    if (t < p.abp) return 0;
+    if (t < p.bbp) return 1;
+    return 2;
+  }
+  function draw(ts){
+    if (!card.isConnected) return;
+    var cv = q('#dsCv'); if (!cv) return;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 210, dpr = window.devicePixelRatio || 1;
+    cv.width = w*dpr; cv.height = h*dpr;
+    var c = cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,w,h);
+    c.lineWidth = 2; c.font = '10.5px "IBM Plex Sans", sans-serif';
+    var t = temp(), st = state(), p = pr(), txt = cssv('--text2');
+    if (st > 0) col = Math.min(0.72, col + 0.004);
+    /* matraz */
+    c.strokeStyle = CV_GLASS; c.strokeRect(w*0.10, 96, w*0.26, 68);
+    c.fillStyle = CV_FLUID; c.fillRect(w*0.10+1.5, 120, w*0.26-3, 42);
+    /* llama */
+    c.fillStyle = st > 0 ? CV_HOT : CV_GLASS;
+    for (var f=0;f<4;f++){
+      c.beginPath(); c.moveTo(w*0.13+f*13, 180); c.lineTo(w*0.165+f*13, 168); c.lineTo(w*0.20+f*13, 180); c.fill();
+    }
+    /* tubo */
+    c.strokeStyle = CV_GLASS;
+    c.beginPath(); c.moveTo(w*0.23, 96); c.lineTo(w*0.23, 56); c.lineTo(w*0.72, 56); c.lineTo(w*0.72, 108); c.stroke();
+    /* vapor */
+    if (st > 0){
+      c.fillStyle = st === 1 ? CV_VAPOR : CV_SPECK;
+      for (var v=0;v<6;v++){
+        var vx = w*0.23 + ((ts/16 + v*40) % (w*0.49));
+        c.beginPath(); c.arc(vx, 50, 2.4, 0, Math.PI*2); c.fill();
+      }
+    }
+    /* colector */
+    c.strokeStyle = CV_GLASS; c.strokeRect(w*0.60, 112, w*0.24, 52);
+    if (col > 0.02){
+      c.fillStyle = st === 2 ? CV_SPECK : CV_FLUID2;
+      c.fillRect(w*0.60+1.5, 164-52*col, w*0.24-3, 52*col-1.5);
+    }
+    /* termómetro */
+    c.strokeStyle = CV_GLASS; c.strokeRect(w*0.90, 40, 12, 124);
+    var fr = (t-20)/95;
+    c.fillStyle = t >= p.abp ? CV_HOT : CV_FLUID;
+    c.fillRect(w*0.90+2, 162-120*fr, 8, 120*fr);
+    c.fillStyle = txt;
+    c.fillText(t + ' °C', w*0.78, 34);
+    c.fillText(L({es:'colector',en:'collector'}), w*0.60, 176);
+    c.fillText(L({es:'matraz',en:'flask'}), w*0.10, 176);
+    requestAnimationFrame(draw);
+  }
+  function refresh(){
+    var p = pr(), t = temp(), st = state();
+    q('#dsM1').textContent = t + ' °C';
+    q('#dsM2').textContent = st === 0 ? L({es:'nada hierve',en:'nothing boils'})
+                          : st === 1 ? L(p.a) : L({es:'los dos',en:'both'});
+    q('#dsM3').textContent = st === 0 ? L({es:'vacío',en:'empty'})
+                          : st === 1 ? L(p.a) : L({es:'mezcla',en:'mixture'});
+    var fb = q('#dsFb');
+    if (st === 0){
+      fb.className = 'fbline';
+      fb.textContent = L({es:'Todavía nada hierve, así que nada llega al colector. Sube la temperatura.',
+                          en:'Nothing boils yet, so nothing reaches the collector. Raise the temperature.'});
+    } else if (st === 1){
+      fb.className = 'fbline warn';
+      fb.textContent = L({es:'Solo hierve el componente de punto de ebullición más bajo: el colector recibe ',
+                          en:'Only the component with the lower boiling point boils: the collector receives '}) + L(p.a) + '.';
+    } else {
+      fb.className = 'fbline bad';
+      fb.textContent = L({es:'Pasaste el punto de ebullición del agua: ahora hierven los dos y el destilado sale mezclado. Baja la temperatura.',
+                          en:'You went past the boiling point of water: now both boil and the distillate comes out mixed. Lower the temperature.'});
+    }
+  }
+  function tally(){
+    q('#dsTa').textContent = L({es:'Destilados limpios: ',en:'Clean distillates: '}) + solved + ' / ' + rounds.length;
+  }
+  function renderRound(){
+    col = 0;
+    if (ri >= rounds.length){
+      done = true;
+      q('#dsName').textContent = L({es:'Recorrido completo', en:'Full run complete'});
+      q('#dsFb').className = 'fbline good';
+      q('#dsFb').textContent = L({es:'Con la temperatura justa se recoge un solo componente a la vez.',
+                                  en:'With the right temperature you collect a single component at a time.'});
+      tally(); return;
+    }
+    var p = rounds[ri];
+    q('#dsName').textContent = L({es:'En el matraz: ',en:'In the flask: '}) + L(p.a) + ' (' + p.abp + ' °C) ' +
+      L({es:'y ',en:'and '}) + L(p.b) + ' (' + p.bbp + ' °C)';
+    q('#dsT').value = 20;
+    q('#dsRv').className = 'revealbox'; q('#dsRv').innerHTML = '';
+    tries = 0; tally(); refresh();
+  }
+  function check(){
+    if (done || ri >= rounds.length) return;
+    var p = rounds[ri], st = state();
+    if (st === 1){
+      solved++; ri++;
+      q('#dsFb').className = 'fbline good';
+      q('#dsFb').textContent = L({es:'Destilado limpio: recogiste ',en:'Clean distillate: you collected '}) + L(p.a) +
+        L({es:' sin arrastrar ',en:' without carrying over '}) + L(p.b) + '.';
+      tally(); setTimeout(renderRound, 2000); return;
+    }
+    tries++;
+    if (tries >= 3){
+      var rv = q('#dsRv'); rv.className = 'revealbox show';
+      rv.innerHTML = '<strong>'+ L({es:'Intervalo útil: ',en:'Useful range: '}) + p.abp + ' °C ' +
+        L({es:'a',en:'to'}) + ' ' + (p.bbp-1) + ' °C.</strong> ' +
+        L({es:'Ahí hierve solo ',en:'There only '}) + L(p.a) + L({es:'.',en:' boils.'});
+      ri++; setTimeout(renderRound, 3000); return;
+    }
+    refresh();
+  }
+  q('#dsLbl').textContent = L({es:'Temperatura del matraz', en:'Flask temperature'});
+  q('#dsM1l').textContent = L({es:'Temperatura', en:'Temperature'});
+  q('#dsM2l').textContent = L({es:'Hierve', en:'Boiling'});
+  q('#dsM3l').textContent = L({es:'En el colector', en:'In the collector'});
+  q('#dsQ').textContent   = L({es:'Ajusta la temperatura para recoger un solo componente.',
+                               en:'Set the temperature to collect a single component.'});
+  q('#dsGo').textContent  = L({es:'Recoger el destilado', en:'Collect the distillate'});
+  q('#dsT').addEventListener('input', function(){ col = 0; refresh(); });
+  q('#dsGo').addEventListener('click', check);
+  renderRound();
+  requestAnimationFrame(draw);
+}
+
+/* ── WIDGET 4: cromatografía en papel (afinidad por el disolvente) ── */
+function widgetCroma(rng, host){
+  var NAMES = [ {es:'amarillo',en:'yellow'}, {es:'azul',en:'blue'}, {es:'rojo',en:'red'} ];
+  var rounds = [0,1,2].map(function(){ return shuffleArr([0.88,0.56,0.26], rng); });
+  var ri=0, tries=0, solved=0, done=false;
+  var btns = NAMES.map(function(n,i){ return '<button class="mtab" data-p="'+i+'">'+L(n)+'</button>'; }).join('');
+  var card = labCard(host,
+    L({es:'Tira de cromatografía', en:'Chromatography strip'}),
+    L({es:'Deja subir el disolvente y compara hasta dónde llega cada pigmento.',
+       en:'Let the solvent climb and compare how far each pigment travels.'}),
+    '<canvas class="wcanvas" id="crCv"></canvas>'+
+    '<div class="slrow"><label id="crLbl"></label><input type="range" id="crF" min="0" max="100" value="0"></div>'+
+    '<div class="qprompt" id="crQ"></div>'+
+    '<div class="mtabs" id="crBtns">'+btns+'</div>'+
+    '<div class="fbline" id="crFb"></div><div class="revealbox" id="crRv"></div><div class="tally" id="crTa"></div>');
+  function q(sel){ return card.querySelector(sel); }
+  function front(){ return (parseInt(q('#crF').value,10) || 0)/100; }
+  function aff(){ return rounds[Math.min(ri, rounds.length-1)]; }
+  function best(){
+    var a = aff(), bi = 0;
+    for (var i=1;i<3;i++) if (a[i] > a[bi]) bi = i;
+    return bi;
+  }
+  function draw(){
+    var cv = q('#crCv'); if (!cv) return;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 210, dpr = window.devicePixelRatio || 1;
+    cv.width = w*dpr; cv.height = h*dpr;
+    var c = cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,w,h);
+    c.lineWidth = 2; c.font = '11px "IBM Plex Sans", sans-serif';
+    var base = h-26, top = 22, run = base - top, fr = front(), a = aff();
+    c.strokeStyle = CV_GLASS; c.strokeRect(w*0.26, top-8, w*0.20, run+22);
+    c.fillStyle = CV_FLUID; c.fillRect(w*0.26+1.5, base, w*0.20-3, 14);
+    c.strokeStyle = CV_SPECK;
+    c.beginPath(); c.moveTo(w*0.26, base - run*fr); c.lineTo(w*0.46, base - run*fr); c.stroke();
+    c.fillStyle = cssv('--text3');
+    c.fillText(L({es:'frente del disolvente',en:'solvent front'}), w*0.50, base - run*fr + 4);
+    for (var p=0;p<3;p++){
+      var y = base - 6 - run*fr*a[p];
+      c.fillStyle = CV_PIG[p];
+      c.beginPath(); c.ellipse(w*0.36, y, 9, 5.5, 0, 0, Math.PI*2); c.fill();
+      c.fillText(L(NAMES[p]), w*0.05, y + 4);
+    }
+    c.fillStyle = cssv('--text3');
+    c.fillText(L({es:'línea de salida',en:'start line'}), w*0.50, base - 2);
+  }
+  function tally(){
+    q('#crTa').textContent = L({es:'Tiras leídas: ',en:'Strips read: '}) + solved + ' / ' + rounds.length;
+  }
+  function renderRound(){
+    if (ri >= rounds.length){
+      done = true;
+      q('#crFb').className = 'fbline good';
+      q('#crFb').textContent = L({es:'La altura de cada mancha depende de su afinidad por el disolvente y por el papel.',
+                                  en:'The height of each patch depends on its affinity for the solvent and for the paper.'});
+      tally(); return;
+    }
+    q('#crF').value = 0;
+    q('#crFb').textContent = ''; q('#crFb').className = 'fbline';
+    q('#crRv').className = 'revealbox'; q('#crRv').innerHTML = '';
+    tries = 0; tally(); draw();
+  }
+  function choose(p){
+    if (done || ri >= rounds.length) return;
+    var fb = q('#crFb'), fr = front(), bi = best();
+    if (fr < 0.35){
+      fb.className = 'fbline warn';
+      fb.textContent = L({es:'Con tan poco avance del disolvente las manchas casi coinciden: deja subir más antes de comparar.',
+                          en:'With so little solvent climb the patches nearly overlap: let it rise further before comparing.'});
+      draw(); return;
+    }
+    if (p === bi){
+      solved++; ri++;
+      fb.className = 'fbline good';
+      fb.textContent = L({es:'El pigmento ',en:'The '}) + L(NAMES[p]) +
+        L({es:' llegó más alto: el disolvente lo arrastra mejor y se pega menos al papel.',
+           en:' pigment travelled highest: the solvent carries it better and it clings less to the paper.'});
+      tally(); setTimeout(renderRound, 2000); return;
+    }
+    tries++;
+    if (tries >= 3){
+      var rv = q('#crRv'); rv.className = 'revealbox show';
+      rv.innerHTML = '<strong>'+L(NAMES[bi])+'.</strong> ' +
+        L({es:'Es la mancha más alejada de la línea de salida.', en:'It is the patch farthest from the start line.'});
+      ri++; setTimeout(renderRound, 2800); return;
+    }
+    fb.className = 'fbline bad';
+    fb.textContent = L({es:'El pigmento ',en:'The '}) + L(NAMES[p]) +
+      L({es:' quedó por debajo de otro. Compara la distancia desde la línea de salida.',
+         en:' pigment ended up below another one. Compare the distance from the start line.'});
+  }
+  q('#crLbl').textContent = L({es:'Avance del disolvente', en:'Solvent climb'});
+  q('#crQ').textContent   = L({es:'¿Cuál pigmento arrastra más lejos el disolvente?', en:'Which pigment does the solvent carry farthest?'});
+  q('#crF').addEventListener('input', draw);
+  q('#crBtns').querySelectorAll('.mtab').forEach(function(b){
+    b.addEventListener('click', function(){ choose(parseInt(b.getAttribute('data-p'),10)); });
+  });
+  renderRound();
+  setTimeout(draw, 120);
+}
+
+/* ── WIDGET 5: mezclador de concentración (porcentaje en masa) ── */
+function widgetMezcla(rng, host){
+  var targets = shuffleArr([5,8,10,12,15,20,25], rng).slice(0,3);
+  var ri=0, tries=0, solved=0, done=false;
+  var card = labCard(host,
+    L({es:'Mezclador de concentración', en:'Concentration mixer'}),
+    L({es:'Mueve las dos masas y mira cómo cambia el porcentaje del soluto.',
+       en:'Move the two masses and watch how the solute percentage changes.'}),
+    '<canvas class="wcanvas" id="mzCv"></canvas>'+
+    '<div class="cgrid">'+
+      '<div class="cg slrow"><label id="mzSl"></label><input type="range" id="mzS" min="2" max="60" value="10"></div>'+
+      '<div class="cg slrow"><label id="mzWl"></label><input type="range" id="mzW" min="40" max="300" value="190"></div>'+
+    '</div>'+
+    '<div class="metrics">'+
+      '<div class="metric"><div class="mlbl" id="mzM1l"></div><div class="mnum ts" id="mzM1"></div></div>'+
+      '<div class="metric"><div class="mlbl" id="mzM2l"></div><div class="mnum cs" id="mzM2"></div></div>'+
+      '<div class="metric"><div class="mlbl" id="mzM3l"></div><div class="mnum ps" id="mzM3"></div></div>'+
+    '</div>'+
+    '<div class="qprompt" id="mzQ"></div>'+
+    '<div class="mtabs"><button class="mtab" id="mzGo"></button></div>'+
+    '<div class="fbline" id="mzFb"></div><div class="revealbox" id="mzRv"></div><div class="tally" id="mzTa"></div>');
+  function q(sel){ return card.querySelector(sel); }
+  function sol(){ return parseInt(q('#mzS').value,10) || 2; }
+  function wat(){ return parseInt(q('#mzW').value,10) || 40; }
+  function pct(){ return sol()*100/(sol()+wat()); }
+  function draw(){
+    var cv = q('#mzCv'); if (!cv) return;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 210, dpr = window.devicePixelRatio || 1;
+    cv.width = w*dpr; cv.height = h*dpr;
+    var c = cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,w,h);
+    c.lineWidth = 2; c.font = '11px "IBM Plex Sans", sans-serif';
+    var total = sol()+wat(), p = pct();
+    var bx = w*0.30, bw = w*0.40, by = 26, bh = h-70;
+    c.strokeStyle = CV_GLASS; c.strokeRect(bx, by, bw, bh);
+    var lev = Math.min(0.94, 0.18 + total/420);
+    var lh = bh*lev;
+    c.fillStyle = 'rgba(60,110,170,' + (0.16 + Math.min(0.74, p/34)).toFixed(2) + ')';
+    c.fillRect(bx+1.5, by+bh-lh, bw-3, lh-1.5);
+    c.fillStyle = CV_SOLID;
+    var dots = Math.round(sol()/3);
+    for (var i=0;i<dots;i++){
+      var dx = bx + 8 + ((i*17)%(bw-16));
+      var dy = by + bh - 8 - ((i*11)%Math.max(8, lh-10));
+      c.beginPath(); c.arc(dx, dy, 2.1, 0, Math.PI*2); c.fill();
+    }
+    c.fillStyle = cssv('--text2');
+    c.fillText(p.toFixed(1) + ' %', bx + bw + 10, by + bh - lh + 4);
+    c.fillText(total + ' g', bx + bw + 10, by + bh);
+    var tg = targets[Math.min(ri, targets.length-1)];
+    c.fillStyle = cssv('--gold');
+    c.fillText(L({es:'meta: ',en:'target: '}) + tg + ' %', 8, 18);
+  }
+  function tally(){
+    q('#mzTa').textContent = L({es:'Metas alcanzadas: ',en:'Targets reached: '}) + solved + ' / ' + targets.length;
+  }
+  function refresh(){
+    var p = pct(), tg = targets[Math.min(ri, targets.length-1)];
+    q('#mzM1').textContent = sol() + ' g';
+    q('#mzM2').textContent = (sol()+wat()) + ' g';
+    q('#mzM3').textContent = p.toFixed(1) + ' %';
+    var fb = q('#mzFb'), d = p - tg;
+    if (done){ draw(); return; }
+    if (Math.abs(d) <= 0.3){
+      fb.className = 'fbline good';
+      fb.textContent = L({es:'Estás en la meta: confirma la mezcla.', en:'You are on target: confirm the mixture.'});
+    } else if (d < 0){
+      fb.className = 'fbline warn';
+      fb.textContent = L({es:'Te faltan ',en:'You are '}) + Math.abs(d).toFixed(1) +
+        L({es:' puntos: agrega soluto o quita agua.', en:' points short: add solute or remove water.'});
+    } else {
+      fb.className = 'fbline warn';
+      fb.textContent = L({es:'Te pasaste por ',en:'You are over by '}) + d.toFixed(1) +
+        L({es:' puntos: quita soluto o agrega agua.', en:' points: remove solute or add water.'});
+    }
+    draw();
+  }
+  function renderRound(){
+    if (ri >= targets.length){
+      done = true;
+      q('#mzQ').textContent = L({es:'Tres mezclas ajustadas.', en:'Three mixtures adjusted.'});
+      q('#mzFb').className = 'fbline good';
+      q('#mzFb').textContent = L({es:'El porcentaje depende de la masa del soluto y de la masa total, no solo del soluto.',
+                                  en:'The percentage depends on the solute mass and the total mass, not on the solute alone.'});
+      tally(); draw(); return;
+    }
+    q('#mzQ').textContent = L({es:'Consigue una disolución al ',en:'Reach a solution at '}) + targets[ri] +
+      L({es:' % en masa.',en:' % by mass.'});
+    q('#mzRv').className = 'revealbox'; q('#mzRv').innerHTML = '';
+    tries = 0; tally(); refresh();
+  }
+  function check(){
+    if (done || ri >= targets.length) return;
+    var tg = targets[ri], p = pct();
+    if (Math.abs(p - tg) <= 0.3){
+      solved++; ri++;
+      q('#mzFb').className = 'fbline good';
+      q('#mzFb').textContent = L({es:'Mezcla lista: ',en:'Mixture ready: '}) + sol() + ' g ' +
+        L({es:'de soluto en ',en:'of solute in '}) + (sol()+wat()) + ' g ' +
+        L({es:'de disolución.',en:'of solution.'});
+      tally(); setTimeout(renderRound, 2000); return;
+    }
+    tries++;
+    if (tries >= 3){
+      var w2 = Math.round(sol()*100/tg) - sol();
+      var rv = q('#mzRv'); rv.className = 'revealbox show';
+      rv.innerHTML = '<strong>'+ sol() + ' g ' + L({es:'de soluto con ',en:'of solute with '}) + w2 + ' g ' +
+        L({es:'de agua.',en:'of water.'}) + '</strong> ' +
+        L({es:'Así la masa total deja al soluto en la meta.', en:'That total mass puts the solute right on target.'});
+      ri++; setTimeout(renderRound, 3000); return;
+    }
+    refresh();
+  }
+  q('#mzSl').textContent  = L({es:'Masa de soluto (g)', en:'Solute mass (g)'});
+  q('#mzWl').textContent  = L({es:'Masa de agua (g)', en:'Water mass (g)'});
+  q('#mzM1l').textContent = L({es:'Soluto', en:'Solute'});
+  q('#mzM2l').textContent = L({es:'Masa total', en:'Total mass'});
+  q('#mzM3l').textContent = L({es:'En masa', en:'By mass'});
+  q('#mzGo').textContent  = L({es:'Confirmar mezcla', en:'Confirm mixture'});
+  q('#mzS').addEventListener('input', refresh);
+  q('#mzW').addEventListener('input', refresh);
+  q('#mzGo').addEventListener('click', check);
+  renderRound();
+  setTimeout(draw, 120);
+}
+
+/* ================================================
+   buildLesson — guide content (interleaved concepts, manipulatives, problems)
+   ================================================ */
+function buildLesson(rng){
+  problems = [];
+  var host = document.getElementById('lessonBody');
+  host.innerHTML = '';
+
+  /* ══ ARRANQUE ══ */
+  addSection(
+    L({es:'Punto de partida', en:'Starting point'}),
+    L({es:'Toda mezcla se puede deshacer', en:'Every mixture can be undone'}),
+    '<p>'+L({es:'En una mezcla las sustancias se juntan pero no reaccionan: cada una conserva sus propiedades. Por eso siempre queda un camino físico para volver a separarlas, sin transformar a ninguna en otra sustancia.',
+             en:'In a mixture the substances come together but do not react: each one keeps its properties. That is why there is always a physical route to separate them again, without turning any of them into another substance.'})+'</p>'+
+    '<div class="callout"><p><strong>'+L({es:'Orden de trabajo: ',en:'Working order: '})+'</strong>'+
+      L({es:'primero observa la mezcla y encuentra en qué se diferencian sus componentes; solo después elige el montaje. Nunca al revés.',
+         en:'first look at the mixture and find how its components differ; only then choose the setup. Never the other way around.'})+'</p></div>'
+  );
+
+  /* ══ CONCEPTO 1 ══ */
+  var s1 = addSection(
+    L({es:'Concepto 1', en:'Concept 1'}),
+    L({es:'Una fase o varias fases', en:'One phase or several phases'}),
+    '<p>'+L({es:'Si al observar la mezcla, incluso con aumento, todo el campo se ve parejo, la mezcla es <strong>homogénea</strong>. El caso más común es la disolución: el <strong>soluto</strong> queda repartido entre las partículas del <strong>disolvente</strong> y deja de distinguirse.',
+             en:'If the whole field looks even when you observe the mixture, even under magnification, the mixture is <strong>homogeneous</strong>. The most common case is the solution: the <strong>solute</strong> spreads out among the particles of the <strong>solvent</strong> and stops being distinguishable.'})+'</p>'+
+    '<p>'+L({es:'Si distingues dos o más fases, la mezcla es <strong>heterogénea</strong>. Ahí conviene nombrar la <strong>fase dispersa</strong>, que es lo que está repartido, y la <strong>fase dispersante</strong>, que es el medio que la rodea.',
+             en:'If you can tell two or more phases apart, the mixture is <strong>heterogeneous</strong>. There it helps to name the <strong>dispersed phase</strong>, which is what is spread out, and the <strong>dispersing phase</strong>, which is the medium around it.'})+'</p>'+
+    '<div class="callout"><p>'+L({es:'En una disolución el soluto suele estar en menor cantidad y el disolvente en mayor cantidad. En el agua de mar, la sal es el soluto y el agua el disolvente.',
+                                  en:'In a solution the solute is usually the smaller amount and the solvent the larger one. In seawater, salt is the solute and water is the solvent.'})+'</p></div>'
+  );
+  widgetLupa(rng, s1);
+
+  /* ── Problema 1 ── */
+  var P1 = [
+    { title:{es:'Tres muestras en la mesa', en:'Three samples on the bench'},
+      stmt:{es:'El laboratorio recibe tres muestras: agua de mar ya filtrada, un aderezo de aceite y limón recién agitado y una barra de acero inoxidable. ¿Cuál de las tres es heterogénea?',
+            en:'The lab receives three samples: already filtered seawater, a freshly shaken oil and lemon dressing, and a bar of stainless steel. Which of the three is heterogeneous?'},
+      opts:{es:['El aderezo de aceite y limón','El agua de mar ya filtrada','La barra de acero inoxidable','Las tres muestras son heterogéneas'],
+            en:['The oil and lemon dressing','The already filtered seawater','The stainless steel bar','All three samples are heterogeneous']}, ci:0, sw:false,
+      hint:{es:'Cuenta cuántas fases distintas alcanzas a distinguir en cada muestra.',
+            en:'Count how many distinct phases you can tell apart in each sample.'},
+      exp:{es:'El aceite y el limón no se mezclan y quedan dos fases visibles, así que esa muestra es heterogénea. El agua de mar filtrada es una disolución y el acero inoxidable es una aleación: las dos se ven en una sola fase.',
+           en:'Oil and lemon do not mix and two visible phases remain, so that sample is heterogeneous. Filtered seawater is a solution and stainless steel is an alloy: both look like a single phase.'} },
+    { title:{es:'Tres recipientes en la cocina', en:'Three containers in the kitchen'},
+      stmt:{es:'En la cocina hay tres recipientes: un frasco de miel, un vaso de agua con hielos y una taza de té ya colado. ¿Cuál de los tres contiene una mezcla heterogénea?',
+            en:'In the kitchen there are three containers: a jar of honey, a glass of water with ice cubes, and a cup of strained tea. Which of the three holds a heterogeneous mixture?'},
+      opts:{es:['El vaso de agua con hielos','El frasco de miel','La taza de té ya colado','Ninguno: los tres tienen una sola fase'],
+            en:['The glass of water with ice cubes','The jar of honey','The cup of strained tea','None: all three have a single phase']}, ci:0, sw:false,
+      hint:{es:'Busca el recipiente donde convivan dos estados de la materia a la vista.',
+            en:'Look for the container where two states of matter sit together in plain sight.'},
+      exp:{es:'El hielo es sólido y el agua que lo rodea es líquida: son dos fases dentro del mismo vaso, así que la mezcla es heterogénea. La miel y el té colado se ven uniformes en una sola fase.',
+           en:'The ice is solid and the water around it is liquid: two phases inside the same glass, so the mixture is heterogeneous. Honey and strained tea look uniform in a single phase.'} }
+  ];
+  var v1 = P1[Math.floor(rng()*P1.length)], o1 = probObj(v1, rng);
+  problems.push({ title:o1.title, questionText:o1.questionText, fn:o1.fn, showWork:o1.showWork, hint:o1.hint,
+                  explanation:o1.explanation, options:o1.options, correctIdx:o1.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  /* ── Problema 2 ── */
+  var P2 = [
+    { title:{es:'Quién reparte y quién recibe', en:'Which one spreads and which one receives'},
+      stmt:{es:'Un laboratorio clínico prepara una disolución salina disolviendo 9 g de sal en 991 g de agua estéril. ¿Qué papel cumple cada componente en la disolución obtenida?',
+            en:'A clinical lab prepares a saline solution by dissolving 9 g of salt in 991 g of sterile water. What role does each component play in the resulting solution?'},
+      opts:{es:['La sal es el soluto y el agua es el disolvente','El agua es el soluto y la sal es el disolvente','Las dos actúan como disolvente porque las dos son puras','La sal es la fase dispersante y el agua es la fase dispersa'],
+            en:['The salt is the solute and the water is the solvent','The water is the solute and the salt is the solvent','Both act as solvent because both are pure','The salt is the dispersing phase and the water is the dispersed phase']}, ci:0, sw:false,
+      hint:{es:'Compara las cantidades y decide quién queda repartido dentro de quién.',
+            en:'Compare the amounts and decide which one ends up spread inside the other.'},
+      exp:{es:'El componente que queda repartido y está en menor cantidad es el soluto, y el que lo recibe y está en mayor cantidad es el disolvente: aquí la sal es el soluto y el agua el disolvente.',
+           en:'The component that ends up spread out and is present in the smaller amount is the solute, and the one that receives it in the larger amount is the solvent: here the salt is the solute and the water is the solvent.'} },
+    { title:{es:'Niebla dentro de un frasco', en:'Fog inside a jar'},
+      stmt:{es:'En un frasco cerrado se produce niebla: gotas diminutas de agua quedan repartidas en el aire y la mezcla se ve turbia. ¿Cómo se nombran esas dos partes de la mezcla?',
+            en:'Fog forms inside a closed jar: tiny water droplets end up spread through the air and the mixture looks cloudy. How are those two parts of the mixture named?'},
+      opts:{es:['Las gotas de agua son la fase dispersa y el aire la fase dispersante','El aire es la fase dispersa y las gotas de agua la fase dispersante','Las gotas de agua son el disolvente y el aire es el soluto','No hay fases porque la niebla se comporta como una sustancia pura'],
+            en:['The water droplets are the dispersed phase and the air the dispersing phase','The air is the dispersed phase and the water droplets the dispersing phase','The water droplets are the solvent and the air is the solute','There are no phases because fog behaves as a pure substance']}, ci:0, sw:false,
+      hint:{es:'Identifica qué quedó repartido y qué hace de medio alrededor.',
+            en:'Identify what ended up spread out and what acts as the medium around it.'},
+      exp:{es:'La fase dispersa es lo que queda repartido, aquí las gotas de agua, y la fase dispersante es el medio que las rodea, aquí el aire. Esa turbidez confirma que hay más de una fase.',
+           en:'The dispersed phase is what ends up spread out, here the water droplets, and the dispersing phase is the medium around them, here the air. That cloudiness confirms there is more than one phase.'} }
+  ];
+  var v2 = P2[Math.floor(rng()*P2.length)], o2 = probObj(v2, rng);
+  problems.push({ title:o2.title, questionText:o2.questionText, fn:o2.fn, showWork:o2.showWork, hint:o2.hint,
+                  explanation:o2.explanation, options:o2.options, correctIdx:o2.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  /* ══ CONCEPTO 2 ══ */
+  var s2 = addSection(
+    L({es:'Concepto 2', en:'Concept 2'}),
+    L({es:'La propiedad física decide el montaje', en:'The physical property picks the setup'}),
+    '<p>'+L({es:'Ningún método sirve para todas las mezclas. Antes de montar el equipo hay que encontrar en qué se diferencian los componentes: el tamaño de partícula, si el sólido está disuelto o solo suspendido, si dos líquidos se mezclan entre sí y cuál es más denso, la solubilidad en un disolvente, el punto de ebullición o la capacidad de pasar de sólido a gas.',
+             en:'No single method works for every mixture. Before building the setup you have to find how the components differ: particle size, whether the solid is dissolved or merely suspended, whether two liquids mix and which is denser, solubility in a solvent, boiling point, or the ability to go from solid to gas.'})+'</p>'+
+    '<div class="rules-grid">'+
+      '<div class="rcard"><div class="rname">'+L({es:'Filtración',en:'Filtration'})+'</div><div class="rform">'+L({es:'tamaño de partícula',en:'particle size'})+'</div><div class="rnote">'+L({es:'sólido insoluble dentro de un líquido',en:'insoluble solid inside a liquid'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Decantación',en:'Decanting'})+'</div><div class="rform">'+L({es:'densidad',en:'density'})+'</div><div class="rnote">'+L({es:'líquidos que no se mezclan, o sólido ya asentado',en:'liquids that do not mix, or a settled solid'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Evaporación',en:'Evaporation'})+'</div><div class="rform">'+L({es:'paso de líquido a vapor',en:'liquid to vapour change'})+'</div><div class="rnote">'+L({es:'sal disuelta en agua',en:'salt dissolved in water'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Cristalización',en:'Crystallization'})+'</div><div class="rform">'+L({es:'solubilidad al enfriar',en:'solubility on cooling'})+'</div><div class="rnote">'+L({es:'azúcar que forma cristales al concentrarse',en:'sugar forming crystals as it concentrates'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Extracción',en:'Extraction'})+'</div><div class="rform">'+L({es:'solubilidad selectiva',en:'selective solubility'})+'</div><div class="rnote">'+L({es:'color y aroma de una flor en agua caliente',en:'colour and aroma of a flower in hot water'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Sublimación',en:'Sublimation'})+'</div><div class="rform">'+L({es:'paso de sólido a gas',en:'solid to gas change'})+'</div><div class="rnote">'+L({es:'yodo o naftalina revueltos con arena',en:'iodine or naphthalene mixed with sand'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Cromatografía',en:'Chromatography'})+'</div><div class="rform">'+L({es:'afinidad por el papel',en:'affinity for the paper'})+'</div><div class="rnote">'+L({es:'pigmentos disueltos en una tinta',en:'pigments dissolved in an ink'})+'</div></div>'+
+    '</div>'
+  );
+  widgetMesa(rng, s2);
+
+  /* ── Problema 3 ── */
+  var P3 = [
+    { title:{es:'Agua de lluvia en la cubeta', en:'Rainwater in the bucket'},
+      stmt:{es:'Después de la lluvia quedó en una cubeta agua con arena y hojas pequeñas. La arena no se disuelve y sus granos siguen enteros. ¿Qué conviene hacer primero para obtener agua sin sólidos?',
+            en:'After the rain a bucket held water with sand and small leaves. The sand does not dissolve and its grains stay whole. What should be done first to obtain water with no solids?'},
+      opts:{es:['Pasar la mezcla por papel filtro','Calentar la mezcla hasta que el agua se vaya como vapor','Colocar la mezcla en una tira de papel dentro de un disolvente','Calentar la mezcla con una tapa fría colocada encima'],
+            en:['Pour the mixture through filter paper','Heat the mixture until the water leaves as vapour','Place the mixture on a paper strip inside a solvent','Heat the mixture with a cold lid placed on top']}, ci:0, sw:false,
+      hint:{es:'El sólido no está disuelto y sus granos son más grandes que los poros del papel.',
+            en:'The solid is not dissolved and its grains are larger than the pores of the paper.'},
+      exp:{es:'Los granos de arena no caben por los poros del papel y el agua sí pasa, así que el sólido queda retenido arriba y el agua limpia cae al vaso. Calentar hasta el vapor eliminaría justamente el agua que se quiere conservar.',
+           en:'The sand grains do not fit through the pores of the paper while the water does, so the solid stays on top and clean water drips into the beaker. Heating until vapour forms would remove the very water you want to keep.'} },
+    { title:{es:'El montaje que no funcionó', en:'The setup that did not work'},
+      stmt:{es:'Un equipo quiso separar agua con arena colocando una tira de papel dentro de la mezcla y esperando media hora; el agua siguió turbia. ¿Cuál fue el error del equipo?',
+            en:'A team tried to separate water with sand by placing a paper strip inside the mixture and waiting half an hour; the water stayed cloudy. What was the mistake?'},
+      opts:{es:['Eligieron un método para componentes disueltos y la arena no está disuelta','Eligieron el método correcto pero dejaron la tira demasiado poco tiempo','Eligieron un método que necesita calentar la mezcla desde el principio','Eligieron un método que solo funciona con dos líquidos de distinta densidad'],
+            en:['They chose a method for dissolved components and the sand is not dissolved','They chose the right method but left the strip in for far too little time','They chose a method that needs the mixture heated from the start','They chose a method that only works with two liquids of different density']}, ci:0, sw:false,
+      hint:{es:'Revisa qué tipo de componente puede subir por una tira de papel.',
+            en:'Check what kind of component can climb up a paper strip.'},
+      exp:{es:'Una tira de papel separa componentes disueltos según su afinidad por el papel y el disolvente. La arena es un sólido insoluble y sus granos solo se retiran retenidos en un filtro.',
+           en:'A paper strip separates dissolved components according to their affinity for the paper and the solvent. Sand is an insoluble solid and its grains can only be removed by being trapped in a filter.'} }
+  ];
+  var v3 = P3[Math.floor(rng()*P3.length)], o3 = probObj(v3, rng);
+  problems.push({ title:o3.title, questionText:o3.questionText, fn:o3.fn, showWork:o3.showWork, hint:o3.hint,
+                  explanation:o3.explanation, options:o3.options, correctIdx:o3.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  /* ── Problema 4 ── */
+  var P4 = [
+    { title:{es:'Aceite arriba, vinagre abajo', en:'Oil on top, vinegar below'},
+      stmt:{es:'En un frasco quedaron aceite y vinagre. Al dejarlo quieto unos minutos, el aceite se acomoda arriba y el vinagre abajo. ¿Qué método aprovecha esa diferencia para separarlos?',
+            en:'A jar was left holding oil and vinegar. After a few still minutes the oil settles on top and the vinegar below. Which method uses that difference to separate them?'},
+      opts:{es:['Decantación con un embudo de separación','Filtración con papel de poro muy fino','Cristalización lenta en un plato ancho','Sublimación calentando el frasco destapado'],
+            en:['Decanting with a separating funnel','Filtration with very fine pore paper','Slow crystallization in a wide dish','Sublimation by heating the uncovered jar']}, ci:0, sw:false,
+      hint:{es:'Los dos líquidos no se mezclan y uno de ellos es más denso que el otro.',
+            en:'The two liquids do not mix and one of them is denser than the other.'},
+      exp:{es:'Al no mezclarse, el líquido más denso se queda abajo y puede salir por la llave del embudo mientras el otro permanece arriba: esa separación por densidad es la decantación.',
+           en:'Since they do not mix, the denser liquid stays at the bottom and can leave through the funnel tap while the other stays on top: that separation by density is decanting.'} },
+    { title:{es:'Color y sabor de la flor', en:'Colour and flavour from the flower'},
+      stmt:{es:'Para obtener el color y el sabor de la flor de jamaica se deja la flor en agua caliente un rato y después se retira el líquido teñido. ¿Cómo se llama ese método de separación?',
+            en:'To obtain the colour and flavour of hibiscus flower, the flower sits in hot water for a while and then the coloured liquid is taken out. What is that separation method called?'},
+      opts:{es:['Extracción, porque el agua se lleva los componentes solubles','Sublimación, porque la flor pasa de sólido a gas','Decantación, porque el líquido teñido resulta más denso','Filtración, porque el color queda atrapado en el papel'],
+            en:['Extraction, because the water takes the soluble components with it','Sublimation, because the flower goes from solid to gas','Decanting, because the coloured liquid turns out denser','Filtration, because the colour gets trapped in the paper']}, ci:0, sw:false,
+      hint:{es:'Piensa qué componentes de la flor pueden disolverse y salir con el agua.',
+            en:'Think about which components of the flower can dissolve and leave with the water.'},
+      exp:{es:'El agua caliente disuelve los componentes solubles de la flor y los arrastra consigo mientras el resto de la flor queda entero: sacar un componente con un disolvente adecuado es una extracción.',
+           en:'Hot water dissolves the soluble components of the flower and carries them along while the rest of the flower stays whole: pulling a component out with a suitable solvent is an extraction.'} }
+  ];
+  var v4 = P4[Math.floor(rng()*P4.length)], o4 = probObj(v4, rng);
+  problems.push({ title:o4.title, questionText:o4.questionText, fn:o4.fn, showWork:o4.showWork, hint:o4.hint,
+                  explanation:o4.explanation, options:o4.options, correctIdx:o4.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  /* ══ CONCEPTO 3 ══ */
+  var s3 = addSection(
+    L({es:'Concepto 3', en:'Concept 3'}),
+    L({es:'Cuando el cambio de estado hace el trabajo', en:'When the change of state does the work'}),
+    '<p>'+L({es:'En la <strong>evaporación</strong> el disolvente se va como vapor y el soluto queda en el fondo. En la <strong>cristalización</strong> la disolución se concentra o se enfría y el soluto se ordena en cristales que se pueden recoger. En la <strong>sublimación</strong> un sólido pasa directo a gas al calentarse y regresa a sólido sobre una superficie fría.',
+             en:'In <strong>evaporation</strong> the solvent leaves as vapour and the solute stays at the bottom. In <strong>crystallization</strong> the solution concentrates or cools and the solute arranges into crystals you can collect. In <strong>sublimation</strong> a solid goes straight to gas when heated and returns to solid on a cold surface.'})+'</p>'+
+    '<p>'+L({es:'Y cuando dos líquidos sí se mezclan pero hierven a temperaturas distintas, la temperatura se vuelve el control fino: el de punto de ebullición más bajo sale primero en forma de vapor y se recoge condensado.',
+             en:'And when two liquids do mix but boil at different temperatures, temperature becomes the fine control: the one with the lower boiling point leaves first as vapour and is collected once condensed.'})+'</p>'+
+    '<div class="callout"><p>'+L({es:'Si la temperatura sube demasiado, los dos componentes hierven a la vez y el producto vuelve a salir mezclado.',
+                                  en:'If the temperature climbs too high, both components boil at once and the product comes out mixed again.'})+'</p></div>'
+  );
+  widgetDestila(rng, s3);
+
+  /* ── Problema 5 ── */
+  var P5 = [
+    { title:{es:'Piletas al sol', en:'Ponds in the sun'},
+      stmt:{es:'En una salinera el agua de mar se deja en piletas abiertas al sol hasta que en el fondo solo queda sal. ¿En qué diferencia entre el agua y la sal se apoya ese resultado?',
+            en:'At a salt works, seawater sits in open ponds under the sun until only salt is left at the bottom. Which difference between water and salt makes that result possible?'},
+      opts:{es:['El agua pasa a vapor con el calor del sol y la sal no','La sal se disuelve mejor en agua caliente que en agua fría','Los granos de sal son más grandes que los poros de un filtro','El agua y la sal nunca llegan a mezclarse entre sí'],
+            en:['Water turns to vapour with the heat of the sun and salt does not','Salt dissolves better in hot water than in cold water','Salt grains are larger than the pores of a filter','Water and salt never actually mix together']}, ci:0, sw:false,
+      hint:{es:'Pregúntate cuál de los dos componentes puede abandonar la pileta y de qué forma.',
+            en:'Ask which of the two components can leave the pond, and in what form.'},
+      exp:{es:'El agua se evapora a la temperatura del ambiente y la sal permanece en el fondo: la evaporación aprovecha esa diferencia en la facilidad para pasar al estado gaseoso.',
+           en:'The water evaporates at ambient temperature while the salt stays at the bottom: evaporation uses that difference in how easily each one turns into gas.'} },
+    { title:{es:'El primero en llegar al colector', en:'First to reach the collector'},
+      stmt:{es:'Una mezcla de alcohol y agua se calienta en un equipo con serpentín. Cerca de los 80 °C empieza a recogerse líquido en el otro extremo del equipo. ¿Qué propiedad del alcohol explica que se recoja primero?',
+            en:'A mixture of alcohol and water is heated in an apparatus with a coil. Near 80 °C liquid starts to collect at the far end. Which property of the alcohol explains why it is collected first?'},
+      opts:{es:['Su punto de ebullición más bajo que el del agua','Su densidad mayor que la del agua','Su solubilidad menor en el agua','Su tamaño de partícula mayor que el del agua'],
+            en:['Its boiling point lower than that of water','Its density higher than that of water','Its lower solubility in water','Its particle size larger than that of water']}, ci:0, sw:false,
+      hint:{es:'Compara a qué temperatura empieza a hervir cada componente de la mezcla.',
+            en:'Compare the temperature at which each component of the mixture starts to boil.'},
+      exp:{es:'El alcohol hierve a menor temperatura que el agua, así que su vapor sale antes, se condensa en el serpentín y llega primero al colector mientras el agua sigue líquida.',
+           en:'Alcohol boils at a lower temperature than water, so its vapour leaves earlier, condenses in the coil and reaches the collector first while the water is still liquid.'} }
+  ];
+  var v5 = P5[Math.floor(rng()*P5.length)], o5 = probObj(v5, rng);
+  problems.push({ title:o5.title, questionText:o5.questionText, fn:o5.fn, showWork:o5.showWork, hint:o5.hint,
+                  explanation:o5.explanation, options:o5.options, correctIdx:o5.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  /* ── Problema 6 ── */
+  var P6 = [
+    { title:{es:'Vapor violeta en el frasco', en:'Violet vapour in the jar'},
+      stmt:{es:'Un frasco contiene arena revuelta con cristales de yodo. Al calentar con suavidad, el yodo forma un vapor violeta sin volverse líquido y después aparece sólido sobre la tapa fría. ¿Qué método se está aplicando?',
+            en:'A jar holds sand mixed with iodine crystals. On gentle heating the iodine forms a violet vapour without becoming liquid and then appears as a solid on the cold lid. Which method is being applied?'},
+      opts:{es:['Sublimación del yodo','Cristalización del yodo','Filtración de la arena','Decantación de la mezcla'],
+            en:['Sublimation of the iodine','Crystallization of the iodine','Filtration of the sand','Decanting of the mixture']}, ci:0, sw:false,
+      hint:{es:'Sigue por cuáles estados de la materia pasó el yodo durante el calentamiento.',
+            en:'Track which states of matter the iodine went through while it was heated.'},
+      exp:{es:'El yodo pasó de sólido a gas y de gas otra vez a sólido, sin ser líquido en ningún momento: ese doble cambio es la sublimación, y la arena queda intacta en el fondo.',
+           en:'The iodine went from solid to gas and from gas back to solid, never passing through the liquid state: that double change is sublimation, and the sand stays untouched at the bottom.'} },
+    { title:{es:'Naftalina y sal de mesa', en:'Naphthalene and table salt'},
+      stmt:{es:'Se quiere separar naftalina de sal de mesa. Al calentar la mezcla, la naftalina pasa a gas y la sal no cambia. ¿Qué se recoge sobre la superficie fría del recipiente?',
+            en:'A mixture of naphthalene and table salt is to be separated. On heating, the naphthalene turns to gas and the salt does not change. What is collected on the cold surface of the container?'},
+      opts:{es:['La naftalina, otra vez en estado sólido','La sal, arrastrada por el gas de naftalina','Una mezcla de sal y naftalina ya fundidas','Solo vapor de agua tomado del ambiente'],
+            en:['The naphthalene, back in the solid state','The salt, carried along by the naphthalene gas','A mixture of salt and naphthalene, both melted','Only water vapour taken from the surroundings']}, ci:0, sw:false,
+      hint:{es:'El gas que toca una superficie fría vuelve al estado del que salió.',
+            en:'A gas that touches a cold surface returns to the state it came from.'},
+      exp:{es:'El gas de naftalina toca la superficie fría y regresa a sólido ahí mismo, mientras la sal, que no cambió de estado, permanece en el fondo del recipiente.',
+           en:'The naphthalene gas touches the cold surface and returns to solid right there, while the salt, which never changed state, stays at the bottom of the container.'} }
+  ];
+  var v6 = P6[Math.floor(rng()*P6.length)], o6 = probObj(v6, rng);
+  problems.push({ title:o6.title, questionText:o6.questionText, fn:o6.fn, showWork:o6.showWork, hint:o6.hint,
+                  explanation:o6.explanation, options:o6.options, correctIdx:o6.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  /* ══ CONCEPTO 4 ══ */
+  var s4 = addSection(
+    L({es:'Concepto 4', en:'Concept 4'}),
+    L({es:'Cuando los componentes se parecen demasiado', en:'When the components are too much alike'}),
+    '<p>'+L({es:'Los pigmentos de una tinta están disueltos y hierven o se filtran casi igual, así que ningún método anterior los separa. La <strong>cromatografía</strong> usa otra diferencia: cada componente se pega al papel con distinta fuerza y se disuelve en el disolvente con distinta facilidad.',
+             en:'The pigments in an ink are dissolved and boil or filter almost the same way, so none of the earlier methods separates them. <strong>Chromatography</strong> uses a different difference: each component clings to the paper with a different strength and dissolves in the solvent with a different ease.'})+'</p>'+
+    '<p>'+L({es:'El disolvente sube por el papel y arrastra más lejos al componente que se disuelve mejor y se sujeta menos. El resultado es una serie de manchas a distintas alturas desde la línea de salida.',
+             en:'The solvent climbs the paper and carries the component that dissolves better and clings less the farthest. The result is a series of patches at different heights from the start line.'})+'</p>'
+  );
+  widgetCroma(rng, s4);
+
+  /* ── Problema 7 ── */
+  var P7 = [
+    { title:{es:'Tres manchas en la tira', en:'Three patches on the strip'},
+      stmt:{es:'Una tira de papel con una gota de tinta negra se coloca en agua. Al subir el disolvente aparecen tres manchas: la amarilla arriba, la roja al medio y la azul abajo. ¿Qué indica la posición de la mancha amarilla?',
+            en:'A paper strip with a drop of black ink is placed in water. As the solvent climbs, three patches appear: yellow on top, red in the middle and blue at the bottom. What does the position of the yellow patch tell you?'},
+      opts:{es:['Que el disolvente arrastra ese pigmento mejor que a los otros dos','Que ese pigmento es el más abundante de los tres en la tinta','Que ese pigmento tiene el punto de ebullición más bajo de los tres','Que ese pigmento no llegó a disolverse en el disolvente'],
+            en:['That the solvent carries that pigment better than the other two','That the pigment is the most abundant of the three in the ink','That the pigment has the lowest boiling point of the three','That the pigment never managed to dissolve in the solvent']}, ci:0, sw:false,
+      hint:{es:'La distancia recorrida depende de qué tanto se queda pegado el pigmento al papel.',
+            en:'The distance travelled depends on how strongly the pigment clings to the paper.'},
+      exp:{es:'La mancha más alejada de la línea de salida corresponde al pigmento que se disuelve mejor en el disolvente y se sujeta menos al papel, así que el disolvente lo lleva más lejos.',
+           en:'The patch farthest from the start line belongs to the pigment that dissolves best in the solvent and clings least to the paper, so the solvent takes it farther.'} },
+    { title:{es:'Dos plumones, la misma altura', en:'Two markers, the same height'},
+      stmt:{es:'Dos plumones de marcas distintas dejan una mancha exactamente a la misma altura en la misma tira y con el mismo disolvente. ¿Qué conclusión resulta razonable?',
+            en:'Two markers from different brands leave a patch at exactly the same height on the same strip with the same solvent. Which conclusion is reasonable?'},
+      opts:{es:['Que las dos tintas comparten un pigmento con la misma afinidad por el disolvente','Que las dos tintas contienen exactamente la misma masa de pigmento','Que las dos tintas son sustancias puras y no mezclas de pigmentos','Que el disolvente subió más rápido en una mitad de la tira que en la otra'],
+            en:['That both inks share a pigment with the same affinity for the solvent','That both inks contain exactly the same mass of pigment','That both inks are pure substances rather than mixtures of pigments','That the solvent climbed faster in one half of the strip than the other']}, ci:0, sw:false,
+      hint:{es:'Con el mismo papel y el mismo disolvente, la altura depende solo del comportamiento del pigmento.',
+            en:'With the same paper and the same solvent, the height depends only on how the pigment behaves.'},
+      exp:{es:'Con igual papel y disolvente, dos manchas que llegan a la misma altura se comportan igual frente al disolvente, lo que apunta a un pigmento común en las dos tintas.',
+           en:'With the same paper and solvent, two patches that reach the same height behave identically toward the solvent, which points to a pigment shared by both inks.'} }
+  ];
+  var v7 = P7[Math.floor(rng()*P7.length)], o7 = probObj(v7, rng);
+  problems.push({ title:o7.title, questionText:o7.questionText, fn:o7.fn, showWork:o7.showWork, hint:o7.hint,
+                  explanation:o7.explanation, options:o7.options, correctIdx:o7.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  /* ══ CONCEPTO 5 ══ */
+  var s5 = addSection(
+    L({es:'Concepto 5', en:'Concept 5'}),
+    L({es:'Qué tan concentrada está la mezcla', en:'How concentrated the mixture is'}),
+    '<p>'+L({es:'Las etiquetas de muchos productos indican la concentración en porcentaje. El <strong>porcentaje en masa</strong> compara la masa del soluto con la masa total de la mezcla, por cada 100 g de disolución. El <strong>porcentaje en volumen</strong> hace lo mismo con volúmenes, por cada 100 mL de disolución.',
+             en:'The labels on many products give the concentration as a percentage. <strong>Percentage by mass</strong> compares the solute mass with the total mass of the mixture, per 100 g of solution. <strong>Percentage by volume</strong> does the same with volumes, per 100 mL of solution.'})+'</p>'+
+    '<p>'+L({es:'Leer esos números sirve para decidir: un gel para manos con menos de 60 % de alcohol pierde eficacia, y un producto de limpieza concentrado se debe diluir con el agua que indica su etiqueta antes de usarlo.',
+             en:'Reading those numbers helps you decide: a hand gel with less than 60 % alcohol loses effectiveness, and a concentrated cleaning product has to be diluted with the water its label states before use.'})+'</p>'+
+    '<div class="callout"><p>'+L({es:'El mismo soluto puede dar mezclas muy distintas: lo que cambia el porcentaje es la relación entre la parte y el total, no solo la cantidad de soluto.',
+                                  en:'The same solute can give very different mixtures: what changes the percentage is the ratio between the part and the total, not the amount of solute alone.'})+'</p></div>'
+  );
+  widgetMezcla(rng, s5);
+
+  /* ── Problema 8 ── */
+  var GELP = [[250,70,175],[200,60,120],[400,75,300],[300,80,240]];
+  var CLNP = [[500,12,60],[750,20,150],[400,15,60],[600,10,60]];
+  var g8 = GELP[Math.floor(rng()*GELP.length)], c8 = CLNP[Math.floor(rng()*CLNP.length)];
+  var P8 = [
+    { title:{es:'La etiqueta del gel', en:'The gel label'},
+      stmt:{es:'La etiqueta de un gel para manos indica '+g8[1]+' % de alcohol en volumen y el envase contiene '+g8[0]+' mL de gel. ¿Cuántos mililitros de alcohol hay en ese envase?',
+            en:'The label on a hand gel states '+g8[1]+' % alcohol by volume and the bottle holds '+g8[0]+' mL of gel. How many millilitres of alcohol are in that bottle?'},
+      opts:{es:[String(g8[2]), String(g8[0]-g8[2]), String(g8[1]), String(g8[0])],
+            en:[String(g8[2]), String(g8[0]-g8[2]), String(g8[1]), String(g8[0])]}, ci:0, sw:true,
+      hint:{es:'El porcentaje en volumen dice cuántos mililitros de soluto hay en cada 100 mL de disolución: multiplica el volumen total por el porcentaje y divide entre 100.',
+            en:'Percentage by volume tells how many millilitres of solute there are in each 100 mL of solution: multiply the total volume by the percentage and divide by 100.'},
+      exp:{es:'De cada 100 mL de gel, '+g8[1]+' mL son alcohol, así que en '+g8[0]+' mL: '+g8[0]+' × '+g8[1]+' ÷ 100 = '+g8[2],
+           en:'In each 100 mL of gel, '+g8[1]+' mL are alcohol, so in '+g8[0]+' mL: '+g8[0]+' × '+g8[1]+' ÷ 100 = '+g8[2]} },
+    { title:{es:'El limpiador concentrado', en:'The concentrated cleaner'},
+      stmt:{es:'Una botella de limpiador multiusos de '+c8[0]+' mL indica en su etiqueta '+c8[1]+' % de detergente en volumen. ¿Cuántos mililitros de detergente contiene la botella?',
+            en:'A '+c8[0]+' mL bottle of all purpose cleaner states '+c8[1]+' % detergent by volume on its label. How many millilitres of detergent does the bottle contain?'},
+      opts:{es:[String(c8[2]), String(c8[0]-c8[2]), String(c8[1]), String(c8[0])],
+            en:[String(c8[2]), String(c8[0]-c8[2]), String(c8[1]), String(c8[0])]}, ci:0, sw:true,
+      hint:{es:'El porcentaje en volumen indica cuántos mililitros de soluto hay por cada 100 mL de producto: multiplica el volumen total por el porcentaje y divide entre 100.',
+            en:'Percentage by volume gives the millilitres of solute per 100 mL of product: multiply the total volume by the percentage and divide by 100.'},
+      exp:{es:'Por cada 100 mL de producto hay '+c8[1]+' mL de detergente, así que en '+c8[0]+' mL: '+c8[0]+' × '+c8[1]+' ÷ 100 = '+c8[2],
+           en:'Every 100 mL of product holds '+c8[1]+' mL of detergent, so in '+c8[0]+' mL: '+c8[0]+' × '+c8[1]+' ÷ 100 = '+c8[2]} }
+  ];
+  var v8 = P8[Math.floor(rng()*P8.length)], o8 = probObj(v8, rng);
+  problems.push({ title:o8.title, questionText:o8.questionText, fn:o8.fn, showWork:o8.showWork, hint:o8.hint,
+                  explanation:o8.explanation, options:o8.options, correctIdx:o8.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  /* ══ CIERRE ══ */
+  addSection(
+    L({es:'Cierre', en:'Closing'}),
+    L({es:'Últimas decisiones', en:'Final decisions'}),
+    ''
+  );
+
+  /* ── Problema 9 ── */
+  var DR1 = [[12,300,4],[15,60,25],[20,500,4],[18,200,9],[24,400,6],[30,250,12]];
+  var DR2 = [[250,8,20],[400,15,60],[300,12,36],[500,6,30],[200,25,50]];
+  var d1 = DR1[Math.floor(rng()*DR1.length)], d2 = DR2[Math.floor(rng()*DR2.length)];
+  var P9 = [
+    { title:{es:'Cálculo directo', en:'Direct computation'},
+      stmt:{es:'Calcula el valor de esta expresión:', en:'Work out the value of this expression:'},
+      fn: d1[0]+' × 100 ÷ '+d1[1],
+      opts:{es:[String(d1[2]), String(d1[2]*10), String(d1[0]), String(Math.round(d1[1]/d1[0]))],
+            en:[String(d1[2]), String(d1[2]*10), String(d1[0]), String(Math.round(d1[1]/d1[0]))]}, ci:0, sw:true,
+      hint:{es:'La multiplicación y la división se resuelven de izquierda a derecha: primero el producto, después el cociente.',
+            en:'Multiplication and division are resolved from left to right: the product first, then the quotient.'},
+      exp:{es:'Primero el producto: '+d1[0]+' × 100 = '+(d1[0]*100)+'. Después la división: '+(d1[0]*100)+' ÷ '+d1[1]+' = '+d1[2],
+           en:'First the product: '+d1[0]+' × 100 = '+(d1[0]*100)+'. Then the division: '+(d1[0]*100)+' ÷ '+d1[1]+' = '+d1[2]} },
+    { title:{es:'Cálculo directo', en:'Direct computation'},
+      stmt:{es:'Calcula el valor de esta expresión:', en:'Work out the value of this expression:'},
+      fn: d2[0]+' × '+d2[1]+' ÷ 100',
+      opts:{es:[String(d2[2]), String(d2[1]), String(d2[0]), String(d2[2]+d2[1])],
+            en:[String(d2[2]), String(d2[1]), String(d2[0]), String(d2[2]+d2[1])]}, ci:0, sw:true,
+      hint:{es:'Resuelve de izquierda a derecha: primero el producto de los dos primeros factores, después la división.',
+            en:'Work from left to right: first the product of the two leading factors, then the division.'},
+      exp:{es:'Primero el producto: '+d2[0]+' × '+d2[1]+' = '+(d2[0]*d2[1])+'. Después la división: '+(d2[0]*d2[1])+' ÷ 100 = '+d2[2],
+           en:'First the product: '+d2[0]+' × '+d2[1]+' = '+(d2[0]*d2[1])+'. Then the division: '+(d2[0]*d2[1])+' ÷ 100 = '+d2[2]} }
+  ];
+  var v9 = P9[Math.floor(rng()*P9.length)], o9 = probObj(v9, rng);
+  problems.push({ title:o9.title, questionText:o9.questionText, fn:o9.fn, showWork:o9.showWork, hint:o9.hint,
+                  explanation:o9.explanation, options:o9.options, correctIdx:o9.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  /* ── Problema 10 ── */
+  var SALP = [[20,500,4],[24,400,6],[30,600,5],[18,300,6],[21,700,3]];
+  var BEVP = [[60,1200,5],[48,600,8],[36,900,4],[90,750,12]];
+  var s10 = SALP[Math.floor(rng()*SALP.length)], b10 = BEVP[Math.floor(rng()*BEVP.length)];
+  var P10 = [
+    { title:{es:'Lo que dejó la pileta', en:'What the pond left behind'},
+      stmt:{es:'En una salinera se dejaron secar al sol '+s10[1]+' kg de agua de mar en una pileta y al final quedaron '+s10[0]+' kg de sal seca. ¿Qué porcentaje en masa de sal contenía esa agua de mar?',
+            en:'At a salt works, '+s10[1]+' kg of seawater were left to dry in the sun in a pond and '+s10[0]+' kg of dry salt remained at the end. What percentage by mass of salt did that seawater contain?'},
+      opts:{es:[String(s10[2]), String(s10[0]), String(Math.round(s10[1]/s10[0])), String(s10[2]*10)],
+            en:[String(s10[2]), String(s10[0]), String(Math.round(s10[1]/s10[0])), String(s10[2]*10)]}, ci:0, sw:true,
+      hint:{es:'La sal seca es la parte y el agua de mar completa es el total: divide la parte entre el total y multiplica por 100.',
+            en:'The dry salt is the part and the whole seawater is the total: divide the part by the total and multiply by 100.'},
+      exp:{es:'La parte es la sal y el total es el agua de mar de la pileta: '+s10[0]+' × 100 ÷ '+s10[1]+' = '+s10[2],
+           en:'The part is the salt and the total is the seawater in the pond: '+s10[0]+' × 100 ÷ '+s10[1]+' = '+s10[2]} },
+    { title:{es:'La jarra de la cocina', en:'The jug in the kitchen'},
+      stmt:{es:'Una jarra de agua de limón se preparó con '+b10[0]+' g de azúcar y quedó con una masa total de '+b10[1]+' g de bebida. ¿Qué porcentaje en masa de azúcar tiene la bebida?',
+            en:'A jug of lemonade was prepared with '+b10[0]+' g of sugar and ended up with a total mass of '+b10[1]+' g of drink. What percentage by mass of sugar does the drink have?'},
+      opts:{es:[String(b10[2]), String(b10[0]), String(Math.round(b10[1]/b10[0])), String(b10[2]*10)],
+            en:[String(b10[2]), String(b10[0]), String(Math.round(b10[1]/b10[0])), String(b10[2]*10)]}, ci:0, sw:true,
+      hint:{es:'El azúcar es la parte y la bebida completa es el total: divide la parte entre el total y multiplica por 100.',
+            en:'The sugar is the part and the whole drink is the total: divide the part by the total and multiply by 100.'},
+      exp:{es:'La parte es el azúcar y el total es toda la bebida de la jarra: '+b10[0]+' × 100 ÷ '+b10[1]+' = '+b10[2],
+           en:'The part is the sugar and the total is the whole drink in the jug: '+b10[0]+' × 100 ÷ '+b10[1]+' = '+b10[2]} }
+  ];
+  var v10 = P10[Math.floor(rng()*P10.length)], o10 = probObj(v10, rng);
+  problems.push({ title:o10.title, questionText:o10.questionText, fn:o10.fn, showWork:o10.showWork, hint:o10.hint,
+                  explanation:o10.explanation, options:o10.options, correctIdx:o10.correctIdx, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+
+  document.getElementById('progFill').style.width = '0%';
+}
+</script>
+</body>
+</html>

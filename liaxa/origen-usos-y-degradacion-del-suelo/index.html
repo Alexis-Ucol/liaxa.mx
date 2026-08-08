@@ -1,0 +1,2299 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Origen, Usos y Degradación del Suelo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Origen, Usos y Degradación del Suelo</div>
+    <div class="wcourse" id="wcourse-el">Geografía · 1° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Origen, Usos y Degradación del Suelo</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#1a3a6b', primaryDark:'#0f2444', primaryBg:'#e8edf5',
+  accent:'#c9a84c', accentBg:'#f7f1e3',
+  darkPrimary:'#4a78bf', darkPrimaryDark:'#7aa2e0', darkPrimaryBg:'#0e1f38',
+  darkAccent:'#d4b86a', darkAccentBg:'#241e0e',
+  pBR:26, pBG:58, pBB:107, pAR:201, pAG:168, pAB:76,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'LIAXA',
+  guideTitle:{ es:'Origen, Usos y Degradación del Suelo', en:'Origin, Uses and Degradation of Soil' },
+  courseName:{ es:'Geografía · 1° de Secundaria', en:'Geography · Grade 1 of Secondary' }, filePrefix:'geo1_t10_g01'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'geo1_t10_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Origen, Usos y Degradación del Suelo','wcourse':'Geografía · 1° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Origin, Uses and Degradation of Soil','wcourse':'Geography · Grade 1 of Secondary',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'geo1_t10_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'geo1_t10_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'geo1_t10_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'geo1_t10_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('geo1_t10_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+/* ══════════════════════════════════════════════════════════════════════════
+   GUÍA :: Origen, usos y degradación del suelo.
+   Cómo nace el suelo a partir de la roca y de los seres vivos, para qué lo usa
+   una comunidad, qué le ocurre cuando se le pide más de lo que aguanta, cómo se
+   enlaza con el clima que está cambiando, y qué acción puede sostener un grupo
+   de estudiantes con datos en la mano.
+   Bilingüe (Rule 10), variantes por semilla (Rule 4), manipulativos marcados
+   con data-widget (Part 0).
+   ══════════════════════════════════════════════════════════════════════════ */
+function L(o){ return (o && o[LANG] !== undefined) ? o[LANG] : (o ? o.es : ''); }
+function ri(rng, a, b){ return a + Math.floor(rng() * (b - a + 1)); }
+function pk(rng, a){ return a[Math.floor(rng() * a.length)]; }
+function permOf(n, rng){
+  var a = [], i;
+  for (i = 0; i < n; i++) a.push(i);
+  for (i = a.length - 1; i > 0; i--){ var j = Math.floor(rng() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+
+function say(host, cls, msg){
+  var e = host.querySelector('.gw-fb');
+  if (!e) return;
+  e.className = 'gw-fb' + (cls ? ' ' + cls : '');
+  e.innerHTML = msg;
+}
+
+function rcard(name, form, note){
+  return '<div class="rcard"><div class="rname">' + name + '</div><div class="rform">' + form + '</div><div class="rnote">' + note + '</div></div>';
+}
+
+function sec(tag, title, html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = '<div class="stag">' + tag + '</div><h2>' + title + '</h2>' + html;
+  document.getElementById('lessonBody').appendChild(d);
+  return d;
+}
+
+function widgetHost(parent, id, kind){
+  var d = document.createElement('div');
+  d.className = 'gw section';
+  d.id = id;
+  d.setAttribute('data-widget', kind);
+  parent.appendChild(d);
+  return d;
+}
+
+function injectGuideCSS(){
+  if (document.getElementById('guideCSS')) return;
+  var s = document.createElement('style');
+  s.id = 'guideCSS';
+  s.textContent = [
+    '.gw{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin:1.1rem 0;}',
+    '.gw-h{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.55rem;}',
+    '.gw-q{font-size:1rem;font-weight:600;margin-bottom:.35rem;color:var(--text);}',
+    '.gw-mini{font-size:.8rem;color:var(--text3);margin-bottom:.6rem;}',
+    '.gw-row{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center;margin:.7rem 0 0;}',
+    '.gw-btn{min-width:44px;min-height:44px;padding:.5rem .8rem;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);font-family:inherit;font-size:.85rem;cursor:pointer;transition:all .14s;}',
+    '.gw-btn:hover{border-color:var(--green);background:var(--green-bg);}',
+    '.gw-fb{font-size:.84rem;padding:.6rem .8rem;border-radius:8px;margin-top:.65rem;background:var(--surface2);color:var(--text2);}',
+    '.gw-fb.warm{background:var(--gold-bg);color:var(--text2);border-left:3px solid var(--gold);}',
+    '.gw-fb.good{background:var(--ok-bg);color:var(--ok);border-left:3px solid var(--ok);}',
+    '.gw-fb.miss{background:var(--bad-bg);color:var(--bad);border-left:3px solid var(--bad);}',
+    /* perfil del suelo (ordenar) */
+    '.tl-list{display:flex;flex-direction:column;gap:.4rem;margin:.7rem 0;}',
+    '.tl-chip{display:flex;align-items:center;gap:.55rem;min-height:44px;border:1.5px solid var(--border);border-radius:9px;padding:.5rem .65rem;background:var(--surface2);color:var(--text);font-size:.82rem;cursor:pointer;transition:all .14s;}',
+    '.tl-chip:hover{border-color:var(--green);background:var(--green-bg);}',
+    '.tl-chip.sel{border-color:var(--gold);background:var(--gold-bg);}',
+    '.tl-chip.locked{border-color:var(--ok);background:var(--ok-bg);cursor:default;}',
+    '.tl-num{font-family:"IBM Plex Mono",monospace;font-weight:700;color:var(--text3);flex-shrink:0;}',
+    /* clasificador de usos */
+    '.cl-prog{font-size:.72rem;color:var(--text3);margin-bottom:.3rem;}',
+    '.cl-card{display:block;text-align:center;font-weight:600;font-size:.9rem;margin:.6rem 0;padding:.75rem .6rem;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);}',
+    '.cl-bins{display:flex;flex-wrap:wrap;gap:.4rem;}',
+    '.cl-bin{flex:1 1 40%;min-width:120px;min-height:44px;padding:.5rem;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);font-family:inherit;font-size:.82rem;cursor:pointer;transition:all .14s;}',
+    '.cl-bin:hover{border-color:var(--green);background:var(--green-bg);}',
+    /* emparejar practica y daño */
+    '.mt-wrap{display:flex;gap:.6rem;flex-wrap:wrap;}',
+    '.mt-col{flex:1 1 46%;min-width:150px;}',
+    '.mt-lbl{font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.35rem;}',
+    '.mt-chip{min-height:44px;display:flex;align-items:center;border:1.5px solid var(--border);border-radius:9px;padding:.5rem .6rem;margin-bottom:.4rem;background:var(--surface2);color:var(--text);font-size:.82rem;cursor:pointer;transition:all .14s;}',
+    '.mt-chip:hover{border-color:var(--green);background:var(--green-bg);}',
+    '.mt-chip.sel{border-color:var(--gold);background:var(--gold-bg);}',
+    '.mt-chip.done{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);cursor:default;}',
+    /* tablero del clima */
+    '.bd-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.45rem;margin:.7rem 0;}',
+    '@media(max-width:600px){.bd-grid{grid-template-columns:1fr;}}',
+    '.bd-tile{min-height:44px;text-align:left;padding:.6rem .7rem;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);font-family:inherit;font-size:.82rem;cursor:pointer;transition:all .14s;}',
+    '.bd-tile:hover{border-color:var(--green);background:var(--green-bg);}',
+    '.bd-tile.on{border-color:var(--gold);background:var(--gold-bg);}',
+    '.bd-tile.good{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);cursor:default;}',
+    '.bd-tile.bad{border-color:var(--bad);background:var(--bad-bg);color:var(--bad);cursor:default;}',
+    /* plan de la parcela */
+    '.pl-row{margin:.6rem 0;}',
+    '.pl-lbl{display:flex;justify-content:space-between;gap:.5rem;font-size:.78rem;color:var(--text2);margin-bottom:.22rem;}',
+    '.pl-val{font-family:"IBM Plex Mono",monospace;font-weight:600;color:var(--green);}',
+    '.pl-track{position:relative;height:18px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);overflow:hidden;}',
+    '.pl-fill{height:100%;background:var(--green);transition:width .2s;}',
+    '.pl-fill.alt{background:var(--gold);}',
+    '.pl-fill.off{background:var(--bad);}',
+    '.pl-sld{width:100%;accent-color:var(--green);min-height:34px;}',
+    '.pl-stats{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem;}',
+    '.pl-st{flex:1 1 30%;min-width:96px;background:var(--surface2);border-radius:8px;padding:.5rem;text-align:center;}',
+    '.pl-sl{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);}',
+    '.pl-sv{font-family:"IBM Plex Mono",monospace;font-size:.95rem;font-weight:600;color:var(--text);}',
+    '.pl-sv.hit{color:var(--ok);}',
+    '.pl-sv.miss{color:var(--bad);}',
+    /* compromiso */
+    '.rf-prompt{font-size:.92rem;color:var(--text2);margin:.2rem 0 .8rem;}'
+  ].join('\n');
+  document.head.appendChild(s);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 1 :: DE LA ROCA AL SUELO (ordenar la formación)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wRoca(rng, host){
+  var STEPS = [
+    { es:'La roca queda expuesta al aire, al agua de lluvia y a los cambios de temperatura', en:'The rock is left exposed to the air, to rainwater and to changes in temperature' },
+    { es:'La roca se agrieta y se parte en fragmentos cada vez más pequeños', en:'The rock cracks and breaks into smaller and smaller fragments' },
+    { es:'Musgos y líquenes se instalan sobre los fragmentos y los siguen desgastando', en:'Mosses and lichens settle on the fragments and go on wearing them down' },
+    { es:'Los restos de esas plantas se acumulan y forman materia orgánica', en:'The remains of those plants pile up and form organic matter' },
+    { es:'Lombrices, raíces y bacterias mezclan la materia orgánica con los fragmentos minerales', en:'Worms, roots and bacteria mix the organic matter with the mineral fragments' },
+    { es:'El terreno queda con capas distintas: la más viva arriba y la roca madre hasta abajo', en:'The ground ends up with different layers: the most alive on top and the parent rock at the bottom' }
+  ];
+  var N = STEPS.length;
+  var st = { order: permOf(N, rng), sel: null, tries: 0, done: false };
+  if (st.order.every(function(v, i){ return v === i; })) { var q = st.order[0]; st.order[0] = st.order[N - 1]; st.order[N - 1] = q; }
+
+  function render(){
+    var chips = st.order.map(function(ei, pos){
+      var cls = 'tl-chip' + (st.done ? ' locked' : (st.sel === pos ? ' sel' : ''));
+      return '<div class="' + cls + '" data-p="' + pos + '"><span class="tl-num">' + (pos + 1) + '</span>' + L(STEPS[ei]) + '</div>';
+    }).join('');
+    host.innerHTML =
+      '<div class="gw-h iw-tag">' + L({ es:'De la roca al suelo', en:'From rock to soil' }) + '</div>' +
+      '<div class="gw-q">' + L({ es:'¿En qué orden aparece el suelo sobre una roca desnuda?', en:'In what order does soil appear on top of bare rock?' }) + '</div>' +
+      '<div class="gw-mini iw-sub">' + L({
+        es:'Ordena los pasos del primero al último. Toca dos tarjetas para intercambiarlas y después verifica.',
+        en:'Order the steps from first to last. Tap two cards to swap them and then check.'
+      }) + '</div>' +
+      '<div class="tl-list">' + chips + '</div>' +
+      (st.done ? '' : '<div class="gw-row"><button class="gw-btn" data-r="check">' + L({ es:'Verificar el orden', en:'Check the order' }) + '</button></div>') +
+      '<div class="gw-fb"></div>';
+    host.querySelectorAll('.tl-chip').forEach(function(el){
+      el.addEventListener('click', function(){ tap(parseInt(el.getAttribute('data-p'), 10)); });
+    });
+    var b = host.querySelector('[data-r="check"]');
+    if (b) b.addEventListener('click', check);
+  }
+
+  function tap(pos){
+    if (st.done) return;
+    var msg = host.querySelector('.gw-fb').innerHTML;
+    if (st.sel === null) st.sel = pos;
+    else if (st.sel === pos) st.sel = null;
+    else { var t = st.order[st.sel]; st.order[st.sel] = st.order[pos]; st.order[pos] = t; st.sel = null; }
+    render();
+    if (msg) say(host, '', msg);
+  }
+
+  function check(){
+    var ok = st.order.every(function(ei, pos){ return ei === pos; });
+    if (ok){
+      st.done = true; render();
+      say(host, 'good', '🎉 ' + L({
+        es:'Ese es el orden. Fíjate en lo que pasó: primero se rompe la roca y hasta el final aparece la parte viva. Por eso un suelo con su capa oscura arriba no se improvisa, es el resultado de cientos de años de trabajo del agua, del aire y de los seres vivos.',
+        en:'That is the order. Notice what happened: first the rock breaks and only at the end does the living part appear. That is why soil with its dark top layer cannot be improvised, it is the result of hundreds of years of work by water, air and living things.'
+      }));
+      return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      st.order = STEPS.map(function(_, i){ return i; });
+      st.done = true; render();
+      say(host, 'warm', L({
+        es:'Este es el orden. Cada paso solo puede ocurrir si el anterior ya ocurrió: sin fragmentos no hay dónde se agarren los musgos, y sin restos de plantas no hay materia orgánica que mezclar.',
+        en:'This is the order. Each step can only happen if the previous one already happened: with no fragments there is nothing for the mosses to hold on to, and with no plant remains there is no organic matter to mix in.'
+      }));
+      return;
+    }
+    var bad = 0;
+    for (var i = 0; i < N; i++){ if (st.order[i] !== i){ bad = i; break; } }
+    say(host, 'miss', L({
+      es:'Todavía no. Mira la tarjeta número ' + (bad + 1) + ': ¿lo que dice puede ocurrir antes de lo que está arriba de ella?',
+      en:'Not yet. Look at card number ' + (bad + 1) + ': can what it says happen before what is above it?'
+    }));
+  }
+
+  render();
+  say(host, '', L({
+    es:'Los seis pasos están revueltos.',
+    en:'The six steps are shuffled.'
+  }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 2 :: EL MAPA DE USOS (clasificar en cuatro usos del suelo)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wUsos(rng, host){
+  var BINS = [
+    { es:'Agrícola', en:'Farming' },
+    { es:'Ganadero', en:'Livestock' },
+    { es:'Forestal', en:'Forestry' },
+    { es:'Urbano', en:'Urban' }
+  ];
+  var ITEMS = [
+    { es:'Se abren los surcos para sembrar maíz y frijol antes de la temporada de lluvias', en:'Furrows are opened to sow maize and beans before the rainy season', bin:0,
+      why:{ es:'Lo que se obtiene del terreno es una cosecha, y para eso hay que remover y sembrar.', en:'What is obtained from the ground is a harvest, and for that you have to break the ground and sow.' } },
+    { es:'Un potrero cercado donde pastan veinte vacas durante todo el año', en:'A fenced paddock where twenty cows graze all year round', bin:1,
+      why:{ es:'El terreno se destina a alimentar animales, no a levantar una cosecha.', en:'The ground is given over to feeding animals, not to raising a crop.' } },
+    { es:'Se aprovechan por temporadas la madera y la resina de un bosque de pinos y se vuelve a plantar', en:'Timber and resin from a pine forest are used by seasons and replanting is done', bin:2,
+      why:{ es:'Se aprovecha el árbol y se mantiene el bosque en pie: ese es el uso forestal.', en:'The tree is used and the forest is kept standing: that is forestry use.' } },
+    { es:'Se traza una calle y se conectan las tomas de agua de un fraccionamiento nuevo', en:'A street is laid out and the water connections of a new housing estate are made', bin:3,
+      why:{ es:'El suelo queda debajo de calles y construcciones, cubierto y sin producir.', en:'The soil ends up beneath streets and buildings, covered over and not producing.' } },
+    { es:'Un huerto de hortalizas regado por goteo en la orilla del pueblo', en:'A vegetable garden watered by drip irrigation on the edge of the town', bin:0,
+      why:{ es:'También aquí el terreno se trabaja para dar alimento de cultivo.', en:'Here too the ground is worked to give a food crop.' } },
+    { es:'Se siembra pasto para los borregos y su paso se rota entre dos terrenos', en:'Grass is sown for the sheep and their grazing is rotated between two plots', bin:1,
+      why:{ es:'El pasto no se cosecha para las personas: sostiene al rebaño.', en:'The grass is not harvested for people: it supports the flock.' } },
+    { es:'Se plantan árboles de la región en una ladera para recuperar la cubierta y frenar el agua', en:'Trees of the region are planted on a slope to bring back the cover and slow the water', bin:2,
+      why:{ es:'Devolver la cubierta de árboles a un terreno también es un uso forestal.', en:'Bringing tree cover back to a piece of land is also a forestry use.' } },
+    { es:'Se nivela un terreno para levantar una bodega y el estacionamiento de los camiones', en:'A plot is levelled to put up a warehouse and the lorry car park', bin:3,
+      why:{ es:'La superficie queda sellada: el agua ya no se infiltra por ahí.', en:'The surface ends up sealed: water no longer soaks in there.' } }
+  ];
+  var st = { seq: permOf(ITEMS.length, rng), i: 0, tries: 0, hits: 0, done: false, busy: false };
+
+  function render(){
+    st.busy = false;
+    if (st.done){
+      host.innerHTML =
+        '<div class="gw-h iw-tag">' + L({ es:'El mapa de usos', en:'The map of uses' }) + '</div>' +
+        '<div class="gw-q">' + L({ es:'Mapa terminado', en:'Map finished' }) + '</div>' +
+        '<div class="gw-fb good">🎉 ' + L({
+          es:'Acertaste ' + st.hits + ' de ' + ITEMS.length + '. Para saber el uso de un terreno no preguntes cómo se ve, pregunta qué se le pide: una cosecha, alimento para animales, madera y cubierta, o superficie para construir.',
+          en:'You got ' + st.hits + ' of ' + ITEMS.length + '. To know the use of a plot do not ask how it looks, ask what is being asked of it: a harvest, food for animals, timber and cover, or surface to build on.'
+        }) + '</div>';
+      return;
+    }
+    var it = ITEMS[st.seq[st.i]];
+    host.innerHTML =
+      '<div class="gw-h iw-tag">' + L({ es:'El mapa de usos', en:'The map of uses' }) + '</div>' +
+      '<div class="gw-q">' + L({ es:'¿A qué uso del suelo corresponde cada terreno?', en:'Which soil use does each plot belong to?' }) + '</div>' +
+      '<div class="gw-mini iw-sub">' + L({
+        es:'Lee lo que ocurre en el terreno y decide qué se le está pidiendo al suelo.',
+        en:'Read what happens on the plot and decide what is being asked of the soil.'
+      }) + '</div>' +
+      '<div class="cl-prog">' + (st.i + 1) + ' / ' + ITEMS.length + '</div>' +
+      '<div class="cl-card">' + L(it) + '</div>' +
+      '<div class="cl-bins">' + BINS.map(function(b, bi){
+        return '<button class="cl-bin" data-b="' + bi + '">' + L(b) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="gw-fb"></div>';
+    host.querySelectorAll('.cl-bin').forEach(function(btn){
+      btn.addEventListener('click', function(){ choose(parseInt(btn.getAttribute('data-b'), 10)); });
+    });
+  }
+
+  function advance(){
+    st.busy = true;
+    st.i++; st.tries = 0;
+    if (st.i >= ITEMS.length) st.done = true;
+    setTimeout(render, 1200);
+  }
+
+  function choose(bi){
+    if (st.busy || st.done) return;
+    var it = ITEMS[st.seq[st.i]];
+    if (bi === it.bin){
+      st.hits++;
+      say(host, 'good', '✓ ' + L(it.why));
+      advance();
+      return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      say(host, 'warm', L({ es:'Es uso ', en:'It is ' }) + '<b>' + L(BINS[it.bin]) + '</b>. ' + L(it.why));
+      advance();
+      return;
+    }
+    var nudge;
+    if (bi === 0) nudge = { es:'Todavía no. ¿De verdad se levanta una cosecha en ese terreno?', en:'Not yet. Is a harvest really taken from that plot?' };
+    else if (bi === 1) nudge = { es:'Todavía no. ¿Hay animales comiendo ahí, o el terreno da otra cosa?', en:'Not yet. Are there animals eating there, or does the plot give something else?' };
+    else if (bi === 2) nudge = { es:'Todavía no. ¿El terreno queda con árboles en pie al final?', en:'Not yet. Does the plot end up with trees standing on it?' };
+    else nudge = { es:'Todavía no. ¿El suelo queda cubierto por construcciones o sigue descubierto?', en:'Not yet. Does the soil end up covered by buildings or is it still open?' };
+    say(host, 'miss', L(nudge));
+  }
+
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 3 :: LA PARCELA CANSADA (práctica  ->  daño que produce)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wDanio(rng, host){
+  var PAIRS = [
+    { a:{ es:'Trazar los surcos de la ladera bajando en línea recta con la pendiente', en:'Laying the furrows of the slope straight down with the gradient' },
+      b:{ es:'El agua de lluvia corre rápido por el surco y se lleva la capa fértil de arriba', en:'Rainwater runs fast along the furrow and carries away the fertile top layer' },
+      cue:{ es:'abre un camino recto por donde el agua baja sin freno', en:'opens a straight path for the water to run down unchecked' } },
+    { a:{ es:'Dejar el terreno desnudo entre una cosecha y la siguiente siembra', en:'Leaving the ground bare between one harvest and the next sowing' },
+      b:{ es:'El viento levanta las partículas sueltas y se lleva el suelo seco', en:'The wind lifts the loose particles and carries the dry soil away' },
+      cue:{ es:'deja la superficie sin nada que la sujete cuando sopla el viento', en:'leaves the surface with nothing holding it when the wind blows' } },
+    { a:{ es:'Regar en exceso en una zona calurosa sin salida para el agua sobrante', en:'Watering too much in a hot area with no way out for the leftover water' },
+      b:{ es:'Al evaporarse el agua quedan sales en la superficie y las plantas crecen mal', en:'As the water evaporates salts are left on the surface and plants grow badly' },
+      cue:{ es:'mete al terreno más agua de la que puede salir, y el agua se va dejando lo que traía', en:'puts more water into the ground than can leave, and the water goes leaving behind what it carried' } },
+    { a:{ es:'Pasar maquinaria pesada una y otra vez sobre el mismo terreno húmedo', en:'Driving heavy machinery over and over across the same wet plot' },
+      b:{ es:'El suelo se aprieta, el agua ya no se infiltra y las raíces no avanzan', en:'The soil is pressed tight, water no longer soaks in and roots cannot advance' },
+      cue:{ es:'aplasta los huecos por donde entraban el aire y el agua', en:'crushes the gaps through which air and water used to enter' } },
+    { a:{ es:'Meter en el potrero más animales de los que la hierba alcanza a sostener', en:'Putting more animals in the paddock than the grass can support' },
+      b:{ es:'La hierba no logra rebrotar y el terreno queda descubierto y pisoteado', en:'The grass cannot grow back and the ground is left bare and trampled' },
+      cue:{ es:'consume la hierba más rápido de lo que la hierba se repone', en:'eats the grass faster than the grass grows back' } }
+  ];
+  var N = PAIRS.length;
+  var st = { left: permOf(N, rng), right: permOf(N, rng), sel: null, done: [], tries: 0 };
+
+  function isDone(i){ return st.done.indexOf(i) >= 0; }
+
+  function render(){
+    var leftHtml = st.left.map(function(i){
+      var cls = 'mt-chip' + (isDone(i) ? ' done' : (st.sel === i ? ' sel' : ''));
+      return '<div class="' + cls + '" data-side="a" data-i="' + i + '">' + L(PAIRS[i].a) + '</div>';
+    }).join('');
+    var rightHtml = st.right.map(function(i){
+      var cls = 'mt-chip' + (isDone(i) ? ' done' : '');
+      return '<div class="' + cls + '" data-side="b" data-i="' + i + '">' + L(PAIRS[i].b) + '</div>';
+    }).join('');
+    host.innerHTML =
+      '<div class="gw-h iw-tag">' + L({ es:'La parcela cansada', en:'The tired plot' }) + '</div>' +
+      '<div class="gw-q">' + L({ es:'¿Qué le hace al suelo cada una de estas prácticas?', en:'What does each of these practices do to the soil?' }) + '</div>' +
+      '<div class="gw-mini iw-sub">' + L({
+        es:'Toca una práctica de la izquierda y después el daño que produce. Los pares que aciertes se quedan fijos.',
+        en:'Tap a practice on the left and then the damage it produces. The pairs you get right stay fixed.'
+      }) + '</div>' +
+      '<div class="mt-wrap">' +
+        '<div class="mt-col"><div class="mt-lbl">' + L({ es:'Lo que se hace', en:'What is done' }) + '</div>' + leftHtml + '</div>' +
+        '<div class="mt-col"><div class="mt-lbl">' + L({ es:'Lo que le pasa al suelo', en:'What happens to the soil' }) + '</div>' + rightHtml + '</div>' +
+      '</div>' +
+      '<div class="gw-fb"></div>';
+    host.querySelectorAll('.mt-chip').forEach(function(el){
+      el.addEventListener('click', function(){ tap(el.getAttribute('data-side'), parseInt(el.getAttribute('data-i'), 10)); });
+    });
+  }
+
+  function finish(){
+    say(host, 'good', '🎉 ' + L({
+      es:'Parcela revisada. Ninguna de estas prácticas fue hecha con mala intención: todas buscaban producir más o más rápido. La degradación aparece cuando se le pide al suelo más de lo que alcanza a reponer.',
+      en:'Plot reviewed. None of these practices was done with bad intent: all of them were after more or faster production. Degradation appears when more is asked of the soil than it manages to replace.'
+    }));
+  }
+
+  function tap(side, i){
+    if (isDone(i)) return;
+    if (side === 'a'){
+      st.sel = (st.sel === i ? null : i);
+      var keep = host.querySelector('.gw-fb').innerHTML;
+      render();
+      if (st.sel !== null){
+        say(host, 'warm', L({ es:'Elegiste ', en:'You picked ' }) + '<b>' + L(PAIRS[st.sel].a) + '</b>. ' +
+          L({ es:'Ahora toca lo que eso le hace al suelo.', en:'Now tap what that does to the soil.' }));
+      } else if (keep){ say(host, '', keep); }
+      return;
+    }
+    if (st.sel === null){
+      say(host, 'warm', L({
+        es:'Primero elige una práctica de la izquierda: el daño se entiende cuando sabes qué lo provocó.',
+        en:'Pick a practice on the left first: the damage makes sense once you know what caused it.'
+      }));
+      return;
+    }
+    var chosen = st.sel;
+    if (i === chosen){
+      st.done.push(chosen); st.sel = null; st.tries = 0;
+      render();
+      if (st.done.length >= N){ finish(); return; }
+      say(host, 'good', '✓ ' + L({ es:'Esa práctica ', en:'That practice ' }) + L(PAIRS[chosen].cue) + '.');
+      return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      st.done.push(chosen); st.sel = null; st.tries = 0;
+      render();
+      say(host, 'warm', L({ es:'Le corresponde: ', en:'The right one is: ' }) + '<b>' + L(PAIRS[chosen].b) + '</b>. ' +
+        L({ es:'Esa práctica ', en:'That practice ' }) + L(PAIRS[chosen].cue) + '.');
+      if (st.done.length >= N) finish();
+      return;
+    }
+    say(host, 'miss', L({ es:'Todavía no. Esa práctica ', en:'Not yet. That practice ' }) +
+      L(PAIRS[chosen].cue) + L({ es:', vuelve a elegir.', en:', choose again.' }));
+  }
+
+  render();
+  say(host, '', L({
+    es:'Cinco prácticas comunes y cinco daños, revueltos.',
+    en:'Five common practices and five kinds of damage, shuffled.'
+  }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 4 :: EL TABLERO DEL CLIMA (marcar lo que sí calienta el planeta)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wClima(rng, host){
+  var TILES = [
+    { es:'Quemar carbón, petróleo y gas para producir electricidad y mover vehículos', en:'Burning coal, oil and gas to produce electricity and move vehicles', ok:true,
+      why:{ es:'Es la fuente principal del dióxido de carbono que se acumula en el aire.', en:'It is the main source of the carbon dioxide that builds up in the air.' } },
+    { es:'Desmontar y quemar bosques para abrir terrenos de cultivo o potreros', en:'Clearing and burning forests to open crop fields or paddocks', ok:true,
+      why:{ es:'El carbono guardado en los árboles y en el suelo termina en el aire.', en:'The carbon stored in the trees and in the soil ends up in the air.' } },
+    { es:'Dejar que la basura se pudra amontonada sin ningún manejo', en:'Letting rubbish rot in piles with no management at all', ok:true,
+      why:{ es:'Al pudrirse sin aire libera metano, otro gas de efecto invernadero.', en:'Rotting without air releases methane, another greenhouse gas.' } },
+    { es:'Cultivar y criar ganado en superficies cada vez más grandes de tierra desmontada', en:'Farming and raising cattle on ever larger areas of cleared land', ok:true,
+      why:{ es:'Cada hectárea desmontada suma emisiones y resta suelo que guardaba carbono.', en:'Every cleared hectare adds emissions and removes soil that was storing carbon.' } },
+    { es:'El paso de las estaciones a lo largo del año', en:'The passing of the seasons through the year', ok:false,
+      why:{ es:'Las estaciones se repiten cada año desde siempre: no explican una subida sostenida.', en:'The seasons have repeated every year forever: they do not explain a sustained rise.' } },
+    { es:'Que un día de esta semana haga más calor que el mismo día del año pasado', en:'That one day this week is hotter than the same day last year', ok:false,
+      why:{ es:'Eso es el estado del tiempo de un día; el clima se mide en promedios de muchos años.', en:'That is the weather of one day; climate is measured in averages over many years.' } },
+    { es:'El plástico que flota en el mar y llega hasta las playas', en:'The plastic floating in the sea and washing up on the beaches', ok:false,
+      why:{ es:'Es un problema grave de contaminación, pero no es un gas que retenga calor.', en:'It is a serious pollution problem, but it is not a gas that traps heat.' } },
+    { es:'El adelgazamiento de la capa de ozono sobre las zonas polares', en:'The thinning of the ozone layer over the polar regions', ok:false,
+      why:{ es:'Ese daño deja pasar más radiación ultravioleta, que es otro asunto distinto.', en:'That damage lets more ultraviolet radiation through, which is a different matter.' } }
+  ];
+  var ord = permOf(TILES.length, rng);
+  var st = { sel: TILES.map(function(){ return false; }), tries: 0, done: false };
+
+  function render(){
+    var grid = ord.map(function(i){
+      var cls = 'bd-tile';
+      if (st.done) cls += TILES[i].ok ? ' good' : ' bad';
+      else if (st.sel[i]) cls += ' on';
+      return '<button class="' + cls + '" data-i="' + i + '">' + L(TILES[i]) + '</button>';
+    }).join('');
+    host.innerHTML =
+      '<div class="gw-h iw-tag">' + L({ es:'El tablero del clima', en:'The climate board' }) + '</div>' +
+      '<div class="gw-q">' + L({ es:'¿Cuáles sí aumentan los gases que calientan el planeta?', en:'Which ones really increase the gases that warm the planet?' }) + '</div>' +
+      '<div class="gw-mini iw-sub">' + L({
+        es:'Marca solo las tarjetas que agregan gases de efecto invernadero al aire. Puedes marcar y desmarcar las veces que quieras antes de verificar.',
+        en:'Mark only the cards that add greenhouse gases to the air. You can mark and unmark as many times as you like before checking.'
+      }) + '</div>' +
+      '<div class="bd-grid">' + grid + '</div>' +
+      (st.done ? '' : '<div class="gw-row"><button class="gw-btn" data-r="check">' + L({ es:'Verificar el tablero', en:'Check the board' }) + '</button></div>') +
+      '<div class="gw-fb"></div>';
+    host.querySelectorAll('.bd-tile').forEach(function(el){
+      el.addEventListener('click', function(){ toggle(parseInt(el.getAttribute('data-i'), 10)); });
+    });
+    var b = host.querySelector('[data-r="check"]');
+    if (b) b.addEventListener('click', check);
+  }
+
+  function toggle(i){
+    if (st.done) return;
+    var msg = host.querySelector('.gw-fb').innerHTML;
+    st.sel[i] = !st.sel[i];
+    render();
+    if (msg) say(host, '', msg);
+  }
+
+  function check(){
+    var extra = [], falta = [];
+    TILES.forEach(function(tt, i){
+      if (st.sel[i] && !tt.ok) extra.push(i);
+      if (!st.sel[i] && tt.ok) falta.push(i);
+    });
+    if (extra.length === 0 && falta.length === 0){
+      st.done = true; render();
+      say(host, 'good', '🎉 ' + L({
+        es:'Tablero resuelto. Las cuatro que marcaste tienen algo en común: todas sacan carbono que estaba guardado bajo tierra o en los seres vivos y lo mandan al aire. Las otras cuatro son problemas reales o hechos normales, pero no son la causa del calentamiento.',
+        en:'Board solved. The four you marked have something in common: all of them take carbon that was stored underground or in living things and send it into the air. The other four are real problems or normal facts, but they are not the cause of the warming.'
+      }));
+      return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      st.done = true; render();
+      say(host, 'warm', L({
+        es:'Estas son las cuatro que sí agregan gases de efecto invernadero. Las otras cuatro confunden el estado del tiempo con el clima, o mezclan el calentamiento con otros daños ambientales que tienen causas distintas.',
+        en:'These are the four that really add greenhouse gases. The other four confuse weather with climate, or mix up the warming with other environmental damage that has different causes.'
+      }));
+      return;
+    }
+    if (extra.length){
+      say(host, 'miss', L({ es:'Revisa la que dice ', en:'Look again at the one that says ' }) + '<b>' + L(TILES[extra[0]]) + '</b>. ' +
+        L({ es:'¿Esa tarjeta suma gases al aire, o es otra cosa?', en:'Does that card add gases to the air, or is it something else?' }));
+      return;
+    }
+    say(host, 'miss', L({
+      es:'Te falta al menos una. Busca la que saca carbono de donde estaba guardado y lo suelta al aire.',
+      en:'You are missing at least one. Look for the one that takes carbon out of where it was stored and lets it into the air.'
+    }));
+  }
+
+  render();
+  say(host, '', L({
+    es:'Ocho tarjetas: cuatro suman gases de efecto invernadero y cuatro no.',
+    en:'Eight cards: four add greenhouse gases and four do not.'
+  }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 5 :: EL PLAN DE LA PARCELA (repartir jornadas, cubrir dos metas)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wParcela(rng, host){
+  var xm = ri(rng, 3, 5);
+  var ym = ri(rng, 2, 4);
+  var T  = xm + ym + ri(rng, 1, 2);
+  var r  = ri(rng, 8, 12);
+  var f  = ri(rng, 4, 7);
+  var R  = xm * r;
+  var F  = ym * f;
+  var st = { x: 1, y: 1 };
+
+  host.innerHTML =
+    '<div class="gw-h iw-tag">' + L({ es:'El plan de la parcela', en:'The plot plan' }) + '</div>' +
+    '<div class="gw-q">' + L({ es:'Dos metas, ' + T + ' jornadas y una sola ladera', en:'Two goals, ' + T + ' work sessions and a single slope' }) + '</div>' +
+    '<div class="gw-mini iw-sub">' + L({
+      es:'El grupo dispone de ' + T + ' jornadas este mes. Cada jornada de barreras vivas protege ' + r + ' metros de ladera y cada jornada de composta alcanza para abonar ' + f + ' surcos del huerto. Mueve las barras hasta cubrir las dos metas sin pasarte de las jornadas disponibles.',
+      en:'The group has ' + T + ' work sessions this month. Each session of living barriers protects ' + r + ' metres of slope and each composting session is enough to feed ' + f + ' furrows of the garden. Move the bars until both goals are covered without going over the sessions available.'
+    }) + '</div>' +
+    '<div class="pl-row">' +
+      '<div class="pl-lbl"><span>' + L({ es:'Jornadas de barreras vivas en la ladera', en:'Sessions of living barriers on the slope' }) + '</span><span class="pl-val" data-v="x"></span></div>' +
+      '<div class="pl-track"><div class="pl-fill" data-b="x"></div></div>' +
+      '<input class="pl-sld" type="range" data-s="x" min="0" max="' + T + '" step="1" value="' + st.x + '">' +
+    '</div>' +
+    '<div class="pl-row">' +
+      '<div class="pl-lbl"><span>' + L({ es:'Jornadas de composta para el huerto', en:'Composting sessions for the garden' }) + '</span><span class="pl-val" data-v="y"></span></div>' +
+      '<div class="pl-track"><div class="pl-fill alt" data-b="y"></div></div>' +
+      '<input class="pl-sld" type="range" data-s="y" min="0" max="' + T + '" step="1" value="' + st.y + '">' +
+    '</div>' +
+    '<div class="pl-stats">' +
+      '<div class="pl-st"><div class="pl-sl">' + L({ es:'Jornadas usadas', en:'Sessions used' }) + '</div><div class="pl-sv" data-k="t"></div></div>' +
+      '<div class="pl-st"><div class="pl-sl">' + L({ es:'Metros protegidos', en:'Metres protected' }) + '</div><div class="pl-sv" data-k="r"></div></div>' +
+      '<div class="pl-st"><div class="pl-sl">' + L({ es:'Surcos abonados', en:'Furrows fed' }) + '</div><div class="pl-sv" data-k="f"></div></div>' +
+    '</div>' +
+    '<div class="gw-fb"></div>';
+
+  function draw(){
+    var used = st.x + st.y, met = st.x * r, sur = st.y * f;
+    host.querySelector('[data-v="x"]').textContent = st.x;
+    host.querySelector('[data-v="y"]').textContent = st.y;
+    host.querySelector('[data-b="x"]').style.width = (st.x / T * 100) + '%';
+    host.querySelector('[data-b="y"]').style.width = (st.y / T * 100) + '%';
+    host.querySelector('[data-k="t"]').textContent = used + ' / ' + T;
+    host.querySelector('[data-k="r"]').textContent = met + ' / ' + R;
+    host.querySelector('[data-k="f"]').textContent = sur + ' / ' + F;
+    host.querySelector('[data-k="t"]').className = 'pl-sv ' + (used <= T ? 'hit' : 'miss');
+    host.querySelector('[data-k="r"]').className = 'pl-sv ' + (met >= R ? 'hit' : 'miss');
+    host.querySelector('[data-k="f"]').className = 'pl-sv ' + (sur >= F ? 'hit' : 'miss');
+    host.querySelector('[data-b="x"]').className = 'pl-fill' + (used > T ? ' off' : '');
+    host.querySelector('[data-b="y"]').className = 'pl-fill alt' + (used > T ? ' off' : '');
+
+    if (used > T){
+      say(host, 'miss', L({
+        es:'Estás comprometiendo ' + used + ' jornadas y el grupo solo tiene ' + T + '. Un plan que nadie puede cumplir se cae en la primera semana: baja alguna de las dos barras.',
+        en:'You are committing ' + used + ' sessions and the group only has ' + T + '. A plan nobody can carry out collapses in the first week: lower one of the two bars.'
+      }));
+      return;
+    }
+    if (met < R){
+      say(host, 'warm', L({
+        es:'A la ladera le faltan ' + (R - met) + ' metros por proteger. Todavía te quedan jornadas libres: sube la barra de barreras vivas.',
+        en:'The slope still has ' + (R - met) + ' metres left to protect. You still have free sessions: raise the living barriers bar.'
+      }));
+      return;
+    }
+    if (sur < F){
+      say(host, 'warm', L({
+        es:'Faltan ' + (F - sur) + ' surcos por abonar. Sube la barra de composta sin pasarte de las ' + T + ' jornadas.',
+        en:'There are still ' + (F - sur) + ' furrows to feed. Raise the composting bar without going over the ' + T + ' sessions.'
+      }));
+      return;
+    }
+    say(host, 'good', '🎉 ' + L({
+      es:'Plan armado: cubres las dos metas y te sobran ' + (T - used) + ' jornadas. Fíjate en lo que hiciste: la composta devuelve al suelo la materia orgánica que ya se había ido, y las barreras evitan que se vaya la que todavía queda. Un plan que solo repara vuelve a empezar cada año.',
+      en:'Plan ready: you cover both goals and have ' + (T - used) + ' sessions to spare. Notice what you did: the compost gives back to the soil the organic matter already lost, and the barriers keep what is still there from leaving. A plan that only repairs starts over every year.'
+    }));
+  }
+
+  host.querySelectorAll('.pl-sld').forEach(function(sl){
+    sl.addEventListener('input', function(){
+      st[sl.getAttribute('data-s')] = parseInt(sl.value, 10);
+      draw();
+    });
+  });
+  draw();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 6 :: TU POSTURA (escribir o dibujar)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wPostura(rng, host){
+  var PROMPTS = [
+    { es:'Elige un terreno que conozcas: tu patio, un lote de la cuadra, una parcela o una ladera cercana. Escribe qué uso tiene hoy, qué señal de desgaste le ves y qué harías tú para frenarla.',
+      en:'Choose a piece of ground you know: your yard, a lot on your block, a plot or a nearby slope. Write down what use it has today, what sign of wear you see on it and what you would do to stop it.' },
+    { es:'Dibuja el perfil de un suelo sano y a un lado el de un suelo degradado. Señala en cada uno qué capa está y qué capa falta.',
+      en:'Draw the profile of a healthy soil and next to it that of a degraded soil. Mark on each one which layer is there and which layer is missing.' },
+    { es:'Alguien afirma que el calentamiento global no existe porque este invierno hizo mucho frío. Escribe con tus palabras la respuesta que le darías y el dato en el que la apoyarías.',
+      en:'Someone claims that global warming does not exist because this winter was very cold. Write in your own words the answer you would give and the figure you would base it on.' },
+    { es:'Escribe el texto de tres renglones con el que propondrías a tu escuela una acción para cuidar el suelo: qué se hace, quién lo hace y con qué dato se sabrá si sirvió.',
+      en:'Write the three line text you would use to propose to your school an action to care for the soil: what is done, who does it and which figure will show whether it worked.' }
+  ];
+  var p = pk(rng, PROMPTS);
+
+  host.innerHTML =
+    '<div class="gw-h iw-tag">' + L({ es:'Tu postura', en:'Your stand' }) + '</div>' +
+    '<div class="rf-prompt iw-sub">' + L(p) + '</div>' +
+    '<div class="wtabs">' +
+      '<button class="wtab active" data-r="tt">' + L({ es:'⌨️ Escribir', en:'⌨️ Write' }) + '</button>' +
+      '<button class="wtab" data-r="td">' + L({ es:'✏️ Dibujar', en:'✏️ Sketch' }) + '</button>' +
+    '</div>' +
+    '<div class="wpanel active" id="rf_type"><textarea class="wtextarea" id="rfTa" placeholder="' + L({ es:'Tu respuesta...', en:'Your answer...' }) + '"></textarea></div>' +
+    '<div class="wpanel" id="rf_draw">' +
+      '<div class="cvwrap">' +
+        '<canvas class="dcanvas" id="rfCv"></canvas>' +
+        '<div class="ctoolbar">' +
+          '<button class="tbtn2 bpen on">' + t('btn-pen') + '</button>' +
+          '<button class="tbtn2 bmarker">' + t('btn-marker') + '</button>' +
+          '<button class="tbtn2 beraser">' + t('btn-eraser') + '</button>' +
+          '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+          '<div class="cdot" data-color="#1a1a16" style="background:#1a1a16"></div>' +
+          '<div class="cdot" data-color="#8b2500" style="background:#8b2500"></div>' +
+          '<div class="cdot" data-color="#1d4e89" style="background:#1d4e89"></div>' +
+          '<button class="clrbtn">' + t('btn-clear') + '</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="save">' + L({ es:'Guardar mi postura', en:'Save my stand' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var tt = host.querySelector('[data-r="tt"]'), td = host.querySelector('[data-r="td"]');
+  var cvReady = false;
+  function showPanel(which){
+    ['type','draw'].forEach(function(k){
+      var el = document.getElementById('rf_' + k);
+      if (el) el.classList.toggle('active', k === which);
+    });
+    tt.classList.toggle('active', which === 'type');
+    td.classList.toggle('active', which === 'draw');
+    if (which === 'draw' && !cvReady) setTimeout(function(){
+      var c = document.getElementById('rfCv');
+      if (c){ cvReady = true; initCanvas(c); }
+    }, 60);
+  }
+  tt.addEventListener('click', function(){ showPanel('type'); });
+  td.addEventListener('click', function(){ showPanel('draw'); });
+
+  host.querySelector('[data-r="save"]').addEventListener('click', function(){
+    say(host, 'good', '✓ ' + L({
+      es:'Guardado. Aquí no hay una sola respuesta buena: lo que vale es que tu postura se apoye en algo que se pueda mostrar y no solo en lo que a ti te parece.',
+      en:'Saved. There is no single right answer here: what counts is that your stand rests on something you can show and not only on what seems true to you.'
+    }));
+  });
+
+  say(host, '', L({
+    es:'Puedes escribir, dibujar, o las dos cosas.',
+    en:'You can write, sketch, or do both.'
+  }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROBLEMAS
+   ══════════════════════════════════════════════════════════════════════════ */
+function addProblem(rng, v){
+  var idx = problems.length;
+  var opts = L(v.opts).slice();
+  var correctVal = opts[v.ci];
+  var sh = shuffle(opts, rng);
+  var prob = {
+    title: L(v.title),
+    questionText: L(v.q),
+    fn: '',
+    hint: L(v.hint),
+    explanation: L(v.exp),
+    options: sh,
+    correctIdx: sh.indexOf(correctVal),
+    showWork: !!v.showWork,
+    studentChoice: null,
+    pendingChoice: null
+  };
+  problems.push(prob);
+  buildOneCard(prob, idx);
+}
+
+function mkP1(rng){
+  var vs = [
+    {
+      title:{ es:'Dos laderas de la misma roca', en:'Two slopes of the same rock' },
+      q:{ es:'Dos laderas vecinas quedaron al descubierto el mismo año y sobre la misma clase de roca. En una crecieron musgos y arbustos desde el principio; la otra permaneció pelada. Décadas después, la ladera con plantas tiene una capa de suelo más gruesa. ¿Qué explica esa diferencia?',
+          en:'Two neighbouring slopes were left bare in the same year and on the same kind of rock. On one, mosses and shrubs grew from the start; the other stayed bare. Decades later, the slope with plants has a thicker layer of soil. What explains that difference?' },
+      opts:{ es:['Las plantas y los organismos que viven con ellas dejan restos que se transforman en materia orgánica y se mezclan con los fragmentos de roca',
+                 'Las plantas impidieron que la lluvia tocara la roca, y una roca protegida del agua se convierte en suelo con mayor rapidez',
+                 'La roca de esa ladera era más blanda desde el principio, porque las plantas únicamente logran crecer sobre rocas blandas',
+                 'El suelo de esa ladera llegó arrastrado por el viento desde otra región y se depositó encima de la roca'],
+             en:['Plants and the organisms that live with them leave remains that turn into organic matter and mix with the rock fragments',
+                 'The plants kept the rain from touching the rock, and a rock protected from water turns into soil more quickly',
+                 'The rock on that slope was softer from the start, because plants only manage to grow on soft rock',
+                 'The soil on that slope was carried there by the wind from another region and settled on top of the rock'] },
+      ci:0, showWork:false,
+      hint:{ es:'Pregúntate qué aporta un ser vivo al terreno cuando muere y qué le falta a una ladera pelada.',
+             en:'Ask yourself what a living thing gives to the ground when it dies and what a bare slope is missing.' },
+      exp:{ es:'El suelo tiene una parte mineral, que viene de la roca desgastada, y una parte orgánica, que viene de los seres vivos. Donde hay plantas, sus restos alimentan esa segunda parte y el suelo engorda más rápido. El agua no protege ni acelera al quedar fuera, la dureza de la roca no depende de que crezcan plantas, y el polvo del viento aporta material en algunas zonas pero no forma por sí solo un suelo con sus capas.',
+            en:'Soil has a mineral part, which comes from worn rock, and an organic part, which comes from living things. Where there are plants, their remains feed that second part and the soil thickens faster. Water does not protect or speed things up by being kept out, the hardness of the rock does not depend on plants growing, and windblown dust adds material in some areas but does not on its own build a soil with its layers.' }
+    },
+    {
+      title:{ es:'La ceniza del volcán', en:'The ash from the volcano' },
+      q:{ es:'Una erupción cubrió un valle con una capa gruesa de ceniza volcánica y el terreno quedó desnudo. ¿Qué tendría que ocurrir ahí para que con el tiempo se forme un suelo?',
+          en:'An eruption covered a valley with a thick layer of volcanic ash and the ground was left bare. What would have to happen there for a soil to form over time?' },
+      opts:{ es:['Que la ceniza se vaya desgastando, que se instalen plantas y otros seres vivos y que sus restos se mezclen con el material durante mucho tiempo',
+                 'Que llueva una temporada completa sobre el valle, porque el agua por sí sola convierte en suelo cualquier material que encuentre',
+                 'Que alguien pase el arado sobre el valle, porque el suelo aparece en cuanto la superficie se remueve con herramientas',
+                 'Que el viento traiga polvo de otras regiones, ya que ese polvo es el único origen posible de la capa fértil'],
+             en:['That the ash slowly wears down, that plants and other living things settle in and that their remains mix with the material over a long time',
+                 'That it rains for a whole season over the valley, because water on its own turns any material it finds into soil',
+                 'That someone runs a plough over the valley, because soil appears as soon as the surface is turned over with tools',
+                 'That the wind brings dust from other regions, since that dust is the only possible origin of the fertile layer'] },
+      ci:0, showWork:false,
+      hint:{ es:'Recuerda que en la formación del suelo intervienen el material de origen, los seres vivos y el tiempo.',
+             en:'Remember that soil formation involves the starting material, living things and time.' },
+      exp:{ es:'Para que haya suelo hacen falta tres cosas juntas: un material que se desgaste, seres vivos que aporten materia orgánica y tiempo suficiente para que todo se mezcle en capas. La lluvia sola desgasta pero no aporta vida, el arado remueve lo que ya existe sin crear nada nuevo, y el polvo del viento es apenas otro material de partida.',
+            en:'For there to be soil three things are needed together: a material that wears down, living things that add organic matter and enough time for it all to mix into layers. Rain alone wears things down but adds no life, the plough turns over what is already there without creating anything new, and windblown dust is just one more starting material.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP2(rng){
+  var vs = [];
+  var a = pk(rng, [200, 250, 300, 350, 400]);
+  var b = ri(rng, 3, 6);
+  vs.push({
+    title:{ es:'El reloj lento del suelo', en:'The slow clock of soil' },
+    q:{ es:'En una ladera se ha medido que el suelo gana 1 centímetro de espesor cada ' + a + ' años. Si ese ritmo se mantiene igual, ¿cuántos años tardaría esa ladera en formar una capa de ' + b + ' centímetros?',
+        en:'On a slope it has been measured that the soil gains 1 centimetre of thickness every ' + a + ' years. If that pace stays the same, how many years would that slope take to build a layer of ' + b + ' centimetres?' },
+    opts:{ es:[String(a * b), String(a * (b - 1)), String(a * (b + 1)), String(a)],
+           en:[String(a * b), String(a * (b - 1)), String(a * (b + 1)), String(a)] },
+    ci:0, showWork:true,
+    hint:{ es:'Cuenta cuántas veces hay que esperar lo que cuesta un solo centímetro.',
+           en:'Count how many times you have to wait what a single centimetre costs.' },
+    exp:{ es:'Cada centímetro cuesta ' + a + ' años, así que ' + b + ' centímetros cuestan ' + b + ' veces esa espera. Quedarse en ' + a + ' responde por un solo centímetro, y equivocarse por un centímetro de más o de menos cambia el total en cientos de años. La cuenta es ' + a + ' por ' + b + ' = ' + (a * b) + '.',
+          en:'Each centimetre costs ' + a + ' years, so ' + b + ' centimetres cost ' + b + ' times that wait. Stopping at ' + a + ' answers for a single centimetre, and being one centimetre out changes the total by hundreds of years. The calculation is ' + a + ' times ' + b + ' = ' + (a * b) + '.' }
+  });
+  var k = pk(rng, [3, 5, 7]);
+  var Q = pk(rng, [4, 6]);
+  var P = Q * k;
+  vs.push({
+    title:{ es:'Lo que se fue de la parcela', en:'What left the plot' },
+    q:{ es:'En una parcela se midió el espesor del suelo y se volvió a medir ' + Q + ' años después: en total se habían perdido ' + P + ' milímetros. Si la pérdida fue pareja en todos esos años, ¿cuántos milímetros se perdieron cada año?',
+        en:'On a plot the thickness of the soil was measured and measured again ' + Q + ' years later: in total ' + P + ' millimetres had been lost. If the loss was even across all those years, how many millimetres were lost each year?' },
+    opts:{ es:[String(k), String(P), String(P - Q), String(Q)],
+           en:[String(k), String(P), String(P - Q), String(Q)] },
+    ci:0, showWork:true,
+    hint:{ es:'Reparte lo perdido en partes iguales, una por cada año que pasó.',
+           en:'Split what was lost into equal parts, one for each year that passed.' },
+    exp:{ es:'La pérdida total se reparte entre los años que duró la medición. Tomar los ' + P + ' milímetros completos confunde el total con el ritmo anual, y restar los años a los milímetros mezcla dos cosas que ni siquiera se miden igual. La cuenta es ' + P + ' entre ' + Q + ' = ' + k + '.',
+          en:'The total loss is split between the years the measurement covered. Taking the whole ' + P + ' millimetres confuses the total with the yearly pace, and subtracting the years from the millimetres mixes two things that are not even measured in the same way. The calculation is ' + P + ' divided by ' + Q + ' = ' + k + '.' }
+  });
+  return pk(rng, vs);
+}
+
+function mkP3(rng){
+  var vs = [
+    {
+      title:{ es:'El reparto del ejido', en:'Sharing out the ejido' },
+      q:{ es:'Un ejido tiene dos zonas: una parte plana con suelo profundo y una ladera de pendiente fuerte con suelo delgado. La asamblea debe decidir qué actividad va en cada zona. ¿Cuál reparto cuida mejor el suelo?',
+          en:'An ejido has two areas: a flat part with deep soil and a steep slope with thin soil. The assembly has to decide which activity goes in each area. Which arrangement takes better care of the soil?' },
+      opts:{ es:['Cultivos en la parte plana y vegetación permanente en la ladera',
+                 'Cultivos en la ladera y ganado suelto en la parte plana profunda',
+                 'Vegetación permanente en la parte plana y cultivos en la ladera',
+                 'Bodegas y estacionamiento en la parte plana y cultivos en la ladera'],
+             en:['Crops on the flat part and permanent vegetation on the slope',
+                 'Crops on the slope and loose cattle on the deep flat part',
+                 'Permanent vegetation on the flat part and crops on the slope',
+                 'Warehouses and car park on the flat part and crops on the slope'] },
+      ci:0, showWork:false,
+      hint:{ es:'Piensa en qué zona el agua de lluvia corre más rápido y qué necesita esa zona para retener la tierra.',
+             en:'Think about which area rainwater runs down fastest and what that area needs to hold the earth in place.' },
+      exp:{ es:'En una pendiente fuerte el agua baja con fuerza y arrastra la capa fértil apenas queda descubierta, así que ahí conviene una cubierta que se quede todo el año. La parte plana y profunda es la que aguanta el trabajo del cultivo. Las otras tres opciones ponen a cultivar justo donde el suelo se va, o sepultan bajo construcciones el mejor terreno del ejido.',
+            en:'On a steep slope water runs down hard and drags away the fertile layer as soon as it is uncovered, so what suits there is a cover that stays all year. The deep flat part is the one that stands up to the work of cropping. The other three options put crops exactly where the soil leaves, or bury the best land of the ejido under buildings.' }
+    },
+    {
+      title:{ es:'El terreno pedregoso', en:'The stony plot' },
+      q:{ es:'Una familia recibe un terreno en pendiente, con suelo delgado y muchas piedras, en una zona de lluvias intensas. ¿Cuál uso le conviene a ese terreno?',
+          en:'A family receives a sloping plot, with thin soil and many stones, in an area of heavy rain. Which use suits that plot?' },
+      opts:{ es:['Mantenerlo con vegetación permanente que sostenga el suelo y aprovechar con cuidado la madera y otros productos',
+                 'Sembrar cada año un cultivo que exija remover la superficie, porque así el suelo se afloja y se hace más profundo',
+                 'Abrirlo al pastoreo intensivo, ya que el pisoteo del ganado aprieta el terreno y evita que la lluvia se lo lleve',
+                 'Nivelarlo con maquinaria y construir encima, aprovechando que un terreno pedregoso no sirve para nada más'],
+             en:['Keeping it under permanent vegetation that holds the soil and carefully taking timber and other products from it',
+                 'Sowing every year a crop that needs the surface turned over, because that way the soil loosens and gets deeper',
+                 'Opening it to intensive grazing, since the trampling of the cattle presses the ground down and stops the rain taking it',
+                 'Levelling it with machinery and building on it, taking advantage of a stony plot being good for nothing else'] },
+      ci:0, showWork:false,
+      hint:{ es:'Con suelo delgado y lluvia fuerte, lo primero es que algo cubra la superficie todo el año.',
+             en:'With thin soil and heavy rain, the first thing needed is something covering the surface all year.' },
+      exp:{ es:'Un suelo delgado en pendiente no aguanta que lo dejen descubierto: la cubierta vegetal permanente es lo que lo sostiene, y aun así permite obtener productos del terreno. Remover cada año no hace más profundo el suelo, el pisoteo aprieta el terreno pero también lo deja pelado, y llamar inservible a un terreno es lo que suele terminar en construcciones sobre laderas inestables.',
+            en:'Thin soil on a slope cannot take being left bare: permanent plant cover is what holds it, and it still allows products to be taken from the land. Turning it over every year does not make the soil deeper, trampling presses the ground down but also leaves it bare, and calling a plot useless is what usually ends in buildings on unstable slopes.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP4(rng){
+  var vs = [
+    {
+      title:{ es:'De bosque a colonia', en:'From forest to housing estate' },
+      q:{ es:'En veinte años, una zona de bosque de un municipio pasó a ser terreno de cultivo y después colonia con calles pavimentadas. ¿Qué le ocurre al suelo con ese cambio de uso?',
+          en:'In twenty years, an area of forest in a municipality became crop land and later a housing estate with paved streets. What happens to the soil with that change of use?' },
+      opts:{ es:['Queda cubierto por calles y construcciones, deja de recibir materia orgánica y el agua ya no se infiltra donde antes lo hacía',
+                 'Descansa bajo el pavimento y recupera poco a poco la fertilidad que tenía en la época del bosque',
+                 'Se vuelve más fértil que el del bosque, porque ya no hay plantas que le quiten nutrientes cada temporada',
+                 'No cambia en nada, porque lo que se modifica está encima y el suelo permanece igual debajo'],
+             en:['It ends up covered by streets and buildings, stops receiving organic matter and water no longer soaks in where it used to',
+                 'It rests under the pavement and slowly recovers the fertility it had in the days of the forest',
+                 'It becomes more fertile than the forest soil, because there are no longer plants taking nutrients from it each season',
+                 'Nothing changes, because what is altered is on top and the soil stays the same underneath'] },
+      ci:0, showWork:false,
+      hint:{ es:'Pregúntate qué le llegaba al suelo bajo el bosque y qué deja de llegarle bajo una calle.',
+             en:'Ask yourself what reached the soil under the forest and what stops reaching it under a street.' },
+      exp:{ es:'Bajo el bosque, las hojas y las raíces alimentan la capa orgánica y el agua entra al terreno. Bajo el pavimento no llega ninguna de las dos cosas: el suelo queda sellado y el agua de lluvia corre por la superficie en lugar de infiltrarse. Un suelo cubierto no descansa ni se enriquece, y sostener que nada cambia ignora que el suelo depende de lo que ocurre arriba de él.',
+            en:'Under the forest, leaves and roots feed the organic layer and water enters the ground. Under pavement neither of those arrives: the soil is sealed and rainwater runs across the surface instead of soaking in. Covered soil neither rests nor grows richer, and claiming nothing changes ignores that soil depends on what happens above it.' }
+    },
+    {
+      title:{ es:'Abrir el monte al cultivo', en:'Opening the woodland to crops' },
+      q:{ es:'Una comunidad decide desmontar una zona de monte en pendiente para sembrar ahí cada año. Los primeros dos ciclos la cosecha es buena y después empieza a bajar. ¿Qué explica mejor esa caída?',
+          en:'A community decides to clear an area of sloping woodland to sow there every year. For the first two cycles the harvest is good and after that it starts to drop. What best explains that fall?' },
+      opts:{ es:['Sin la cubierta del monte, la lluvia arrastra ladera abajo la capa fértil que el bosque había acumulado durante años',
+                 'La semilla que se usa se debilita después de dos ciclos y por eso rinde menos en el mismo terreno',
+                 'El terreno recién desmontado necesita varios años de descanso antes de dar su primera buena cosecha',
+                 'Las raíces de los árboles que fueron cortados siguen consumiendo bajo tierra el agua del cultivo'],
+             en:['With no woodland cover, the rain drags downhill the fertile layer the forest had built up over years',
+                 'The seed being used weakens after two cycles and that is why it yields less on the same plot',
+                 'Freshly cleared land needs several years of rest before giving its first good harvest',
+                 'The roots of the trees that were cut go on using up the water of the crop underground'] },
+      ci:0, showWork:false,
+      hint:{ es:'La primera cosecha vive de lo que el bosque dejó guardado; pregúntate cuánto dura eso en una pendiente.',
+             en:'The first harvest lives off what the forest left stored; ask yourself how long that lasts on a slope.' },
+      exp:{ es:'El monte deja una capa rica en materia orgánica, y por eso los primeros ciclos rinden. Al quedar el terreno descubierto en pendiente, cada lluvia se lleva parte de esa capa y no hay nada que la reponga al mismo ritmo. La semilla no se debilita por el terreno, un desmonte no rinde más tras descansar sin cubierta, y las raíces cortadas dejan de consumir agua.',
+            en:'The woodland leaves behind a layer rich in organic matter, and that is why the first cycles yield well. Once the ground is bare on a slope, every rain takes part of that layer away and nothing replaces it at the same pace. Seed does not weaken because of the plot, cleared land does not yield more after resting with no cover, and cut roots stop using water.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP5(rng){
+  var vs = [
+    {
+      title:{ es:'Dos parcelas después de la cosecha', en:'Two plots after the harvest' },
+      q:{ es:'Dos parcelas vecinas de la misma ladera terminaron su cosecha el mismo día. En una se dejaron los restos de las plantas cubriendo el terreno; en la otra se quemaron y el suelo quedó desnudo hasta la siguiente siembra. Después de una temporada de lluvias fuertes, ¿qué se espera encontrar?',
+          en:'Two neighbouring plots on the same slope finished their harvest on the same day. On one, the plant remains were left covering the ground; on the other they were burned and the soil was left bare until the next sowing. After a season of heavy rain, what would you expect to find?' },
+      opts:{ es:['La parcela desnuda perdió más suelo, porque nada frenó el golpe de la lluvia ni el agua que escurre',
+                 'La parcela cubierta perdió más suelo, porque los restos retienen agua y un terreno húmedo se lava con más facilidad',
+                 'Las dos perdieron lo mismo, porque la pérdida de suelo depende solo de cuánta lluvia cayó sobre la ladera',
+                 'Ninguna perdió suelo, porque un terreno de cultivo repone cada temporada lo que la lluvia se lleva'],
+             en:['The bare plot lost more soil, because nothing softened the blow of the rain or the water running off',
+                 'The covered plot lost more soil, because the remains hold water and wet ground washes away more easily',
+                 'Both lost the same, because soil loss depends only on how much rain fell on the slope',
+                 'Neither lost soil, because a crop plot replaces every season what the rain takes away'] },
+      ci:0, showWork:false,
+      hint:{ es:'Compara qué recibe la primera gota de lluvia en cada parcela antes de tocar la tierra.',
+             en:'Compare what the first raindrop meets on each plot before it touches the earth.' },
+      exp:{ es:'Los restos de la cosecha reciben el impacto de la gota, frenan el agua que corre y le dan tiempo de infiltrarse. Sin esa cubierta, la lluvia golpea directo, desprende las partículas y las arrastra ladera abajo. La pérdida no depende solo de cuánta lluvia cae, sino de cómo llega al suelo, y ningún cultivo repone en un año lo que tarda siglos en formarse.',
+            en:'Harvest remains take the impact of the drop, slow the running water and give it time to soak in. With no such cover, the rain hits directly, loosens the particles and drags them downhill. The loss does not depend only on how much rain falls, but on how it reaches the soil, and no crop replaces in one year what takes centuries to form.' }
+    },
+    {
+      title:{ es:'La costra blanca', en:'The white crust' },
+      q:{ es:'En una zona calurosa se riega en abundancia un terreno que no tiene salida para el agua sobrante. Después de varios ciclos aparece una costra blanquecina en la superficie y las plantas crecen cada vez peor. ¿Qué ocurrió en ese suelo?',
+          en:'In a hot area a plot with no way out for the leftover water is watered heavily. After several cycles a whitish crust appears on the surface and the plants grow worse and worse. What happened in that soil?' },
+      opts:{ es:['El agua se evaporó y fue dejando en la superficie las sales que traía disueltas',
+                 'El exceso de riego lavó las sales hacia abajo y por eso el terreno quedó más fértil que antes',
+                 'La costra es materia orgánica acumulada por el riego frecuente y sirve de alimento a las plantas',
+                 'El riego enfrió el terreno y las plantas dejaron de crecer por la baja temperatura del suelo'],
+             en:['The water evaporated and kept leaving on the surface the salts it carried dissolved',
+                 'The excess watering washed the salts downward and that is why the plot ended up more fertile than before',
+                 'The crust is organic matter built up by frequent watering and it serves as food for the plants',
+                 'The watering cooled the plot and the plants stopped growing because of the low soil temperature'] },
+      ci:0, showWork:false,
+      hint:{ es:'El agua de riego lleva sales disueltas; piensa qué se queda cuando el agua se va por evaporación.',
+             en:'Irrigation water carries dissolved salts; think about what stays when the water leaves by evaporating.' },
+      exp:{ es:'En clima caluroso y sin drenaje, el agua sale del terreno evaporándose, pero las sales que traía no se evaporan: se quedan y se acumulan hasta formar una costra que impide que las raíces tomen agua. Si el agua sobrante pudiera salir, se llevaría esas sales, que es justo lo contrario de lo que pasó aquí. Ni la costra es alimento ni el problema es la temperatura.',
+            en:'In hot weather with no drainage, water leaves the plot by evaporating, but the salts it carried do not evaporate: they stay and build up until they form a crust that stops roots from taking water. If the leftover water could drain away it would carry those salts off, which is exactly the opposite of what happened here. The crust is not food and the problem is not temperature.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP6(rng){
+  var vs = [];
+  var H = ri(rng, 8, 20);
+  var T = ri(rng, 5, 9);
+  vs.push({
+    title:{ es:'Lo que pierde la parcela', en:'What the plot loses' },
+    q:{ es:'En una parcela de ' + H + ' hectáreas se estimó que la erosión se lleva ' + T + ' toneladas de suelo por hectárea cada año. ¿Cuántas toneladas de suelo pierde la parcela completa en un año?',
+        en:'On a plot of ' + H + ' hectares it was estimated that erosion takes ' + T + ' tonnes of soil per hectare every year. How many tonnes of soil does the whole plot lose in one year?' },
+    opts:{ es:[String(H * T), String(H + T), String(H * (T - 1)), String(T)],
+           en:[String(H * T), String(H + T), String(H * (T - 1)), String(T)] },
+    ci:0, showWork:true,
+    hint:{ es:'Lo que pierde una hectárea se repite en cada una de las hectáreas de la parcela.',
+           en:'What one hectare loses is repeated on each of the hectares of the plot.' },
+    exp:{ es:'El dato está dado por hectárea, así que hay que repetirlo tantas veces como hectáreas tenga la parcela. Sumar las dos cantidades mezcla hectáreas con toneladas, y quedarse en ' + T + ' responde por una sola hectárea. La cuenta es ' + H + ' por ' + T + ' = ' + (H * T) + ' toneladas.',
+          en:'The figure is given per hectare, so it has to be repeated as many times as the plot has hectares. Adding the two quantities mixes hectares with tonnes, and stopping at ' + T + ' answers for a single hectare. The calculation is ' + H + ' times ' + T + ' = ' + (H * T) + ' tonnes.' }
+  });
+  var m = ri(rng, 9, 20);
+  var N = 5 * m;
+  vs.push({
+    title:{ es:'El recorrido por el ejido', en:'The walk around the ejido' },
+    q:{ es:'Un grupo recorrió las ' + N + ' hectáreas de un ejido y anotó el estado de cada una. Encontró que tres de cada cinco hectáreas muestran señales claras de erosión. ¿Cuántas hectáreas del ejido muestran señales de erosión?',
+        en:'A group walked the ' + N + ' hectares of an ejido and wrote down the state of each one. It found that three out of every five hectares show clear signs of erosion. How many hectares of the ejido show signs of erosion?' },
+    opts:{ es:[String(3 * N / 5), String(N / 5), String(2 * N / 5), String(N)],
+           en:[String(3 * N / 5), String(N / 5), String(2 * N / 5), String(N)] },
+    ci:0, showWork:true,
+    hint:{ es:'Reparte las hectáreas en grupos de cinco y cuenta tres de cada grupo.',
+           en:'Split the hectares into groups of five and count three from each group.' },
+    exp:{ es:'Las hectáreas del ejido forman ' + m + ' grupos de cinco, y en cada grupo hay tres con erosión. Tomar una de cada cinco cuenta apenas la tercera parte de lo hallado, y quedarse con dos de cada cinco cuenta justo las que están sanas. La cuenta es ' + m + ' por 3 = ' + (3 * N / 5) + ' hectáreas.',
+          en:'The hectares of the ejido make ' + m + ' groups of five, and in each group three show erosion. Taking one out of five counts barely a third of what was found, and taking two out of five counts exactly the healthy ones. The calculation is ' + m + ' times 3 = ' + (3 * N / 5) + ' hectares.' }
+  });
+  return pk(rng, vs);
+}
+
+function mkP7(rng){
+  var vs = [
+    {
+      title:{ es:'El desmonte y el aire', en:'The clearing and the air' },
+      q:{ es:'Una empresa desmonta y quema una superficie de bosque para abrir terrenos de cultivo. ¿Por qué esa acción tiene que ver con el calentamiento global?',
+          en:'A company clears and burns an area of forest to open crop land. Why does that action have to do with global warming?' },
+      opts:{ es:['Porque el carbono que estaba guardado en los árboles y en la materia orgánica del suelo pasa al aire como gas de efecto invernadero',
+                 'Porque el humo tapa la luz del Sol y hace que la superficie de la Tierra reciba más calor del que recibía antes',
+                 'Porque el terreno despejado refleja la luz hacia el espacio y devuelve al aire el calor que el bosque guardaba',
+                 'Porque al quitar los árboles el viento corre más rápido y arrastra hasta ese lugar el calor de otras regiones'],
+             en:['Because the carbon stored in the trees and in the organic matter of the soil goes into the air as a greenhouse gas',
+                 'Because the smoke blocks the light of the Sun and makes the surface of the Earth receive more heat than before',
+                 'Because the cleared ground reflects light back into space and returns to the air the heat the forest was holding',
+                 'Because with the trees gone the wind runs faster and drags to that place the heat of other regions'] },
+      ci:0, showWork:false,
+      hint:{ es:'Pregúntate dónde estaba guardado el carbono antes del desmonte y a dónde va después.',
+             en:'Ask yourself where the carbon was stored before the clearing and where it goes afterwards.' },
+      exp:{ es:'Los árboles y la materia orgánica del suelo son depósitos de carbono. Al cortarlos y quemarlos, ese carbono se combina con el oxígeno y sale al aire como dióxido de carbono, que es el gas que retiene calor en la atmósfera. Las otras tres respuestas inventan mecanismos: el humo no calienta la superficie, reflejar luz no devuelve calor guardado y el viento no traslada el calentamiento del planeta.',
+            en:'Trees and the organic matter of the soil are carbon stores. When they are cut and burned, that carbon joins with oxygen and leaves into the air as carbon dioxide, the gas that traps heat in the atmosphere. The other three answers invent mechanisms: smoke does not heat the surface, reflecting light does not give back stored heat and the wind does not move the warming of the planet around.' }
+    },
+    {
+      title:{ es:'El invierno frío', en:'The cold winter' },
+      q:{ es:'Un compañero afirma: este invierno hizo mucho frío en mi ciudad, así que el calentamiento global no existe. ¿Cuál respuesta corrige mejor ese razonamiento?',
+          en:'A classmate claims: this winter was very cold in my city, so global warming does not exist. Which answer best corrects that reasoning?' },
+      opts:{ es:['Un invierno frío en una ciudad describe el estado del tiempo de un lugar, y el calentamiento se afirma con promedios de muchos años y de todo el planeta',
+                 'Tiene razón: si en una ciudad hizo frío, entonces la temperatura del planeta no puede estar subiendo',
+                 'Ese frío demuestra que el clima del planeta se está enfriando en lugar de calentarse como se dice',
+                 'El calentamiento solo se nota en verano, así que los inviernos se comportan igual que siempre'],
+             en:['A cold winter in one city describes the weather of one place, and the warming is claimed from averages over many years and the whole planet',
+                 'He is right: if it was cold in one city, then the temperature of the planet cannot be rising',
+                 'That cold shows that the climate of the planet is cooling instead of warming as people say',
+                 'The warming is only noticeable in summer, so winters behave just as they always did'] },
+      ci:0, showWork:false,
+      hint:{ es:'Piensa en la diferencia entre lo que ocurre un día en un lugar y lo que ocurre en promedio durante décadas.',
+             en:'Think about the difference between what happens on one day in one place and what happens on average over decades.' },
+      exp:{ es:'El estado del tiempo cambia de un día a otro y de un lugar a otro; el clima es el comportamiento promedio durante muchos años. Un invierno frío en una ciudad cabe perfectamente dentro de una tendencia global de calentamiento, porque la tendencia se mide con registros de todo el planeta y de décadas. Las otras respuestas toman un caso local como si fuera la medida del mundo entero.',
+            en:'Weather changes from day to day and from place to place; climate is the average behaviour over many years. A cold winter in one city fits perfectly inside a global warming trend, because the trend is measured with records from the whole planet and across decades. The other answers take one local case as if it were the measure of the entire world.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP8(rng){
+  var vs = [];
+  var G = pk(rng, [40, 50, 60]);
+  var A = ri(rng, 6, 12);
+  vs.push({
+    title:{ es:'El carbono que sale del bosque', en:'The carbon that leaves the forest' },
+    q:{ es:'Se estima que cada hectárea de bosque que se desmonta y se quema libera al aire ' + G + ' toneladas de carbono. En un municipio se desmontaron ' + A + ' hectáreas durante un año. ¿Cuántas toneladas de carbono se liberaron?',
+        en:'It is estimated that every hectare of forest cleared and burned releases ' + G + ' tonnes of carbon into the air. In one municipality ' + A + ' hectares were cleared during a year. How many tonnes of carbon were released?' },
+    opts:{ es:[String(G * A), String(G + A), String(G * (A - 1)), String(G)],
+           en:[String(G * A), String(G + A), String(G * (A - 1)), String(G)] },
+    ci:0, showWork:true,
+    hint:{ es:'Lo que libera una hectárea se repite en cada hectárea desmontada.',
+           en:'What one hectare releases is repeated on each cleared hectare.' },
+    exp:{ es:'El dato viene por hectárea, así que se repite tantas veces como hectáreas se desmontaron. Sumar las cantidades mezcla hectáreas con toneladas y da un número demasiado pequeño para el daño real. La cuenta es ' + G + ' por ' + A + ' = ' + (G * A) + ' toneladas.',
+          en:'The figure comes per hectare, so it is repeated as many times as hectares were cleared. Adding the quantities mixes hectares with tonnes and gives a number far too small for the real damage. The calculation is ' + G + ' times ' + A + ' = ' + (G * A) + ' tonnes.' }
+  });
+  var E = pk(rng, [30, 35, 40]);
+  var d = pk(rng, [8, 12, 15]);
+  var S = E + d;
+  vs.push({
+    title:{ es:'El suelo que dejó de guardar', en:'The soil that stopped storing' },
+    q:{ es:'Un suelo con su cubierta vegetal guardaba ' + S + ' toneladas de carbono por hectárea. Después de varios años de sobrepastoreo y de quedar descubierto, ese mismo suelo guarda ' + E + ' toneladas por hectárea. ¿Cuántas toneladas de carbono por hectárea dejó de guardar?',
+        en:'A soil with its plant cover used to store ' + S + ' tonnes of carbon per hectare. After several years of overgrazing and of being left bare, that same soil stores ' + E + ' tonnes per hectare. How many tonnes of carbon per hectare did it stop storing?' },
+    opts:{ es:[String(d), String(S), String(E), String(S + E)],
+           en:[String(d), String(S), String(E), String(S + E)] },
+    ci:0, showWork:true,
+    hint:{ es:'Compara la cantidad de antes con la de ahora y fíjate en la diferencia.',
+           en:'Compare the amount from before with the one now and look at the difference.' },
+    exp:{ es:'La pregunta no pide cuánto guarda ni cuánto guardaba, sino la diferencia entre las dos cantidades, y esa diferencia es carbono que terminó en el aire. Sumar las dos cifras daría un suelo que nunca existió. La cuenta es ' + S + ' menos ' + E + ' = ' + d + ' toneladas por hectárea.',
+          en:'The question does not ask how much it stores or how much it stored, but the difference between the two amounts, and that difference is carbon that ended up in the air. Adding the two figures would give a soil that never existed. The calculation is ' + S + ' minus ' + E + ' = ' + d + ' tonnes per hectare.' }
+  });
+  return pk(rng, vs);
+}
+
+function mkP9(rng){
+  var vs = [
+    {
+      title:{ es:'La ladera de la escuela', en:'The slope behind the school' },
+      q:{ es:'Un grupo quiere pasar de la queja por la tierra que se lava en la ladera detrás de la escuela a una acción que se pueda cumplir y revisar. ¿Cuál propuesta está mejor planteada para lograrlo?',
+          en:'A group wants to move from complaining about the earth washing off the slope behind the school to an action that can be carried out and reviewed. Which proposal is best set out to achieve it?' },
+      opts:{ es:['Sembrar una franja de plantas de la región al pie de la ladera y medir cada mes cuánta tierra se acumula frente a esa franja',
+                 'Concientizar a todo el municipio sobre la importancia de cuidar la naturaleza y el medio ambiente',
+                 'Pedir a las autoridades que resuelvan de una vez el problema de la erosión en toda la región',
+                 'Esperar a que la vegetación regrese sola cuando dejen de pasar vehículos por la parte alta'],
+             en:['Planting a strip of local plants at the foot of the slope and measuring each month how much earth builds up in front of that strip',
+                 'Raising awareness across the whole municipality about the importance of caring for nature and the environment',
+                 'Asking the authorities to solve the erosion problem of the whole region once and for all',
+                 'Waiting for the vegetation to come back on its own once vehicles stop crossing the upper part'] },
+      ci:0, showWork:false,
+      hint:{ es:'Busca la propuesta que dice qué se hace, dónde se hace y con qué se sabrá si funcionó.',
+             en:'Look for the proposal that says what is done, where it is done and how you will know whether it worked.' },
+      exp:{ es:'La primera nombra una acción concreta, un lugar y una medida que permitirá comparar después: eso la vuelve del tamaño de un grupo escolar y revisable en un mes. Las otras tres son un deseo general, una petición sin compromiso propio y una espera, y ninguna deja un dato con el cual saber si algo cambió.',
+            en:'The first names a concrete action, a place and a measure that will allow a later comparison: that makes it the right size for a school group and reviewable in a month. The other three are a general wish, a request with no commitment of their own and a wait, and none of them leaves a figure to tell whether anything changed.' }
+    },
+    {
+      title:{ es:'Los surcos de la ladera', en:'The furrows on the slope' },
+      q:{ es:'Una familia va a sembrar en una ladera y pide consejo para que la lluvia no se lleve la tierra. ¿Cuál práctica reduce esa pérdida?',
+          en:'A family is going to sow on a slope and asks for advice so that the rain does not carry the earth away. Which practice reduces that loss?' },
+      opts:{ es:['Trazar los surcos siguiendo las curvas de nivel, atravesados a la pendiente, para que el agua no baje en línea recta',
+                 'Trazar los surcos hacia abajo siguiendo la pendiente, para que el agua salga del terreno lo más rápido posible',
+                 'Retirar los restos de la cosecha anterior y dejar la superficie limpia hasta la siguiente siembra',
+                 'Pasar maquinaria pesada varias veces para emparejar bien el terreno antes de sembrar'],
+             en:['Laying the furrows along the contour lines, across the gradient, so the water does not run straight down',
+                 'Laying the furrows downhill along the gradient, so the water leaves the plot as fast as possible',
+                 'Removing the remains of the previous harvest and leaving the surface clean until the next sowing',
+                 'Driving heavy machinery over it several times to level the ground well before sowing'] },
+      ci:0, showWork:false,
+      hint:{ es:'El agua se lleva más tierra mientras más rápido corra; piensa qué trazo la obliga a detenerse.',
+             en:'Water carries more earth the faster it runs; think about which layout forces it to stop.' },
+      exp:{ es:'Un surco atravesado a la pendiente funciona como un escalón: detiene el agua, le da tiempo de infiltrarse y deja la tierra en su sitio. Los surcos que bajan derecho se convierten en canales que aceleran el agua, quitar los restos deja la superficie sin protección y la maquinaria pesada aprieta el terreno hasta que el agua ya no puede entrar.',
+            en:'A furrow across the gradient works like a step: it stops the water, gives it time to soak in and leaves the earth in place. Furrows running straight down become channels that speed the water up, removing the remains leaves the surface unprotected and heavy machinery presses the ground until water can no longer get in.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP10(rng){
+  var vs = [
+    {
+      title:{ es:'El caso completo', en:'The whole case' },
+      q:{ es:'En una comunidad se desmontó la parte alta de una ladera para abrir potreros, se metieron más animales de los que la hierba aguantaba, el suelo quedó descubierto y con las lluvias el lodo bajó hasta las parcelas y tapó el canal de riego. Un grupo de estudiantes va a presentar el caso ante la autoridad. ¿Cuál planteamiento describe el caso completo y pide algo que después se pueda comprobar?',
+          en:'In a community the upper part of a slope was cleared to open paddocks, more animals were put in than the grass could support, the soil was left bare and with the rains the mud came down to the plots and blocked the irrigation channel. A group of students is going to present the case to the authority. Which statement describes the whole case and asks for something that can be checked afterwards?' },
+      opts:{ es:['Se desmontó y se sobrecargó la parte alta, el suelo quedó descubierto y el lodo tapó el canal; pedimos sembrar una franja de vegetación arriba, reducir la carga de animales y registrar cada mes el lodo retirado del canal',
+                 'La ladera se ve fea y erosionada desde el camino que entra al pueblo; pedimos que alguien la arregle lo antes posible',
+                 'Las lluvias de este año cayeron con más fuerza que las de años anteriores; pedimos que se avise a la comunidad cuando vengan tormentas',
+                 'Los dueños de las parcelas de abajo descuidaron su canal de riego; pedimos que lo limpien durante la próxima faena del pueblo'],
+             en:['The upper part was cleared and overloaded, the soil was left bare and the mud blocked the channel; we ask for a strip of vegetation above, fewer animals and a monthly record of mud removed from the channel',
+                 'The slope looks ugly and eroded from the road that comes into the village; we ask that someone fix it as soon as possible',
+                 'The rains this year fell harder than those of previous years; we ask that the community be warned whenever storms are coming',
+                 'The owners of the plots below neglected their irrigation channel; we ask that they clean it during the next village work day'] },
+      ci:0, showWork:false,
+      hint:{ es:'Revisa si el planteamiento nombra el origen, el daño al suelo, a quiénes afectó y algo que se pueda medir después.',
+             en:'Check whether the statement names the origin, the damage to the soil, who it affected and something that can be measured later.' },
+      exp:{ es:'Solo el primero junta las cuatro piezas: qué se hizo arriba, qué le pasó al suelo, a quiénes alcanzó abajo y qué se pide, con un registro que permitirá saber si el lodo bajó. El segundo se queda en la impresión, el tercero cambia el origen del caso por el clima de un año y el cuarto culpa a quienes recibieron el daño sin tocar lo que lo provocó.',
+            en:'Only the first brings the four pieces together: what was done above, what happened to the soil, who it reached below and what is being asked, with a record that will show whether the mud went down. The second stops at an impression, the third swaps the origin of the case for the weather of one year and the fourth blames those who received the damage without touching what caused it.' }
+    },
+    {
+      title:{ es:'Reparar y prevenir', en:'Repair and prevent' },
+      q:{ es:'En la misma comunidad, el lodo que baja de la ladera desmontada tapa cada temporada el canal de riego. Se discuten cuatro medidas. ¿Cuál combina algo que repara el daño con algo que evita que vuelva a ocurrir?',
+          en:'In the same community, the mud coming down from the cleared slope blocks the irrigation channel every season. Four measures are being discussed. Which one combines something that repairs the damage with something that stops it happening again?' },
+      opts:{ es:['Retirar el lodo del canal y sembrar en la parte alta una franja de vegetación que sostenga el suelo',
+                 'Retirar el lodo del canal cada temporada y volver a retirarlo cuando el canal se llene de nuevo',
+                 'Sembrar vegetación en la parte alta y esperar a que ella misma libere con el tiempo el canal ya tapado',
+                 'Cambiar el trazo del canal para que el lodo pase de largo y siga bajando hasta el río'],
+             en:['Removing the mud from the channel and sowing on the upper part a strip of vegetation that holds the soil',
+                 'Removing the mud from the channel each season and removing it again whenever the channel fills up once more',
+                 'Sowing vegetation on the upper part and waiting for it to clear the already blocked channel over time',
+                 'Changing the route of the channel so the mud passes by and goes on down to the river'] },
+      ci:0, showWork:false,
+      hint:{ es:'Una medida atiende el daño que ya está; la otra atiende la razón por la que el daño llega.',
+             en:'One measure deals with the damage already there; the other deals with the reason the damage arrives.' },
+      exp:{ es:'Retirar el lodo resuelve lo que ya ocurrió y sembrar arriba corta el origen, así que juntas dejan de repetir el trabajo cada temporada. Limpiar una y otra vez solo repara, sembrar sin limpiar deja el canal tapado, y desviar el canal traslada el lodo aguas abajo sin evitar que el suelo se siga yendo de la ladera.',
+            en:'Removing the mud settles what already happened and sowing above cuts the origin, so together they stop the work repeating every season. Cleaning over and over only repairs, sowing without cleaning leaves the channel blocked, and rerouting the channel moves the mud downstream without stopping the soil from leaving the slope.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BUILD LESSON
+   ══════════════════════════════════════════════════════════════════════════ */
+function buildLesson(rng) {
+  injectGuideCSS();
+
+  /* ══ INTRO ══ */
+  sec(
+    L({ es:'Para empezar', en:'To begin' }),
+    L({ es:'La capa delgada de la que dependemos', en:'The thin layer we depend on' }),
+    '<p>' + L({
+      es:'Debajo de tus pies hay una capa que casi nunca miramos y que sostiene casi todo lo que comes. No es tierra suelta ni polvo: es una mezcla viva de fragmentos de roca, restos de plantas y animales, agua, aire y millones de organismos que trabajan ahí dentro. Esa capa se llama suelo, y en muchos lugares mide apenas unos centímetros.',
+      en:'Beneath your feet there is a layer we almost never look at and that supports nearly everything you eat. It is not loose earth or dust: it is a living mixture of rock fragments, remains of plants and animals, water, air and millions of organisms working inside it. That layer is called soil, and in many places it is only a few centimetres thick.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Lo que hace especial al suelo es su ritmo. Tarda siglos en formarse y puede perderse en unas cuantas temporadas de lluvias sobre un terreno descubierto. Por eso las decisiones que toma una comunidad sobre sus terrenos pesan tanto, y por eso el suelo aparece en el centro de la conversación sobre el clima que está cambiando.',
+      en:'What makes soil special is its pace. It takes centuries to form and can be lost in a few rainy seasons on bare ground. That is why the decisions a community makes about its land weigh so much, and that is why soil sits at the centre of the conversation about the changing climate.'
+    }) + '</p>' +
+    '<div class="callout"><p><strong>' + L({ es:'Lo que vas a hacer: ', en:'What you are going to do: ' }) + '</strong>' + L({
+      es:'vas a armar el orden en que nace un suelo sobre la roca desnuda, a clasificar terrenos según el uso que se les da, a emparejar cada práctica del campo con el daño que produce, a separar lo que sí calienta el planeta de lo que no, y a repartir las jornadas de un grupo hasta cubrir dos metas de cuidado del suelo.',
+      en:'you are going to build the order in which a soil is born on bare rock, sort plots by the use given to them, pair each farming practice with the damage it produces, separate what really warms the planet from what does not, and share out the work sessions of a group until two soil care goals are covered.'
+    }) + '</p></div>'
+  );
+
+  /* ══ CONCEPTO 1 ══ */
+  var s1 = sec(
+    L({ es:'Concepto 1', en:'Concept 1' }),
+    L({ es:'De dónde sale el suelo', en:'Where soil comes from' }),
+    '<p>' + L({
+      es:'El suelo nace de la roca. El agua, el aire, el hielo y los cambios de temperatura agrietan la roca hasta partirla en fragmentos cada vez más pequeños. Sobre esos fragmentos se instalan los primeros seres vivos, musgos y líquenes, que la siguen desgastando y, al morir, dejan restos. Esos restos se transforman en materia orgánica y se mezclan con la parte mineral gracias a las lombrices, las raíces y las bacterias. Así aparece una capa oscura arriba, otra más clara debajo y la roca madre hasta el fondo.',
+      en:'Soil is born from rock. Water, air, ice and changes in temperature crack the rock until it breaks into smaller and smaller fragments. On those fragments the first living things settle, mosses and lichens, which go on wearing them down and, when they die, leave remains. Those remains turn into organic matter and get mixed with the mineral part thanks to worms, roots and bacteria. That is how a dark layer appears on top, a lighter one below and the parent rock at the very bottom.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Cinco factores deciden cómo será ese suelo: la roca de la que parte, el clima del lugar, los seres vivos que llegan, el relieve donde se forma y el tiempo que se le dé. El tiempo es el factor más ignorado y el más importante: un centímetro de suelo puede tardar entre cien y varios cientos de años en formarse, según el lugar. Nada de lo que hagas puede acelerarlo.',
+      en:'Five factors decide what that soil will be like: the rock it starts from, the climate of the place, the living things that arrive, the relief where it forms and the time it is given. Time is the most ignored factor and the most important one: one centimetre of soil can take between one hundred and several hundred years to form, depending on the place. Nothing you do can speed that up.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard(L({ es:'Roca madre', en:'Parent rock' }), L({ es:'material de partida', en:'starting material' }), L({ es:'aporta la parte mineral', en:'it provides the mineral part' })) +
+      rcard(L({ es:'Clima', en:'Climate' }), L({ es:'agua y temperatura', en:'water and temperature' }), L({ es:'rompen la roca y mueven el proceso', en:'they break the rock and drive the process' })) +
+      rcard(L({ es:'Seres vivos', en:'Living things' }), L({ es:'materia orgánica', en:'organic matter' }), L({ es:'la parte viva y oscura de arriba', en:'the living dark part on top' })) +
+      rcard(L({ es:'Relieve', en:'Relief' }), L({ es:'plano o pendiente', en:'flat or sloping' }), L({ es:'decide si el suelo se queda o se va', en:'it decides whether soil stays or leaves' })) +
+      rcard(L({ es:'Tiempo', en:'Time' }), L({ es:'siglos por centímetro', en:'centuries per centimetre' }), L({ es:'no hay manera de apurarlo', en:'there is no way to rush it' })) +
+    '</div>'
+  );
+  wRoca(rng, widgetHost(s1, 'w_roca', 'timeline'));
+  addProblem(rng, mkP1(rng));
+  addProblem(rng, mkP2(rng));
+
+  /* ══ CONCEPTO 2 ══ */
+  var s2 = sec(
+    L({ es:'Concepto 2', en:'Concept 2' }),
+    L({ es:'Para qué usamos el suelo', en:'What we use soil for' }),
+    '<p>' + L({
+      es:'Uso del suelo es la actividad a la que una sociedad destina cada terreno. Los principales son el agrícola, donde se levantan cosechas; el ganadero, donde el terreno alimenta animales; el forestal, donde se aprovechan la madera y otros productos manteniendo el bosque en pie; el urbano e industrial, donde el suelo queda cubierto por calles, casas y bodegas; y el de conservación, donde se protege lo que hay para que siga funcionando.',
+      en:'Soil use is the activity a society gives each piece of land over to. The main ones are farming, where harvests are raised; livestock, where the land feeds animals; forestry, where timber and other products are taken while the forest stays standing; urban and industrial, where the soil ends up covered by streets, houses and warehouses; and conservation, where what is there is protected so it keeps working.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Cada uso le pide algo distinto al suelo, y no todos los suelos aguantan lo mismo. Un suelo profundo de terreno plano soporta el trabajo del cultivo; uno delgado en pendiente fuerte se va con la primera lluvia si lo dejan descubierto. Cuando un terreno pasa de un uso a otro, por ejemplo de bosque a cultivo y de cultivo a colonia, hablamos de cambio de uso de suelo, y ese cambio casi siempre modifica lo que el suelo recibe y lo que puede seguir dando.',
+      en:'Each use asks something different of the soil, and not all soils can take the same thing. Deep soil on flat ground stands up to the work of cropping; thin soil on a steep slope leaves with the first rain if it is left bare. When a plot moves from one use to another, for example from forest to crops and from crops to housing, we speak of a change of soil use, and that change nearly always alters what the soil receives and what it can go on giving.'
+    }) + '</p>'
+  );
+  wUsos(rng, widgetHost(s2, 'w_usos', 'classify'));
+  addProblem(rng, mkP3(rng));
+  addProblem(rng, mkP4(rng));
+
+  /* ══ CONCEPTO 3 ══ */
+  var s3 = sec(
+    L({ es:'Concepto 3', en:'Concept 3' }),
+    L({ es:'Cuando se le pide de más: sobreexplotación y degradación', en:'When too much is asked: overuse and degradation' }),
+    '<p>' + L({
+      es:'Sobreexplotar un suelo es sacarle más de lo que alcanza a reponer: sembrar sin descanso, meter más animales de los que la hierba sostiene, quitarle la cubierta cada temporada. La degradación es el resultado: el suelo pierde materia orgánica, pierde estructura y pierde espesor, y con eso pierde la capacidad de sostener vida.',
+      en:'To overuse a soil is to take from it more than it manages to replace: sowing without rest, putting in more animals than the grass supports, stripping its cover every season. Degradation is the result: the soil loses organic matter, loses structure and loses thickness, and with that it loses its ability to support life.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Toma varias formas. La erosión hídrica se lleva la capa fértil con el agua que escurre por una ladera descubierta. La erosión eólica hace lo mismo con el viento sobre un terreno seco y desnudo. La salinización deja sales en la superficie cuando se riega en exceso sin drenaje en climas calurosos. La compactación aplasta los huecos por donde entran el aire y el agua. Y cuando el proceso avanza tanto que el terreno ya casi no produce, se habla de desertificación. Recuerda el ritmo: lo que tardó siglos en formarse se puede perder en unos cuantos años.',
+      en:'It takes several forms. Water erosion carries the fertile layer off with the water running down an uncovered slope. Wind erosion does the same with the wind over dry bare ground. Salinisation leaves salts on the surface when there is too much watering without drainage in hot climates. Compaction crushes the gaps through which air and water get in. And when the process goes so far that the land barely produces, we speak of desertification. Remember the pace: what took centuries to form can be lost in a few years.'
+    }) + '</p>'
+  );
+  wDanio(rng, widgetHost(s3, 'w_danio', 'match'));
+  addProblem(rng, mkP5(rng));
+  addProblem(rng, mkP6(rng));
+
+  /* ══ CONCEPTO 4 ══ */
+  var s4 = sec(
+    L({ es:'Concepto 4', en:'Concept 4' }),
+    L({ es:'El suelo y el clima que está cambiando', en:'Soil and the changing climate' }),
+    '<p>' + L({
+      es:'La atmósfera tiene gases que retienen parte del calor que la Tierra devuelve al espacio. Ese efecto invernadero es natural y sin él el planeta sería un lugar helado. El problema es la cantidad: desde hace poco más de un siglo, quemar carbón, petróleo y gas, desmontar bosques y acumular residuos ha subido la concentración de esos gases, y con ella la temperatura promedio del planeta. A eso se le llama calentamiento global, y el cambio climático es el conjunto de alteraciones que trae consigo.',
+      en:'The atmosphere has gases that hold back part of the heat the Earth returns to space. That greenhouse effect is natural and without it the planet would be a frozen place. The problem is the amount: for a little over a century, burning coal, oil and gas, clearing forests and piling up waste has raised the concentration of those gases, and with it the average temperature of the planet. That is called global warming, and climate change is the set of alterations it brings with it.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'El suelo entra en esta historia por los dos lados. Por un lado guarda carbono: la materia orgánica de un suelo sano es un enorme depósito, y cuando se desmonta, se quema o se degrada, ese carbono termina en el aire. Por otro lado lo padece: las sequías más largas resecan y agrietan el terreno, y las lluvias más intensas arrastran más suelo en menos tiempo. Un suelo cubierto y con materia orgánica es al mismo tiempo un freno al problema y una defensa frente a él.',
+      en:'Soil enters this story from both sides. On one side it stores carbon: the organic matter of a healthy soil is a huge store, and when it is cleared, burned or degraded, that carbon ends up in the air. On the other side it suffers: longer droughts dry out and crack the ground, and heavier rains drag more soil away in less time. A soil that is covered and rich in organic matter is at once a brake on the problem and a defence against it.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Para tomar postura hace falta una distinción que se confunde muy seguido. El estado del tiempo es lo que ocurre hoy en tu ciudad y cambia de un día a otro. El clima es el comportamiento promedio durante muchos años y en regiones enteras. Un invierno frío no desmiente el calentamiento, igual que un día de calor no lo demuestra: lo que se mide son tendencias de décadas y de todo el planeta.',
+      en:'To take a stand you need a distinction that gets confused very often. Weather is what happens today in your city and changes from one day to the next. Climate is the average behaviour over many years and across whole regions. A cold winter does not disprove the warming, just as one hot day does not prove it: what is measured are trends over decades and across the whole planet.'
+    }) + '</p>'
+  );
+  wClima(rng, widgetHost(s4, 'w_clima', 'board'));
+  addProblem(rng, mkP7(rng));
+  addProblem(rng, mkP8(rng));
+
+  /* ══ CONCEPTO 5 ══ */
+  var s5 = sec(
+    L({ es:'Concepto 5', en:'Concept 5' }),
+    L({ es:'Cuidar el suelo y sostener una postura', en:'Caring for soil and holding a stand' }),
+    '<p>' + L({
+      es:'Frente a un suelo que se está yendo hay dos clases de medidas y conviene usarlas juntas. Las que reparan devuelven lo perdido: composta y abonos orgánicos, plantación de árboles y arbustos, retiro del material arrastrado. Las que previenen cortan el origen: mantener el terreno cubierto entre cosechas, ajustar la cantidad de animales al pasto disponible, dejar descansar y rotar los cultivos, trabajar la ladera de modo que el agua no baje en línea recta. Una comunidad que solo repara repite el mismo trabajo cada temporada.',
+      en:'Faced with soil that is leaving there are two kinds of measures and it is worth using them together. Those that repair give back what was lost: compost and organic fertiliser, planting trees and shrubs, removing the dragged material. Those that prevent cut the origin: keeping the ground covered between harvests, matching the number of animals to the available grass, resting and rotating crops, working the slope so that water does not run straight down. A community that only repairs repeats the same work every season.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Tomar postura crítica ante el calentamiento global no es repetir consignas ni resignarse. Es informarse con registros y no con impresiones, distinguir el tiempo del clima, señalar qué actividades concretas están detrás del problema, y comprometerse con una acción del tamaño de tus posibilidades. Una acción sirve cuando dice qué se hace, quién lo hace, cuándo, y con qué dato se sabrá después si funcionó.',
+      en:'Taking a critical stand on global warming is not repeating slogans nor giving up. It is getting informed with records and not with impressions, telling weather from climate, pointing at which concrete activities lie behind the problem, and committing to an action the size of what you can manage. An action works when it says what is done, who does it, when, and which figure will show afterwards whether it worked.'
+    }) + '</p>'
+  );
+  wParcela(rng, widgetHost(s5, 'w_parcela', 'plan'));
+  wPostura(rng, widgetHost(s5, 'w_postura', 'reflect'));
+  addProblem(rng, mkP9(rng));
+
+  /* ══ CIERRE ══ */
+  sec(
+    L({ es:'Para cerrar', en:'To finish' }),
+    L({ es:'Un caso con todas sus piezas', en:'A case with all its pieces' }),
+    '<p>' + L({
+      es:'El caso que sigue junta todo lo anterior: un uso que cambió, un suelo que se degradó, personas afectadas más abajo y una petición. Léelo con calma y decide cuál planteamiento no deja ninguna pieza fuera.',
+      en:'The case below brings together everything above: a use that changed, a soil that degraded, people affected further down and a request. Read it calmly and decide which statement leaves no piece out.'
+    }) + '</p>'
+  );
+  addProblem(rng, mkP10(rng));
+}
+</script>
+</body>
+</html>

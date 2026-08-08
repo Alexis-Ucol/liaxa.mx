@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crecimiento, Distribución y Composición Poblacional</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+/* ── INTERACTIVE WIDGETS ── */
+.wgt { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.1rem; margin:1rem 0; }
+.wgt-h { font-size:.68rem; letter-spacing:.11em; text-transform:uppercase; color:var(--text3); margin-bottom:.55rem; font-weight:600; }
+.wgt-q { font-size:.9rem; font-weight:600; margin-bottom:.6rem; }
+.wtask { background:var(--green-bg); border-radius:8px; padding:.55rem .8rem; font-size:.85rem; color:var(--text); margin-bottom:.75rem; }
+.wtask strong { color:var(--green-dark); }
+.wmsg { margin-top:.7rem; font-size:.83rem; padding:.6rem .8rem; border-radius:8px; background:var(--surface2); color:var(--text2); }
+.wmsg.ok { background:var(--ok-bg); color:var(--ok); }
+.wmsg.warn { background:var(--gold-bg); color:var(--text2); border-left:3px solid var(--gold); }
+.wprog { font-size:.72rem; color:var(--text3); margin-top:.5rem; letter-spacing:.04em; }
+.wbtn { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:.5rem 1rem; font-size:.8rem; cursor:pointer; color:var(--text2); margin-top:.65rem; min-height:44px; }
+.wbtn:hover { border-color:var(--green); color:var(--green); }
+
+/* simulador de crecimiento + pirámide (canvas) */
+.cvbox { border:1px solid var(--border); border-radius:10px; background:var(--surface2); overflow:hidden; margin-bottom:.8rem; }
+.wcv { display:block; width:100%; height:auto; }
+.srow { display:flex; align-items:center; gap:.7rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.slbl { font-size:.76rem; color:var(--text3); min-width:118px; }
+.srow input[type=range] { flex:1; min-width:150px; accent-color:var(--green); height:32px; }
+.sval { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; color:var(--green); min-width:62px; text-align:right; }
+.readout { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; margin-top:.7rem; }
+.rout { background:var(--surface2); border-radius:8px; padding:.55rem; text-align:center; }
+.rlbl { font-size:.63rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); }
+.rnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; color:var(--green); }
+
+/* cuadrícula de densidad */
+.dgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:.35rem; max-width:300px; margin:.6rem auto .3rem; }
+.dcell { aspect-ratio:1/1; border:1.5px solid var(--border); border-radius:7px; background:var(--surface2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:.78rem; color:var(--text3); min-height:44px; transition:all .13s; }
+.dcell:hover { border-color:var(--green); }
+.dcell.l1 { background:var(--green-bg); color:var(--green-dark); border-color:var(--green); }
+.dcell.l2 { background:var(--gold-bg); color:var(--text); border-color:var(--gold); }
+.dcell.l3 { background:var(--gold); color:var(--surface); border-color:var(--gold); font-weight:700; }
+.dnote { font-size:.72rem; color:var(--text3); text-align:center; margin-bottom:.5rem; }
+
+/* clasificador */
+.cls-card { border:1.5px solid var(--border); border-radius:9px; background:var(--surface2); padding:.7rem .85rem; font-size:.86rem; font-weight:600; text-align:center; margin:.6rem 0; }
+.cls-bins { display:flex; flex-wrap:wrap; gap:.5rem; }
+.cls-bin { flex:1; min-width:130px; min-height:44px; border:1.5px solid var(--border); border-radius:9px; background:var(--surface); padding:.55rem .8rem; font-size:.84rem; font-family:inherit; color:var(--text2); cursor:pointer; transition:all .14s; }
+.cls-bin:hover { border-color:var(--green); color:var(--green); }
+
+/* reflexión */
+.reflect-prompt { font-size:.92rem; margin:.5rem 0 .8rem; color:var(--text2); }
+
+@media (max-width:600px){
+  .readout { grid-template-columns:repeat(3,1fr); gap:.35rem; }
+  .rnum { font-size:.85rem; }
+  .slbl { min-width:100px; font-size:.72rem; }
+  .dgrid { max-width:100%; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Crecimiento, Distribución y Composición Poblacional</div>
+    <div class="wcourse" id="wcourse-el">Geografía · 1° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Crecimiento, Distribución y Composición Poblacional</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#1a3a6b', primaryDark:'#0f2444', primaryBg:'#e8edf5',
+  accent:'#c9a84c', accentBg:'#f7f1e3',
+  darkPrimary:'#4a78bf', darkPrimaryDark:'#7aa2e0', darkPrimaryBg:'#0e1f38',
+  darkAccent:'#d4b86a', darkAccentBg:'#241e0e',
+  pBR:26, pBG:58, pBB:107, pAR:201, pAG:168, pAB:76,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'LIAXA',
+  guideTitle:{ es:'Crecimiento, Distribución y Composición Poblacional', en:'Population Growth, Distribution and Composition' },
+  courseName:{ es:'Geografía · 1° de Secundaria', en:'Geography · Grade 1 of Secondary' }, filePrefix:'geo1_t06_g01'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'geo1_t06_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Crecimiento, Distribución y Composición Poblacional','wcourse':'Geografía · 1° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Population Growth, Distribution and Composition','wcourse':'Geography · Grade 1 of Secondary',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'geo1_t06_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'geo1_t06_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'geo1_t06_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'geo1_t06_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('geo1_t06_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+/* ================================================
+   CONTENT HELPERS
+   ================================================ */
+function S(es, en){ return LANG === 'es' ? es : en; }
+
+function addSection(tag, html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = '<div class="stag">' + tag + '</div>' + html;
+  document.getElementById('lessonBody').appendChild(d);
+  return d;
+}
+
+function addWidget(kind, inner){
+  var d = document.createElement('div');
+  d.className = 'wgtwrap section';
+  d.setAttribute('data-widget', kind);
+  d.innerHTML = inner;
+  document.getElementById('lessonBody').appendChild(d);
+  return d;
+}
+
+function cvar(name, fb){
+  try { var v = getComputedStyle(document.documentElement).getPropertyValue(name); return (v && v.trim()) || fb; }
+  catch(e){ return fb; }
+}
+
+function fmtN(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function signed(n){ return n < 0 ? '−' + Math.abs(n) : String(n); }
+
+/* Shuffles options (Rule 7) keeping ES/EN aligned, then builds the card inline (Rule 1/5). */
+function addProblem(v, rng){
+  var n = v.options.es.length, idx = [], k;
+  for (k = 0; k < n; k++) idx.push(k);
+  for (k = n - 1; k > 0; k--) {
+    var j = Math.floor(rng() * (k + 1));
+    var tmp = idx[k]; idx[k] = idx[j]; idx[j] = tmp;
+  }
+  var langOpts = (LANG === 'es') ? v.options.es : v.options.en;
+  var prob = {
+    title:        v.title[LANG],
+    questionText: v.stmt[LANG],
+    fn:           v.fn || '',
+    hint:         v.hint[LANG],
+    explanation:  v.explanation[LANG],
+    options:      idx.map(function(o){ return langOpts[o]; }),
+    correctIdx:   idx.indexOf(v.correct),
+    showWork:     !!v.showWork,
+    studentChoice:null, pendingChoice:null
+  };
+  problems.push(prob);
+  buildOneCard(prob, problems.length - 1);
+}
+
+/* ================================================
+   WIDGET 1 - SIMULADOR DE CRECIMIENTO NATURAL
+   Two live rates, a ten year population curve that redraws on every move,
+   three rounds with different targets, reveal on the third miss.
+   ================================================ */
+var GS = null;
+function buildGrowth(rng){
+  var sets = [ [14, 5, -4], [12, 3, -6], [16, 6, -2] ];
+  var chosen = pick(sets, rng);
+  GS = { nat:20, mor:8, round:0, tries:0, done:false, base:20000, goals: shuffle(chosen, rng) };
+  return addWidget('growth',
+    '<div class="wgt">' +
+      '<div class="wgt-h">' + S('Simulador de crecimiento natural','Natural growth simulator') + '</div>' +
+      '<div id="gsBox"></div>' +
+    '</div>');
+}
+function gsSetNat(v){ if (!GS || GS.done) return; GS.nat = parseInt(v,10); gsRender(); }
+function gsSetMor(v){ if (!GS || GS.done) return; GS.mor = parseInt(v,10); gsRender(); }
+function gsRender(msg, cls){
+  if (!GS) return;
+  var box = document.getElementById('gsBox');
+  if (!box) return;
+  var c = GS.nat - GS.mor;
+  var end = GS.base * Math.pow(1 + c/1000, 10);
+  var goal = GS.goals[Math.min(GS.round, GS.goals.length - 1)];
+  var task = GS.done
+    ? S('Las tres metas quedaron atrás. Sigue moviendo las barras para ver qué le pasa a la curva.',
+        'The three targets are behind you. Keep moving the bars to see what happens to the curve.')
+    : S('Meta ' + (GS.round + 1) + ' de 3: logra un crecimiento natural de <strong>' + signed(goal) + ' por cada 1 000 habitantes</strong>.',
+        'Target ' + (GS.round + 1) + ' of 3: reach a natural growth of <strong>' + signed(goal) + ' per 1 000 inhabitants</strong>.');
+  var deflt = S('Mueve las dos barras y observa la curva: la población de este municipio parte de 20 000 habitantes.',
+                'Move both bars and watch the curve: the population of this municipality starts at 20 000 inhabitants.');
+  box.innerHTML =
+    '<div class="wtask">' + task + '</div>' +
+    '<div class="cvbox"><canvas class="wcv" id="gsCv" width="600" height="210"></canvas></div>' +
+    '<div class="srow"><div class="slbl">' + S('Nacimientos por mil','Births per thousand') + '</div>' +
+      '<input type="range" min="0" max="40" value="' + GS.nat + '" oninput="gsSetNat(this.value)">' +
+      '<div class="sval">' + GS.nat + '</div></div>' +
+    '<div class="srow"><div class="slbl">' + S('Defunciones por mil','Deaths per thousand') + '</div>' +
+      '<input type="range" min="0" max="40" value="' + GS.mor + '" oninput="gsSetMor(this.value)">' +
+      '<div class="sval">' + GS.mor + '</div></div>' +
+    '<div class="readout">' +
+      '<div class="rout"><div class="rlbl">' + S('Crecimiento','Growth') + '</div><div class="rnum">' + signed(c) + S(' por mil',' per thousand') + '</div></div>' +
+      '<div class="rout"><div class="rlbl">' + S('Hoy','Today') + '</div><div class="rnum">' + fmtN(GS.base) + '</div></div>' +
+      '<div class="rout"><div class="rlbl">' + S('En 10 años','In 10 years') + '</div><div class="rnum">' + fmtN(end) + '</div></div>' +
+    '</div>' +
+    (GS.done ? '' : '<button class="wbtn" onclick="gsCheck()">' + S('Comprobar','Check') + '</button>') +
+    '<div class="wmsg' + (cls ? ' ' + cls : '') + '">' + (msg || deflt) + '</div>';
+  gsDraw();
+}
+function gsDraw(){
+  var cv = document.getElementById('gsCv');
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext('2d');
+  var W = cv.width, H = cv.height;
+  var surf = cvar('--surface2', '#f0ede6');
+  var line = cvar('--green', '#1a4a8a');
+  var accent = cvar('--gold', '#c9a84c');
+  var faint = cvar('--border', '#ddd8cc');
+  var txt = cvar('--text3', '#7a7468');
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = surf; ctx.fillRect(0,0,W,H);
+  var L = 70, R = W - 20, T = 24, B = H - 28;
+  var c = GS.nat - GS.mor;
+  var pts = [], i;
+  for (i = 0; i <= 10; i++) pts.push(GS.base * Math.pow(1 + c/1000, i));
+  var lo = Math.min.apply(null, pts), hi = Math.max.apply(null, pts);
+  if (hi - lo < 1) { lo = lo - 200; hi = hi + 200; }
+  var pad = (hi - lo) * 0.15; lo -= pad; hi += pad;
+  ctx.strokeStyle = faint; ctx.lineWidth = 1;
+  for (i = 0; i <= 3; i++) {
+    var gy = T + (B - T) * i / 3;
+    ctx.beginPath(); ctx.moveTo(L, gy); ctx.lineTo(R, gy); ctx.stroke();
+  }
+  ctx.strokeStyle = line; ctx.lineWidth = 3; ctx.beginPath();
+  for (i = 0; i <= 10; i++) {
+    var x = L + (R - L) * i / 10;
+    var y = B - (B - T) * (pts[i] - lo) / (hi - lo);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = accent;
+  ctx.beginPath(); ctx.arc(R, B - (B - T) * (pts[10] - lo) / (hi - lo), 5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = txt; ctx.font = '13px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(S('Habitantes','Inhabitants'), 8, T - 8);
+  ctx.fillText(fmtN(hi), 8, T + 6);
+  ctx.fillText(fmtN(lo), 8, B);
+  ctx.textAlign = 'center';
+  ctx.fillText(S('Año 0','Year 0'), L, H - 8);
+  ctx.fillText(S('Año 10','Year 10'), R - 14, H - 8);
+}
+function gsCheck(){
+  if (!GS || GS.done) return;
+  var goal = GS.goals[GS.round];
+  var c = GS.nat - GS.mor;
+  if (c === goal) {
+    GS.round++; GS.tries = 0;
+    if (GS.round >= GS.goals.length) {
+      GS.done = true;
+      gsRender(S('Las tres metas cumplidas. La misma diferencia se puede lograr con tasas altas o bajas: lo que decide el crecimiento es la distancia entre nacimientos y defunciones.',
+                 'All three targets met. The same difference can be reached with high or low rates: what decides growth is the distance between births and deaths.'), 'ok');
+    } else {
+      gsRender(S('Meta lograda. Ahora ve por la siguiente.','Target reached. Now go for the next one.'), 'ok');
+    }
+    return;
+  }
+  GS.tries++;
+  if (GS.tries >= 3) {
+    var n2 = Math.max(0, Math.min(40, goal + 8)), m2 = n2 - goal;
+    GS.nat = n2; GS.mor = m2; GS.round++; GS.tries = 0;
+    if (GS.round >= GS.goals.length) GS.done = true;
+    gsRender(S('Una combinación que cumple esa meta es ' + n2 + ' nacimientos y ' + m2 + ' defunciones por cada 1 000 habitantes. Lo que cuenta es la resta, no el tamaño de cada tasa.',
+               'One combination that meets that target is ' + n2 + ' births and ' + m2 + ' deaths per 1 000 inhabitants. What counts is the subtraction, not the size of each rate.'), 'warn');
+    return;
+  }
+  var dif = goal - c;
+  var msg = dif > 0
+    ? S('Vas en ' + signed(c) + ' por mil y la meta es ' + signed(goal) + '. Te faltan ' + Math.abs(dif) + ': sube los nacimientos o baja las defunciones.',
+        'You are at ' + signed(c) + ' per thousand and the target is ' + signed(goal) + '. You need ' + Math.abs(dif) + ' more: raise births or lower deaths.')
+    : S('Vas en ' + signed(c) + ' por mil y la meta es ' + signed(goal) + '. Te sobran ' + Math.abs(dif) + ': baja los nacimientos o sube las defunciones.',
+        'You are at ' + signed(c) + ' per thousand and the target is ' + signed(goal) + '. That is ' + Math.abs(dif) + ' too many: lower births or raise deaths.');
+  gsRender(msg, 'warn');
+}
+
+/* ================================================
+   WIDGET 2 - CUADRICULA DE DENSIDAD
+   Sixteen squares of 1 km2. Tapping a square cycles 0, 10, 20, 30 inhabitants.
+   Total, occupied squares and average density update on every tap.
+   ================================================ */
+var DEN = null;
+function buildDensity(rng){
+  var sets = [
+    [ {hab:120, mode:'conc', lim:4}, {hab:120, mode:'disp', lim:10}, {hab:180, mode:'conc', lim:6} ],
+    [ {hab:150, mode:'conc', lim:5}, {hab:150, mode:'disp', lim:12}, {hab:90,  mode:'conc', lim:3} ]
+  ];
+  DEN = { cells:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], round:0, tries:0, done:false, rounds: pick(sets, rng) };
+  return addWidget('density',
+    '<div class="wgt">' +
+      '<div class="wgt-h">' + S('Reparte a la población','Spread out the population') + '</div>' +
+      '<div id="denBox"></div>' +
+    '</div>');
+}
+function denTap(i){
+  if (!DEN || DEN.done) return;
+  DEN.cells[i] = (DEN.cells[i] + 10) % 40;
+  denRender();
+}
+function denTotals(){
+  var t = 0, occ = 0, i;
+  for (i = 0; i < DEN.cells.length; i++) { t += DEN.cells[i]; if (DEN.cells[i] > 0) occ++; }
+  return { total:t, occ:occ, dens: t / 16 };
+}
+function denRender(msg, cls){
+  if (!DEN) return;
+  var box = document.getElementById('denBox');
+  if (!box) return;
+  var tt = denTotals();
+  var r = DEN.rounds[Math.min(DEN.round, DEN.rounds.length - 1)];
+  var task = DEN.done
+    ? S('Ya viste las tres repartos. Sigue tocando los cuadros si quieres probar otras formas.',
+        'You have seen the three layouts. Keep tapping squares if you want to try other shapes.')
+    : (r.mode === 'conc'
+        ? S('Reto ' + (DEN.round + 1) + ' de 3: coloca <strong>' + r.hab + ' habitantes</strong> ocupando <strong>' + r.lim + ' cuadros o menos</strong>.',
+            'Challenge ' + (DEN.round + 1) + ' of 3: place <strong>' + r.hab + ' inhabitants</strong> using <strong>' + r.lim + ' squares or fewer</strong>.')
+        : S('Reto ' + (DEN.round + 1) + ' de 3: coloca <strong>' + r.hab + ' habitantes</strong> ocupando <strong>' + r.lim + ' cuadros o más</strong>.',
+            'Challenge ' + (DEN.round + 1) + ' of 3: place <strong>' + r.hab + ' inhabitants</strong> using <strong>' + r.lim + ' squares or more</strong>.'));
+  var grid = DEN.cells.map(function(v, i){
+    var lvl = v === 0 ? '' : (v === 10 ? ' l1' : (v === 20 ? ' l2' : ' l3'));
+    return '<div class="dcell' + lvl + '" onclick="denTap(' + i + ')">' + (v === 0 ? '' : v) + '</div>';
+  }).join('');
+  var deflt = S('Cada cuadro es 1 km². Tócalo una y otra vez para poner 10, 20 o 30 habitantes, o dejarlo vacío.',
+                'Each square is 1 km². Tap it again and again to place 10, 20 or 30 inhabitants, or leave it empty.');
+  box.innerHTML =
+    '<div class="wtask">' + task + '</div>' +
+    '<div class="dgrid">' + grid + '</div>' +
+    '<div class="dnote">' + S('Territorio de 16 km²','Territory of 16 km²') + '</div>' +
+    '<div class="readout">' +
+      '<div class="rout"><div class="rlbl">' + S('Habitantes','Inhabitants') + '</div><div class="rnum">' + tt.total + '</div></div>' +
+      '<div class="rout"><div class="rlbl">' + S('Cuadros con gente','Squares in use') + '</div><div class="rnum">' + tt.occ + '</div></div>' +
+      '<div class="rout"><div class="rlbl">' + S('Densidad','Density') + '</div><div class="rnum">' + (Math.round(tt.dens * 10) / 10) + '</div></div>' +
+    '</div>' +
+    (DEN.done ? '' : '<button class="wbtn" onclick="denCheck()">' + S('Comprobar','Check') + '</button>') +
+    '<div class="wmsg' + (cls ? ' ' + cls : '') + '">' + (msg || deflt) + '</div>';
+}
+function denAdvance(txt, cls){
+  DEN.round++; DEN.tries = 0;
+  if (DEN.round >= DEN.rounds.length) DEN.done = true;
+  denRender(txt, cls);
+}
+function denCheck(){
+  if (!DEN || DEN.done) return;
+  var r = DEN.rounds[DEN.round], tt = denTotals();
+  var okHab = (tt.total === r.hab);
+  var okCells = (r.mode === 'conc') ? (tt.occ <= r.lim && tt.occ > 0) : (tt.occ >= r.lim);
+  if (okHab && okCells) {
+    denAdvance(S('Logrado. La densidad media es la misma que antes, pero la gente quedó repartida de otra forma: eso es concentración o dispersión.',
+                 'Done. The average density is the same as before, but the people ended up spread differently: that is concentration or dispersion.'), 'ok');
+    return;
+  }
+  DEN.tries++;
+  if (DEN.tries >= 3) {
+    var i, k = 0;
+    for (i = 0; i < 16; i++) DEN.cells[i] = 0;
+    if (r.mode === 'conc') {
+      var per = r.hab / r.lim;
+      for (i = 0; i < r.lim; i++) DEN.cells[i] = per;
+    } else {
+      for (i = 0; i < r.lim; i++) DEN.cells[i] = 10;
+      k = r.hab - r.lim * 10;
+      i = 0;
+      while (k > 0 && i < r.lim) { DEN.cells[i] += 10; k -= 10; i++; }
+    }
+    denAdvance(S('Así queda uno de los repartos posibles. Fíjate en el número de cuadros ocupados: ahí está la diferencia.',
+                 'This is one of the possible layouts. Look at the number of occupied squares: that is where the difference is.'), 'warn');
+    return;
+  }
+  var msg;
+  if (!okHab) {
+    var d = r.hab - tt.total;
+    msg = d > 0
+      ? S('Llevas ' + tt.total + ' habitantes. Te faltan ' + d + ' para llegar a la meta.',
+          'You have ' + tt.total + ' inhabitants. You need ' + d + ' more to reach the target.')
+      : S('Llevas ' + tt.total + ' habitantes. Te sobran ' + Math.abs(d) + ' para la meta.',
+          'You have ' + tt.total + ' inhabitants. That is ' + Math.abs(d) + ' too many for the target.');
+  } else if (r.mode === 'conc') {
+    msg = S('Ya tienes los ' + r.hab + ' habitantes, pero ocupan ' + tt.occ + ' cuadros. Júntalos en ' + r.lim + ' o menos.',
+            'You already have the ' + r.hab + ' inhabitants, but they use ' + tt.occ + ' squares. Bring them together into ' + r.lim + ' or fewer.');
+  } else {
+    msg = S('Ya tienes los ' + r.hab + ' habitantes, pero ocupan ' + tt.occ + ' cuadros. Repártelos en ' + r.lim + ' o más.',
+            'You already have the ' + r.hab + ' inhabitants, but they use ' + tt.occ + ' squares. Spread them into ' + r.lim + ' or more.');
+  }
+  denRender(msg, 'warn');
+}
+
+/* ================================================
+   WIDGET 3 - CLASIFICADOR CIUDAD Y CAMPO
+   Each trait goes into one of two spaces; the third miss reveals the answer
+   with the reason and moves on.
+   ================================================ */
+var CLS = null;
+function buildClassify(rng){
+  var ITEMS = [
+    { es:'La mayoría de las personas se dedica a la siembra, la ganadería o la pesca.',
+      en:'Most people work in farming, livestock or fishing.', bin:1 },
+    { es:'Hay hospitales, universidades y varias rutas de transporte público.',
+      en:'There are hospitals, universities and several public transport routes.', bin:0 },
+    { es:'Las viviendas están separadas entre sí por caminos de terracería de varios kilómetros.',
+      en:'Homes are separated from each other by dirt roads several kilometres long.', bin:1 },
+    { es:'El suelo está cubierto casi por completo de construcciones y calles pavimentadas.',
+      en:'The ground is almost entirely covered by buildings and paved streets.', bin:0 },
+    { es:'Lo que más se reclama es el tiempo que toma trasladarse entre la casa y el trabajo.',
+      en:'The main complaint is the time it takes to travel between home and work.', bin:0 },
+    { es:'Lo que más se reclama es que la secundaria más cercana queda a una hora de camino.',
+      en:'The main complaint is that the nearest secondary school is an hour away.', bin:1 }
+  ];
+  CLS = { items: ITEMS, seq: shuffle([0,1,2,3,4,5], rng), i:0, tries:0, correct:0, done:false, lock:false };
+  return addWidget('classify',
+    '<div class="wgt">' +
+      '<div class="wgt-h">' + S('Ciudad o campo','City or countryside') + '</div>' +
+      '<div id="clsBox"></div>' +
+    '</div>');
+}
+function clsRender(msg, cls){
+  if (!CLS) return;
+  var box = document.getElementById('clsBox');
+  if (!box) return;
+  var BINS = S(['Espacio urbano','Espacio rural'], ['Urban space','Rural space']);
+  if (CLS.done) {
+    box.innerHTML = '<div class="wmsg ok">' + S('Rasgos clasificados: ','Traits sorted: ') + CLS.correct + ' / ' + CLS.items.length + '. ' +
+      S('Los rasgos de un lado hablan de gente junta; los del otro, de gente separada por el territorio.',
+        'The traits on one side speak of people packed together; those on the other, of people separated across the territory.') + '</div>';
+    return;
+  }
+  var it = CLS.items[CLS.seq[CLS.i]];
+  var deflt = S('Lee el rasgo y decide en qué espacio aparece con más fuerza.',
+                'Read the trait and decide in which space it shows up most strongly.');
+  box.innerHTML =
+    '<div class="wprog">' + (CLS.i + 1) + ' / ' + CLS.items.length + '</div>' +
+    '<div class="cls-card">' + it[LANG] + '</div>' +
+    '<div class="cls-bins">' +
+      '<button class="cls-bin" onclick="clsPick(0)">' + BINS[0] + '</button>' +
+      '<button class="cls-bin" onclick="clsPick(1)">' + BINS[1] + '</button>' +
+    '</div>' +
+    '<div class="wmsg' + (cls ? ' ' + cls : '') + '">' + (msg || deflt) + '</div>';
+}
+function clsPick(bi){
+  if (!CLS || CLS.done || CLS.lock) return;
+  var it = CLS.items[CLS.seq[CLS.i]];
+  var BINS = S(['Espacio urbano','Espacio rural'], ['Urban space','Rural space']);
+  if (bi === it.bin) {
+    CLS.correct++; CLS.tries = 0; CLS.i++;
+    if (CLS.i >= CLS.items.length) CLS.done = true;
+    clsRender(S('Correcto. Sigue con el siguiente rasgo.','Correct. On to the next trait.'), 'ok');
+    return;
+  }
+  CLS.tries++;
+  if (CLS.tries >= 3) {
+    CLS.tries = 0; CLS.i++; CLS.lock = true;
+    if (CLS.i >= CLS.items.length) CLS.done = true;
+    clsRender(S('Era <b>' + BINS[it.bin] + '</b>. Pregúntate si ese rasgo nace de la gente concentrada o de la gente dispersa.',
+                'It was <b>' + BINS[it.bin] + '</b>. Ask yourself whether that trait comes from people concentrated or people dispersed.'), 'warn');
+    setTimeout(function(){ if (CLS) { CLS.lock = false; clsRender(); } }, 1600);
+    return;
+  }
+  clsRender(S('Todavía no. ¿Ese rasgo aparece donde la población se junta o donde se separa?',
+              'Not yet. Does that trait appear where population gathers or where it spreads out?'), 'warn');
+}
+
+/* ================================================
+   WIDGET 4 - CONSTRUCTOR DE PIRAMIDE DE POBLACION
+   Two live controls reshape the pyramid on the canvas; three profiles to match.
+   ================================================ */
+var PY = null;
+function buildPyramid(rng){
+  var profs = ['joven','transicion','envejecida'];
+  PY = { nat:50, lon:50, round:0, tries:0, done:false, order: shuffle(profs, rng) };
+  return addWidget('pyramid',
+    '<div class="wgt">' +
+      '<div class="wgt-h">' + S('Construye la pirámide','Build the pyramid') + '</div>' +
+      '<div id="pyBox"></div>' +
+    '</div>');
+}
+function pyText(p){
+  if (p === 'joven') return S('Un país donde nacen muchas niñas y niños y pocas personas llegan a edades avanzadas.',
+                              'A country where many children are born and few people reach old age.');
+  if (p === 'envejecida') return S('Un país donde nacen pocas personas y muchas llegan a edades avanzadas.',
+                                   'A country where few people are born and many reach old age.');
+  return S('Un país donde ya nacen menos que antes y cada vez más gente llega a la vejez.',
+           'A country where fewer are born than before and more and more people reach old age.');
+}
+function pyMatch(p){
+  if (p === 'joven') return (PY.nat >= 65 && PY.lon <= 45);
+  if (p === 'envejecida') return (PY.nat <= 35 && PY.lon >= 65);
+  return (PY.nat >= 40 && PY.nat <= 60 && PY.lon >= 45 && PY.lon <= 70);
+}
+function pySetNat(v){ if (!PY || PY.done) return; PY.nat = parseInt(v,10); pyRender(); }
+function pySetLon(v){ if (!PY || PY.done) return; PY.lon = parseInt(v,10); pyRender(); }
+function pyRender(msg, cls){
+  if (!PY) return;
+  var box = document.getElementById('pyBox');
+  if (!box) return;
+  var p = PY.order[Math.min(PY.round, PY.order.length - 1)];
+  var task = PY.done
+    ? S('Los tres perfiles quedaron armados. Sigue moviendo las barras para ver formas intermedias.',
+        'The three profiles are built. Keep moving the bars to see shapes in between.')
+    : S('Perfil ' + (PY.round + 1) + ' de 3: ' + pyText(p),
+        'Profile ' + (PY.round + 1) + ' of 3: ' + pyText(p));
+  var deflt = S('Mueve las barras y observa cómo cambian la base y la cúspide de la pirámide.',
+                'Move the bars and watch how the base and the top of the pyramid change.');
+  box.innerHTML =
+    '<div class="wtask">' + task + '</div>' +
+    '<div class="cvbox"><canvas class="wcv" id="pyCv" width="600" height="240"></canvas></div>' +
+    '<div class="srow"><div class="slbl">' + S('Nacimientos','Births') + '</div>' +
+      '<input type="range" min="0" max="100" value="' + PY.nat + '" oninput="pySetNat(this.value)">' +
+      '<div class="sval">' + PY.nat + '</div></div>' +
+    '<div class="srow"><div class="slbl">' + S('Llegan a la vejez','Reach old age') + '</div>' +
+      '<input type="range" min="0" max="100" value="' + PY.lon + '" oninput="pySetLon(this.value)">' +
+      '<div class="sval">' + PY.lon + '</div></div>' +
+    (PY.done ? '' : '<button class="wbtn" onclick="pyCheck()">' + S('Comprobar','Check') + '</button>') +
+    '<div class="wmsg' + (cls ? ' ' + cls : '') + '">' + (msg || deflt) + '</div>';
+  pyDraw();
+}
+function pyDraw(){
+  var cv = document.getElementById('pyCv');
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext('2d');
+  var W = cv.width, H = cv.height;
+  var surf = cvar('--surface2', '#f0ede6');
+  var bar = cvar('--green', '#1a4a8a');
+  var bar2 = cvar('--gold', '#c9a84c');
+  var txt = cvar('--text3', '#7a7468');
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = surf; ctx.fillRect(0,0,W,H);
+  var labels = S(['0 a 14','15 a 29','30 a 44','45 a 59','60 a 74','75 y más'],
+                 ['0 to 14','15 to 29','30 to 44','45 to 59','60 to 74','75 and over']);
+  var base = 30 + PY.nat * 1.6;
+  var f = 0.55 + PY.lon * 0.0035;
+  var w = [], i, mx = 0;
+  for (i = 0; i < 6; i++) { w.push(base * Math.pow(f, i)); if (w[i] > mx) mx = w[i]; }
+  var half = 220, scale = mx > 0 ? Math.min(1, half / mx) : 1;
+  var cx = W / 2, top = 26, bh = 26, gap = 6;
+  ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = txt;
+  ctx.fillText(S('Hombres','Men'), cx - 150, 16);
+  ctx.fillText(S('Mujeres','Women'), cx + 150, 16);
+  for (i = 0; i < 6; i++) {
+    var ww = w[5 - i] * scale;
+    var y = top + i * (bh + gap);
+    ctx.fillStyle = bar;
+    ctx.fillRect(cx - 26 - ww, y, ww, bh);
+    ctx.fillStyle = bar2;
+    ctx.fillRect(cx + 26, y, ww, bh);
+    ctx.fillStyle = txt; ctx.font = '11px sans-serif';
+    ctx.fillText(labels[5 - i], cx, y + 17);
+  }
+}
+function pyCheck(){
+  if (!PY || PY.done) return;
+  var p = PY.order[PY.round];
+  if (pyMatch(p)) {
+    PY.round++; PY.tries = 0;
+    if (PY.round >= PY.order.length) {
+      PY.done = true;
+      pyRender(S('Los tres perfiles armados. La forma de la pirámide resume dos cosas a la vez: cuánta gente nace y cuánta llega a edades avanzadas.',
+                 'All three profiles built. The shape of the pyramid sums up two things at once: how many are born and how many reach old age.'), 'ok');
+    } else {
+      pyRender(S('Esa es la forma. Ve por el siguiente perfil.','That is the shape. Go for the next profile.'), 'ok');
+    }
+    return;
+  }
+  PY.tries++;
+  if (PY.tries >= 3) {
+    if (p === 'joven') { PY.nat = 85; PY.lon = 25; }
+    else if (p === 'envejecida') { PY.nat = 20; PY.lon = 85; }
+    else { PY.nat = 50; PY.lon = 58; }
+    PY.round++; PY.tries = 0;
+    if (PY.round >= PY.order.length) PY.done = true;
+    pyRender(S('Así se ve ese perfil. Compara la base con la cúspide y guarda esa imagen.',
+               'This is how that profile looks. Compare the base with the top and keep that image in mind.'), 'warn');
+    return;
+  }
+  var tip;
+  if (p === 'joven') {
+    tip = (PY.nat < 65)
+      ? S('La base todavía es angosta: para una población joven necesitas más nacimientos.',
+          'The base is still narrow: for a young population you need more births.')
+      : S('La cúspide sigue ancha: en una población joven pocas personas llegan a edades avanzadas.',
+          'The top is still wide: in a young population few people reach old age.');
+  } else if (p === 'envejecida') {
+    tip = (PY.nat > 35)
+      ? S('La base sigue ancha: en una población envejecida nacen pocas personas.',
+          'The base is still wide: in an aged population few people are born.')
+      : S('La cúspide todavía es angosta: sube la barra de quienes llegan a la vejez.',
+          'The top is still narrow: raise the bar of those who reach old age.');
+  } else {
+    tip = S('Este perfil está a medio camino: ni la base tan ancha ni la cúspide tan angosta. Acerca las dos barras al centro.',
+            'This profile is halfway: neither a very wide base nor a very narrow top. Move both bars toward the middle.');
+  }
+  pyRender(tip, 'warn');
+}
+
+/* ================================================
+   WIDGET 5 - REFLEXION
+   ================================================ */
+function buildReflect(rng){
+  var PROMPTS = [
+    { es:'Describe tu localidad: ¿la población está concentrada o dispersa? Da dos señales que hayas observado y explica qué servicio se vuelve más difícil de llevar hasta todas las casas.',
+      en:'Describe your locality: is the population concentrated or dispersed? Give two signs you have observed and explain which service becomes harder to bring to every home.' },
+    { es:'Dibuja la pirámide de población que imaginas para tu comunidad y marca el grupo de edad más numeroso. Explica qué necesitaría con más urgencia ese grupo.',
+      en:'Sketch the population pyramid you imagine for your community and mark the largest age group. Explain what that group would need most urgently.' },
+    { es:'Si tu localidad duplicara su población en diez años, ¿qué tres cosas tendrían que cambiar primero? Ordénalas y justifica la primera.',
+      en:'If your locality doubled its population in ten years, which three things would have to change first? Put them in order and justify the first one.' }
+  ];
+  var p = pick(PROMPTS, rng);
+  var w = addWidget('reflect',
+    '<div class="wgt">' +
+      '<div class="wgt-h">' + S('Tu turno','Your turn') + '</div>' +
+      '<div class="reflect-prompt">' + p[LANG] + '</div>' +
+      '<div class="wtabs">' +
+        '<button class="wtab active" onclick="reflectTab(\'type\',this)">' + S('⌨️ Escribir','⌨️ Write') + '</button>' +
+        '<button class="wtab" onclick="reflectTab(\'draw\',this)">' + S('✏️ Dibujar','✏️ Sketch') + '</button>' +
+      '</div>' +
+      '<div class="wpanel active" id="reflect_type"><textarea class="wtextarea" id="reflectTa" placeholder="' + S('Tu respuesta...','Your answer...') + '"></textarea></div>' +
+      '<div class="wpanel" id="reflect_draw">' +
+        '<div class="cvwrap">' +
+          '<canvas class="dcanvas" id="reflectCv"></canvas>' +
+          '<div class="ctoolbar">' +
+            '<button class="tbtn2 bpen on">' + t('btn-pen') + '</button>' +
+            '<button class="tbtn2 bmarker">' + t('btn-marker') + '</button>' +
+            '<button class="tbtn2 beraser">' + t('btn-eraser') + '</button>' +
+            '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+            '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+            '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+            '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+            '<button class="clrbtn">' + t('btn-clear') + '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<button class="wbtn" onclick="reflectSave()">' + S('Guardar','Save') + '</button>' +
+      '<div class="wmsg" id="reflectFb">' + S('No hay una sola respuesta: lo que cuenta es que uses los datos de tu propio lugar.',
+                                              'There is no single answer: what counts is that you use the data of your own place.') + '</div>' +
+    '</div>');
+  return w;
+}
+function reflectTab(which, btn){
+  ['type','draw'].forEach(function(k){
+    var el = document.getElementById('reflect_' + k);
+    if (el) el.classList.toggle('active', k === which);
+  });
+  var tabs = btn.closest('.wtabs');
+  if (tabs) tabs.querySelectorAll('.wtab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  if (which === 'draw') setTimeout(function(){
+    var c = document.getElementById('reflectCv');
+    if (c && !c.width) initCanvas(c);
+  }, 60);
+}
+function reflectSave(){
+  var fb = document.getElementById('reflectFb');
+  if (fb) {
+    fb.className = 'wmsg ok';
+    fb.textContent = S('Guardado. Buen razonamiento: aquí no hay una sola respuesta correcta.',
+                       'Saved. Good thinking: there is no single right answer here.');
+  }
+}
+
+/* ================================================
+   buildLesson — concept, manipulative, problem (Rule 1)
+   ================================================ */
+function buildLesson(rng) {
+  problems = []; answeredCount = 0; correctCount = 0;
+  document.getElementById('lessonBody').innerHTML = '';
+  var pf = document.getElementById('progFill'); if (pf) pf.style.width = '0%';
+
+  /* ── CONCEPTO 1 ─────────────────────────────────────────────── */
+  addSection(S('CONCEPTO 1','CONCEPT 1'),
+    '<h2>' + S('La población nunca se queda quieta','Population never stands still') + '</h2>' +
+    '<p>' + S('En un año, en cualquier lugar del mundo, nacen personas, mueren otras, algunas llegan de fuera y otras se van. La población de un país es el resultado de esos cuatro movimientos, y por eso cambia todo el tiempo.',
+              'In one year, anywhere in the world, people are born, others die, some arrive from outside and others leave. The population of a country is the result of those four movements, and that is why it changes all the time.') + '</p>' +
+    '<p>' + S('Para comparar países de tamaños distintos no se cuentan los nacimientos a secas: se miden por cada 1 000 habitantes. Así, decir que en un país hay 22 nacimientos por cada 1 000 habitantes permite compararlo con otro que tiene diez veces más gente.',
+              'To compare countries of different sizes, births are not counted on their own: they are measured per 1 000 inhabitants. Saying that a country has 22 births per 1 000 inhabitants makes it comparable with another one that has ten times more people.') + '</p>' +
+    '<div class="rules-grid">' +
+      '<div class="rcard"><div class="rname">' + S('Natalidad','Birth rate') + '</div><div class="rform">' + S('nacimientos por mil','births per thousand') + '</div><div class="rnote">' + S('Cuántas personas se suman cada año.','How many people are added each year.') + '</div></div>' +
+      '<div class="rcard"><div class="rname">' + S('Mortalidad','Death rate') + '</div><div class="rform">' + S('defunciones por mil','deaths per thousand') + '</div><div class="rnote">' + S('Cuántas personas se restan cada año.','How many people are subtracted each year.') + '</div></div>' +
+      '<div class="rcard"><div class="rname">' + S('Crecimiento natural','Natural growth') + '</div><div class="rform">' + S('natalidad menos mortalidad','births minus deaths') + '</div><div class="rnote">' + S('Puede ser positivo, cero o negativo.','It can be positive, zero or negative.') + '</div></div>' +
+      '<div class="rcard"><div class="rname">' + S('Saldo migratorio','Net migration') + '</div><div class="rform">' + S('llegadas menos salidas','arrivals minus departures') + '</div><div class="rnote">' + S('Se suma al crecimiento natural.','It is added to natural growth.') + '</div></div>' +
+    '</div>' +
+    '<div class="callout"><p><strong>' + S('Por qué importa: ','Why it matters: ') + '</strong>' +
+      S('cuando una población crece rápido, cada año hacen falta más aulas, más viviendas, más empleos y más agua potable. Cuando casi no crece, lo que se vuelve urgente es otra cosa: sostener pensiones y servicios de salud.',
+        'when a population grows fast, every year needs more classrooms, more housing, more jobs and more drinking water. When it barely grows, something else becomes urgent: sustaining pensions and health services.') + '</p></div>');
+
+  buildGrowth(rng); gsRender();
+
+  /* ── PROBLEMA 1 ─────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'Personas que se suman en un año', en:'People added in one year' }, showWork:true,
+      stmt:{ es:'En un año, un país de 4 000 000 de habitantes registró una tasa de natalidad de 22 nacimientos por cada 1 000 habitantes y una tasa de mortalidad de 7 defunciones por cada 1 000 habitantes. ¿Cuántas personas ganó ese país por crecimiento natural durante ese año?',
+             en:'In one year, a country of 4 000 000 inhabitants recorded a birth rate of 22 births per 1 000 inhabitants and a death rate of 7 deaths per 1 000 inhabitants. How many people did that country gain through natural growth during that year?' },
+      options:{ es:['60 000 personas','88 000 personas','116 000 personas','15 000 personas'],
+                en:['60 000 people','88 000 people','116 000 people','15 000 people'] },
+      correct:0,
+      hint:{ es:'Primero obtén la diferencia entre las dos tasas y después aplícala a cada grupo de 1 000 habitantes que tiene el país.',
+             en:'First find the difference between the two rates and then apply it to each group of 1 000 inhabitants in the country.' },
+      explanation:{ es:'La diferencia entre 22 y 7 deja 15 personas por cada 1 000 habitantes. El país tiene 4 000 grupos de 1 000 habitantes, así que 4 000 × 15 = 60 000 personas ganadas por crecimiento natural. Sumar las dos tasas daría 116 000 y usar solo los nacimientos daría 88 000.',
+                    en:'The difference between 22 and 7 leaves 15 people per 1 000 inhabitants. The country has 4 000 groups of 1 000 inhabitants, so 4 000 × 15 = 60 000 people gained through natural growth. Adding the two rates would give 116 000 and using only births would give 88 000.' } },
+    { title:{ es:'Personas que se suman en un año', en:'People added in one year' }, showWork:true,
+      stmt:{ es:'Durante un año, una entidad de 2 500 000 habitantes registró 18 nacimientos y 6 defunciones por cada 1 000 habitantes. ¿Cuántas personas ganó esa entidad por crecimiento natural durante ese año?',
+             en:'During one year, a state of 2 500 000 inhabitants recorded 18 births and 6 deaths per 1 000 inhabitants. How many people did that state gain through natural growth during that year?' },
+      options:{ es:['30 000 personas','45 000 personas','60 000 personas','12 000 personas'],
+                en:['30 000 people','45 000 people','60 000 people','12 000 people'] },
+      correct:0,
+      hint:{ es:'Obtén primero la diferencia entre las dos tasas y después aplícala a cada grupo de 1 000 habitantes de la entidad.',
+             en:'First find the difference between the two rates and then apply it to each group of 1 000 inhabitants of the state.' },
+      explanation:{ es:'La diferencia entre 18 y 6 deja 12 personas por cada 1 000 habitantes. La entidad tiene 2 500 grupos de 1 000 habitantes, así que 2 500 × 12 = 30 000 personas. Usar solo los nacimientos daría 45 000 y sumar las dos tasas daría 60 000.',
+                    en:'The difference between 18 and 6 leaves 12 people per 1 000 inhabitants. The state has 2 500 groups of 1 000 inhabitants, so 2 500 × 12 = 30 000 people. Using only births would give 45 000 and adding the two rates would give 60 000.' } }
+  ], rng), rng);
+
+  /* ── PROBLEMA 2 ─────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'Lo que trae un crecimiento rápido', en:'What fast growth brings' }, showWork:false,
+      stmt:{ es:'Dos países tienen hoy el mismo número de habitantes. En el primero nacen 30 y mueren 8 personas por cada mil cada año; en el segundo nacen 11 y mueren 10. ¿Qué previsión para los próximos quince años tiene más sustento en el primer país?',
+             en:'Two countries have the same number of inhabitants today. In the first one 30 are born and 8 die per thousand each year; in the second one 11 are born and 10 die. Which forecast for the next fifteen years has the strongest support in the first country?' },
+      options:{ es:[
+        'Tendrá que ampliar escuelas y servicios de atención infantil, porque cada año se suman muchas más personas en edades tempranas.',
+        'Tendrá que destinar la mayor parte de su gasto a pensiones, porque su población llegará antes a las edades avanzadas.',
+        'Dejará de aumentar en cuanto su tasa de mortalidad se mantenga estable durante algunos años seguidos.',
+        'Ganará superficie de territorio al mismo ritmo con el que aumenta su número de habitantes cada año.' ],
+        en:[
+        'It will have to expand schools and child care services, because many more people at early ages are added every year.',
+        'It will have to spend most of its budget on pensions, because its population will reach older ages sooner.',
+        'It will stop increasing as soon as its death rate stays stable for a few years in a row.',
+        'It will gain territory at the same pace at which its number of inhabitants increases each year.' ] },
+      correct:0,
+      hint:{ es:'Compara las dos diferencias y pregúntate en qué edades entra la gente que se suma cada año.',
+             en:'Compare the two differences and ask yourself at which ages the people added each year enter.' },
+      explanation:{ es:'En el primer país la diferencia es de 22 por cada mil y en el segundo de 1 por cada mil. Quienes se suman por nacimiento entran por la parte más joven de la población, así que la primera presión aparece en guarderías, escuelas y salud infantil. El territorio no cambia de tamaño y las pensiones son el problema del país que casi no crece.',
+                    en:'In the first country the difference is 22 per thousand and in the second one it is 1 per thousand. Those added by birth enter through the youngest part of the population, so the first pressure appears in nurseries, schools and child health. Territory does not change size, and pensions are the problem of the country that barely grows.' } },
+    { title:{ es:'Más gente, los mismos servicios', en:'More people, the same services' }, showWork:false,
+      stmt:{ es:'Una ciudad pasó de 120 000 a 180 000 habitantes en diez años y conservó el mismo número de escuelas y los mismos pozos de agua que tenía al inicio. ¿Qué implicación se sostiene mejor con esos datos?',
+             en:'A city went from 120 000 to 180 000 inhabitants in ten years and kept the same number of schools and the same water wells it had at the start. Which implication is best supported by that data?' },
+      options:{ es:[
+        'Aumentó la presión sobre el agua y sobre los grupos escolares, porque hay más personas usando exactamente los mismos servicios.',
+        'El crecimiento no tuvo ningún efecto, porque las escuelas y los pozos ya existían desde antes de que llegara la gente nueva.',
+        'La ciudad dejará de crecer por sí sola en cuanto las escuelas alcancen su cupo máximo de estudiantes.',
+        'El número de habitantes bajará de manera automática hasta ajustarse a los servicios que hay disponibles.' ],
+        en:[
+        'Pressure on water and on class sizes increased, because more people are using exactly the same services.',
+        'Growth had no effect at all, because the schools and the wells already existed before the new people arrived.',
+        'The city will stop growing on its own as soon as the schools reach their maximum student capacity.',
+        'The number of inhabitants will automatically drop until it matches the services that are available.' ] },
+      correct:0,
+      hint:{ es:'Divide mentalmente el mismo servicio entre más personas y observa qué le pasa a lo que le toca a cada una.',
+             en:'Mentally divide the same service among more people and see what happens to each share.' },
+      explanation:{ es:'Se sumaron 60 000 habitantes y la oferta de agua y de aulas quedó igual, así que a cada persona le toca menos. Ese es el efecto social y ambiental del crecimiento cuando los servicios no lo acompañan. La población no se ajusta sola al número de escuelas ni deja de crecer por sí misma.',
+                    en:'Sixty thousand inhabitants were added and the supply of water and classrooms stayed the same, so each person gets less. That is the social and environmental effect of growth when services do not follow it. Population does not adjust itself to the number of schools nor stop growing on its own.' } }
+  ], rng), rng);
+
+  /* ── CONCEPTO 2 ─────────────────────────────────────────────── */
+  addSection(S('CONCEPTO 2','CONCEPT 2'),
+    '<h2>' + S('Dónde vive la gente','Where people live') + '</h2>' +
+    '<p>' + S('La población nunca se reparte de manera pareja sobre el territorio. Hay valles y costas llenos de ciudades y hay desiertos, selvas y montañas casi vacíos. A esa manera de repartirse se le llama distribución, y depende del agua, del relieve, del clima, de los suelos, del trabajo disponible y de los caminos que existen.',
+              'Population is never spread evenly over a territory. There are valleys and coasts packed with cities and there are deserts, jungles and mountains that are almost empty. That way of spreading out is called distribution, and it depends on water, relief, climate, soils, available work and existing roads.') + '</p>' +
+    '<p>' + S('Para comparar lugares se usa la densidad de población, que reparte a todos los habitantes de un territorio entre su superficie y se expresa en habitantes por kilómetro cuadrado. Es un promedio, y como todo promedio esconde lo que pasa adentro.',
+              'To compare places we use population density, which divides all the inhabitants of a territory by its surface and is expressed in inhabitants per square kilometre. It is an average, and like every average it hides what happens inside.') + '</p>' +
+    '<div class="callout"><p><strong>' + S('Concentración y dispersión: ','Concentration and dispersion: ') + '</strong>' +
+      S('dos territorios con la misma densidad media pueden verse opuestos. En uno la gente está apretada en un solo punto y el resto queda vacío; en el otro está repartida en muchas localidades pequeñas. Llevar agua, escuela o clínica cuesta muy distinto en cada caso.',
+        'two territories with the same average density can look opposite. In one, people are packed into a single spot and the rest is empty; in the other, they are spread across many small localities. Bringing water, a school or a clinic costs very differently in each case.') + '</p></div>');
+
+  buildDensity(rng); denRender();
+
+  /* ── PROBLEMA 3 ─────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'Habitantes por kilómetro cuadrado', en:'Inhabitants per square kilometre' }, showWork:true,
+      stmt:{ es:'Un municipio ocupa una superficie de 350 km² y en él viven 84 000 personas. ¿Cuál es su densidad de población?',
+             en:'A municipality covers an area of 350 km² and 84 000 people live in it. What is its population density?' },
+      options:{ es:['240 hab/km²','24 hab/km²','2 400 hab/km²','0.004 hab/km²'],
+                en:['240 inhab/km²','24 inhab/km²','2 400 inhab/km²','0.004 inhab/km²'] },
+      correct:0,
+      hint:{ es:'La densidad reparte a los habitantes entre los kilómetros cuadrados, así que el número de personas va arriba en la división.',
+             en:'Density divides the inhabitants by the square kilometres, so the number of people goes on top of the division.' },
+      explanation:{ es:'Al repartir 84 000 habitantes entre 350 km² resultan 240 habitantes por kilómetro cuadrado. Dividir al revés, es decir la superficie entre los habitantes, da 0.004 y no describe la densidad.',
+                    en:'Dividing 84 000 inhabitants by 350 km² gives 240 inhabitants per square kilometre. Dividing the other way round, that is the area by the inhabitants, gives 0.004 and does not describe density.' } },
+    { title:{ es:'Habitantes por kilómetro cuadrado', en:'Inhabitants per square kilometre' }, showWork:true,
+      stmt:{ es:'Un municipio ocupa una superficie de 240 km² y en él viven 72 000 personas. ¿Cuál es su densidad de población?',
+             en:'A municipality covers an area of 240 km² and 72 000 people live in it. What is its population density?' },
+      options:{ es:['300 hab/km²','30 hab/km²','3 000 hab/km²','0.003 hab/km²'],
+                en:['300 inhab/km²','30 inhab/km²','3 000 inhab/km²','0.003 inhab/km²'] },
+      correct:0,
+      hint:{ es:'La densidad reparte a los habitantes entre los kilómetros cuadrados, así que el número de personas va arriba en la división.',
+             en:'Density divides the inhabitants by the square kilometres, so the number of people goes on top of the division.' },
+      explanation:{ es:'Al repartir 72 000 habitantes entre 240 km² resultan 300 habitantes por kilómetro cuadrado. Dividir al revés, es decir la superficie entre los habitantes, da 0.003 y no describe la densidad.',
+                    en:'Dividing 72 000 inhabitants by 240 km² gives 300 inhabitants per square kilometre. Dividing the other way round, that is the area by the inhabitants, gives 0.003 and does not describe density.' } }
+  ], rng), rng);
+
+  /* ── PROBLEMA 4 ─────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'El mismo total, dos repartos', en:'The same total, two layouts' }, showWork:false,
+      stmt:{ es:'Dos municipios tienen 20 000 habitantes cada uno. En el municipio A, 18 000 personas viven en una sola localidad. En el municipio B, la gente vive en 60 localidades pequeñas separadas por caminos de terracería. ¿Qué dificultad es más probable en el municipio B?',
+             en:'Two municipalities have 20 000 inhabitants each. In municipality A, 18 000 people live in a single locality. In municipality B, people live in 60 small localities separated by dirt roads. Which difficulty is most likely in municipality B?' },
+      options:{ es:[
+        'Llevar agua entubada, clínica y transporte cuesta más y tarda más, porque el servicio debe repetirse en muchos puntos alejados.',
+        'Las calles se congestionan cada mañana por la cantidad de vehículos que se mueven hacia el mismo lugar de trabajo.',
+        'El precio del suelo sube tanto que las familias jóvenes no consiguen dónde construir su propia vivienda.',
+        'El aire se contamina por la cantidad de fábricas y de transporte que se concentran en unas pocas calles.' ],
+        en:[
+        'Bringing piped water, a clinic and transport costs more and takes longer, because the service must be repeated at many distant points.',
+        'Streets get congested every morning because of the number of vehicles moving toward the same workplace.',
+        'Land prices rise so much that young families cannot find anywhere to build their own home.',
+        'The air gets polluted by the number of factories and vehicles concentrated in a few streets.' ] },
+      correct:0,
+      hint:{ es:'Piensa en cuántas veces hay que repetir la misma obra para que alcance a todas las familias del municipio B.',
+             en:'Think about how many times the same works must be repeated so that they reach every family in municipality B.' },
+      explanation:{ es:'En B la población está dispersa: cada red de agua, cada aula y cada ruta hay que construirla muchas veces para pocas personas. Las otras tres dificultades son propias de la concentración, es decir, del municipio A.',
+                    en:'In B the population is dispersed: every water network, every classroom and every route must be built many times over for few people. The other three difficulties belong to concentration, that is, to municipality A.' } },
+    { title:{ es:'El mismo total, dos repartos', en:'The same total, two layouts' }, showWork:false,
+      stmt:{ es:'Dos municipios tienen 20 000 habitantes cada uno. En el municipio A, 18 000 personas viven en una sola localidad. En el municipio B, la gente vive en 60 localidades pequeñas separadas por caminos de terracería. ¿Qué dificultad es más probable en el municipio A?',
+             en:'Two municipalities have 20 000 inhabitants each. In municipality A, 18 000 people live in a single locality. In municipality B, people live in 60 small localities separated by dirt roads. Which difficulty is most likely in municipality A?' },
+      options:{ es:[
+        'El suelo urbano se encarece y los servicios de esa localidad se saturan, porque casi todos los habitantes usan los mismos al mismo tiempo.',
+        'Cada obra de agua o de electricidad debe repetirse decenas de veces para alcanzar a muy pocas familias en cada punto.',
+        'La escuela más cercana queda a más de una hora de camino para la mayoría de las familias del municipio.',
+        'El transporte público no puede sostener una ruta porque casi nadie la usaría a lo largo del día.' ],
+        en:[
+        'Urban land becomes expensive and the services of that locality get saturated, because almost all inhabitants use the same ones at the same time.',
+        'Every water or electricity project must be repeated dozens of times to reach very few families at each point.',
+        'The nearest school is more than an hour away for most families in the municipality.',
+        'Public transport cannot sustain a route because almost nobody would use it during the day.' ] },
+      correct:0,
+      hint:{ es:'Piensa qué pasa cuando casi toda la población de un municipio usa la misma calle, la misma red y la misma escuela.',
+             en:'Think about what happens when almost the whole population of a municipality uses the same street, the same network and the same school.' },
+      explanation:{ es:'En A la población está concentrada: los servicios llegan a más gente con menos obra, pero se saturan y el suelo se encarece. Las otras tres dificultades describen la dispersión del municipio B.',
+                    en:'In A the population is concentrated: services reach more people with less construction, but they get saturated and land becomes expensive. The other three difficulties describe the dispersion of municipality B.' } }
+  ], rng), rng);
+
+  /* ── CONCEPTO 3 ─────────────────────────────────────────────── */
+  addSection(S('CONCEPTO 3','CONCEPT 3'),
+    '<h2>' + S('Ciudad y campo','City and countryside') + '</h2>' +
+    '<p>' + S('Para contar y comparar, en México se considera urbana toda localidad de 2 500 habitantes o más, y rural la que tiene menos. Es una línea de corte cómoda para hacer estadísticas, pero la vida de cada lugar tiene más matices que un número.',
+              'For counting and comparing, in Mexico any locality with 2 500 inhabitants or more is considered urban, and one with fewer is rural. It is a convenient cut off line for statistics, but the life of each place has more nuance than a number.') + '</p>' +
+    '<p>' + S('El espacio urbano nace de la concentración: mucha gente junta, suelo cubierto de construcciones, comercio, industria y servicios cerca unos de otros. Sus problemas también nacen de ahí: traslados largos, aire contaminado, vivienda cara y crecimiento sobre terrenos que antes eran de cultivo.',
+              'Urban space is born from concentration: many people together, ground covered with buildings, commerce, industry and services close to one another. Its problems are born from the same place: long commutes, polluted air, expensive housing and growth over land that used to be farmland.') + '</p>' +
+    '<p>' + S('El espacio rural nace de la dispersión: pocas personas por kilómetro cuadrado, actividades ligadas a la tierra, al ganado, al bosque o al mar. Sus problemas también: la clínica y la secundaria quedan lejos, el transporte es escaso y hay menos opciones de empleo. Ninguno de los dos vive sin el otro.',
+              'Rural space is born from dispersion: few people per square kilometre, activities tied to the land, livestock, the forest or the sea. Its problems too: the clinic and the secondary school are far away, transport is scarce and there are fewer job options. Neither of the two lives without the other.') + '</p>');
+
+  buildClassify(rng); clsRender();
+
+  /* ── PROBLEMA 5 ─────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'Cuando el número no lo dice todo', en:'When the number does not say it all' }, showWork:false,
+      stmt:{ es:'Una localidad tiene 3 100 habitantes y la mayoría de las familias vive de la siembra de maíz y de la cría de ganado. Un equipo debe registrarla en una tabla estadística. ¿Qué afirmación es correcta?',
+             en:'A locality has 3 100 inhabitants and most families live from growing maize and raising livestock. A team must record it in a statistical table. Which statement is correct?' },
+      options:{ es:[
+        'Se registra como urbana por su número de habitantes, aunque su actividad principal siga siendo del campo.',
+        'Se registra como rural, porque el tipo de trabajo de la gente es lo único que decide esa clasificación.',
+        'No puede registrarse, porque una localidad dedicada al campo nunca alcanza esa cantidad de habitantes.',
+        'Se registra como urbana porque el maíz y el ganado que produce se venden en las ciudades cercanas.' ],
+        en:[
+        'It is recorded as urban because of its number of inhabitants, even though its main activity is still farming.',
+        'It is recorded as rural, because the kind of work people do is the only thing that decides that classification.',
+        'It cannot be recorded, because a locality devoted to farming never reaches that number of inhabitants.',
+        'It is recorded as urban because the maize and livestock it produces are sold in the nearby cities.' ] },
+      correct:0,
+      hint:{ es:'Fíjate en cuál es el dato que usa la tabla para trazar la línea entre las dos categorías.',
+             en:'Look at which piece of data the table uses to draw the line between the two categories.' },
+      explanation:{ es:'La clasificación estadística se decide por el tamaño de la localidad, y 3 100 supera el corte, así que entra como urbana. El caso muestra que el criterio ordena los datos pero no describe por sí solo la vida ni el trabajo del lugar.',
+                    en:'The statistical classification is decided by the size of the locality, and 3 100 is above the cut off, so it counts as urban. The case shows that the criterion sorts the data but does not by itself describe the life or the work of the place.' } },
+    { title:{ es:'Dos vecinas casi iguales', en:'Two almost identical neighbours' }, showWork:false,
+      stmt:{ es:'Dos localidades vecinas se parecen mucho: mismas calles de tierra, mismos cultivos, misma escuela compartida. Una tiene 2 300 habitantes y la otra 2 700. En la tabla oficial quedan en categorías distintas. ¿Qué muestra este caso?',
+             en:'Two neighbouring localities look very much alike: the same dirt streets, the same crops, the same shared school. One has 2 300 inhabitants and the other 2 700. In the official table they end up in different categories. What does this case show?' },
+      options:{ es:[
+        'Que el criterio de tamaño sirve para contar y comparar, pero puede separar localidades muy parecidas entre sí.',
+        'Que la tabla oficial contiene un error, porque dos localidades vecinas deben quedar siempre en la misma categoría.',
+        'Que la localidad de 2 700 habitantes tiene por fuerza más servicios y más industria que la de 2 300.',
+        'Que las categorías de la tabla se asignan según la distancia que separa a cada localidad de la capital.' ],
+        en:[
+        'That the size criterion is useful for counting and comparing, but it can separate localities that are very much alike.',
+        'That the official table contains a mistake, because two neighbouring localities must always end up in the same category.',
+        'That the locality with 2 700 inhabitants necessarily has more services and more industry than the one with 2 300.',
+        'That the categories in the table are assigned according to the distance between each locality and the capital.' ] },
+      correct:0,
+      hint:{ es:'Compara lo que la tabla mide con lo que en realidad se ve en las dos localidades.',
+             en:'Compare what the table measures with what can actually be seen in the two localities.' },
+      explanation:{ es:'Una línea de corte tiene que estar en algún número, y por eso deja de un lado y de otro a lugares casi idénticos. Sirve para hacer estadísticas comparables, no para describir todo lo que ocurre en cada localidad.',
+                    en:'A cut off line has to sit at some number, and that is why it puts almost identical places on either side of it. It is useful for making comparable statistics, not for describing everything that happens in each locality.' } }
+  ], rng), rng);
+
+  /* ── PROBLEMA 6 ─────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'La ciudad avanza sobre el campo', en:'The city advances over the countryside' }, showWork:false,
+      stmt:{ es:'Durante quince años, una ciudad se extendió sobre los terrenos de cultivo que la rodeaban y las colonias nuevas quedaron en la orilla, lejos de los centros de trabajo. ¿Qué par de efectos describe mejor lo ocurrido?',
+             en:'Over fifteen years, a city spread over the farmland that surrounded it and the new neighbourhoods ended up on the edge, far from workplaces. Which pair of effects best describes what happened?' },
+      options:{ es:[
+        'Se perdió suelo de cultivo y aumentó el tiempo que las familias de la orilla dedican a trasladarse al trabajo y a la escuela.',
+        'Aumentó la superficie de cultivo alrededor y se acortaron los traslados, porque la ciudad ahora ocupa más espacio.',
+        'El campo y la ciudad quedaron aislados y dejaron de intercambiar alimentos, trabajadores y productos entre sí.',
+        'Bajó el precio del suelo en toda la ciudad y por eso las familias nuevas eligieron vivir en el centro histórico.' ],
+        en:[
+        'Farmland was lost and the time families on the edge spend travelling to work and school increased.',
+        'The surrounding farmland increased and commutes got shorter, because the city now takes up more space.',
+        'The countryside and the city became isolated and stopped exchanging food, workers and products.',
+        'Land prices fell across the whole city and that is why new families chose to live in the historic centre.' ] },
+      correct:0,
+      hint:{ es:'Pregúntate qué había antes en ese suelo y a qué distancia quedaron las viviendas nuevas.',
+             en:'Ask yourself what used to be on that land and how far away the new homes ended up.' },
+      explanation:{ es:'La mancha urbana se extiende sobre suelo que antes producía alimentos, y las colonias de la orilla quedan lejos del empleo y de los servicios. Por eso el crecimiento hacia afuera suele traer a la vez pérdida de suelo agrícola y traslados más largos.',
+                    en:'The urban area spreads over land that used to produce food, and the neighbourhoods on the edge end up far from jobs and services. That is why outward growth usually brings both loss of farmland and longer commutes.' } },
+    { title:{ es:'Una escuela a una hora de camino', en:'A school an hour away' }, showWork:false,
+      stmt:{ es:'En una localidad de 400 habitantes, quienes terminan la primaria deben tomar cada día un camión que tarda una hora para llegar a la secundaria más cercana. Varios dejan de estudiar en el camino. ¿Qué explica mejor esta situación?',
+             en:'In a locality of 400 inhabitants, those who finish primary school must take a bus that lasts an hour every day to reach the nearest secondary school. Several drop out along the way. What best explains this situation?' },
+      options:{ es:[
+        'La dispersión de la población aleja y encarece los servicios, y por eso el acceso a la educación depende del traslado.',
+        'La localidad tiene demasiados habitantes para el tamaño de su territorio y por eso la escuela quedó fuera de ella.',
+        'Las familias de esa localidad no consideran importante que sus hijas e hijos continúen estudiando la secundaria.',
+        'El transporte tarda una hora porque las carreteras del país son iguales de lentas en todas las regiones.' ],
+        en:[
+        'The dispersion of the population makes services distant and expensive, so access to education depends on travel.',
+        'The locality has too many inhabitants for the size of its territory and that is why the school ended up outside it.',
+        'The families of that locality do not consider it important for their children to continue secondary school.',
+        'Transport takes an hour because the roads of the country are equally slow in every region.' ] },
+      correct:0,
+      hint:{ es:'Piensa cuántos estudiantes reuniría una escuela si se construyera en una localidad de ese tamaño.',
+             en:'Think about how many students a school would gather if it were built in a locality of that size.' },
+      explanation:{ es:'Con 400 habitantes no se reúnen estudiantes suficientes para sostener una secundaria, así que el servicio se concentra en una localidad mayor y el resto viaja. Ese es uno de los efectos típicos de la dispersión rural sobre el acceso a los servicios.',
+                    en:'With 400 inhabitants there are not enough students to sustain a secondary school, so the service is concentrated in a larger locality and everyone else travels. That is one of the typical effects of rural dispersion on access to services.' } }
+  ], rng), rng);
+
+  /* ── CONCEPTO 4 ─────────────────────────────────────────────── */
+  addSection(S('CONCEPTO 4','CONCEPT 4'),
+    '<h2>' + S('Quiénes forman la población','Who makes up the population') + '</h2>' +
+    '<p>' + S('Saber cuánta gente hay no basta: también importa quiénes son. La composición de la población describe cómo se reparte entre grupos de edad y entre hombres y mujeres. Se dibuja en una pirámide de población: barras horizontales, un grupo de edad en cada nivel, hombres de un lado y mujeres del otro.',
+              'Knowing how many people there are is not enough: it also matters who they are. The composition of a population describes how it splits between age groups and between men and women. It is drawn in a population pyramid: horizontal bars, one age group per level, men on one side and women on the other.') + '</p>' +
+    '<p>' + S('Una base muy ancha significa que nacen muchas niñas y niños. Una cúspide ancha significa que muchas personas llegan a edades avanzadas. Entre esos dos extremos caben todas las formas intermedias, y cada forma anticipa una necesidad distinta: aulas y vacunas de un lado, pensiones y atención médica de larga duración del otro.',
+              'A very wide base means many children are born. A wide top means many people reach old age. Between those two extremes fit all the intermediate shapes, and each shape anticipates a different need: classrooms and vaccines on one side, pensions and long term medical care on the other.') + '</p>' +
+    '<div class="callout"><p><strong>' + S('Tres grandes grupos: ','Three large groups: ') + '</strong>' +
+      S('de 0 a 14 años, de 15 a 64 años y de 65 años o más. Comparar el peso de cada uno dice más sobre el futuro de un país que el total de habitantes.',
+        'from 0 to 14 years, from 15 to 64 years and 65 years or more. Comparing the weight of each one says more about the future of a country than the total number of inhabitants.') + '</p></div>');
+
+  buildPyramid(rng); pyRender();
+
+  /* ── PROBLEMA 7 ─────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'Dos formas, dos futuros', en:'Two shapes, two futures' }, showWork:false,
+      stmt:{ es:'La pirámide del país X tiene una base muy ancha y una cúspide muy angosta. La del país Y tiene una base angosta y una cúspide ancha. Los dos países planean su gasto para los próximos diez años. ¿Qué decisión tiene más sentido para el país X?',
+             en:'The pyramid of country X has a very wide base and a very narrow top. The one of country Y has a narrow base and a wide top. Both countries are planning their spending for the next ten years. Which decision makes most sense for country X?' },
+      options:{ es:[
+        'Construir y equipar más escuelas y servicios de atención infantil en las regiones donde vive esa población.',
+        'Ampliar el sistema de pensiones y las clínicas dedicadas a la atención de las personas adultas mayores.',
+        'Reducir el número de maestras y maestros, porque la matrícula escolar irá bajando año con año.',
+        'Cerrar los servicios de salud materna, porque el país ya no tendrá nacimientos que atender.' ],
+        en:[
+        'Build and equip more schools and child care services in the regions where that population lives.',
+        'Expand the pension system and the clinics devoted to caring for older adults.',
+        'Reduce the number of teachers, because school enrolment will fall year after year.',
+        'Close maternal health services, because the country will no longer have births to attend.' ] },
+      correct:0,
+      hint:{ es:'Localiza en qué nivel de la pirámide de X está la mayor cantidad de personas y calcula qué edad tendrán en diez años.',
+             en:'Find at which level of the pyramid of X the largest number of people sits and work out how old they will be in ten years.' },
+      explanation:{ es:'La base ancha de X indica que su grupo más numeroso está en las edades más jóvenes, así que la presión inmediata cae sobre escuelas y salud infantil. Las pensiones y las clínicas geriátricas son la prioridad del país Y, que tiene la cúspide ancha.',
+                    en:'The wide base of X shows that its largest group is at the youngest ages, so the immediate pressure falls on schools and child health. Pensions and geriatric clinics are the priority of country Y, which has the wide top.' } },
+    { title:{ es:'Leer una cúspide ancha', en:'Reading a wide top' }, showWork:false,
+      stmt:{ es:'Un país presenta una pirámide con la base angosta, el centro abultado y la cúspide claramente ancha. ¿Qué afirmación se sostiene con esa forma?',
+             en:'A country shows a pyramid with a narrow base, a bulging middle and a clearly wide top. Which statement is supported by that shape?' },
+      options:{ es:[
+        'Una parte grande de su población ya rebasó los 65 años, así que crecerán la demanda de pensiones y de atención médica.',
+        'Su población infantil es la más numerosa del país y por eso faltarán lugares en las escuelas primarias.',
+        'Su población total va a duplicarse en los próximos años gracias al tamaño del grupo de edades intermedias.',
+        'Su territorio está sobrepoblado, porque una cúspide ancha siempre indica una densidad de población muy alta.' ],
+        en:[
+        'A large part of its population is already over 65, so demand for pensions and medical care will grow.',
+        'Its child population is the largest in the country and that is why primary school places will run short.',
+        'Its total population will double in the coming years thanks to the size of the middle age group.',
+        'Its territory is overpopulated, because a wide top always indicates a very high population density.' ] },
+      correct:0,
+      hint:{ es:'Recuerda qué grupo de edad ocupa el nivel más alto de la pirámide y qué significa que ese nivel sea ancho.',
+             en:'Remember which age group occupies the highest level of the pyramid and what it means for that level to be wide.' },
+      explanation:{ es:'El nivel más alto reúne a las personas de mayor edad, así que una cúspide ancha significa muchas personas adultas mayores. La base angosta indica lo contrario para la niñez, y la forma de la pirámide no dice nada sobre la densidad ni sobre la superficie del país.',
+                    en:'The highest level gathers the oldest people, so a wide top means many older adults. The narrow base indicates the opposite for children, and the shape of the pyramid says nothing about density or about the surface of the country.' } }
+  ], rng), rng);
+
+  /* ── PROBLEMA 8 ─────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'Leer la tabla de edades', en:'Reading the age table' }, showWork:false,
+      stmt:{ es:'Una tabla compara la composición por edad de dos países. País A: 34% de 0 a 14 años, 61% de 15 a 64 años y 5% de 65 años o más. País B: 16% de 0 a 14 años, 65% de 15 a 64 años y 19% de 65 años o más. ¿Qué afirmación se sostiene con esos datos?',
+             en:'A table compares the age composition of two countries. Country A: 34% aged 0 to 14, 61% aged 15 to 64 and 5% aged 65 or over. Country B: 16% aged 0 to 14, 65% aged 15 to 64 and 19% aged 65 or over. Which statement is supported by that data?' },
+      options:{ es:[
+        'En el país A la población de 0 a 14 años es casi siete veces mayor que la de 65 años o más.',
+        'En el país B la mayor parte de la población ya rebasó los 65 años de edad.',
+        'En los dos países el grupo de 0 a 14 años supera al grupo de 15 a 64 años.',
+        'El país A tiene más habitantes en total que el país B, porque su porcentaje infantil es mayor.' ],
+        en:[
+        'In country A the population aged 0 to 14 is almost seven times larger than the one aged 65 or over.',
+        'In country B most of the population is already over 65 years of age.',
+        'In both countries the group aged 0 to 14 is larger than the group aged 15 to 64.',
+        'Country A has more inhabitants in total than country B, because its child percentage is higher.' ] },
+      correct:0,
+      hint:{ es:'Compara los porcentajes dentro de cada país antes de comparar un país con el otro, y revisa qué dato no aparece en la tabla.',
+             en:'Compare the percentages inside each country before comparing one country with the other, and check which piece of data is missing from the table.' },
+      explanation:{ es:'En el país A, 34% frente a 5% da una proporción cercana a siete veces. En el país B, 19% no es la mayoría; en los dos países el grupo de 15 a 64 años es el más numeroso, y los porcentajes no dicen nada sobre el total de habitantes de cada país.',
+                    en:'In country A, 34% against 5% gives a ratio close to seven times. In country B, 19% is not the majority; in both countries the group aged 15 to 64 is the largest, and percentages say nothing about the total number of inhabitants of each country.' } },
+    { title:{ es:'Quién necesitará más aulas', en:'Who will need more classrooms' }, showWork:false,
+      stmt:{ es:'Una tabla muestra dos países. País C: 28% de su población tiene de 0 a 14 años y 7% tiene 65 años o más. País D: 18% tiene de 0 a 14 años y 14% tiene 65 años o más. ¿Cuál de los dos enfrentará antes una mayor demanda de lugares en las escuelas, en proporción a su población?',
+             en:'A table shows two countries. Country C: 28% of its population is aged 0 to 14 and 7% is 65 or over. Country D: 18% is aged 0 to 14 and 14% is 65 or over. Which of the two will face a greater demand for school places sooner, in proportion to its population?' },
+      options:{ es:[
+        'El país C, porque más de la cuarta parte de su población todavía no cumple 15 años.',
+        'El país D, porque tiene el doble de población menor de 15 años que el país C.',
+        'Los dos por igual, porque la tabla no incluye el porcentaje del grupo de 15 a 64 años.',
+        'Ninguno de los dos, porque el porcentaje de menores de 15 años no se relaciona con la demanda escolar.' ],
+        en:[
+        'Country C, because more than a quarter of its population is not yet 15 years old.',
+        'Country D, because it has twice as much population under 15 as country C.',
+        'Both equally, because the table does not include the percentage of the group aged 15 to 64.',
+        'Neither of them, because the percentage of people under 15 is unrelated to school demand.' ] },
+      correct:0,
+      hint:{ es:'Localiza en cada país el porcentaje del grupo que está por entrar o ya está en la escuela y compáralos.',
+             en:'Find in each country the percentage of the group that is about to enter or is already in school and compare them.' },
+      explanation:{ es:'El 28% del país C supera la cuarta parte de su población y duplica casi al 18% del país D, así que la presión escolar es mayor ahí. En el país D quien duplica es el grupo de 65 años o más, y ese dato anticipa pensiones, no aulas.',
+                    en:'The 28% of country C is above a quarter of its population and nearly doubles the 18% of country D, so school pressure is greater there. In country D what doubles is the group aged 65 or over, and that figure anticipates pensions, not classrooms.' } }
+  ], rng), rng);
+
+  buildReflect(rng);
+
+  /* ── CIERRE ─────────────────────────────────────────────────── */
+  addSection(S('CIERRE','CLOSING'),
+    '<h2>' + S('Dos casos para leer con datos','Two cases to read with data') + '</h2>' +
+    '<p>' + S('Aquí van dos situaciones nuevas.','Here are two new situations.') + '</p>');
+
+  /* ── PROBLEMA 9 ─────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'Una población que se duplicó', en:'A population that doubled' }, showWork:false,
+      stmt:{ es:'Un país duplicó su población en treinta años. Su superficie cultivable siguió igual y casi toda la gente nueva se instaló en la periferia de tres ciudades. ¿Qué conjunto de implicaciones describe mejor la situación?',
+             en:'A country doubled its population in thirty years. Its farmland stayed the same and almost all the new people settled on the outskirts of three cities. Which set of implications best describes the situation?' },
+      options:{ es:[
+        'Sociales por la demanda de vivienda y escuelas en la periferia, económicas por los empleos que hacen falta y ambientales por la presión sobre el agua y el suelo.',
+        'Únicamente ambientales, porque el aumento de habitantes solo se refleja en la cantidad de agua y de suelo que se consume cada año.',
+        'Únicamente económicas, porque cualquier dificultad derivada de la población se corrige creando más empleos en esas tres ciudades.',
+        'Ninguna en particular, porque el número de habitantes no modifica la manera en que un país usa su territorio ni sus recursos.' ],
+        en:[
+        'Social because of the demand for housing and schools on the outskirts, economic because of the jobs needed and environmental because of the pressure on water and soil.',
+        'Only environmental, because the increase in inhabitants is reflected solely in the amount of water and soil consumed each year.',
+        'Only economic, because any difficulty derived from population is corrected by creating more jobs in those three cities.',
+        'None in particular, because the number of inhabitants does not change the way a country uses its territory or its resources.' ] },
+      correct:0,
+      hint:{ es:'Revisa por separado a las personas, al empleo y a los recursos naturales antes de elegir.',
+             en:'Look separately at people, at jobs and at natural resources before choosing.' },
+      explanation:{ es:'Duplicar la población en un territorio que no crece afecta a la vez a las personas, al trabajo y a los recursos. La vivienda y las escuelas de la periferia son implicaciones sociales, los empleos que faltan son económicas y el agua y el suelo bajo presión son ambientales.',
+                    en:'Doubling the population in a territory that does not grow affects people, work and resources at the same time. Housing and schools on the outskirts are social implications, the missing jobs are economic ones and water and soil under pressure are environmental ones.' } },
+    { title:{ es:'Cuando la base se angosta', en:'When the base narrows' }, showWork:false,
+      stmt:{ es:'En cuarenta años, la población de 0 a 14 años de un país bajó de 33% a 17% del total y la de 65 años o más subió de 4% a 13%. ¿Qué combinación de decisiones responde mejor a ese cambio?',
+             en:'In forty years, the population aged 0 to 14 of a country fell from 33% to 17% of the total and the one aged 65 or over rose from 4% to 13%. Which combination of decisions best responds to that change?' },
+      options:{ es:[
+        'Sostener las pensiones y ampliar la atención médica de larga duración, sin descuidar la calidad de las escuelas que ya existen.',
+        'Construir con urgencia el doble de escuelas primarias, porque la población infantil será la que más crezca en los próximos años.',
+        'Concentrar todo el gasto público en programas de natalidad, porque un país solo puede sostenerse si su población deja de envejecer.',
+        'Mantener todos los servicios sin ningún cambio, porque los porcentajes de cada grupo de edad no influyen en lo que la población necesita.' ],
+        en:[
+        'Sustain pensions and expand long term medical care, without neglecting the quality of the schools that already exist.',
+        'Urgently build twice as many primary schools, because the child population will be the fastest growing in the coming years.',
+        'Concentrate all public spending on birth programmes, because a country can only sustain itself if its population stops ageing.',
+        'Keep every service unchanged, because the percentages of each age group do not affect what the population needs.' ] },
+      correct:0,
+      hint:{ es:'Observa qué grupo perdió peso y cuál lo ganó, y traduce cada cambio en el servicio que le corresponde.',
+             en:'Look at which group lost weight and which one gained it, and translate each change into the service it corresponds to.' },
+      explanation:{ es:'La niñez pasó a ser la mitad del peso que tenía y las personas adultas mayores se multiplicaron por más de tres. Con esa composición hacen falta pensiones y atención médica prolongada, mientras las escuelas existentes bastan y conviene cuidar su calidad, no duplicarlas.',
+                    en:'Children now weigh half of what they used to and older adults have more than tripled. With that composition pensions and long term medical care are needed, while the existing schools are enough and their quality should be looked after rather than doubled.' } }
+  ], rng), rng);
+
+  /* ── PROBLEMA 10 ────────────────────────────────────────────── */
+  addProblem(pick([
+    { title:{ es:'Comparar dos países con la tabla', en:'Comparing two countries with the table' }, showWork:false,
+      stmt:{ es:'Una tabla registra dos países. País M: densidad de 380 hab/km² y 82% de población urbana. País N: densidad de 12 hab/km² y 34% de población urbana. ¿Qué afirmación se sostiene con esa tabla?',
+             en:'A table records two countries. Country M: density of 380 inhab/km² and 82% urban population. Country N: density of 12 inhab/km² and 34% urban population. Which statement is supported by that table?' },
+      options:{ es:[
+        'En el país M la población está mucho más concentrada y la mayor parte vive en localidades urbanas.',
+        'El país N tiene menos habitantes que el país M, porque su densidad de población es más baja.',
+        'En el país M ya no quedan localidades rurales, porque su densidad de población es muy alta.',
+        'En el país N la población está concentrada en pocos puntos, porque su porcentaje urbano es bajo.' ],
+        en:[
+        'In country M the population is much more concentrated and most of it lives in urban localities.',
+        'Country N has fewer inhabitants than country M, because its population density is lower.',
+        'In country M there are no rural localities left, because its population density is very high.',
+        'In country N the population is concentrated in a few spots, because its urban percentage is low.' ] },
+      correct:0,
+      hint:{ es:'Recuerda que la densidad relaciona habitantes con superficie y que el porcentaje urbano no aparece por casualidad junto a ella.',
+             en:'Remember that density relates inhabitants to surface and that the urban percentage does not sit next to it by chance.' },
+      explanation:{ es:'Una densidad de 380 frente a 12 indica mucha más gente por kilómetro cuadrado, y el 82% urbano confirma que esa gente vive en localidades grandes. La densidad no dice cuántos habitantes tiene un país, porque también depende de la superficie, y un porcentaje urbano alto no borra las localidades rurales.',
+                    en:'A density of 380 against 12 indicates far more people per square kilometre, and the 82% urban confirms that those people live in large localities. Density does not tell how many inhabitants a country has, because it also depends on the surface, and a high urban percentage does not erase rural localities.' } },
+    { title:{ es:'Mismo número, distinta densidad', en:'Same number, different density' }, showWork:false,
+      stmt:{ es:'Una tabla registra dos zonas del mismo estado. Zona A: 5 000 habitantes en 10 km². Zona B: 5 000 habitantes en 500 km². ¿Qué comparación describe correctamente a las dos zonas?',
+             en:'A table records two zones of the same state. Zone A: 5 000 inhabitants in 10 km². Zone B: 5 000 inhabitants in 500 km². Which comparison correctly describes the two zones?' },
+      options:{ es:[
+        'Tienen el mismo número de habitantes, pero la densidad de la zona A es cincuenta veces mayor que la de la zona B.',
+        'La zona A tiene cincuenta veces más habitantes que la zona B, y por eso su densidad de población es mayor.',
+        'Las dos zonas tienen la misma densidad, porque el número de habitantes es idéntico en una y en otra.',
+        'La zona B es la más densa, porque su mayor superficie le permite alojar a muchas más personas.' ],
+        en:[
+        'They have the same number of inhabitants, but the density of zone A is fifty times higher than that of zone B.',
+        'Zone A has fifty times more inhabitants than zone B, and that is why its population density is higher.',
+        'Both zones have the same density, because the number of inhabitants is identical in one and the other.',
+        'Zone B is the denser one, because its larger surface lets it host many more people.' ] },
+      correct:0,
+      hint:{ es:'Obtén la densidad de cada zona por separado antes de compararlas entre sí.',
+             en:'Work out the density of each zone separately before comparing them.' },
+      explanation:{ es:'La zona A tiene 500 habitantes por kilómetro cuadrado y la zona B tiene 10, así que la primera es cincuenta veces más densa aunque las dos tengan la misma población. Lo que cambia no es el número de personas sino la superficie sobre la que se reparten.',
+                    en:'Zone A has 500 inhabitants per square kilometre and zone B has 10, so the first is fifty times denser even though both have the same population. What changes is not the number of people but the surface over which they are spread.' } }
+  ], rng), rng);
+}
+</script>
+</body>
+</html>

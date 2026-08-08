@@ -1,0 +1,2623 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concentración de Contaminantes (ppm) en Aire, Agua y Suelo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Concentración de Contaminantes (ppm) en Aire, Agua y Suelo</div>
+    <div class="wcourse" id="wcourse-el">Química · 3° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Concentración de Contaminantes (ppm) en Aire, Agua y Suelo</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#1a3a6b', primaryDark:'#0f2444', primaryBg:'#e8edf5',
+  accent:'#c9a84c', accentBg:'#f7f1e3',
+  darkPrimary:'#4a78bf', darkPrimaryDark:'#7aa2e0', darkPrimaryBg:'#0e1f38',
+  darkAccent:'#d4b86a', darkAccentBg:'#241e0e',
+  pBR:26, pBG:58, pBB:107, pAR:201, pAG:168, pAB:76,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'LIAXA',
+  guideTitle:{ es:'Concentración de Contaminantes (ppm) en Aire, Agua y Suelo', en:'Pollutant Concentration (ppm) in Air, Water and Soil' },
+  courseName:{ es:'Química · 3° de Secundaria', en:'Chemistry · 3° de Secundaria' }, filePrefix:'qui3_t05_g02'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'qui3_t05_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Concentración de Contaminantes (ppm) en Aire, Agua y Suelo','wcourse':'Química · 3° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Pollutant Concentration (ppm) in Air, Water and Soil','wcourse':'Chemistry · 3° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'qui3_t05_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'qui3_t05_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'qui3_t05_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'qui3_t05_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('qui3_t05_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+/* ==========================================================================
+   HELPERS DE CONTENIDO :: texto bilingue, secciones, tarjetas graduadas
+   Cada tarjeta graduada se agrega en linea con buildOneCard (Rule 5).
+   ========================================================================== */
+
+function L(o){ return (o && o[LANG] !== undefined) ? o[LANG] : (o ? o.es : ''); }
+function pk(rng, a){ return a[Math.floor(rng() * a.length)]; }
+function pkN(rng, a, n){ return shuffle(a, rng).slice(0, n); }
+function fmt(x){
+  var v = Math.round(x * 1000) / 1000;
+  return (Math.round(v) === v) ? String(Math.round(v)) : String(v);
+}
+
+function sec(tag, title, html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = '<div class="stag">' + tag + '</div><h2>' + title + '</h2>' + html;
+  document.getElementById('lessonBody').appendChild(d);
+  return d;
+}
+
+function widgetHost(parent, id){
+  var d = document.createElement('div');
+  d.className = 'gw';
+  d.id = id;
+  parent.appendChild(d);
+  return d;
+}
+
+function rcard(name, form, note){
+  return '<div class="rcard"><div class="rname">' + name + '</div><div class="rform">' + form + '</div><div class="rnote">' + note + '</div></div>';
+}
+
+function chip(txt){ return '<span class="gw-chip">' + txt + '</span>'; }
+
+function say(host, cls, msg){
+  var e = host.querySelector('.gw-fb');
+  if (!e) return;
+  e.className = 'gw-fb' + (cls ? ' ' + cls : '');
+  e.innerHTML = msg;
+}
+
+function addProblem(rng, spec){
+  var idx = problems.length;
+  var correctVal = spec.options[spec.correct];
+  var sh = shuffle(spec.options, rng);
+  var prob = {
+    title: spec.title,
+    questionText: spec.q,
+    fn: spec.fn || '',
+    hint: spec.hint || '',
+    explanation: spec.exp || '',
+    options: sh,
+    correctIdx: sh.indexOf(correctVal),
+    showWork: !!spec.showWork,
+    studentChoice: null,
+    pendingChoice: null
+  };
+  problems.push(prob);
+  buildOneCard(prob, idx);
+}
+
+/* Un variante trae su propio enunciado, sus cuatro opciones y su explicacion. */
+function useVariant(v){
+  return { title:L(v.t), q:L(v.q), options:L(v.o), correct:v.c, hint:L(v.h), exp:L(v.e), fn:'', showWork:false };
+}
+
+function injectGuideCSS(){
+  if (document.getElementById('guideCSS')) return;
+  var s = document.createElement('style');
+  s.id = 'guideCSS';
+  s.textContent = [
+    '.gw{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin:1.1rem 0;}',
+    '.gw-h{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.55rem;}',
+    '.gw-q{font-size:1rem;font-weight:600;margin-bottom:.5rem;color:var(--text);}',
+    '.gw-mini{font-size:.78rem;color:var(--text3);margin-bottom:.55rem;}',
+    '.gw-lbl{font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:.7rem 0 .3rem;}',
+    '.gw-row{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center;margin:.7rem 0 0;}',
+    '.gw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.45rem;}',
+    '.gw-btn{min-width:44px;min-height:44px;padding:.5rem .85rem;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);font-family:inherit;font-size:.84rem;cursor:pointer;transition:all .14s;}',
+    '.gw-btn:hover{border-color:var(--green);background:var(--green-bg);}',
+    '.gw-btn.solved{background:var(--ok-bg);color:var(--ok);border-color:var(--ok);}',
+    '.gw-btn[disabled]{opacity:.45;cursor:default;}',
+    '.gw-fb{font-size:.84rem;padding:.6rem .8rem;border-radius:8px;margin-top:.65rem;background:var(--surface2);color:var(--text2);}',
+    '.gw-fb.warm{background:var(--gold-bg);color:var(--text2);border-left:3px solid var(--gold);}',
+    '.gw-fb.good{background:var(--ok-bg);color:var(--ok);border-left:3px solid var(--ok);}',
+    '.gw-fb.miss{background:var(--bad-bg);color:var(--bad);border-left:3px solid var(--bad);}',
+    '.gw-val{font-family:"IBM Plex Mono",monospace;font-weight:600;color:var(--green);font-size:.86rem;}',
+    '.gw-rng{width:100%;accent-color:var(--green);}',
+    '.gw-read{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;margin-top:.6rem;}',
+    '.gw-rd{background:var(--surface2);border-radius:8px;padding:.55rem;text-align:center;}',
+    '.gw-rd .k{font-size:.63rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);}',
+    '.gw-rd .v{font-family:"IBM Plex Mono",monospace;font-size:.88rem;font-weight:600;color:var(--green);}',
+    '.gw-chip{display:inline-block;font-size:.71rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:.16rem .6rem;margin:0 .28rem .3rem 0;color:var(--text2);}',
+    '.gw-case{border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);padding:.7rem .85rem;font-size:.85rem;color:var(--text2);}',
+    '.gw-step{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-top:.6rem;}',
+    /* escala de la proporcion */
+    '.sc-box{display:flex;gap:.9rem;flex-wrap:wrap;align-items:center;margin-top:.7rem;}',
+    '.sc-frame{position:relative;width:132px;height:132px;border:2px solid var(--border);border-radius:10px;background:var(--surface2);flex-shrink:0;overflow:hidden;}',
+    '.sc-part{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--gold);border-radius:2px;transition:width .2s,height .2s;}',
+    '.sc-halo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34px;height:34px;border:1.5px dashed var(--gold);border-radius:50%;}',
+    '.sc-side{flex:1;min-width:210px;}',
+    '.sc-ruler{display:flex;gap:.2rem;margin-top:.5rem;}',
+    '.sc-tick{flex:1;height:26px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);font-size:.6rem;display:flex;align-items:center;justify-content:center;color:var(--text3);overflow:hidden;}',
+    '.sc-tick.on{background:var(--green);color:var(--surface);border-color:var(--green);font-weight:600;}',
+    '.sc-tick.goal{border-color:var(--gold);border-width:2px;}',
+    '.sc-eq{font-size:.79rem;color:var(--text2);margin-top:.45rem;}',
+    /* mesa de unidades */
+    '.un-trays{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.7rem;}',
+    '.un-tray{border:1.5px dashed var(--border);border-radius:10px;background:var(--surface2);padding:.55rem;min-height:96px;cursor:pointer;transition:all .14s;}',
+    '.un-tray:hover{border-color:var(--green);}',
+    '.un-tray.armed{border-style:solid;border-color:var(--gold);background:var(--gold-bg);}',
+    '.un-tname{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:.35rem;}',
+    '.un-card{border:1.5px solid var(--border);border-radius:9px;background:var(--surface);padding:.45rem .55rem;font-size:.76rem;color:var(--text);margin-bottom:.35rem;cursor:pointer;min-height:44px;display:flex;align-items:center;transition:all .14s;}',
+    '.un-card:hover{border-color:var(--green);background:var(--green-bg);}',
+    '.un-card.sel{border-color:var(--gold);background:var(--gold-bg);}',
+    '.un-card.set{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);cursor:default;}',
+    '.un-card.shown{border-color:var(--gold);background:var(--gold-bg);cursor:default;}',
+    '.un-pool{margin-top:.7rem;}',
+    /* ventana de exceso */
+    '.tw-plot{position:relative;display:flex;align-items:flex-end;gap:.35rem;height:150px;padding:.5rem .3rem 0;border:1px solid var(--border);border-radius:10px;background:var(--surface2);margin-top:.7rem;}',
+    '.tw-bar{flex:1;background:var(--green);border-radius:4px 4px 0 0;cursor:pointer;position:relative;min-height:6px;transition:all .14s;}',
+    '.tw-bar:hover{opacity:.82;}',
+    '.tw-bar.mk{background:var(--gold);}',
+    '.tw-bar.hit{background:var(--ok);}',
+    '.tw-bar.slip{background:var(--bad);}',
+    '.tw-ref{position:absolute;left:.3rem;right:.3rem;height:0;border-top:2px dashed var(--gold);}',
+    '.tw-reflbl{position:absolute;right:.4rem;font-size:.6rem;color:var(--gold);transform:translateY(-100%);}',
+    '.tw-axis{display:flex;gap:.35rem;padding:0 .3rem;margin-top:.25rem;}',
+    '.tw-ax{flex:1;text-align:center;font-size:.62rem;color:var(--text3);}',
+    /* mapa de lecturas */
+    '.mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;margin-top:.7rem;}',
+    '.mp-cell{min-height:66px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);padding:.4rem;font-size:.7rem;color:var(--text2);display:flex;flex-direction:column;justify-content:center;}',
+    '.mp-cell.pt{cursor:pointer;transition:all .14s;}',
+    '.mp-cell.pt:hover{border-color:var(--green);}',
+    '.mp-cell.t1{background:var(--green-bg);}',
+    '.mp-cell.t2{background:var(--gold-bg);}',
+    '.mp-cell.t3{background:var(--bad-bg);}',
+    '.mp-cell.sel{border-color:var(--gold);border-width:2px;}',
+    '.mp-cell.found{border-color:var(--ok);border-width:2px;}',
+    '.mp-v{font-family:"IBM Plex Mono",monospace;font-size:.82rem;font-weight:600;color:var(--text);}',
+    '.mp-n{font-size:.68rem;color:var(--text3);}',
+    '.mp-comp{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-top:.4rem;}',
+    /* comparador de fichas */
+    '.fc-head{display:grid;grid-template-columns:96px 1fr 1fr;gap:.4rem;font-size:.63rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-top:.7rem;}',
+    '.fc-row{display:grid;grid-template-columns:96px 1fr 1fr;gap:.4rem;align-items:stretch;margin-top:.35rem;cursor:pointer;}',
+    '.fc-k{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);display:flex;align-items:center;}',
+    '.fc-v{border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);padding:.4rem .5rem;font-size:.76rem;color:var(--text);min-height:44px;display:flex;align-items:center;transition:all .14s;}',
+    '.fc-row:hover .fc-v{border-color:var(--green);}',
+    '.fc-row.pickd .fc-v{border-color:var(--gold);background:var(--gold-bg);}',
+    '.fc-row.same .fc-v{opacity:.6;}',
+    '.fc-row.block .fc-v{border-color:var(--bad);background:var(--bad-bg);color:var(--bad);}',
+    '.fc-row.okrow .fc-v{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);}',
+    '.mcopt.pending{background:var(--gold-bg);}',
+    '@media (max-width:600px){.gw{padding:.8rem;}.gw-read{grid-template-columns:1fr 1fr;}.sc-frame{width:110px;height:110px;}.sc-side{min-width:160px;}.sc-tick{font-size:.54rem;}.un-trays{grid-template-columns:1fr;}.mp-grid{gap:.3rem;}.mp-cell{min-height:60px;font-size:.66rem;}.fc-head,.fc-row{grid-template-columns:74px 1fr 1fr;}.fc-v{font-size:.72rem;}}'
+  ].join('');
+  document.head.appendChild(s);
+}
+
+/* ==========================================================================
+   LECCION :: concepto, manipulativo y problemas, en ese orden (Rule 1)
+   ========================================================================== */
+
+function buildLesson(rng){
+  injectGuideCSS();
+
+  sec(
+    L({ es:'Punto de partida', en:'Starting point' }),
+    L({ es:'Un número diminuto que decide una política de barrio', en:'A tiny number that decides a neighbourhood policy' }),
+    '<p>' + L({
+      es:'Cuando una comunidad sospecha que su pozo, su aire o su tierra están contaminados, la conversación tarde o temprano llega a una cifra: tantas partes por millón de tal sustancia. Ese número parece pequeño, casi insignificante, y sin embargo puede ser la diferencia entre un agua que se puede beber y otra que no.',
+      en:'When a community suspects that its well, its air or its soil is polluted, the conversation sooner or later arrives at a figure: so many parts per million of some substance. That number looks small, almost negligible, and yet it can be the difference between water that can be drunk and water that cannot.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Esta guía trabaja en leer esa cifra con precisión: qué compara, cómo cambia la unidad según se mida aire, agua o suelo, contra qué referencia se juzga y qué se puede concluir cuando hay varias lecturas juntas. Al final, esa lectura cuidadosa es la que sostiene una propuesta preventiva frente a la asamblea.',
+      en:'This guide works on reading that figure precisely: what it compares, how the unit changes depending on whether air, water or soil is measured, against which reference it is judged, and what can be concluded when several readings are put together. In the end, that careful reading is what supports a preventive proposal before the assembly.'
+    }) + '</p>' +
+    '<div class="gw-lbl">' + L({ es:'Lo que vas a leer en esta guía', en:'What you will read in this guide' }) + '</div>' +
+    '<div>' +
+      chip(L({ es:'partes por millón', en:'parts per million' })) +
+      chip(L({ es:'miligramos por litro', en:'milligrams per litre' })) +
+      chip(L({ es:'miligramos por kilogramo', en:'milligrams per kilogram' })) +
+      chip(L({ es:'volumen entre volumen', en:'volume over volume' })) +
+      chip(L({ es:'valor de referencia', en:'reference value' })) +
+      chip(L({ es:'periodo de promedio', en:'averaging period' })) +
+      chip(L({ es:'gradiente hacia la fuente', en:'gradient towards the source' })) +
+    '</div>'
+  );
+
+  /* CONCEPTO 1 ────────────────────────────────────────────────────────── */
+  var s1 = sec(
+    L({ es:'Concepto 1', en:'Concept 1' }),
+    L({ es:'Una parte entre un millón de partes', en:'One part in a million parts' }),
+    '<p>' + L({
+      es:'Las partes por millón responden a una sola pregunta: de todo el material de la muestra, ¿qué fracción corresponde al contaminante? Una lectura de 1 ppm significa que por cada millón de partes de la muestra hay una parte de la sustancia buscada. Es la misma idea del porcentaje, que es una parte entre cien, llevada a una escala diez mil veces más fina.',
+      en:'Parts per million answer a single question: out of all the material in the sample, which fraction corresponds to the pollutant? A reading of 1 ppm means that for every million parts of the sample there is one part of the substance being looked for. It is the same idea as a percentage, which is one part in a hundred, taken to a scale ten thousand times finer.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Se eligió esa escala por comodidad y por seguridad de la lectura. Los contaminantes que dañan la salud actúan en cantidades tan pequeñas que escribirlas como porcentaje obliga a arrastrar ceros y decimales, y cada cero de más es una oportunidad de equivocarse al copiar un dato en una tabla comunitaria. Cuando la sustancia aparece en proporciones todavía menores se recurre a las partes por mil millones, que se abrevian ppb.',
+      en:'That scale was chosen for convenience and for safety when reading. The pollutants that harm health act in amounts so small that writing them as a percentage means dragging along zeros and decimals, and every extra zero is a chance to make a mistake when copying a figure into a community table. When the substance appears in even smaller proportions, parts per billion are used, abbreviated ppb.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard(L({ es:'Porcentaje', en:'Percentage' }), L({ es:'1 parte en 100', en:'1 part in 100' }), L({ es:'útil para cantidades grandes', en:'useful for large amounts' })) +
+      rcard(L({ es:'Partes por millón', en:'Parts per million' }), L({ es:'1 parte en 1 000 000', en:'1 part in 1 000 000' }), L({ es:'la escala usual de los contaminantes', en:'the usual scale for pollutants' })) +
+      rcard(L({ es:'Partes por mil millones', en:'Parts per billion' }), L({ es:'1 parte en 1 000 000 000', en:'1 part in 1 000 000 000' }), L({ es:'para sustancias activas en dosis mínimas', en:'for substances active at minimal doses' })) +
+      rcard(L({ es:'Lo que no dice', en:'What it does not say' }), L({ es:'proporción, no total', en:'proportion, not total' }), L({ es:'no informa cuánta sustancia hay en el sitio', en:'it does not report how much substance is at the site' })) +
+    '</div>' +
+    '<div class="callout"><p><strong>' + L({ es:'Idea clave: ', en:'Key idea: ' }) + '</strong>' + L({
+      es:'una lectura en partes por millón describe qué tan concentrada está la sustancia, no cuánta hay. Dos pozos con la misma lectura están igual de concentrados aunque uno guarde mil veces más agua que el otro.',
+      en:'a reading in parts per million describes how concentrated the substance is, not how much of it there is. Two wells with the same reading are equally concentrated even if one holds a thousand times more water than the other.'
+    }) + '</p></div>'
+  );
+  w1(rng, widgetHost(s1, 'w_escala'));
+  addProblem(rng, mkP1(rng));
+  addProblem(rng, mkP2(rng));
+
+  /* CONCEPTO 2 ────────────────────────────────────────────────────────── */
+  var s2 = sec(
+    L({ es:'Concepto 2', en:'Concept 2' }),
+    L({ es:'Cada compartimento se mide a su manera', en:'Each compartment is measured in its own way' }),
+    '<p>' + L({
+      es:'La idea de proporción es la misma en aire, agua y suelo, pero lo que se pone arriba y abajo de esa proporción cambia. En agua se compara la masa de la sustancia con el volumen del líquido: un miligramo por litro se informa como una parte por millón, porque un litro de agua tiene una masa cercana a un millón de miligramos. En suelo se comparan masas: un miligramo por kilogramo de muestra seca equivale también a una parte por millón, y la muestra se seca antes de pesarla para que la humedad del día no altere el resultado.',
+      en:'The idea of proportion is the same in air, water and soil, but what goes on top and at the bottom of that proportion changes. In water the mass of the substance is compared with the volume of the liquid: one milligram per litre is reported as one part per million, because one litre of water has a mass close to a million milligrams. In soil masses are compared: one milligram per kilogram of dry sample also equals one part per million, and the sample is dried before weighing so that the humidity of the day does not alter the result.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'En aire la comparación se hace entre volúmenes de gas: las partes por millón indican cuántos volúmenes del gas contaminante hay por cada millón de volúmenes de aire, y por eso la lectura depende de la temperatura y la presión del momento. Las partículas suspendidas son un caso aparte: no son un gas que ocupe una fracción del volumen, sino material sólido flotando, así que se informan en microgramos de partículas por metro cúbico de aire.',
+      en:'In air the comparison is made between volumes of gas: parts per million indicate how many volumes of the polluting gas there are for every million volumes of air, and that is why the reading depends on the temperature and pressure at the time. Suspended particles are a separate case: they are not a gas occupying a fraction of the volume but solid material floating, so they are reported in micrograms of particles per cubic metre of air.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard(L({ es:'Agua', en:'Water' }), 'mg / L', L({ es:'masa de sustancia entre volumen de líquido', en:'mass of substance over volume of liquid' })) +
+      rcard(L({ es:'Suelo', en:'Soil' }), 'mg / kg', L({ es:'masa entre masa de muestra seca', en:'mass over mass of dry sample' })) +
+      rcard(L({ es:'Aire, gases', en:'Air, gases' }), L({ es:'volumen / volumen', en:'volume / volume' }), L({ es:'depende de temperatura y presión', en:'it depends on temperature and pressure' })) +
+      rcard(L({ es:'Aire, partículas', en:'Air, particles' }), 'µg / m³', L({ es:'masa suspendida en un volumen de aire', en:'mass suspended in a volume of air' })) +
+    '</div>' +
+    '<div class="callout"><p>' + L({
+      es:'Una unidad mal elegida no es un descuido de redacción: convierte una medición correcta en un dato imposible de comparar con la referencia y con las demás lecturas del expediente.',
+      en:'A badly chosen unit is not a writing slip: it turns a correct measurement into a figure impossible to compare with the reference and with the other readings in the file.'
+    }) + '</p></div>'
+  );
+  w2(rng, widgetHost(s2, 'w_unidades'));
+  addProblem(rng, mkP3(rng));
+  addProblem(rng, mkP4(rng));
+
+  /* CONCEPTO 3 ────────────────────────────────────────────────────────── */
+  var s3 = sec(
+    L({ es:'Concepto 3', en:'Concept 3' }),
+    L({ es:'Ninguna lectura se juzga sola: referencia y periodo', en:'No reading is judged alone: reference and period' }),
+    '<p>' + L({
+      es:'Un valor en partes por millón no es alto ni bajo por sí mismo. Se vuelve alto o bajo frente a un valor de referencia, que es el máximo recomendado para un uso concreto. La referencia del agua de bebida es más exigente que la del agua de riego; la del suelo de un patio escolar es más exigente que la de un terreno industrial. Comparar contra la referencia equivocada produce una conclusión falsa aunque la medición sea impecable.',
+      en:'A value in parts per million is neither high nor low by itself. It becomes high or low against a reference value, which is the maximum recommended for a specific use. The reference for drinking water is stricter than the one for irrigation water; the one for the soil of a school yard is stricter than the one for industrial land. Comparing against the wrong reference produces a false conclusion even when the measurement is flawless.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'En aire aparece además el periodo de promedio. Una referencia puede estar definida como promedio de una hora, de ocho horas o de un año, porque el daño de cada contaminante depende del tiempo que se respire. Una lectura horaria y una referencia anual describen exposiciones distintas y no se comparan entre sí. Y un solo dato tampoco describe una tendencia: hace falta una serie de lecturas en el mismo sitio para saber si el problema crece, se mantiene o cede.',
+      en:'In air there is also the averaging period. A reference can be defined as a one hour, eight hour or annual average, because the harm of each pollutant depends on how long it is breathed. An hourly reading and an annual reference describe different exposures and are not compared with each other. And a single figure does not describe a trend either: a series of readings at the same site is needed to know whether the problem is growing, holding or easing.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard(L({ es:'Referencia', en:'Reference' }), L({ es:'máximo recomendado', en:'recommended maximum' }), L({ es:'cambia con el uso del agua o del suelo', en:'it changes with the use of the water or soil' })) +
+      rcard(L({ es:'Periodo', en:'Period' }), L({ es:'1 h, 8 h, 1 año', en:'1 h, 8 h, 1 year' }), L({ es:'la referencia y el dato deben coincidir', en:'the reference and the figure must match' })) +
+      rcard(L({ es:'Serie', en:'Series' }), L({ es:'varias lecturas', en:'several readings' }), L({ es:'un dato aislado no muestra tendencia', en:'an isolated figure shows no trend' })) +
+      rcard(L({ es:'Excedencia', en:'Exceedance' }), L({ es:'dato por encima', en:'figure above' }), L({ es:'se cuenta cuántas veces y en qué horario', en:'how many times and at what hours is counted' })) +
+    '</div>'
+  );
+  w3(rng, widgetHost(s3, 'w_ventana'));
+  addProblem(rng, mkP5(rng));
+  addProblem(rng, mkP6(rng));
+
+  /* CONCEPTO 4 ────────────────────────────────────────────────────────── */
+  var s4 = sec(
+    L({ es:'Concepto 4', en:'Concept 4' }),
+    L({ es:'Varias lecturas juntas señalan la fuente', en:'Several readings together point at the source' }),
+    '<p>' + L({
+      es:'Cuando las mediciones se levantan en varios puntos del mismo barrio dejan de ser cifras sueltas y forman un patrón. Casi siempre la concentración es mayor cerca del lugar donde la sustancia se libera y va disminuyendo conforme aumenta la distancia, porque el aire dispersa, el agua diluye y el suelo retiene lo que le va llegando. Ese descenso ordenado es el rastro que conduce a la fuente.',
+      en:'When measurements are taken at several points in the same neighbourhood they stop being loose figures and form a pattern. Almost always the concentration is higher near the place where the substance is released and decreases as the distance grows, because air disperses, water dilutes and soil holds whatever reaches it. That orderly decline is the trail that leads to the source.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'El patrón se lee junto con la geografía del sitio. En aire conviene mirar hacia dónde sopla el viento dominante, porque las lecturas altas aparecen a favor del viento y no alrededor por igual. En agua se mira aguas abajo de la descarga. En suelo se mira la pendiente por donde escurre la lluvia. Y una sola lectura alta no basta: conviene repetirla antes de señalar a alguien, porque un frasco mal manejado también produce números altos.',
+      en:'The pattern is read together with the geography of the site. In air it helps to look at where the prevailing wind blows, because high readings appear downwind and not evenly all around. In water you look downstream of the discharge. In soil you look at the slope where rain runs off. And a single high reading is not enough: it is worth repeating before pointing at anybody, because a badly handled sample bottle also produces high numbers.'
+    }) + '</p>' +
+    '<div class="callout"><p>' + L({
+      es:'La pregunta que ordena un recorrido de medición no es dónde está el número más grande, sino hacia dónde crecen los números. Esa dirección es la que apunta al origen del problema.',
+      en:'The question that organizes a measuring walk is not where the biggest number is, but in which direction the numbers grow. That direction is the one pointing at the origin of the problem.'
+    }) + '</p></div>'
+  );
+  w4(rng, widgetHost(s4, 'w_mapa'));
+  addProblem(rng, mkP7(rng));
+
+  /* CONCEPTO 5 ────────────────────────────────────────────────────────── */
+  var s5 = sec(
+    L({ es:'Concepto 5', en:'Concept 5' }),
+    L({ es:'Sistematizar las fuentes y decidir la medida', en:'Systematizing the sources and deciding the measure' }),
+    '<p>' + L({
+      es:'La información sobre concentración casi nunca viene de un solo lado: hay reportes de laboratorio, boletines de estaciones de monitoreo, mediciones escolares con equipo sencillo y testimonios de quienes viven en el sitio. Sistematizar es acomodar todo eso en una misma tabla donde cada renglón declare sustancia, sitio, fecha, unidad, periodo y método. Con esos campos a la vista se distingue qué lecturas se pueden comparar y cuáles solo parecen comparables.',
+      en:'Information about concentration almost never comes from a single place: there are laboratory reports, bulletins from monitoring stations, school measurements with simple equipment and accounts from the people who live at the site. Systematizing means arranging all of that in one table where each row declares substance, site, date, unit, period and method. With those fields in sight you can tell which readings can be compared and which only look comparable.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'La tabla es el punto de partida de la propuesta, no el final. Con ella se elige una acción, y las acciones no valen lo mismo: una medida preventiva actúa sobre la fuente para que la sustancia no se libere, mientras que una correctiva limpia lo ya liberado. Toda propuesta necesita además ser factible con los recursos reales de la comunidad, sostenerse en el tiempo y traer un indicador: la misma sustancia, medida en el mismo punto y con el mismo método, antes y después.',
+      en:'The table is the starting point of the proposal, not its end. With it an action is chosen, and actions are not worth the same: a preventive measure acts on the source so the substance is not released, while a corrective one cleans up what was already released. Every proposal also needs to be feasible with the real resources of the community, to hold over time, and to bring an indicator: the same substance, measured at the same point and with the same method, before and after.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard(L({ es:'Campos mínimos', en:'Minimum fields' }), L({ es:'sustancia, sitio, fecha', en:'substance, site, date' }), L({ es:'sin ellos el dato no se puede repetir', en:'without them the figure cannot be repeated' })) +
+      rcard(L({ es:'Unidad y periodo', en:'Unit and period' }), L({ es:'mg/L, mg/kg, 8 h', en:'mg/L, mg/kg, 8 h' }), L({ es:'deciden si dos lecturas se comparan', en:'they decide whether two readings compare' })) +
+      rcard(L({ es:'Preventiva', en:'Preventive' }), L({ es:'actúa en la fuente', en:'acts at the source' }), L({ es:'evita que la sustancia se libere', en:'it keeps the substance from being released' })) +
+      rcard(L({ es:'Indicador', en:'Indicator' }), L({ es:'antes y después', en:'before and after' }), L({ es:'mismo sitio, mismo método', en:'same site, same method' })) +
+    '</div>'
+  );
+  w5(rng, widgetHost(s5, 'w_fichas'));
+  addProblem(rng, mkP8(rng));
+
+  /* CIERRE ────────────────────────────────────────────────────────────── */
+  sec(
+    L({ es:'Cierre', en:'Closing' }),
+    L({ es:'Las últimas decisiones del expediente', en:'The last decisions in the file' }),
+    '<p>' + L({
+      es:'Las dos situaciones finales juntan todo lo trabajado: qué compara una lectura, con qué referencia se juzga, qué muestra un conjunto de datos y qué acción sostiene la comunidad. Lee con calma antes de elegir.',
+      en:'The last two situations put together everything worked on: what a reading compares, against which reference it is judged, what a set of data shows and which action the community can sustain. Read calmly before choosing.'
+    }) + '</p>'
+  );
+  addProblem(rng, mkP9(rng));
+  addProblem(rng, mkP10(rng));
+}
+/* ==========================================================================
+   MANIPULATIVO 1 :: ESCALA DE LA PROPORCION
+   El alumno mueve un control por siete escalones de proporcion y ve, en tiempo
+   real, la marca del contaminante encogerse y las equivalencias cambiar.
+   Tres rondas, retroalimentacion direccional, revelacion al tercer intento.
+   ========================================================================== */
+
+var SCALE = [
+  { lab:'1 %',       side:14, parts:{ es:'1 parte en 100 partes', en:'1 part in 100 parts' },
+    agua:{ es:'10 gramos en 1 litro de agua', en:'10 grams in 1 litre of water' },
+    suelo:{ es:'10 gramos en 1 kilogramo de suelo', en:'10 grams in 1 kilogram of soil' }, div:'100' },
+  { lab:'0.1 %',     side:7.4, parts:{ es:'1 parte en 1 000 partes', en:'1 part in 1 000 parts' },
+    agua:{ es:'1 gramo en 1 litro de agua', en:'1 gram in 1 litre of water' },
+    suelo:{ es:'1 gramo en 1 kilogramo de suelo', en:'1 gram in 1 kilogram of soil' }, div:'1 000' },
+  { lab:'100 ppm',   side:4, parts:{ es:'1 parte en 10 000 partes', en:'1 part in 10 000 parts' },
+    agua:{ es:'100 miligramos en 1 litro de agua', en:'100 milligrams in 1 litre of water' },
+    suelo:{ es:'1 gramo en 10 kilogramos de suelo', en:'1 gram in 10 kilograms of soil' }, div:'10 000' },
+  { lab:'10 ppm',    side:2.4, parts:{ es:'1 parte en 100 000 partes', en:'1 part in 100 000 parts' },
+    agua:{ es:'10 miligramos en 1 litro de agua', en:'10 milligrams in 1 litre of water' },
+    suelo:{ es:'1 gramo en 100 kilogramos de suelo', en:'1 gram in 100 kilograms of soil' }, div:'100 000' },
+  { lab:'1 ppm',     side:1.5, parts:{ es:'1 parte en 1 000 000 de partes', en:'1 part in 1 000 000 parts' },
+    agua:{ es:'1 miligramo en 1 litro de agua', en:'1 milligram in 1 litre of water' },
+    suelo:{ es:'1 gramo en 1 tonelada de suelo', en:'1 gram in 1 tonne of soil' }, div:'1 000 000' },
+  { lab:'0.1 ppm',   side:1, parts:{ es:'1 parte en 10 000 000 de partes', en:'1 part in 10 000 000 parts' },
+    agua:{ es:'1 miligramo en 10 litros de agua', en:'1 milligram in 10 litres of water' },
+    suelo:{ es:'100 miligramos en 1 tonelada de suelo', en:'100 milligrams in 1 tonne of soil' }, div:'10 000 000' },
+  { lab:'0.01 ppm',  side:0.7, parts:{ es:'1 parte en 100 000 000 de partes', en:'1 part in 100 000 000 parts' },
+    agua:{ es:'1 miligramo en 100 litros de agua', en:'1 milligram in 100 litres of water' },
+    suelo:{ es:'10 miligramos en 1 tonelada de suelo', en:'10 milligrams in 1 tonne of soil' }, div:'100 000 000' }
+];
+
+var SCROUNDS = [
+  { txt:{ es:'El reporte del pozo del ejido dice: 1 miligramo de nitratos en cada litro de agua.',
+          en:'The report of the well on the common land says: 1 milligram of nitrates in every litre of water.' }, i:4 },
+  { txt:{ es:'El reporte del huerto escolar dice: 1 gramo de plomo en cada tonelada de suelo seco.',
+          en:'The report of the school orchard says: 1 gram of lead in every tonne of dry soil.' }, i:4 },
+  { txt:{ es:'El reporte de la parcela dice: 1 gramo de cobre en cada 10 kilogramos de suelo seco.',
+          en:'The report of the plot says: 1 gram of copper in every 10 kilograms of dry soil.' }, i:2 },
+  { txt:{ es:'El reporte del jardín dice: 1 gramo de zinc en cada 100 kilogramos de suelo seco.',
+          en:'The report of the garden says: 1 gram of zinc in every 100 kilograms of dry soil.' }, i:3 },
+  { txt:{ es:'El reporte de la toma escolar dice: 1 miligramo de arsénico en cada 100 litros de agua.',
+          en:'The report of the school intake says: 1 milligram of arsenic in every 100 litres of water.' }, i:6 },
+  { txt:{ es:'El reporte del taller dice: 1 gramo de aceite en cada kilogramo de agua residual.',
+          en:'The report of the workshop says: 1 gram of oil in every kilogram of waste water.' }, i:1 },
+  { txt:{ es:'El reporte del arroyo dice: 10 miligramos de amonio en cada litro de agua.',
+          en:'The report of the stream says: 10 milligrams of ammonium in every litre of water.' }, i:3 },
+  { txt:{ es:'El reporte del laboratorio dice: 1 gramo de sal en cada 100 gramos de mezcla.',
+          en:'The laboratory report says: 1 gram of salt in every 100 grams of mixture.' }, i:0 },
+  { txt:{ es:'El reporte de la red dice: 1 miligramo de fluoruros en cada 10 litros de agua.',
+          en:'The network report says: 1 milligram of fluorides in every 10 litres of water.' }, i:5 }
+];
+
+function w1(rng, host){
+  var R = pkN(rng, SCROUNDS, 3);
+  var rd = 0, tries = 0, locked = false, done = false, cur = 3;
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Escala de la proporción', en:'Scale of the proportion' }) + '</div>' +
+    '<div class="gw-q" data-r="ask"></div>' +
+    '<div class="gw-mini">' + L({
+      es:'Mueve el control por los escalones y observa cómo cambia la marca dorada y cómo cambian las equivalencias. Detente en el escalón que describe la proporción del reporte.',
+      en:'Move the control across the steps and watch how the gold mark changes and how the equivalences change. Stop at the step that describes the proportion of the report.'
+    }) + '</div>' +
+    '<div class="sc-box">' +
+      '<div class="sc-frame"><div class="sc-halo"></div><div class="sc-part" data-r="part"></div></div>' +
+      '<div class="sc-side">' +
+        '<div class="gw-lbl">' + L({ es:'Escalón seleccionado', en:'Selected step' }) + '</div>' +
+        '<input class="gw-rng" type="range" min="0" max="6" step="1" value="3" data-r="rng">' +
+        '<div class="sc-ruler" data-r="ruler"></div>' +
+        '<div class="sc-eq" data-r="eq"></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="gw-read" data-r="read"></div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elA = host.querySelector('[data-r="ask"]'),
+      elP = host.querySelector('[data-r="part"]'),
+      elR = host.querySelector('[data-r="rng"]'),
+      elU = host.querySelector('[data-r="ruler"]'),
+      elE = host.querySelector('[data-r="eq"]'),
+      elD = host.querySelector('[data-r="read"]'),
+      elB = host.querySelector('[data-r="chk"]');
+
+  function draw(reveal){
+    var s = SCALE[cur], c = R[rd];
+    elA.innerHTML = L(c.txt);
+    elP.style.width = s.side + 'px';
+    elP.style.height = s.side + 'px';
+    var ruler = '';
+    for (var k = 0; k < SCALE.length; k++){
+      ruler += '<div class="sc-tick' + (k === cur ? ' on' : '') + (reveal && k === c.i ? ' goal' : '') + '">' + SCALE[k].lab + '</div>';
+    }
+    elU.innerHTML = ruler;
+    elE.innerHTML = L({ es:'Para separar una sola parte habría que dividir la muestra en ', en:'To separate a single part the sample would have to be divided into ' }) +
+      '<span class="gw-val">' + s.div + '</span>' + L({ es:' partes iguales.', en:' equal parts.' });
+    elD.innerHTML =
+      '<div class="gw-rd"><div class="k">' + L({ es:'Proporción', en:'Proportion' }) + '</div><div class="v">' + s.lab + '</div></div>' +
+      '<div class="gw-rd"><div class="k">' + L({ es:'En agua', en:'In water' }) + '</div><div class="v" style="font-size:.72rem">' + L(s.agua) + '</div></div>' +
+      '<div class="gw-rd"><div class="k">' + L({ es:'En suelo', en:'In soil' }) + '</div><div class="v" style="font-size:.72rem">' + L(s.suelo) + '</div></div>';
+    elR.disabled = locked || done;
+  }
+
+  function advance(){
+    rd++;
+    if (rd >= 3){
+      done = true;
+      elB.textContent = L({ es:'Completado', en:'Completed' });
+      elB.className = 'gw-btn solved';
+      draw(false);
+      say(host, 'good', L({
+        es:'Recorriste las tres proporciones. Cada escalón hacia la derecha vuelve la parte diez veces más pequeña dentro de la misma muestra.',
+        en:'You went through the three proportions. Each step to the right makes the part ten times smaller inside the same sample.'
+      }));
+      return;
+    }
+    tries = 0; locked = false; cur = 3;
+    elR.value = '3';
+    elB.textContent = L({ es:'Comprobar', en:'Check' });
+    elB.className = 'gw-btn';
+    draw(false);
+    say(host, '', L({ es:'Nuevo reporte sobre la mesa.', en:'A new report on the table.' }));
+  }
+
+  elR.addEventListener('input', function(){
+    cur = parseInt(elR.value, 10);
+    draw(false);
+  });
+
+  elB.addEventListener('click', function(){
+    if (done) return;
+    if (locked){ advance(); return; }
+    var c = R[rd];
+    if (cur === c.i){
+      locked = true;
+      elB.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente reporte', en:'Next report' });
+      elB.className = 'gw-btn solved';
+      draw(true);
+      say(host, 'good', L({
+        es:'Coincide: esa es la proporción del reporte, escrita en la escala que usan los informes de contaminantes.',
+        en:'It matches: that is the proportion of the report, written in the scale used by pollutant reports.'
+      }));
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      cur = c.i; elR.value = String(c.i); locked = true;
+      elB.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente reporte', en:'Next report' });
+      elB.className = 'gw-btn solved';
+      draw(true);
+      say(host, 'warm', L({
+        es:'Queda marcado el escalón correcto: ',
+        en:'The correct step is marked: '
+      }) + '<strong>' + SCALE[c.i].lab + '</strong>. ' + L({
+        es:'Compara la frase del reporte con la equivalencia que aparece abajo y verás que dicen lo mismo.',
+        en:'Compare the sentence of the report with the equivalence shown below and you will see they say the same thing.'
+      }));
+      return;
+    }
+    say(host, 'miss', cur < c.i
+      ? L({ es:'La proporción que marcaste es mayor que la del reporte: mueve el control hacia la derecha, donde la parte es más pequeña.',
+            en:'The proportion you marked is larger than the one in the report: move the control to the right, where the part is smaller.' })
+      : L({ es:'La proporción que marcaste es menor que la del reporte: mueve el control hacia la izquierda, donde la parte es más grande.',
+            en:'The proportion you marked is smaller than the one in the report: move the control to the left, where the part is larger.' }));
+    draw(false);
+  });
+
+  draw(false);
+}
+
+/* ==========================================================================
+   MANIPULATIVO 2 :: MESA DE UNIDADES POR COMPARTIMENTO
+   Seis tarjetas de unidad y de muestreo se acomodan en la bandeja de aire,
+   agua o suelo. Cada error devuelve la tarjeta con una pista direccional.
+   ========================================================================== */
+
+var UNITS = [
+  { c:'agua', t:{ es:'Miligramos de sustancia por litro (mg/L)', en:'Milligrams of substance per litre (mg/L)' },
+    n:{ es:'Fíjate en qué se mide abajo de la proporción: un volumen que se sirve en litros.',
+        en:'Look at what is measured at the bottom of the proportion: a volume served in litres.' },
+    w:{ es:'Un litro tiene una masa cercana a un millón de miligramos, así que 1 mg/L se informa como 1 ppm.',
+        en:'One litre has a mass close to a million milligrams, so 1 mg/L is reported as 1 ppm.' } },
+  { c:'agua', t:{ es:'La muestra se toma en frasco limpio y se mantiene fría hasta el laboratorio', en:'The sample is taken in a clean bottle and kept cold until the laboratory' },
+    n:{ es:'Piensa en qué muestra puede cambiar de composición si se calienta durante el traslado.',
+        en:'Think about which sample can change composition if it warms up during transport.' },
+    w:{ es:'El frío frena las reacciones y la actividad de los microorganismos que alterarían la lectura del líquido.',
+        en:'Cold slows down reactions and the activity of microorganisms that would alter the reading of the liquid.' } },
+  { c:'agua', t:{ es:'La referencia cambia si el uso es beber o regar', en:'The reference changes if the use is drinking or irrigating' },
+    n:{ es:'Busca el compartimento del que la comunidad hace usos muy distintos con el mismo recurso.',
+        en:'Look for the compartment the community puts to very different uses with the same resource.' },
+    w:{ es:'El mismo recurso se destina a beber o a regar, y cada uso tiene su propio máximo recomendado.',
+        en:'The same resource is used for drinking or for irrigating, and each use has its own recommended maximum.' } },
+  { c:'suelo', t:{ es:'Miligramos de sustancia por kilogramo (mg/kg)', en:'Milligrams of substance per kilogram (mg/kg)' },
+    n:{ es:'Aquí arriba y abajo hay masa: ¿qué compartimento se pesa en una balanza?',
+        en:'Here there is mass on top and at the bottom: which compartment is weighed on a balance?' },
+    w:{ es:'Se comparan dos masas, y 1 mg por kilogramo equivale también a 1 ppm.',
+        en:'Two masses are compared, and 1 mg per kilogram also equals 1 ppm.' } },
+  { c:'suelo', t:{ es:'La muestra se seca antes de pesarla', en:'The sample is dried before weighing it' },
+    n:{ es:'¿Qué muestra llega al laboratorio con una humedad que depende de si llovió esa semana?',
+        en:'Which sample arrives at the laboratory with a humidity that depends on whether it rained that week?' },
+    w:{ es:'Si no se seca, el agua de la muestra entra en el peso y la misma parcela daría lecturas distintas según el clima.',
+        en:'If it is not dried, the water of the sample enters the weight and the same plot would give different readings depending on the weather.' } },
+  { c:'suelo', t:{ es:'Se toman varios puntos y se mezclan para representar el terreno', en:'Several points are taken and mixed to represent the ground' },
+    n:{ es:'Piensa en el compartimento que no se mueve ni se mezcla solo de un punto a otro.',
+        en:'Think of the compartment that does not move or mix by itself from one point to another.' },
+    w:{ es:'Como no se mezcla por sí mismo, un solo punto puede no representar al resto del terreno.',
+        en:'Since it does not mix by itself, a single point may not represent the rest of the ground.' } },
+  { c:'aire', t:{ es:'Partes de gas por millón de partes, volumen entre volumen', en:'Parts of gas per million parts, volume over volume' },
+    n:{ es:'Busca el compartimento donde el contaminante y la muestra son ambos gases.',
+        en:'Look for the compartment where both the pollutant and the sample are gases.' },
+    w:{ es:'Se comparan volúmenes de gas, no masas, porque el contaminante y la muestra están en el mismo estado.',
+        en:'Volumes of gas are compared, not masses, because the pollutant and the sample are in the same state.' } },
+  { c:'aire', t:{ es:'Microgramos de partículas por metro cúbico (µg/m³)', en:'Micrograms of particles per cubic metre (µg/m³)' },
+    n:{ es:'El metro cúbico de abajo te dice en qué compartimento flota lo que se pesa.',
+        en:'The cubic metre at the bottom tells you in which compartment the weighed material floats.' },
+    w:{ es:'Las partículas son material sólido en suspensión, así que se pesa la masa contenida en un volumen conocido.',
+        en:'Particles are solid material in suspension, so the mass contained in a known volume is weighed.' } },
+  { c:'aire', t:{ es:'La lectura cambia con la temperatura y la presión del momento', en:'The reading changes with the temperature and pressure at the time' },
+    n:{ es:'¿Qué muestra se expande o se comprime según el clima del día?',
+        en:'Which sample expands or compresses depending on the weather of the day?' },
+    w:{ es:'El volumen de un gas depende de la temperatura y la presión, y por eso el reporte debe declararlas.',
+        en:'The volume of a gas depends on temperature and pressure, and that is why the report must declare them.' } },
+  { c:'aire', t:{ es:'El equipo aspira un volumen conocido durante varias horas seguidas', en:'The equipment draws in a known volume for several hours in a row' },
+    n:{ es:'Piensa en el compartimento cuya concentración cambia de una hora a otra y se promedia.',
+        en:'Think of the compartment whose concentration changes from hour to hour and is averaged.' },
+    w:{ es:'La concentración varía a lo largo del día, así que el equipo promedia un periodo en lugar de tomar un instante.',
+        en:'The concentration varies through the day, so the equipment averages a period instead of taking one instant.' } }
+];
+
+var COMPS = [
+  { k:'aire',  n:{ es:'Aire',  en:'Air' } },
+  { k:'agua',  n:{ es:'Agua',  en:'Water' } },
+  { k:'suelo', n:{ es:'Suelo', en:'Soil' } }
+];
+
+function w2(rng, host){
+  var byC = {}, i;
+  for (i = 0; i < COMPS.length; i++) byC[COMPS[i].k] = [];
+  for (i = 0; i < UNITS.length; i++) byC[UNITS[i].c].push(UNITS[i]);
+  var cards = [];
+  for (i = 0; i < COMPS.length; i++){
+    cards = cards.concat(pkN(rng, byC[COMPS[i].k], 2));
+  }
+  cards = shuffle(cards, rng).map(function(u, k){
+    return { id:k, u:u, at:null, miss:0, shown:false };
+  });
+  var sel = null, done = false;
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Mesa de unidades', en:'Units table' }) + '</div>' +
+    '<div class="gw-q">' + L({
+      es:'¿A qué compartimento pertenece cada manera de medir?',
+      en:'Which compartment does each way of measuring belong to?'
+    }) + '</div>' +
+    '<div class="gw-mini">' + L({
+      es:'Toca una tarjeta para tomarla y luego la bandeja donde crees que va. Puedes tocar una tarjeta ya colocada para regresarla a la mesa.',
+      en:'Tap a card to pick it up and then the tray where you think it goes. You can tap a card already placed to bring it back to the table.'
+    }) + '</div>' +
+    '<div class="un-trays" data-r="trays"></div>' +
+    '<div class="un-pool"><div class="gw-lbl">' + L({ es:'Tarjetas sin colocar', en:'Cards not yet placed' }) + '</div><div data-r="pool"></div></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elT = host.querySelector('[data-r="trays"]'),
+      elP = host.querySelector('[data-r="pool"]');
+
+  function draw(){
+    var html = '', j, c;
+    for (j = 0; j < COMPS.length; j++){
+      var inside = '';
+      for (var m = 0; m < cards.length; m++){
+        c = cards[m];
+        if (c.at === COMPS[j].k){
+          inside += '<div class="un-card ' + (c.shown ? 'shown' : 'set') + '" data-c="' + c.id + '">' + L(c.u.t) + '</div>';
+        }
+      }
+      html += '<div class="un-tray' + (sel !== null ? ' armed' : '') + '" data-t="' + COMPS[j].k + '">' +
+        '<div class="un-tname">' + L(COMPS[j].n) + '</div>' + inside + '</div>';
+    }
+    elT.innerHTML = html;
+    var pool = '';
+    for (j = 0; j < cards.length; j++){
+      c = cards[j];
+      if (c.at === null) pool += '<div class="un-card' + (sel === c.id ? ' sel' : '') + '" data-c="' + c.id + '">' + L(c.u.t) + '</div>';
+    }
+    elP.innerHTML = pool || '<div class="gw-mini">' + L({ es:'La mesa quedó vacía.', en:'The table is empty.' }) + '</div>';
+    bind();
+  }
+
+  function bind(){
+    host.querySelectorAll('.un-card').forEach(function(el){
+      el.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        if (done) return;
+        var c = cards[parseInt(el.dataset.c, 10)];
+        if (c.shown) return;
+        if (c.at !== null){
+          c.at = null; sel = null;
+          say(host, '', L({ es:'Regresaste la tarjeta a la mesa. Colócala de nuevo cuando quieras.',
+                            en:'You brought the card back to the table. Place it again whenever you want.' }));
+          draw(); return;
+        }
+        sel = (sel === c.id) ? null : c.id;
+        draw();
+      });
+    });
+    host.querySelectorAll('.un-tray').forEach(function(el){
+      el.addEventListener('click', function(){
+        if (done || sel === null) return;
+        place(cards[sel], el.dataset.t);
+      });
+    });
+  }
+
+  function place(c, k){
+    if (c.u.c === k){
+      c.at = k; sel = null;
+      say(host, 'good', L(c.u.w));
+    } else {
+      c.miss++;
+      if (c.miss >= 3){
+        c.at = c.u.c; c.shown = true; sel = null;
+        say(host, 'warm', L({ es:'Esa tarjeta queda colocada en su bandeja: ', en:'That card stays placed in its tray: ' }) +
+          '<strong>' + L(COMPS.filter(function(x){ return x.k === c.u.c; })[0].n) + '</strong>. ' + L(c.u.w));
+      } else {
+        sel = null;
+        say(host, 'miss', L({ es:'Ahí no encaja. ', en:'It does not fit there. ' }) + L(c.u.n));
+      }
+    }
+    var pend = cards.filter(function(x){ return x.at === null; }).length;
+    if (pend === 0){
+      done = true;
+      var okc = cards.filter(function(x){ return !x.shown; }).length;
+      say(host, 'good', L({ es:'Mesa completa: ', en:'Table complete: ' }) + okc + L({ es:' de 6 tarjetas colocadas por tu cuenta. La unidad depende siempre de qué se pone abajo de la proporción.',
+                                                                                       en:' of 6 cards placed on your own. The unit always depends on what goes at the bottom of the proportion.' }));
+    }
+    draw();
+  }
+
+  draw();
+  say(host, '', L({ es:'Toma la primera tarjeta y decide su compartimento.', en:'Pick up the first card and decide its compartment.' }));
+}
+/* ==========================================================================
+   MANIPULATIVO 3 :: VENTANA DE EXCESO
+   Una serie de lecturas y una linea de referencia. El alumno marca las barras
+   que quedan por encima y recibe pistas direccionales hasta cerrar la ronda.
+   ========================================================================== */
+
+var SERIES = [
+  { sub:{ es:'Ozono', en:'Ozone' }, site:{ es:'Estación Alameda', en:'Alameda station' }, unit:' ppm', ref:0.07,
+    per:{ es:'lecturas por hora del mismo día', en:'hourly readings from the same day' },
+    labs:['08','10','12','14','16','18'], vals:[0.03, 0.05, 0.08, 0.11, 0.09, 0.04] },
+  { sub:{ es:'Dióxido de azufre', en:'Sulfur dioxide' }, site:{ es:'Estación Ladrillera', en:'Brickworks station' }, unit:' ppm', ref:0.11,
+    per:{ es:'lecturas por hora del mismo día', en:'hourly readings from the same day' },
+    labs:['06','08','10','12','14','16'], vals:[0.14, 0.19, 0.09, 0.06, 0.05, 0.12] },
+  { sub:{ es:'Nitratos', en:'Nitrates' }, site:{ es:'Pozo del ejido', en:'Well on the common land' }, unit:' ppm', ref:10,
+    per:{ es:'una lectura por semana', en:'one reading per week' },
+    labs:['S1','S2','S3','S4','S5','S6'], vals:[6, 8, 11, 14, 9, 7] },
+  { sub:{ es:'Monóxido de carbono', en:'Carbon monoxide' }, site:{ es:'Estación Carretera', en:'Highway station' }, unit:' ppm', ref:9,
+    per:{ es:'lecturas por hora del mismo día', en:'hourly readings from the same day' },
+    labs:['07','09','11','13','15','17'], vals:[4, 12, 10, 6, 3, 5] },
+  { sub:{ es:'Partículas suspendidas', en:'Suspended particles' }, site:{ es:'Estación Mercado', en:'Market station' }, unit:' µg/m³', ref:45,
+    per:{ es:'un promedio por día', en:'one average per day' },
+    labs:['L','M','X','J','V','S'], vals:[20, 38, 52, 61, 44, 30] }
+];
+
+function w3(rng, host){
+  var R = pkN(rng, SERIES, 3);
+  var rd = 0, tries = 0, locked = false, done = false, mk = [], reveal = false;
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Ventana de exceso', en:'Exceedance window' }) + '</div>' +
+    '<div class="gw-q" data-r="ask"></div>' +
+    '<div class="gw-mini">' + L({
+      es:'Toca las barras que quedan por encima de la línea dorada de referencia. Puedes marcar y desmarcar las veces que necesites antes de comprobar.',
+      en:'Tap the bars that stay above the gold reference line. You can mark and unmark as many times as you need before checking.'
+    }) + '</div>' +
+    '<div class="tw-plot" data-r="plot"></div>' +
+    '<div class="tw-axis" data-r="axis"></div>' +
+    '<div class="gw-read" data-r="read"></div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elA = host.querySelector('[data-r="ask"]'),
+      elP = host.querySelector('[data-r="plot"]'),
+      elX = host.querySelector('[data-r="axis"]'),
+      elD = host.querySelector('[data-r="read"]'),
+      elB = host.querySelector('[data-r="chk"]');
+
+  function over(c){
+    var out = [], i;
+    for (i = 0; i < c.vals.length; i++) if (c.vals[i] > c.ref) out.push(i);
+    return out;
+  }
+
+  function draw(){
+    var c = R[rd], i;
+    var mx = Math.max.apply(null, c.vals);
+    var top = Math.max(mx, c.ref) * 1.22;
+    elA.innerHTML = L(c.sub) + ' · ' + L(c.site) + ' · ' + L({ es:'referencia ', en:'reference ' }) +
+      '<span class="gw-val">' + fmt(c.ref) + c.unit + '</span>';
+    var bars = '<div class="tw-ref" style="bottom:' + (c.ref / top * 100) + '%"><span class="tw-reflbl">' +
+      L({ es:'referencia', en:'reference' }) + '</span></div>';
+    for (i = 0; i < c.vals.length; i++){
+      var cls = 'tw-bar';
+      if (reveal){
+        if (c.vals[i] > c.ref) cls += ' hit';
+        else if (mk.indexOf(i) !== -1) cls += ' slip';
+      } else if (mk.indexOf(i) !== -1) cls += ' mk';
+      bars += '<div class="' + cls + '" data-i="' + i + '" style="height:' + (c.vals[i] / top * 100) + '%" title="' + fmt(c.vals[i]) + c.unit + '"></div>';
+    }
+    elP.innerHTML = bars;
+    var ax = '';
+    for (i = 0; i < c.labs.length; i++) ax += '<div class="tw-ax">' + c.labs[i] + '<br>' + fmt(c.vals[i]) + '</div>';
+    elX.innerHTML = ax;
+    elD.innerHTML =
+      '<div class="gw-rd"><div class="k">' + L({ es:'Serie', en:'Series' }) + '</div><div class="v" style="font-size:.7rem">' + L(c.per) + '</div></div>' +
+      '<div class="gw-rd"><div class="k">' + L({ es:'Referencia', en:'Reference' }) + '</div><div class="v">' + fmt(c.ref) + c.unit + '</div></div>' +
+      '<div class="gw-rd"><div class="k">' + L({ es:'Marcadas', en:'Marked' }) + '</div><div class="v">' + mk.length + '</div></div>';
+    elP.querySelectorAll('.tw-bar').forEach(function(b){
+      b.addEventListener('click', function(){
+        if (locked || done) return;
+        var i2 = parseInt(b.dataset.i, 10);
+        var at = mk.indexOf(i2);
+        if (at === -1) mk.push(i2); else mk.splice(at, 1);
+        draw();
+      });
+    });
+  }
+
+  function advance(){
+    rd++;
+    if (rd >= 3){
+      done = true;
+      elB.textContent = L({ es:'Completado', en:'Completed' });
+      elB.className = 'gw-btn solved';
+      reveal = false; mk = [];
+      draw();
+      say(host, 'good', L({
+        es:'Tres series revisadas. Contar las excedencias y en qué momento ocurren es lo que convierte una serie de números en una descripción del problema.',
+        en:'Three series reviewed. Counting the exceedances and when they happen is what turns a series of numbers into a description of the problem.'
+      }));
+      return;
+    }
+    tries = 0; locked = false; reveal = false; mk = [];
+    elB.textContent = L({ es:'Comprobar', en:'Check' });
+    elB.className = 'gw-btn';
+    draw();
+    say(host, '', L({ es:'Nueva serie en el tablero.', en:'A new series on the board.' }));
+  }
+
+  elB.addEventListener('click', function(){
+    if (done) return;
+    if (locked){ advance(); return; }
+    var c = R[rd], good = over(c);
+    var missing = good.filter(function(i){ return mk.indexOf(i) === -1; }).length;
+    var extra = mk.filter(function(i){ return good.indexOf(i) === -1; }).length;
+    if (missing === 0 && extra === 0 && mk.length > 0){
+      locked = true; reveal = true;
+      elB.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente serie', en:'Next series' });
+      elB.className = 'gw-btn solved';
+      draw();
+      say(host, 'good', L({ es:'Exacto: ', en:'Exactly: ' }) + good.length +
+        L({ es:' lecturas por encima de la referencia. Ese conteo, con su horario, es lo que se reporta.',
+            en:' readings above the reference. That count, with its time, is what gets reported.' }));
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      locked = true; reveal = true;
+      elB.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente serie', en:'Next series' });
+      elB.className = 'gw-btn solved';
+      draw();
+      say(host, 'warm', L({ es:'Quedan señaladas las lecturas que rebasan la referencia: son ', en:'The readings above the reference are now marked: there are ' }) +
+        good.length + L({ es:'. Compara cada barra con la altura de la línea dorada, no con las barras vecinas.',
+                          en:'. Compare each bar with the height of the gold line, not with the neighbouring bars.' }));
+      return;
+    }
+    if (mk.length === 0){
+      say(host, 'miss', L({ es:'Todavía no marcas ninguna barra. Busca las que sobresalen por encima de la línea dorada.',
+                            en:'You have not marked any bar yet. Look for the ones rising above the gold line.' }));
+    } else if (extra > 0){
+      say(host, 'miss', L({ es:'Marcaste una lectura que queda por debajo de la referencia: quítala y revisa la altura de la línea.',
+                            en:'You marked a reading that stays below the reference: remove it and check the height of the line.' }));
+    } else {
+      say(host, 'miss', L({ es:'Vas bien, pero todavía queda al menos una lectura por encima de la referencia sin marcar.',
+                            en:'You are on track, but at least one reading above the reference is still unmarked.' }));
+    }
+    draw();
+  });
+
+  draw();
+}
+
+/* ==========================================================================
+   MANIPULATIVO 4 :: MAPA DE LECTURAS
+   Un plano del barrio con lecturas en varios puntos. El alumno decide donde
+   esta la fuente probable; el widget responde con la direccion del ascenso.
+   ========================================================================== */
+
+var MAPS = [
+  { intro:{ es:'Recorrido de plomo en el suelo alrededor de la cuadra del taller de baterías.',
+            en:'Lead survey in the soil around the block of the battery workshop.' },
+    sub:{ es:'plomo en suelo', en:'lead in soil' }, unit:' ppm',
+    note:{ es:'El norte queda arriba del plano.', en:'North is at the top of the plan.' },
+    pts:[ { r:0, c:0, n:{ es:'Parque', en:'Park' }, v:45 },
+          { r:0, c:2, n:{ es:'Escuela', en:'School' }, v:70 },
+          { r:1, c:1, n:{ es:'Banqueta central', en:'Central pavement' }, v:150 },
+          { r:1, c:2, n:{ es:'Patio del taller', en:'Workshop yard' }, v:340 },
+          { r:2, c:0, n:{ es:'Cancha', en:'Court' }, v:35 },
+          { r:2, c:2, n:{ es:'Bodega vecina', en:'Neighbouring storeroom' }, v:190 } ],
+    fill:{ '0_1':{ es:'calle', en:'street' }, '1_0':{ es:'lote baldío', en:'empty lot' }, '2_1':{ es:'estacionamiento', en:'parking' } } },
+  { intro:{ es:'Lecturas de nitratos en los pozos que siguen la línea del canal de riego.',
+            en:'Nitrate readings in the wells that follow the line of the irrigation canal.' },
+    sub:{ es:'nitratos en agua', en:'nitrates in water' }, unit:' ppm',
+    note:{ es:'El agua del canal corre de arriba hacia abajo del plano.', en:'The canal water runs from the top to the bottom of the plan.' },
+    pts:[ { r:0, c:1, n:{ es:'Pozo del cerro', en:'Hill well' }, v:4 },
+          { r:1, c:0, n:{ es:'Pozo de la escuela', en:'School well' }, v:9 },
+          { r:1, c:1, n:{ es:'Parcela fertilizada', en:'Fertilized plot' }, v:26 },
+          { r:1, c:2, n:{ es:'Pozo del vivero', en:'Nursery well' }, v:11 },
+          { r:2, c:1, n:{ es:'Pozo del barrio bajo', en:'Lower neighbourhood well' }, v:14 },
+          { r:2, c:2, n:{ es:'Toma de la clínica', en:'Clinic intake' }, v:7 } ],
+    fill:{ '0_0':{ es:'monte', en:'hillside' }, '0_2':{ es:'camino', en:'track' }, '2_0':{ es:'huerto', en:'orchard' } } },
+  { intro:{ es:'Lecturas de dióxido de azufre en el aire alrededor de la ladrillera.',
+            en:'Sulfur dioxide readings in the air around the brickworks.' },
+    sub:{ es:'dióxido de azufre en aire', en:'sulfur dioxide in air' }, unit:' ppm',
+    note:{ es:'El viento dominante sopla del poniente hacia el oriente.', en:'The prevailing wind blows from west to east.' },
+    pts:[ { r:0, c:0, n:{ es:'Cerro', en:'Hill' }, v:0.03 },
+          { r:0, c:2, n:{ es:'Colonia alta', en:'Upper neighbourhood' }, v:0.09 },
+          { r:1, c:0, n:{ es:'Patio de la ladrillera', en:'Brickworks yard' }, v:0.22 },
+          { r:1, c:1, n:{ es:'Calle del mercado', en:'Market street' }, v:0.14 },
+          { r:2, c:1, n:{ es:'Primaria', en:'Primary school' }, v:0.08 },
+          { r:2, c:2, n:{ es:'Salida sur', en:'South exit' }, v:0.05 } ],
+    fill:{ '0_1':{ es:'campo', en:'field' }, '1_2':{ es:'canchas', en:'courts' }, '2_0':{ es:'arroyo', en:'stream' } } },
+  { intro:{ es:'Lecturas de zinc en el suelo de los solares que rodean el tiradero.',
+            en:'Zinc readings in the soil of the plots surrounding the dump.' },
+    sub:{ es:'zinc en suelo', en:'zinc in soil' }, unit:' ppm',
+    note:{ es:'La pendiente del terreno baja hacia el sur del plano.', en:'The slope of the land drops towards the south of the plan.' },
+    pts:[ { r:0, c:1, n:{ es:'Solar del norte', en:'Northern plot' }, v:60 },
+          { r:0, c:2, n:{ es:'Camino de entrada', en:'Access track' }, v:95 },
+          { r:1, c:0, n:{ es:'Huerto familiar', en:'Family orchard' }, v:120 },
+          { r:1, c:1, n:{ es:'Borde del tiradero', en:'Edge of the dump' }, v:410 },
+          { r:2, c:0, n:{ es:'Solar del sur', en:'Southern plot' }, v:210 },
+          { r:2, c:2, n:{ es:'Vereda', en:'Footpath' }, v:80 } ],
+    fill:{ '0_0':{ es:'brecha', en:'gap' }, '1_2':{ es:'cerca', en:'fence' }, '2_1':{ es:'zanja', en:'ditch' } } }
+];
+
+function w4(rng, host){
+  var R = pkN(rng, MAPS, 3);
+  var rd = 0, tries = 0, locked = false, done = false, sel = -1, shown = false;
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Mapa de lecturas', en:'Map of readings' }) + '</div>' +
+    '<div class="gw-q" data-r="ask"></div>' +
+    '<div class="gw-mini">' + L({
+      es:'Toca el punto donde es más probable que esté la fuente. Si te equivocas, el plano te dice hacia dónde crecen las lecturas.',
+      en:'Tap the point where the source is most likely to be. If you miss, the plan tells you which way the readings grow.'
+    }) + '</div>' +
+    '<div class="mp-grid" data-r="grid"></div>' +
+    '<div class="mp-comp" data-r="note"></div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk" disabled>' + L({ es:'Siguiente recorrido', en:'Next survey' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elA = host.querySelector('[data-r="ask"]'),
+      elG = host.querySelector('[data-r="grid"]'),
+      elN = host.querySelector('[data-r="note"]'),
+      elB = host.querySelector('[data-r="chk"]');
+
+  function srcIdx(c){
+    var b = 0, i;
+    for (i = 1; i < c.pts.length; i++) if (c.pts[i].v > c.pts[b].v) b = i;
+    return b;
+  }
+
+  function draw(){
+    var c = R[rd], mx = 0, i;
+    for (i = 0; i < c.pts.length; i++) if (c.pts[i].v > mx) mx = c.pts[i].v;
+    elA.innerHTML = L(c.intro);
+    elN.innerHTML = L(c.note) + ' · ' + L({ es:'todas las lecturas son de ', en:'all readings are of ' }) + L(c.sub);
+    var at = {}, s = srcIdx(c);
+    for (i = 0; i < c.pts.length; i++) at[c.pts[i].r + '_' + c.pts[i].c] = i;
+    var html = '';
+    for (var r = 0; r < 3; r++){
+      for (var col = 0; col < 3; col++){
+        var k = r + '_' + col;
+        if (at[k] !== undefined){
+          var p = c.pts[at[k]], tier = p.v / mx < 0.4 ? 't1' : (p.v / mx < 0.75 ? 't2' : 't3');
+          var extra = (sel === at[k] ? ' sel' : '') + (shown && at[k] === s ? ' found' : '');
+          html += '<div class="mp-cell pt ' + tier + extra + '" data-p="' + at[k] + '">' +
+            '<div class="mp-v">' + fmt(p.v) + c.unit + '</div><div class="mp-n">' + L(p.n) + '</div></div>';
+        } else {
+          html += '<div class="mp-cell">' + (c.fill[k] ? L(c.fill[k]) : '') + '</div>';
+        }
+      }
+    }
+    elG.innerHTML = html;
+    elG.querySelectorAll('.mp-cell.pt').forEach(function(el){
+      el.addEventListener('click', function(){
+        if (locked || done) return;
+        choose(parseInt(el.dataset.p, 10));
+      });
+    });
+  }
+
+  function dirTo(from, to){
+    var parts = [];
+    if (to.r < from.r) parts.push(L({ es:'hacia el norte', en:'towards the north' }));
+    if (to.r > from.r) parts.push(L({ es:'hacia el sur', en:'towards the south' }));
+    if (to.c < from.c) parts.push(L({ es:'hacia el poniente', en:'towards the west' }));
+    if (to.c > from.c) parts.push(L({ es:'hacia el oriente', en:'towards the east' }));
+    return parts.join(L({ es:' y ', en:' and ' }));
+  }
+
+  function choose(i){
+    var c = R[rd], s = srcIdx(c);
+    sel = i;
+    if (i === s){
+      locked = true; shown = true;
+      elB.disabled = false;
+      elB.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente recorrido', en:'Next survey' });
+      elB.className = 'gw-btn solved';
+      draw();
+      say(host, 'good', L({ es:'Ahí está: la lectura mayor y el descenso de los puntos alrededor apuntan a ese sitio como fuente probable de ',
+                            en:'There it is: the highest reading and the decline of the surrounding points point to that site as the likely source of ' }) + L(c.sub) + '.');
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      locked = true; shown = true; sel = s;
+      elB.disabled = false;
+      elB.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente recorrido', en:'Next survey' });
+      elB.className = 'gw-btn solved';
+      draw();
+      say(host, 'warm', L({ es:'Queda señalado el punto de la fuente probable: ', en:'The likely source point is now marked: ' }) +
+        '<strong>' + L(c.pts[s].n) + '</strong>, ' + L({ es:'con ', en:'with ' }) + fmt(c.pts[s].v) + c.unit +
+        L({ es:'. Las demás lecturas bajan conforme se alejan de ese punto.', en:'. The other readings drop as they move away from that point.' }));
+      return;
+    }
+    draw();
+    say(host, 'miss', L({ es:'Ahí la lectura es menor. Las lecturas crecen ', en:'The reading is lower there. The readings grow ' }) +
+      dirTo(c.pts[i], c.pts[s]) + L({ es:' de ese punto.', en:' from that point.' }));
+  }
+
+  elB.addEventListener('click', function(){
+    if (done) return;
+    rd++;
+    if (rd >= 3){
+      done = true; rd = 2;
+      elB.textContent = L({ es:'Completado', en:'Completed' });
+      elB.className = 'gw-btn solved';
+      elB.disabled = true;
+      say(host, 'good', L({
+        es:'Tres recorridos leídos. En los tres el rastro fue el mismo: seguir la dirección en la que crecen los números.',
+        en:'Three surveys read. In all three the trail was the same: follow the direction in which the numbers grow.'
+      }));
+      return;
+    }
+    tries = 0; locked = false; shown = false; sel = -1;
+    elB.disabled = true;
+    elB.className = 'gw-btn';
+    draw();
+    say(host, '', L({ es:'Nuevo recorrido sobre el plano.', en:'A new survey on the plan.' }));
+  });
+
+  draw();
+  say(host, '', L({ es:'Lee las lecturas y decide desde dónde se está liberando la sustancia.',
+                    en:'Read the values and decide where the substance is being released from.' }));
+}
+
+/* ==========================================================================
+   MANIPULATIVO 5 :: COMPARADOR DE FICHAS
+   Dos registros del mismo seguimiento. Solo un campo impide compararlos, y la
+   fecha distinta nunca es el problema. El alumno toca el campo que bloquea.
+   ========================================================================== */
+
+var FKEYS = [
+  { k:'sus', n:{ es:'Sustancia', en:'Substance' } },
+  { k:'sit', n:{ es:'Sitio', en:'Site' } },
+  { k:'fec', n:{ es:'Fecha', en:'Date' } },
+  { k:'uni', n:{ es:'Unidad', en:'Unit' } },
+  { k:'per', n:{ es:'Periodo', en:'Period' } },
+  { k:'met', n:{ es:'Método', en:'Method' } }
+];
+
+var PAIRS = [
+  { ctx:{ es:'Dos reportes del seguimiento de nitratos en el pozo del ejido.', en:'Two reports from the nitrate follow up in the well on the common land.' },
+    a:{ sus:{ es:'Nitratos', en:'Nitrates' }, sit:{ es:'Pozo del ejido', en:'Common land well' }, fec:{ es:'12 de marzo', en:'12 March' },
+        uni:'12 mg/L', per:{ es:'muestra puntual', en:'single sample' }, met:{ es:'laboratorio certificado', en:'certified laboratory' } },
+    b:{ sus:{ es:'Nitratos', en:'Nitrates' }, sit:{ es:'Pozo del ejido', en:'Common land well' }, fec:{ es:'20 de agosto', en:'20 August' },
+        uni:'9 000 µg/L', per:{ es:'muestra puntual', en:'single sample' }, met:{ es:'laboratorio certificado', en:'certified laboratory' } },
+    bad:'uni', why:{ es:'Una ficha informa en miligramos por litro y la otra en microgramos por litro: mil veces más pequeños. Antes de comparar hay que llevar las dos lecturas a la misma unidad.',
+                     en:'One record reports in milligrams per litre and the other in micrograms per litre, a thousand times smaller. Before comparing, both readings must be brought to the same unit.' } },
+  { ctx:{ es:'Dos reportes que llegaron a la mesa de la escuela sobre el mismo pozo.', en:'Two reports that arrived at the school table about the same well.' },
+    a:{ sus:{ es:'Nitratos', en:'Nitrates' }, sit:{ es:'Pozo del centro', en:'Central well' }, fec:{ es:'5 de febrero', en:'5 February' },
+        uni:'8 mg/L', per:{ es:'muestra puntual', en:'single sample' }, met:{ es:'laboratorio certificado', en:'certified laboratory' } },
+    b:{ sus:{ es:'Nitritos', en:'Nitrites' }, sit:{ es:'Pozo del centro', en:'Central well' }, fec:{ es:'9 de junio', en:'9 June' },
+        uni:'2 mg/L', per:{ es:'muestra puntual', en:'single sample' }, met:{ es:'laboratorio certificado', en:'certified laboratory' } },
+    bad:'sus', why:{ es:'Son dos sustancias distintas, con química y con referencia propias. Poner sus valores en el mismo renglón haría creer que la concentración bajó cuando en realidad se midió otra cosa.',
+                     en:'They are two different substances, each with its own chemistry and its own reference. Putting their values in the same row would suggest the concentration dropped when in fact something else was measured.' } },
+  { ctx:{ es:'Dos boletines de la red de monitoreo de aire de la misma zona.', en:'Two bulletins from the air monitoring network of the same area.' },
+    a:{ sus:{ es:'Ozono', en:'Ozone' }, sit:{ es:'Estación Puente', en:'Bridge station' }, fec:{ es:'3 de mayo', en:'3 May' },
+        uni:'0.09 ppm', per:{ es:'promedio de 1 hora', en:'1 hour average' }, met:{ es:'estación automática', en:'automatic station' } },
+    b:{ sus:{ es:'Ozono', en:'Ozone' }, sit:{ es:'Estación Puente', en:'Bridge station' }, fec:{ es:'11 de mayo', en:'11 May' },
+        uni:'0.06 ppm', per:{ es:'promedio de 8 horas', en:'8 hour average' }, met:{ es:'estación automática', en:'automatic station' } },
+    bad:'per', why:{ es:'Un valor de una hora y uno de ocho horas describen exposiciones distintas y se juzgan contra referencias distintas. Comparados de frente, uno parecería una mejora que nunca ocurrió.',
+                     en:'A one hour value and an eight hour one describe different exposures and are judged against different references. Compared head to head, one would look like an improvement that never happened.' } },
+  { ctx:{ es:'Dos registros de plomo en suelo entregados por el grupo escolar.', en:'Two lead in soil records handed in by the school group.' },
+    a:{ sus:{ es:'Plomo', en:'Lead' }, sit:{ es:'Patio trasero', en:'Back yard' }, fec:{ es:'14 de enero', en:'14 January' },
+        uni:'310 mg/kg', per:{ es:'muestra compuesta', en:'composite sample' }, met:{ es:'laboratorio certificado', en:'certified laboratory' } },
+    b:{ sus:{ es:'Plomo', en:'Lead' }, sit:{ es:'Jardín del frente', en:'Front garden' }, fec:{ es:'2 de octubre', en:'2 October' },
+        uni:'95 mg/kg', per:{ es:'muestra compuesta', en:'composite sample' }, met:{ es:'laboratorio certificado', en:'certified laboratory' } },
+    bad:'sit', why:{ es:'Son dos sitios distintos del mismo plantel. La diferencia entre las cifras describe dos lugares, no un cambio en el tiempo de uno solo.',
+                     en:'They are two different sites of the same school. The difference between the figures describes two places, not a change over time in a single one.' } },
+  { ctx:{ es:'Dos mediciones del arroyo que el grupo quiere poner en la misma gráfica.', en:'Two measurements of the stream the group wants to put on the same chart.' },
+    a:{ sus:{ es:'Amonio', en:'Ammonium' }, sit:{ es:'Arroyo, puente viejo', en:'Stream, old bridge' }, fec:{ es:'7 de abril', en:'7 April' },
+        uni:'3 mg/L', per:{ es:'muestra puntual', en:'single sample' }, met:{ es:'tira reactiva de campo', en:'field test strip' } },
+    b:{ sus:{ es:'Amonio', en:'Ammonium' }, sit:{ es:'Arroyo, puente viejo', en:'Stream, old bridge' }, fec:{ es:'19 de septiembre', en:'19 September' },
+        uni:'3.4 mg/L', per:{ es:'muestra puntual', en:'single sample' }, met:{ es:'laboratorio certificado', en:'certified laboratory' } },
+    bad:'met', why:{ es:'Una tira de campo distingue intervalos amplios y el laboratorio afina hasta los decimales. La diferencia entre ambas cifras cabe dentro de la imprecisión del método, así que no sostiene una conclusión de cambio.',
+                     en:'A field strip distinguishes broad ranges while the laboratory refines down to decimals. The difference between both figures fits inside the imprecision of the method, so it does not support a conclusion of change.' } },
+  { ctx:{ es:'Dos análisis de suelo de la misma parcela guardados en la carpeta.', en:'Two soil analyses of the same plot kept in the folder.' },
+    a:{ sus:{ es:'Cobre', en:'Copper' }, sit:{ es:'Parcela de maíz', en:'Maize plot' }, fec:{ es:'8 de marzo', en:'8 March' },
+        uni:{ es:'48 mg/kg en base seca', en:'48 mg/kg on a dry basis' }, per:{ es:'muestra compuesta', en:'composite sample' }, met:{ es:'laboratorio certificado', en:'certified laboratory' } },
+    b:{ sus:{ es:'Cobre', en:'Copper' }, sit:{ es:'Parcela de maíz', en:'Maize plot' }, fec:{ es:'25 de julio', en:'25 July' },
+        uni:{ es:'39 mg/kg en muestra húmeda', en:'39 mg/kg on a wet sample' }, per:{ es:'muestra compuesta', en:'composite sample' }, met:{ es:'laboratorio certificado', en:'certified laboratory' } },
+    bad:'uni', why:{ es:'Una lectura se refiere a la masa seca y la otra incluye el agua de la muestra. El agua abulta el peso del suelo y hace parecer menor la proporción de cobre.',
+                     en:'One reading refers to the dry mass and the other includes the water of the sample. The water inflates the weight of the soil and makes the copper proportion look smaller.' } }
+];
+
+function w5(rng, host){
+  var R = pkN(rng, PAIRS, 3);
+  var rd = 0, tries = 0, locked = false, done = false, pickd = null, shown = false;
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Comparador de fichas', en:'Record comparator' }) + '</div>' +
+    '<div class="gw-q" data-r="ask"></div>' +
+    '<div class="gw-mini">' + L({
+      es:'Toca el renglón del dato que impide poner las dos lecturas una junto a la otra. Puedes cambiar de renglón las veces que quieras.',
+      en:'Tap the row of the field that keeps the two readings from being placed side by side. You can change rows as often as you like.'
+    }) + '</div>' +
+    '<div class="fc-head"><div></div><div>' + L({ es:'Ficha A', en:'Record A' }) + '</div><div>' + L({ es:'Ficha B', en:'Record B' }) + '</div></div>' +
+    '<div data-r="rows"></div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk" disabled>' + L({ es:'Siguiente par', en:'Next pair' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elA = host.querySelector('[data-r="ask"]'),
+      elR = host.querySelector('[data-r="rows"]'),
+      elB = host.querySelector('[data-r="chk"]');
+
+  function val(o){ return (typeof o === 'string') ? o : L(o); }
+
+  function draw(){
+    var c = R[rd], html = '';
+    elA.innerHTML = L(c.ctx);
+    for (var i = 0; i < FKEYS.length; i++){
+      var k = FKEYS[i].k;
+      var cls = 'fc-row';
+      if (pickd === k) cls += ' pickd';
+      if (shown && k === c.bad) cls += ' block';
+      if (shown && k !== c.bad && k !== 'fec' && val(c.a[k]) === val(c.b[k])) cls += ' same';
+      html += '<div class="' + cls + '" data-k="' + k + '">' +
+        '<div class="fc-k">' + L(FKEYS[i].n) + '</div>' +
+        '<div class="fc-v">' + val(c.a[k]) + '</div>' +
+        '<div class="fc-v">' + val(c.b[k]) + '</div></div>';
+    }
+    elR.innerHTML = html;
+    elR.querySelectorAll('.fc-row').forEach(function(el){
+      el.addEventListener('click', function(){
+        if (locked || done) return;
+        choose(el.dataset.k);
+      });
+    });
+  }
+
+  function choose(k){
+    var c = R[rd];
+    pickd = k;
+    if (k === c.bad){
+      locked = true; shown = true;
+      elB.disabled = false;
+      elB.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente par', en:'Next pair' });
+      elB.className = 'gw-btn solved';
+      draw();
+      say(host, 'good', L(c.why));
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      locked = true; shown = true; pickd = c.bad;
+      elB.disabled = false;
+      elB.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente par', en:'Next pair' });
+      elB.className = 'gw-btn solved';
+      draw();
+      say(host, 'warm', L({ es:'Queda marcado el renglón que bloquea la comparación. ', en:'The row that blocks the comparison is now marked. ' }) + L(c.why));
+      return;
+    }
+    draw();
+    if (k === 'fec'){
+      say(host, 'miss', L({ es:'Las fechas distintas no impiden comparar: son dos momentos del mismo seguimiento, y esa es justamente la información que interesa.',
+                            en:'Different dates do not block the comparison: they are two moments of the same follow up, and that is exactly the information of interest.' }));
+    } else {
+      say(host, 'miss', L({ es:'Ese dato dice lo mismo en las dos fichas, así que no es el que estorba. Sigue buscando la diferencia.',
+                            en:'That field says the same in both records, so it is not the one getting in the way. Keep looking for the difference.' }));
+    }
+  }
+
+  elB.addEventListener('click', function(){
+    if (done) return;
+    rd++;
+    if (rd >= 3){
+      done = true; rd = 2;
+      elB.textContent = L({ es:'Completado', en:'Completed' });
+      elB.className = 'gw-btn solved';
+      elB.disabled = true;
+      say(host, 'good', L({
+        es:'Tres pares revisados. Sistematizar es justamente esto: dejar a la vista sustancia, sitio, fecha, unidad, periodo y método para saber qué se puede comparar.',
+        en:'Three pairs reviewed. Systematizing is exactly this: keeping substance, site, date, unit, period and method in sight to know what can be compared.'
+      }));
+      return;
+    }
+    tries = 0; locked = false; shown = false; pickd = null;
+    elB.disabled = true;
+    elB.className = 'gw-btn';
+    draw();
+    say(host, '', L({ es:'Otro par de fichas sobre la mesa.', en:'Another pair of records on the table.' }));
+  });
+
+  draw();
+  say(host, '', L({ es:'Compara renglón por renglón antes de decidir.', en:'Compare row by row before deciding.' }));
+}
+/* ==========================================================================
+   PROBLEMAS GRADUADOS :: cada ranura trae variantes con su propia respuesta
+   correcta, sus distractores, su pista y su explicacion (Rule 4).
+   ========================================================================== */
+
+function mkP1(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'Lo que dice una lectura', en:'What a reading says' },
+      q:{ es:'El informe del pozo del ejido registra 4 ppm de nitratos. En la asamblea, un vecino concluye que en el pozo hay 4 miligramos de nitratos en total. ¿Por qué esa conclusión no se sostiene?',
+          en:'The report of the well on the common land records 4 ppm of nitrates. At the assembly, a neighbour concludes that the well holds 4 milligrams of nitrates in total. Why does that conclusion not hold?' },
+      o:{ es:[ 'Porque 4 ppm expresa la proporción entre el nitrato y toda el agua analizada, no la cantidad total almacenada en el pozo.',
+               'Porque los nitratos del agua solo pueden informarse en gramos y la cifra quedó incompleta.',
+               'Porque la lectura de 4 ppm corresponde al aire del brocal y no al agua que se extrae.',
+               'Porque las partes por millón se aplican únicamente a muestras de suelo seco y no a muestras de agua.' ],
+          en:[ 'Because 4 ppm expresses the proportion between the nitrate and all the analysed water, not the total amount stored in the well.',
+               'Because nitrates in water can only be reported in grams and the figure was left incomplete.',
+               'Because the reading of 4 ppm belongs to the air of the well mouth and not to the water that is drawn.',
+               'Because parts per million apply only to dry soil samples and never to water samples.' ] },
+      c:0,
+      h:{ es:'Piensa en qué compara una lectura en partes por millón: la sustancia frente a la muestra analizada o la sustancia frente al depósito completo.',
+          en:'Think about what a reading in parts per million compares: the substance against the analysed sample or the substance against the whole reservoir.' },
+      e:{ es:'Las partes por millón son una proporción medida dentro de la muestra: indican qué tan concentrada está el agua. Para hablar de una cantidad total haría falta saber además cuánta agua contiene el pozo.',
+          en:'Parts per million are a proportion measured inside the sample: they indicate how concentrated the water is. To speak about a total amount you would also need to know how much water the well contains.' } },
+    { t:{ es:'Dos pozos con la misma cifra', en:'Two wells with the same figure' },
+      q:{ es:'Dos pozos de la misma comunidad informan 5 ppm de fluoruros. El primero almacena mucha más agua que el segundo. ¿Qué afirmación describe correctamente esa situación?',
+          en:'Two wells in the same community report 5 ppm of fluorides. The first one stores much more water than the second. Which statement correctly describes that situation?' },
+      o:{ es:[ 'Los dos pozos están igual de concentrados, porque la proporción medida no cambia con la cantidad de agua almacenada.',
+               'El pozo grande está más concentrado, porque la misma cifra sobre más agua representa más sustancia por litro.',
+               'El pozo pequeño está más concentrado, porque el mismo valor se reparte entre menos agua disponible.',
+               'Las dos lecturas no pueden compararse, porque las partes por millón dependen del volumen del depósito.' ],
+          en:[ 'Both wells are equally concentrated, because the measured proportion does not change with the amount of water stored.',
+               'The large well is more concentrated, because the same figure over more water represents more substance per litre.',
+               'The small well is more concentrated, because the same value is spread among less available water.',
+               'The two readings cannot be compared, because parts per million depend on the volume of the reservoir.' ] },
+      c:0,
+      h:{ es:'La lectura se toma de una muestra del agua, no del depósito entero. Pregúntate si el tamaño del depósito entra en esa comparación.',
+          en:'The reading is taken from a sample of the water, not from the whole reservoir. Ask yourself whether the size of the reservoir enters that comparison.' },
+      e:{ es:'La concentración es una proporción entre la sustancia y la muestra, así que dos aguas con 5 ppm están igual de concentradas. El volumen almacenado cambia la cantidad total de fluoruros, no la proporción medida.',
+          en:'Concentration is a proportion between the substance and the sample, so two waters at 5 ppm are equally concentrated. The stored volume changes the total amount of fluorides, not the measured proportion.' } }
+  ]));
+}
+
+function mkP2(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'Por qué se informa en ppm', en:'Why it is reported in ppm' },
+      q:{ es:'Un laboratorio entrega la misma muestra escrita de dos maneras: 0.0007 % y 7 ppm. El grupo escolar debe elegir una para vaciarla en su tabla comunitaria. ¿Qué ventaja tiene la segunda forma?',
+          en:'A laboratory delivers the same sample written in two ways: 0.0007 % and 7 ppm. The school group has to choose one to copy into its community table. What advantage does the second form have?' },
+      o:{ es:[ 'Expresa la misma proporción con cifras manejables, lo que reduce los errores al copiar y comparar valores muy pequeños.',
+               'Convierte la proporción en una cantidad total, lo que permite saber cuánta sustancia hay en el sitio medido.',
+               'Indica que la muestra es más segura, porque un número mayor corresponde siempre a una lectura aceptable.',
+               'Sustituye al valor de referencia, porque las partes por millón ya incluyen el máximo recomendado.' ],
+          en:[ 'It expresses the same proportion with manageable figures, which reduces mistakes when copying and comparing very small values.',
+               'It turns the proportion into a total amount, which allows knowing how much substance there is at the measured site.',
+               'It shows the sample is safer, because a larger number always corresponds to an acceptable reading.',
+               'It replaces the reference value, because parts per million already include the recommended maximum.' ] },
+      c:0,
+      h:{ es:'Las dos escrituras dicen exactamente lo mismo. La ventaja hay que buscarla en el trabajo de quien anota, copia y compara decenas de datos.',
+          en:'Both ways of writing say exactly the same thing. The advantage has to be looked for in the work of whoever writes down, copies and compares dozens of figures.' },
+      e:{ es:'Ambas escrituras representan la misma proporción. Las partes por millón la escriben sin arrastrar ceros ni decimales, y cada cero de más es una oportunidad de equivocarse al vaciar el dato en una tabla.',
+          en:'Both forms represent the same proportion. Parts per million write it without dragging zeros and decimals, and every extra zero is a chance to make a mistake when copying the figure into a table.' } },
+    { t:{ es:'Cambio de escala en el reporte', en:'A change of scale in the report' },
+      q:{ es:'Un boletín informa cierto plaguicida en partes por mil millones en lugar de partes por millón. ¿Qué indica esa elección de unidad?',
+          en:'A bulletin reports a certain pesticide in parts per billion instead of parts per million. What does that choice of unit indicate?' },
+      o:{ es:[ 'Que la sustancia se detecta en proporciones aún menores, y usar partes por millón obligaría a escribir varios decimales.',
+               'Que la sustancia se volvió menos peligrosa, porque el laboratorio la mide en una escala más fina.',
+               'Que la muestra analizada fue mil veces más grande que las muestras habituales de ese laboratorio.',
+               'Que la lectura ya no necesita compararse con una referencia, porque la escala fina la sustituye.' ],
+          en:[ 'That the substance is detected in even smaller proportions, and using parts per million would force writing several decimals.',
+               'That the substance became less dangerous, because the laboratory measures it on a finer scale.',
+               'That the analysed sample was a thousand times bigger than the usual samples of that laboratory.',
+               'That the reading no longer needs to be compared with a reference, because the fine scale replaces it.' ] },
+      c:0,
+      h:{ es:'La unidad se elige por el tamaño de la proporción que se quiere escribir, no por el daño que causa la sustancia.',
+          en:'The unit is chosen according to the size of the proportion to be written, not according to the harm the substance causes.' },
+      e:{ es:'Las partes por mil millones se usan cuando la sustancia aparece en proporciones todavía más pequeñas que las partes por millón. Es una decisión de escritura: el peligro depende de la sustancia y de su referencia, no de la unidad elegida.',
+          en:'Parts per billion are used when the substance appears in proportions even smaller than parts per million. It is a decision about writing: the danger depends on the substance and its reference, not on the chosen unit.' } }
+  ]));
+}
+
+function mkP3(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'La unidad y su compartimento', en:'The unit and its compartment' },
+      q:{ es:'Un equipo escolar toma tierra del patio, la envía al laboratorio y anota el resultado de plomo como 35 mg/L. ¿Qué error contiene ese registro?',
+          en:'A school team takes soil from the yard, sends it to the laboratory and writes down the lead result as 35 mg/L. What error does that record contain?' },
+      o:{ es:[ 'La muestra es sólida y su proporción se establece contra la masa de suelo seco, no contra un volumen de líquido.',
+               'El plomo del suelo debe informarse siempre en gramos, porque los miligramos son una unidad de laboratorio.',
+               'Falta anotar la hora de la toma, que es el dato que vuelve válida cualquier unidad de concentración.',
+               'La lectura debía escribirse en partes por mil millones, porque el plomo es un metal pesado.' ],
+          en:[ 'The sample is solid and its proportion is set against the mass of dry soil, not against a volume of liquid.',
+               'Lead in soil must always be reported in grams, because milligrams are a laboratory unit.',
+               'The time of sampling is missing, and that is the field that makes any concentration unit valid.',
+               'The reading should have been written in parts per billion, because lead is a heavy metal.' ] },
+      c:0,
+      h:{ es:'Revisa qué aparece abajo de la proporción y pregúntate si eso se puede medir en el compartimento del que se tomó la muestra.',
+          en:'Check what appears at the bottom of the proportion and ask whether that can be measured in the compartment the sample came from.' },
+      e:{ es:'El litro mide volumen de líquido y sirve para el agua. En suelo la muestra se seca y se pesa, de modo que la concentración se informa como masa de sustancia por masa de suelo, en miligramos por kilogramo.',
+          en:'The litre measures volume of liquid and works for water. In soil the sample is dried and weighed, so the concentration is reported as mass of substance per mass of soil, in milligrams per kilogram.' } },
+    { t:{ es:'Un dato de aire mal anotado', en:'A badly written air figure' },
+      q:{ es:'El reporte de una estación de monitoreo aparece con la leyenda ozono: 0.08 mg/kg de aire. La maestra pide revisar el registro antes de vaciarlo en la tabla. ¿Qué corresponde corregir?',
+          en:'The report of a monitoring station appears with the line ozone: 0.08 mg/kg of air. The teacher asks to review the record before copying it into the table. What has to be corrected?' },
+      o:{ es:[ 'La unidad, porque el ozono es un gas dentro de otro gas y su proporción se establece entre volúmenes, no entre masas.',
+               'El nombre de la sustancia, porque el ozono se registra siempre junto con las partículas suspendidas.',
+               'El número, porque ninguna lectura de aire puede tener decimales en un boletín de monitoreo.',
+               'El sitio, porque las estaciones de monitoreo solo pueden informar lecturas de agua y de suelo.' ],
+          en:[ 'The unit, because ozone is a gas inside another gas and its proportion is set between volumes, not between masses.',
+               'The name of the substance, because ozone is always recorded together with suspended particles.',
+               'The number, because no air reading can carry decimals in a monitoring bulletin.',
+               'The site, because monitoring stations can only report water and soil readings.' ] },
+      c:0,
+      h:{ es:'Piensa en qué estado están el contaminante y la muestra en este caso, y en qué se puede pesar con una balanza.',
+          en:'Think about the state of the pollutant and of the sample in this case, and about what can be weighed on a balance.' },
+      e:{ es:'El kilogramo pertenece a las muestras que se pesan, como el suelo. Para un gas dentro del aire la proporción se expresa entre volúmenes: partes de gas por millón de partes de aire.',
+          en:'The kilogram belongs to samples that are weighed, such as soil. For a gas inside air the proportion is expressed between volumes: parts of gas per million parts of air.' } }
+  ]));
+}
+
+function mkP4(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'Medir el aire', en:'Measuring the air' },
+      q:{ es:'La estación del barrio informa el monóxido de carbono en partes por millón. ¿Qué compara exactamente esa lectura?',
+          en:'The neighbourhood station reports carbon monoxide in parts per million. What exactly does that reading compare?' },
+      o:{ es:[ 'El volumen del gas contaminante frente al volumen total del aire de la muestra.',
+               'La masa del gas contaminante frente a la masa del equipo que realiza la medición.',
+               'El volumen del gas contaminante frente al volumen de agua que contiene la humedad del aire.',
+               'La masa de las partículas depositadas frente a la superficie del terreno que las recibe.' ],
+          en:[ 'The volume of the polluting gas against the total volume of air in the sample.',
+               'The mass of the polluting gas against the mass of the equipment taking the measurement.',
+               'The volume of the polluting gas against the volume of water held in the humidity of the air.',
+               'The mass of deposited particles against the surface of the ground that receives them.' ] },
+      c:0,
+      h:{ es:'Tanto el contaminante como la muestra son gases. Pregúntate qué propiedad comparten y resulta cómodo comparar en ese caso.',
+          en:'Both the pollutant and the sample are gases. Ask which property they share that is convenient to compare in that case.' },
+      e:{ es:'En aire la proporción se establece entre volúmenes: cuántos volúmenes del gas hay por cada millón de volúmenes de aire. Por eso el reporte declara también la temperatura y la presión, que modifican el volumen del gas.',
+          en:'In air the proportion is set between volumes: how many volumes of the gas there are for every million volumes of air. That is why the report also declares temperature and pressure, which change the volume of the gas.' } },
+    { t:{ es:'El caso de las partículas', en:'The case of particles' },
+      q:{ es:'Las partículas suspendidas del aire se informan en microgramos por metro cúbico y no en partes por millón. ¿Cuál es la razón de esa diferencia?',
+          en:'Suspended particles in air are reported in micrograms per cubic metre and not in parts per million. What is the reason for that difference?' },
+      o:{ es:[ 'Son material sólido flotando en el aire y no un gas que ocupe una fracción del volumen, así que se pesa la masa contenida en un volumen conocido.',
+               'Son un contaminante más reciente que los gases y todavía no existe una escala de proporción para describirlas.',
+               'Provienen siempre del suelo, de modo que conservan las unidades con las que se informan las muestras de tierra.',
+               'Se miden en interiores y no en el aire libre, por lo que necesitan una unidad distinta de la del monitoreo urbano.' ],
+          en:[ 'They are solid material floating in the air and not a gas occupying a fraction of the volume, so the mass contained in a known volume is weighed.',
+               'They are a more recent pollutant than gases and no proportion scale exists yet to describe them.',
+               'They always come from the soil, so they keep the units used for reporting earth samples.',
+               'They are measured indoors and not in open air, so they need a unit different from the one used in urban monitoring.' ] },
+      c:0,
+      h:{ es:'Compara el estado físico de un gas contaminante con el de una partícula suspendida y piensa qué se puede comparar con el volumen del aire.',
+          en:'Compare the physical state of a polluting gas with that of a suspended particle and think about what can be compared with the volume of the air.' },
+      e:{ es:'Las partes por millón en aire comparan volúmenes de gas. Una partícula es materia sólida en suspensión, así que el equipo aspira un volumen conocido de aire, retiene lo sólido y lo pesa: masa por metro cúbico.',
+          en:'Parts per million in air compare volumes of gas. A particle is solid matter in suspension, so the equipment draws in a known volume of air, retains the solids and weighs them: mass per cubic metre.' } }
+  ]));
+}
+
+function mkP5(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'La referencia correcta', en:'The right reference' },
+      q:{ es:'Una estación informa 0.09 ppm de ozono como promedio de una hora. La referencia que el grupo tiene a la mano está definida como promedio de ocho horas. ¿Qué corresponde hacer antes de afirmar en la asamblea que se rebasó la referencia?',
+          en:'A station reports 0.09 ppm of ozone as a one hour average. The reference the group has at hand is defined as an eight hour average. What should be done before stating at the assembly that the reference was exceeded?' },
+      o:{ es:[ 'Buscar la referencia definida para el mismo periodo de promedio, porque un valor horario y uno de ocho horas describen exposiciones distintas.',
+               'Repetir la medición con otro equipo, porque una sola estación nunca puede confirmar que hubo una excedencia.',
+               'Informar la lectura sin ninguna referencia, porque los valores de aire se leen por sí solos en cada boletín.',
+               'Comparar la lectura con la referencia del agua de bebida, que es la más exigente de todas y protege mejor.' ],
+          en:[ 'Look for the reference defined for the same averaging period, because an hourly value and an eight hour one describe different exposures.',
+               'Repeat the measurement with other equipment, because a single station can never confirm an exceedance.',
+               'Report the reading with no reference at all, because air values can be read on their own in each bulletin.',
+               'Compare the reading with the drinking water reference, which is the strictest of all and protects better.' ] },
+      c:0,
+      h:{ es:'Fíjate en que el dato y la referencia traen cada uno un periodo. Pregúntate si describen el mismo tiempo de exposición.',
+          en:'Notice that the figure and the reference each carry a period. Ask whether they describe the same exposure time.' },
+      e:{ es:'La referencia de aire se define junto con un periodo de promedio, porque el daño depende del tiempo que se respire el contaminante. Un dato de una hora se juzga contra una referencia de una hora, no contra una de ocho.',
+          en:'The air reference is defined together with an averaging period, because the harm depends on how long the pollutant is breathed. A one hour figure is judged against a one hour reference, not against an eight hour one.' } },
+    { t:{ es:'La misma cifra, dos usos', en:'The same figure, two uses' },
+      q:{ es:'El agua de un canal registra la misma concentración de una sal disuelta en dos tramos. En el primero se usa para regar hortalizas y en el segundo abastece la toma de una casa. ¿Qué corresponde hacer al analizar esas dos lecturas?',
+          en:'The water of a canal records the same concentration of a dissolved salt in two stretches. In the first one it is used to water vegetables and in the second it supplies the intake of a house. What should be done when analysing those two readings?' },
+      o:{ es:[ 'Comparar cada lectura con la referencia del uso que se le da al agua en ese tramo, porque el máximo recomendado depende del destino.',
+               'Aplicar a los dos tramos la referencia del riego, porque es el uso que aparece primero a lo largo del canal.',
+               'Descartar las dos lecturas, porque un mismo canal no puede tener dos usos distintos en el mismo recorrido.',
+               'Considerar que ambas cumplen, porque las cifras coinciden y una coincidencia confirma que el agua es apta.' ],
+          en:[ 'Compare each reading with the reference of the use given to the water in that stretch, because the recommended maximum depends on the destination.',
+               'Apply the irrigation reference to both stretches, because it is the use that appears first along the canal.',
+               'Discard both readings, because one canal cannot have two different uses along the same course.',
+               'Consider that both comply, because the figures match and a match confirms the water is suitable.' ] },
+      c:0,
+      h:{ es:'Las cifras son iguales, pero lo que se hace con el agua no lo es. Piensa de qué depende el máximo recomendado.',
+          en:'The figures are equal, but what is done with the water is not. Think about what the recommended maximum depends on.' },
+      e:{ es:'El valor de referencia se fija para un uso concreto, y el del agua de bebida es más exigente que el del riego. La misma cifra puede quedar dentro del máximo en un tramo y por encima en el otro.',
+          en:'The reference value is set for a specific use, and the one for drinking water is stricter than the one for irrigation. The same figure can stay within the maximum in one stretch and above it in the other.' } }
+  ]));
+}
+
+function mkP6(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'Lo que revela un horario', en:'What a schedule reveals' },
+      q:{ es:'En una colonia las lecturas de dióxido de azufre suben todos los días entre las seis y las nueve de la mañana y bajan el resto de la jornada. ¿Qué hipótesis orienta mejor la indagación del grupo?',
+          en:'In a neighbourhood the sulfur dioxide readings rise every day between six and nine in the morning and drop for the rest of the day. Which hypothesis better guides the inquiry of the group?' },
+      o:{ es:[ 'Que existe una actividad cercana que opera en ese horario y libera el gas, de modo que conviene identificarla y observarla.',
+               'Que el equipo de la estación se descompone cada mañana y vuelve a funcionar correctamente hacia el mediodía.',
+               'Que el valor de referencia del dióxido de azufre cambia durante la mañana y por eso las lecturas parecen altas.',
+               'Que la concentración depende del número de personas que respiran en la colonia a esa hora del día.' ],
+          en:[ 'That there is a nearby activity operating at those hours and releasing the gas, so it is worth identifying and observing it.',
+               'That the station equipment breaks down every morning and starts working properly again around midday.',
+               'That the reference value for sulfur dioxide changes during the morning and that is why the readings look high.',
+               'That the concentration depends on the number of people breathing in the neighbourhood at that time of day.' ] },
+      c:0,
+      h:{ es:'Un patrón que se repite a la misma hora todos los días suele apuntar a algo que también ocurre a la misma hora todos los días.',
+          en:'A pattern that repeats at the same hour every day usually points to something that also happens at the same hour every day.' },
+      e:{ es:'La regularidad del horario es la pista. Un ascenso diario en la misma franja sugiere una fuente que opera en ese momento, y la indagación sigue con un recorrido a esa hora para ubicarla.',
+          en:'The regularity of the schedule is the clue. A daily rise in the same time band suggests a source operating at that moment, and the inquiry continues with a walk at that hour to locate it.' } },
+    { t:{ es:'Una serie que no se detiene', en:'A series that does not stop' },
+      q:{ es:'El seguimiento mensual de un pozo muestra nitratos que suben poco a poco durante seis meses seguidos, aunque todavía no rebasan la referencia. ¿Qué conclusión sostiene esa serie?',
+          en:'The monthly follow up of a well shows nitrates rising little by little for six months in a row, although they still do not exceed the reference. What conclusion does that series support?' },
+      o:{ es:[ 'Que hay un aporte sostenido de nitratos al pozo, y conviene actuar antes de que las lecturas alcancen la referencia.',
+               'Que el pozo ya es apto de manera definitiva, porque ninguna de las seis lecturas rebasó la referencia.',
+               'Que los nitratos aparecen y desaparecen al azar, de modo que la serie no permite ninguna interpretación.',
+               'Que la referencia del pozo quedó mal calculada, porque una serie creciente siempre indica un error de referencia.' ],
+          en:[ 'That there is a sustained input of nitrates into the well, and it is worth acting before the readings reach the reference.',
+               'That the well is definitively suitable, because none of the six readings exceeded the reference.',
+               'That nitrates appear and disappear at random, so the series allows no interpretation at all.',
+               'That the reference of the well was badly set, because a rising series always indicates a reference error.' ] },
+      c:0,
+      h:{ es:'Una serie aporta algo que un dato aislado no puede dar. Pregúntate qué información añade el hecho de que suba mes con mes.',
+          en:'A series provides something an isolated figure cannot give. Ask what information is added by the fact that it rises month after month.' },
+      e:{ es:'Lo que informa la serie es la tendencia. Un ascenso sostenido indica que algo sigue aportando nitratos, y esperar a que la lectura alcance la referencia deja pasar el momento en que la prevención es más sencilla.',
+          en:'What the series reports is the trend. A sustained rise indicates that something keeps adding nitrates, and waiting for the reading to reach the reference lets the moment when prevention is easiest slip by.' } }
+  ]));
+}
+
+function mkP7(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'El rastro hacia la fuente', en:'The trail towards the source' },
+      q:{ es:'Un recorrido midió plomo en suelo: 40 ppm en el parque, 95 ppm en la banqueta frente al taller de baterías, 330 ppm en el patio trasero del taller y 55 ppm dos calles más adelante. ¿Qué indica ese patrón de lecturas?',
+          en:'A survey measured lead in soil: 40 ppm in the park, 95 ppm on the pavement in front of the battery workshop, 330 ppm in the back yard of the workshop and 55 ppm two streets further on. What does that pattern of readings indicate?' },
+      o:{ es:[ 'Que la fuente probable está en el taller, porque la concentración disminuye conforme aumenta la distancia a ese punto.',
+               'Que el parque es el sitio más afectado, porque es el lugar donde la gente permanece durante más tiempo.',
+               'Que las cuatro lecturas son equivalentes, porque todas se informaron con la misma unidad de concentración.',
+               'Que el suelo se limpió solo dos calles más adelante, porque el plomo se evapora cuando corre el viento.' ],
+          en:[ 'That the likely source is at the workshop, because the concentration decreases as the distance to that point grows.',
+               'That the park is the most affected site, because it is the place where people stay the longest.',
+               'That the four readings are equivalent, because all of them were reported with the same concentration unit.',
+               'That the soil cleaned itself two streets further on, because lead evaporates when the wind blows.' ] },
+      c:0,
+      h:{ es:'Ordena mentalmente las lecturas por su distancia al taller y observa hacia dónde crecen los números.',
+          en:'Mentally order the readings by their distance to the workshop and observe in which direction the numbers grow.' },
+      e:{ es:'El patrón muestra un descenso ordenado conforme aumenta la distancia al patio del taller. Ese gradiente es el rastro típico de una liberación local, y por eso la indagación se concentra en ese sitio.',
+          en:'The pattern shows an orderly decline as the distance to the workshop yard grows. That gradient is the typical trail of a local release, and that is why the inquiry focuses on that site.' } },
+    { t:{ es:'Leer el aire con el viento', en:'Reading the air with the wind' },
+      q:{ es:'Alrededor de una ladrillera, las lecturas de dióxido de azufre son altas en las calles del oriente y bajas en las del poniente. El viento dominante sopla del poniente hacia el oriente. ¿Qué explica mejor esa distribución?',
+          en:'Around a brickworks, sulfur dioxide readings are high in the streets to the east and low in those to the west. The prevailing wind blows from west to east. What best explains that distribution?' },
+      o:{ es:[ 'Que el viento arrastra el gas liberado en la ladrillera hacia las calles que quedan a favor del viento.',
+               'Que las calles del poniente tienen menos habitantes y por eso registran lecturas más bajas de ese gas.',
+               'Que el dióxido de azufre se produce por la mañana únicamente en los barrios del oriente de cualquier zona.',
+               'Que el equipo de medición registra valores más altos cuando se coloca del lado oriente de una fuente.' ],
+          en:[ 'That the wind drags the gas released at the brickworks towards the streets lying downwind.',
+               'That the western streets have fewer inhabitants and therefore record lower readings of that gas.',
+               'That sulfur dioxide is produced in the morning only in the eastern neighbourhoods of any area.',
+               'That the measuring equipment records higher values when it is placed on the eastern side of a source.' ] },
+      c:0,
+      h:{ es:'En aire, las lecturas altas no se reparten en círculo alrededor de la fuente. Piensa en qué las empuja en una dirección.',
+          en:'In air, high readings are not spread in a circle around the source. Think about what pushes them in one direction.' },
+      e:{ es:'El viento dominante transporta el gas desde donde se libera hacia donde sopla, así que las lecturas altas aparecen a favor del viento. Por eso un recorrido de aire se planea mirando primero la dirección del viento.',
+          en:'The prevailing wind transports the gas from where it is released towards where it blows, so high readings appear downwind. That is why an air survey is planned by first looking at the wind direction.' } }
+  ]));
+}
+
+function mkP8(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'Dos fuentes, un mismo sitio', en:'Two sources, one site' },
+      q:{ es:'Dos consultas informan el mismo pozo: un boletín registra 12 ppm de nitratos en marzo y un reporte de laboratorio registra 7 mg/L en noviembre del mismo año. ¿Qué conviene hacer al sistematizar ambos datos?',
+          en:'Two sources report the same well: a bulletin records 12 ppm of nitrates in March and a laboratory report records 7 mg/L in November of the same year. What is the right thing to do when systematizing both figures?' },
+      o:{ es:[ 'Registrar las dos lecturas con su fecha y su unidad, reconociendo que en agua 1 mg/L equivale a 1 ppm, y tratarlas como dos momentos del seguimiento.',
+               'Conservar solo la lectura más alta de las dos, porque representa el peor caso del año y protege mejor a la comunidad.',
+               'Descartar las dos lecturas, porque provienen de fuentes de consulta distintas y no pueden aparecer en la misma tabla.',
+               'Anotar únicamente la lectura de noviembre, porque es la más reciente y sustituye a la información anterior.' ],
+          en:[ 'Record both readings with their date and unit, recognizing that in water 1 mg/L equals 1 ppm, and treat them as two moments of the follow up.',
+               'Keep only the higher of the two readings, because it represents the worst case of the year and protects the community better.',
+               'Discard both readings, because they come from different sources and cannot appear in the same table.',
+               'Write down only the November reading, because it is the most recent and replaces the earlier information.' ] },
+      c:0,
+      h:{ es:'Revisa si las dos unidades hablan de la misma proporción y si las fechas distintas impiden o enriquecen la comparación.',
+          en:'Check whether the two units speak about the same proportion and whether different dates block or enrich the comparison.' },
+      e:{ es:'En agua las dos unidades describen la misma proporción, así que las lecturas son comparables. Las fechas distintas no estorban: son dos momentos del mismo sitio y juntos empiezan a mostrar una tendencia.',
+          en:'In water both units describe the same proportion, so the readings are comparable. The different dates are not a problem: they are two moments of the same site and together they start showing a trend.' } },
+    { t:{ es:'El indicador del proyecto', en:'The indicator of the project' },
+      q:{ es:'Una comunidad acuerda cerrar la descarga de un taller hacia el canal y quiere saber más adelante si la medida funcionó. ¿Qué indicador permite responder esa pregunta con evidencia?',
+          en:'A community agrees to close the discharge of a workshop into the canal and wants to know later whether the measure worked. Which indicator answers that question with evidence?' },
+      o:{ es:[ 'La concentración de la misma sustancia, medida en el mismo punto del canal y con el mismo método, antes y después del cierre.',
+               'El número de personas que asistieron a las reuniones donde se acordó cerrar la descarga del taller.',
+               'La cantidad de letreros colocados a la orilla del canal para avisar del acuerdo a los vecinos.',
+               'La concentración medida en un arroyo de otra región, que sirve como ejemplo de agua en buen estado.' ],
+          en:[ 'The concentration of the same substance, measured at the same point of the canal and with the same method, before and after the closure.',
+               'The number of people who attended the meetings where closing the workshop discharge was agreed.',
+               'The number of signs placed along the canal to inform the neighbours about the agreement.',
+               'The concentration measured in a stream of another region, used as an example of water in good condition.' ] },
+      c:0,
+      h:{ es:'Un indicador tiene que poder medirse dos veces y cambiar solo por efecto de la medida que se tomó.',
+          en:'An indicator has to be measurable twice and change only as an effect of the measure that was taken.' },
+      e:{ es:'Para atribuir el cambio a la medida hay que sostener todo lo demás: misma sustancia, mismo punto y mismo método, comparando antes y después. Las otras cifras describen el esfuerzo del grupo, no el estado del canal.',
+          en:'To attribute the change to the measure everything else has to be held constant: same substance, same point and same method, comparing before and after. The other figures describe the effort of the group, not the state of the canal.' } }
+  ]));
+}
+
+function mkP9(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'Diluir no es resolver', en:'Diluting is not solving' },
+      q:{ es:'Para bajar la lectura de una sustancia en el canal, alguien propone abrir más agua limpia de la presa de modo que la concentración medida disminuya. ¿Qué limitación tiene esa propuesta?',
+          en:'To lower the reading of a substance in the canal, somebody proposes opening more clean water from the dam so that the measured concentration drops. What limitation does that proposal have?' },
+      o:{ es:[ 'Baja la proporción medida, pero la misma cantidad de sustancia sigue entrando al ambiente y se reparte aguas abajo.',
+               'Baja la proporción medida y también destruye la sustancia, aunque exige un gasto de agua difícil de sostener.',
+               'Sube la proporción medida, porque al aumentar el volumen del canal la sustancia se concentra en el fondo.',
+               'No modifica la proporción medida, porque la concentración de un canal depende solo de la sustancia vertida.' ],
+          en:[ 'It lowers the measured proportion, but the same amount of substance keeps entering the environment and spreads downstream.',
+               'It lowers the measured proportion and also destroys the substance, although it demands an unsustainable use of water.',
+               'It raises the measured proportion, because increasing the volume of the canal concentrates the substance at the bottom.',
+               'It does not change the measured proportion, because the concentration of a canal depends only on the substance poured in.' ] },
+      c:0,
+      h:{ es:'Separa dos cosas distintas: la proporción que marca el instrumento y la cantidad de sustancia que se libera cada día.',
+          en:'Separate two different things: the proportion the instrument shows and the amount of substance released each day.' },
+      e:{ es:'Al agregar agua limpia la proporción baja porque crece la muestra, no porque haya menos sustancia. La descarga sigue igual y el problema se reparte en un tramo mayor, así que la medida no actúa sobre la fuente.',
+          en:'Adding clean water lowers the proportion because the sample grows, not because there is less substance. The discharge stays the same and the problem spreads over a longer stretch, so the measure does not act on the source.' } },
+    { t:{ es:'El agua baja y el pez alto', en:'Low in the water, high in the fish' },
+      q:{ es:'En un embalse el agua registra una concentración baja de cierta sustancia, mientras que los análisis de los peces registran una concentración mucho mayor. ¿Qué explica esa diferencia?',
+          en:'In a reservoir the water records a low concentration of a certain substance, while the analyses of the fish record a much higher one. What explains that difference?' },
+      o:{ es:[ 'Que la sustancia se acumula en los organismos, que la retienen poco a poco a partir del agua y del alimento.',
+               'Que el agua del embalse se analizó con un equipo distinto del que se usó para analizar a los peces.',
+               'Que la sustancia se produce dentro de los peces y desde ahí pasa lentamente al agua del embalse.',
+               'Que la concentración del agua siempre resulta menor porque las muestras se toman en la superficie.' ],
+          en:[ 'That the substance builds up in the organisms, which retain it little by little from the water and from their food.',
+               'That the reservoir water was analysed with equipment different from the one used to analyse the fish.',
+               'That the substance is produced inside the fish and from there passes slowly into the reservoir water.',
+               'That the concentration of the water always turns out lower because samples are taken at the surface.' ] },
+      c:0,
+      h:{ es:'Piensa qué ocurre con una sustancia que un organismo incorpora todos los días y elimina con dificultad.',
+          en:'Think about what happens to a substance an organism takes in every day and eliminates only with difficulty.' },
+      e:{ es:'Algunas sustancias se retienen en los tejidos y se concentran a lo largo de la cadena alimentaria. Por eso una lectura baja en el agua no basta para descartar el riesgo de quien consume esos peces con frecuencia.',
+          en:'Some substances are retained in tissues and become concentrated along the food chain. That is why a low reading in the water is not enough to rule out the risk for whoever eats those fish often.' } }
+  ]));
+}
+
+function mkP10(rng){
+  return useVariant(pk(rng, [
+    { t:{ es:'De la tabla a la asamblea', en:'From the table to the assembly' },
+      q:{ es:'Un grupo escolar reunió lecturas de aire, agua y suelo del mismo barrio y quiere presentarlas para sostener una propuesta preventiva. ¿Qué organización de la información sostiene mejor esa propuesta?',
+          en:'A school group gathered air, water and soil readings from the same neighbourhood and wants to present them to support a preventive proposal. Which organization of the information best supports that proposal?' },
+      o:{ es:[ 'Una tabla que declare, para cada lectura, la sustancia, el sitio, la fecha, la unidad y la referencia con la que se compara.',
+               'Una lista con los valores más altos encontrados en el barrio, ordenados del mayor al menor sin más datos.',
+               'Un promedio único de todas las lecturas del barrio, sin separar las de aire, las de agua y las de suelo.',
+               'Una colección de fotografías de los sitios visitados, acompañadas del nombre de quien tomó cada imagen.' ],
+          en:[ 'A table declaring, for each reading, the substance, the site, the date, the unit and the reference it is compared with.',
+               'A list of the highest values found in the neighbourhood, ordered from largest to smallest with no further data.',
+               'A single average of all the readings of the neighbourhood, without separating air, water and soil.',
+               'A collection of photographs of the visited sites, together with the name of whoever took each image.' ] },
+      c:0,
+      h:{ es:'Pregúntate qué necesita saber quien escucha para poder juzgar si cada cifra es alta y para repetir la medición si lo duda.',
+          en:'Ask what a listener needs to know in order to judge whether each figure is high and to repeat the measurement in case of doubt.' },
+      e:{ es:'Una cifra solo se interpreta junto a su sustancia, su sitio, su fecha, su unidad y su referencia. Con esos campos a la vista la asamblea puede juzgar la evidencia y cualquiera puede repetir la medición.',
+          en:'A figure can only be interpreted together with its substance, site, date, unit and reference. With those fields in sight the assembly can judge the evidence and anybody can repeat the measurement.' } },
+    { t:{ es:'Elegir la medida', en:'Choosing the measure' },
+      q:{ es:'El expediente del barrio muestra que las lecturas de un metal en el suelo son mayores junto a un taller que descarga sus residuos en el patio de tierra. Entre las acciones propuestas, ¿cuál actúa de manera preventiva sobre el problema?',
+          en:'The neighbourhood file shows that readings of a metal in the soil are higher next to a workshop that dumps its waste in the bare ground yard. Among the proposed actions, which one acts preventively on the problem?' },
+      o:{ es:[ 'Acordar con el taller un acopio de los residuos en recipientes cerrados y su entrega al servicio autorizado.',
+               'Retirar la capa de tierra del patio del taller y llevarla a un sitio de disposición fuera del barrio.',
+               'Colocar una cerca alrededor del patio del taller para que nadie camine sobre el suelo afectado.',
+               'Repetir la medición del metal cada mes para documentar cómo evolucionan las lecturas del patio.' ],
+          en:[ 'Agree with the workshop on collecting the waste in closed containers and handing it to the authorized service.',
+               'Remove the layer of earth from the workshop yard and take it to a disposal site outside the neighbourhood.',
+               'Put a fence around the workshop yard so that nobody walks on the affected soil.',
+               'Repeat the measurement of the metal every month to document how the yard readings evolve.' ] },
+      c:0,
+      h:{ es:'Distingue entre lo que evita que la sustancia se libere, lo que limpia lo ya liberado y lo que solo documenta o resguarda.',
+          en:'Distinguish between what prevents the substance from being released, what cleans up what was already released and what only documents or shields.' },
+      e:{ es:'Solo la primera acción corta la entrada de residuos al suelo. Retirar la tierra corrige lo ya ocurrido, la cerca reduce el contacto y la medición mensual documenta, pero ninguna de esas tres detiene la descarga.',
+          en:'Only the first action cuts off the entry of waste into the soil. Removing the earth corrects what already happened, the fence reduces contact and the monthly measurement documents, but none of those three stops the discharge.' } }
+  ]));
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,2334 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gráficas Circulares para Analizar Información</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── WIDGETS DE ESTA GUÍA (gráficas circulares) ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-instr { font-size:.88rem; color:var(--text2); margin-bottom:.7rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; margin-top:.7rem; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.goalbar b { color:var(--green-dark); }
+.gcanvas { display:block; width:100%; height:250px; border:1px solid var(--border); border-radius:8px; background:var(--surface); touch-action:manipulation; }
+.pierow { display:flex; gap:.6rem; flex-wrap:wrap; }
+.piecol { flex:1 1 46%; min-width:150px; }
+.piecap { font-size:.74rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.25rem; }
+.piecol .gcanvas { height:190px; }
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.55rem; flex-wrap:wrap; }
+.krow input[type=range] { flex:1; min-width:120px; accent-color:var(--green); height:34px; }
+.klbl { font-size:.78rem; color:var(--text3); min-width:82px; }
+.kval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.95rem; color:var(--green); min-width:52px; text-align:right; }
+.livelbl { margin-top:.55rem; font-size:.88rem; color:var(--text2); }
+.livelbl b { color:var(--green-dark); }
+.statline { margin-top:.35rem; font-size:.84rem; color:var(--text3); }
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.stepslist { margin:.9rem 0 0; padding-left:1.1rem; }
+.stepslist li { font-size:.86rem; color:var(--text2); margin-bottom:.35rem; }
+.fracctl { display:flex; align-items:center; gap:.5rem; margin-top:.6rem; flex-wrap:wrap; }
+.stepbtn { width:40px; height:40px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface2); color:var(--green-dark); font-size:1.05rem; font-weight:700; cursor:pointer; font-family:inherit; }
+.stepbtn:hover { border-color:var(--green); }
+.cntval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1rem; color:var(--green); min-width:34px; text-align:center; }
+.binrow { display:flex; flex-wrap:wrap; gap:.5rem; margin:.7rem 0 0; }
+.binbtn { flex:1 1 44%; min-height:44px; border:1.5px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--text2); font-family:inherit; font-size:.84rem; font-weight:600; cursor:pointer; padding:.5rem .7rem; }
+.binbtn:hover { border-color:var(--green); background:var(--green-bg); color:var(--green-dark); }
+.itemcard { display:block; text-align:center; font-weight:600; font-size:.9rem; color:var(--text); background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:.8rem .7rem; margin:.6rem 0 .2rem; }
+.dtable { width:100%; border-collapse:collapse; margin:.55rem 0; font-size:.85rem; }
+.dtable th { background:var(--green-bg); color:var(--green-dark); text-align:left; padding:.4rem .6rem; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+.dtable td { border-top:1px solid var(--border); padding:.4rem .6rem; color:var(--text2); }
+.dtable td.num { font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--text); text-align:right; }
+.qdata { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.5rem .7rem; margin:.5rem 0 .2rem; font-size:.84rem; color:var(--text2); }
+.qdata b { color:var(--green-dark); font-family:'IBM Plex Mono',monospace; }
+.reflect-prompt { font-size:.9rem; color:var(--text2); margin:.4rem 0 .8rem; }
+@media (max-width: 600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .gcanvas { height:230px; }
+  .piecol { flex:1 1 100%; }
+  .piecol .gcanvas { height:180px; }
+  .klbl { min-width:66px; font-size:.74rem; }
+  .binbtn { flex:1 1 100%; }
+}
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Gráficas Circulares para Analizar Información</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 1° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Gráficas Circulares para Analizar Información</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#1e1e5c', primaryDark:'#131340', primaryBg:'#e9e9f4',
+  accent:'#c0202a', accentBg:'#fae0e2',
+  darkPrimary:'#5454b5', darkPrimaryDark:'#8282d7', darkPrimaryBg:'#121234',
+  darkAccent:'#e65961', darkAccentBg:'#280a0c',
+  pBR:30, pBG:30, pBB:92, pAR:192, pAG:32, pAB:42,
+  logoLeftB64:'data:image/jpeg;base64,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', logoRightB64:'', logoAlt:'Instituto Salesiano Fray Pedro de Gante',
+  guideTitle:{ es:'Gráficas Circulares para Analizar Información', en:'Circle Graphs to Analyze Information' },
+  courseName:{ es:'Matemáticas · 1° de Secundaria', en:'Mathematics · 1° de Secundaria' }, filePrefix:'mat1_t12_g02'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_mat1_t12_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Gráficas Circulares para Analizar Información','wcourse':'Matemáticas · 1° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Circle Graphs to Analyze Information','wcourse':'Mathematics · 1° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_mat1_t12_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_mat1_t12_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_mat1_t12_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_mat1_t12_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('mat1_t12_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+/* ================================================
+   buildLesson: Gráficas circulares para analizar información
+   (1o de Secundaria). Interleaved: idea -> manipulativo -> problema(s).
+   Cards built inline, uno por uno.
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function sum(a){ var s=0,i; for(i=0;i<a.length;i++) s+=a[i]; return s; }
+  function maxOf(a){ return Math.max.apply(null, a); }
+  function minOf(a){ return Math.min.apply(null, a); }
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 320;
+    var h = cv.clientHeight || 220;
+    cv.width  = Math.round(w*dpr);
+    cv.height = Math.round(h*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  /* fracción con numerador sobre denominador (nunca con diagonal) */
+  function mf(n,d){
+    return '<span class="mf-outer"><span class="mf-num">'+n+'</span><span class="mf-den">'+d+'</span></span>';
+  }
+  /* dibuja una gráfica circular: sectores, cortes de referencia y leyenda */
+  function drawPie(cv, cfg){
+    if (!cv) return;
+    var g = fitCv(cv), ctx = g.ctx, w = g.w, h = g.h;
+    var pal = [cssv('--green'), cssv('--gold'), cssv('--green-dark'), cssv('--text3')];
+    var bd  = cssv('--border'), sub = cssv('--text3'), sur = cssv('--surface'), emp = cssv('--surface2');
+    var vals = cfg.values || [], n = vals.length, i, k;
+    var tot = (cfg.total !== undefined && cfg.total !== null) ? cfg.total : sum(vals);
+    var showLeg = (cfg.legend !== false) && cfg.labels;
+    var legW = showLeg ? Math.max(92, Math.min(148, w*0.38)) : 0;
+    var pieW = w - legW;
+    var r  = Math.max(24, Math.min(pieW/2 - 12, h/2 - 12));
+    var cx = pieW/2, cy = h/2;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle = emp; ctx.fill();
+    var acc = 0, a0 = -Math.PI/2, f, a1, mid;
+    for (i=0;i<n;i++){
+      f = tot > 0 ? vals[i]/tot : 0;
+      if (!(f > 0)) continue;
+      if (acc + f > 1) f = 1 - acc;
+      if (!(f > 0)) break;
+      a1 = a0 + f*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,a0,a1); ctx.closePath();
+      ctx.fillStyle = pal[i % 4];
+      if (cfg.hi !== undefined && cfg.hi !== null && cfg.hi !== i) ctx.globalAlpha = 0.30;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = sur; ctx.lineWidth = 2; ctx.stroke();
+      if (cfg.showPct && f >= 0.08){
+        mid = (a0 + a1)/2;
+        ctx.fillStyle = sur;
+        ctx.font = '600 11px "IBM Plex Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(Math.round(f*100)+'%', cx + Math.cos(mid)*r*0.62, cy + Math.sin(mid)*r*0.62 + 4);
+      }
+      a0 = a1; acc += f;
+    }
+    if (cfg.slices){
+      ctx.strokeStyle = bd; ctx.lineWidth = 1;
+      for (k=0;k<cfg.slices;k++){
+        var ang = -Math.PI/2 + (k/cfg.slices)*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx + Math.cos(ang)*r, cy + Math.sin(ang)*r); ctx.stroke();
+      }
+    }
+    if (cfg.quarters){
+      ctx.strokeStyle = bd; ctx.lineWidth = 1;
+      for (k=0;k<4;k++){
+        var qa = -Math.PI/2 + (k/4)*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(cx + Math.cos(qa)*r*0.88, cy + Math.sin(qa)*r*0.88);
+        ctx.lineTo(cx + Math.cos(qa)*(r+5), cy + Math.sin(qa)*(r+5)); ctx.stroke();
+      }
+    }
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.strokeStyle = bd; ctx.lineWidth = 1.4; ctx.stroke();
+    if (showLeg){
+      var ly = cy - (n*17)/2 + 6, lx = pieW + 6;
+      ctx.textAlign = 'left';
+      ctx.font = '500 11px "IBM Plex Sans", sans-serif';
+      for (i=0;i<n;i++){
+        ctx.fillStyle = pal[i % 4];
+        ctx.fillRect(lx, ly - 8, 10, 10);
+        ctx.fillStyle = sub;
+        ctx.fillText(cfg.labels[i] + (cfg.legendVals ? '  ' + vals[i] : ''), lx + 15, ly + 1);
+        ly += 17;
+      }
+    }
+  }
+  /* cuatro opciones distintas: la correcta y los distractores que sí quepan */
+  function opt4(correct, cands){
+    var out = [String(correct)], i, v, k = 1;
+    for (i=0;i<cands.length && out.length<4;i++){
+      v = cands[i];
+      if (v === null || v === undefined || isNaN(v) || v < 0) continue;
+      v = String(Math.round(v));
+      if (out.indexOf(v) === -1) out.push(v);
+    }
+    while (out.length < 4){
+      v = String(Number(correct) + k);
+      if (out.indexOf(v) === -1) out.push(v);
+      k++;
+    }
+    return out;
+  }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = String(T(spec.correct));
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ============================================================
+     TEMAS DE ENCUESTA (el sorteo elige cinco distintos)
+     ============================================================ */
+  var THEMES = [
+    { q:{es:'la mascota preferida', en:'the favorite pet'}, unit:{es:'estudiantes', en:'students'},
+      cats:[{es:'Perro',en:'Dog'},{es:'Gato',en:'Cat'},{es:'Ave',en:'Bird'},{es:'Pez',en:'Fish'}] },
+    { q:{es:'el deporte favorito', en:'the favorite sport'}, unit:{es:'estudiantes', en:'students'},
+      cats:[{es:'Fútbol',en:'Soccer'},{es:'Básquet',en:'Basket'},{es:'Voleibol',en:'Volley'},{es:'Natación',en:'Swim'}] },
+    { q:{es:'la fruta preferida', en:'the favorite fruit'}, unit:{es:'personas', en:'people'},
+      cats:[{es:'Manzana',en:'Apple'},{es:'Plátano',en:'Banana'},{es:'Sandía',en:'Melon'},{es:'Uva',en:'Grape'}] },
+    { q:{es:'cómo llegan a la escuela', en:'how they get to school'}, unit:{es:'estudiantes', en:'students'},
+      cats:[{es:'Camión',en:'Bus'},{es:'Bici',en:'Bike'},{es:'A pie',en:'Walk'},{es:'Auto',en:'Car'}] },
+    { q:{es:'el taller elegido', en:'the chosen workshop'}, unit:{es:'estudiantes', en:'students'},
+      cats:[{es:'Teatro',en:'Theater'},{es:'Música',en:'Music'},{es:'Robótica',en:'Robotics'},{es:'Huerto',en:'Garden'}] },
+    { q:{es:'la bebida preferida en el recreo', en:'the favorite drink at recess'}, unit:{es:'personas', en:'people'},
+      cats:[{es:'Agua',en:'Water'},{es:'Jugo',en:'Juice'},{es:'Leche',en:'Milk'},{es:'Licuado',en:'Smoothie'}] },
+    { q:{es:'el destino del paseo escolar', en:'the school trip destination'}, unit:{es:'estudiantes', en:'students'},
+      cats:[{es:'Museo',en:'Museum'},{es:'Playa',en:'Beach'},{es:'Bosque',en:'Forest'},{es:'Zoológico',en:'Zoo'}] }
+  ];
+  var TS  = shufA(THEMES);
+  var THA = TS[0], THB = TS[1], THC = TS[2], THD = TS[3], THE = TS[4];
+  function cn(th, i){ return T(th.cats[i]); }
+  function labs(th){ return [cn(th,0), cn(th,1), cn(th,2), cn(th,3)]; }
+  function un(th){ return T(th.unit); }
+  function qdata(th, vals){
+    var i, out = [];
+    for (i=0;i<4;i++) out.push(cn(th,i) + ' <b>' + vals[i] + '</b>');
+    return '<div class="qdata">' + out.join(', ') + '</div>';
+  }
+  function qdataP(th, pcts){
+    var i, out = [];
+    for (i=0;i<4;i++) out.push(cn(th,i) + ' <b>' + pcts[i] + '%</b>');
+    return '<div class="qdata">' + out.join(', ') + '</div>';
+  }
+  /* nombre de la parte del círculo según el denominador */
+  function partName(d){
+    if (d === 2) return {es:'la mitad', en:'half'};
+    if (d === 3) return {es:'la tercera parte', en:'a third'};
+    if (d === 4) return {es:'la cuarta parte', en:'a quarter'};
+    if (d === 6) return {es:'la sexta parte', en:'a sixth'};
+    if (d === 8) return {es:'la octava parte', en:'an eighth'};
+    return {es:'la doceava parte', en:'a twelfth'};
+  }
+
+  /* ============================================================
+     VALORES SEMBRADOS (se sacan una sola vez, en orden fijo)
+     ============================================================ */
+  var v1 = Math.floor(rng()*2), v2 = Math.floor(rng()*2), v3 = Math.floor(rng()*2);
+  var v4 = Math.floor(rng()*2), v5 = Math.floor(rng()*2), v6 = Math.floor(rng()*2);
+  var v7 = Math.floor(rng()*2), v8 = Math.floor(rng()*2), v9 = Math.floor(rng()*2);
+  var v10 = Math.floor(rng()*2);
+
+  /* repartos de un círculo en doce partes iguales */
+  var SPL12 = [[6,3,2,1],[6,2,2,2],[4,4,3,1],[6,4,1,1],[4,3,3,2],[3,3,4,2]];
+  /* repartos en porcentajes (siempre suman 100) */
+  var PCT4  = [[50,25,15,10],[40,30,20,10],[50,20,20,10],[35,25,25,15],
+               [45,30,15,10],[40,25,25,10],[30,30,25,15],[35,30,20,15]];
+  var i;
+
+  /* ---- bloque A: el círculo completo (idea 1, manipulativo 1, problema 1) ---- */
+  var kA  = ri(1,3);
+  var bA  = shufA(SPL12[Math.floor(rng()*SPL12.length)]);
+  var cA  = [bA[0]*kA, bA[1]*kA, bA[2]*kA, bA[3]*kA];
+  var TA  = sum(cA);
+  var sA  = cA.slice().sort(function(p,q){ return p-q; });
+  var mA  = ri(0,3);
+  var restA = [];
+  for (i=0;i<4;i++) if (i !== mA) restA.push(cA[i]);
+
+  /* ---- bloque B: fracción del sector (idea 2, manipulativo 2, problemas 2 y 3) ---- */
+  var kB  = ri(2,4);
+  var bB  = shufA(SPL12[Math.floor(rng()*SPL12.length)]);
+  var cB  = [bB[0]*kB, bB[1]*kB, bB[2]*kB, bB[3]*kB];
+  var TB  = sum(cB);
+  var niceB = [];
+  for (i=0;i<4;i++) if (bB[i] === 2 || bB[i] === 3 || bB[i] === 4 || bB[i] === 6) niceB.push(i);
+  var iB  = niceB[Math.floor(rng()*niceB.length)];
+  var altB = [];
+  for (i=0;i<niceB.length;i++) if (bB[niceB[i]] !== bB[iB]) altB.push(niceB[i]);
+  var jB  = altB.length ? altB[Math.floor(rng()*altB.length)] : iB;
+  var dB  = 12 / bB[iB];          // denominador del sector del problema 2
+  var dB2 = 12 / bB[jB];          // denominador del sector del problema 3
+
+  /* ---- bloque C: porcentajes (idea 3, manipulativo 3, problemas 4 y 5) ---- */
+  var pC  = shufA(PCT4[Math.floor(rng()*PCT4.length)]);
+  var TC  = 20*ri(1,4);
+  var cC  = [pC[0]*TC/100, pC[1]*TC/100, pC[2]*TC/100, pC[3]*TC/100];
+  var iC  = ri(0,3);
+  var jC  = (iC + 1 + Math.floor(rng()*3)) % 4;
+
+  /* ---- bloque D: grados (idea 4, manipulativo 4, problemas 6 y 7) ---- */
+  var pD  = shufA(PCT4[Math.floor(rng()*PCT4.length)]);
+  var TD  = 20*ri(1,4);
+  var cD  = [pD[0]*TD/100, pD[1]*TD/100, pD[2]*TD/100, pD[3]*TD/100];
+  var gD  = [pD[0]*18/5, pD[1]*18/5, pD[2]*18/5, pD[3]*18/5];
+  var iD  = ri(0,3);
+  var jD  = (iD + 1 + Math.floor(rng()*3)) % 4;
+
+  /* ---- bloque E: cierre (problemas 9 y 10) ---- */
+  var pE  = shufA(PCT4[Math.floor(rng()*PCT4.length)]);
+  var TE  = 20*ri(1,4);
+  var cE  = [pE[0]*TE/100, pE[1]*TE/100, pE[2]*TE/100, pE[3]*TE/100];
+  var aE = 0, bE = 0;
+  for (i=1;i<4;i++){ if (pE[i] > pE[aE]) aE = i; if (pE[i] < pE[bE]) bE = i; }
+  var mE = ri(0,3);                       // sector que se oculta en el problema 10
+  var restPE = [], restGE = [];
+  for (i=0;i<4;i++) if (i !== mE) { restPE.push(pE[i]); restGE.push(pE[i]*18/5); }
+
+  /* ---- rondas del manipulativo 2 (fracciones) ---- */
+  var FR_POOL = [[1,2],[1,3],[1,4],[1,6],[2,3],[3,4],[5,6],[2,6]];
+  var FRR = shufA(FR_POOL).slice(0,3);
+
+  /* ---- rondas del manipulativo 3 (porcentajes) ---- */
+  var PCR = [];
+  (function(){
+    var r, tt, pp, POOL = [10,15,20,25,30,35,40,45,50,60,70,75];
+    for (r=0;r<3;r++){
+      tt = 20*ri(1,3);
+      pp = POOL[Math.floor(rng()*POOL.length)];
+      PCR.push({ tot:tt, pct:pp, meta:pp*tt/100 });
+    }
+  })();
+
+  /* ---- rondas del manipulativo 4 (ángulos) ---- */
+  var AG_POOL = [
+    { d:2, deg:180 }, { d:3, deg:120 }, { d:4, deg:90 },
+    { d:6, deg:60 },  { d:8, deg:45 }
+  ];
+  var AGR = shufA(AG_POOL).slice(0,3);
+
+  /* ============================================================
+     IDEA 1
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'El círculo entero es el total', en:'The whole circle is the total'}),
+      '<p>'+T({
+        es:'Una gráfica circular parte de una idea muy simple: el círculo completo representa a todas las personas que contestaron, sin que falte ni sobre ninguna. Cada respuesta se queda con una tajada de ese círculo, y esa tajada se llama sector.',
+        en:'A circle graph starts from a very simple idea: the whole circle stands for everyone who answered, with nobody missing and nobody extra. Each answer keeps a slice of that circle, and that slice is called a sector.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Por eso la circular contesta de un vistazo una pregunta que la tabla contesta despacio: ¿qué tan grande es cada respuesta comparada con el grupo entero? Un sector que se lleva media rueda dice que esa respuesta se llevó a la mitad de las personas, aunque en el dibujo no aparezca ningún número.',
+        en:'That is why the circle graph answers at a glance a question the table answers slowly: how big is each answer compared with the whole group? A sector that takes half the wheel says that answer took half the people, even if no number appears in the drawing.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La regla que nunca se rompe es esta: los sectores juntos vuelven a formar el círculo. Si conoces todos los sectores menos uno, el que falta es justo lo que le hace falta al círculo para cerrarse.',
+        en:'The rule that never breaks is this: the sectors put together rebuild the circle. If you know every sector except one, the missing one is exactly what the circle needs to close.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Círculo',en:'Circle'})+'</div><div class="deftxt">'+T({es:'Es el total de personas que contestaron.',en:'It is the total of people who answered.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Sector',en:'Sector'})+'</div><div class="deftxt">'+T({es:'Es la tajada que se lleva una respuesta.',en:'It is the slice one answer takes.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Tamaño',en:'Size'})+'</div><div class="deftxt">'+T({es:'A más personas, más ancho el sector.',en:'The more people, the wider the sector.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Cierre',en:'Closing'})+'</div><div class="deftxt">'+T({es:'Todos los sectores juntos llenan el círculo.',en:'All sectors together fill the circle.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 1: reparte el círculo ---- */
+  (function(){
+    var wrap = widget('reparte');
+    var st = { v:[0,0,0,0], tries:0, done:false };
+    function drawIt(){
+      drawPie(document.getElementById('rpCv'), {
+        values: st.v.slice(), labels: labs(THA), total: TA, legendVals: true
+      });
+    }
+    function live(){
+      var e = document.getElementById('rpLive');
+      if (!e) return;
+      var s = sum(st.v);
+      var txt;
+      if (s < TA) txt = T({es:'Repartidas <b>'+s+'</b> de '+TA+': al círculo todavía le faltan '+(TA-s)+' por acomodar.',
+                           en:'Handed out <b>'+s+'</b> of '+TA+': the circle still needs '+(TA-s)+' more to be placed.'});
+      else if (s > TA) txt = T({es:'Repartidas <b>'+s+'</b> de '+TA+': te pasaste por '+(s-TA)+', y el círculo no puede crecer.',
+                                en:'Handed out <b>'+s+'</b> of '+TA+': you went over by '+(s-TA)+', and the circle cannot grow.'});
+      else txt = T({es:'Repartidas <b>'+s+'</b> de '+TA+': el círculo quedó cerrado.',
+                    en:'Handed out <b>'+s+'</b> of '+TA+': the circle is closed.'});
+      e.innerHTML = txt;
+    }
+    function goalHtml(){
+      var i, out = [];
+      for (i=0;i<4;i++) out.push(cn(THA,i)+' <b>'+cA[i]+'</b>');
+      return out.join(', ');
+    }
+    function render(){
+      var sliders = THA.cats.map(function(c, ci){
+        return '<div class="krow">'+
+          '<span class="klbl">'+cn(THA,ci)+'</span>'+
+          '<input type="range" min="0" max="'+TA+'" step="1" value="'+st.v[ci]+'" oninput="rpSet('+ci+',this.value)">'+
+          '<span class="kval" id="rpv'+ci+'">'+st.v[ci]+'</span>'+
+        '</div>';
+      }).join('');
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Reparte el círculo', en:'Share out the circle'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Este círculo representa a las '+TA+' personas de una encuesta sobre '+T(THA.q)+'. Mueve cada control y observa cómo se abre o se cierra su sector hasta que el reparto coincida con el recuento.',
+            en:'This circle stands for the '+TA+' people in a survey about '+T(THA.q)+'. Move each control and watch its sector open or close until the share out matches the count.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'El recuento dice: ', en:'The count says: '})+goalHtml()+'</div>'+
+          '<canvas class="gcanvas" id="rpCv"></canvas>'+
+          sliders+
+          '<div class="livelbl" id="rpLive"></div>'+
+          (st.done ? '' : '<button class="rverify-btn" onclick="rpChk()">'+T({es:'Verificar reparto', en:'Check the share out'})+'</button>')+
+          '<div class="rfb" id="rpFb"></div>'+
+        '</div>';
+      setTimeout(function(){ drawIt(); live(); }, 30);
+    }
+    window.rpSet = function(ci, val){
+      if (st.done) return;
+      st.v[ci] = parseInt(val,10) || 0;
+      var e = document.getElementById('rpv'+ci);
+      if (e) e.textContent = st.v[ci];
+      drawIt(); live();
+    };
+    window.rpChk = function(){
+      if (st.done) return;
+      var fb = document.getElementById('rpFb'), bad = -1, i, s = sum(st.v);
+      for (i=0;i<4;i++){ if (st.v[i] !== cA[i]) { bad = i; break; } }
+      if (bad === -1){
+        st.done = true; render();
+        setTimeout(function(){
+          var f = document.getElementById('rpFb');
+          if (f) f.innerHTML = '<span class="okmsg">'+T({
+            es:'Círculo repartido. Ahora la respuesta que se llevó la mayor tajada se reconoce sin leer ningún número.',
+            en:'Circle shared out. Now the answer that took the biggest slice is recognizable without reading any number.'
+          })+'</span>';
+        }, 60);
+        return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.v = cA.slice(); st.done = true; render();
+        setTimeout(function(){
+          var f = document.getElementById('rpFb');
+          if (f) f.innerHTML = T({
+            es:'Así queda el reparto: cada sector se llevó exactamente a las personas de su renglón y entre todos cerraron el círculo.',
+            en:'This is how the share out ends: each sector took exactly the people from its row and together they closed the circle.'
+          });
+        }, 60);
+        return;
+      }
+      if (!fb) return;
+      if (s !== TA){
+        fb.innerHTML = (s < TA)
+          ? T({es:'El círculo aún queda abierto: faltan <b>'+(TA-s)+'</b> personas por colocar en algún sector.',
+               en:'The circle is still open: <b>'+(TA-s)+'</b> people are missing from some sector.'})
+          : T({es:'El círculo se desbordó: hay <b>'+(s-TA)+'</b> personas de más repartidas entre los sectores.',
+               en:'The circle overflowed: there are <b>'+(s-TA)+'</b> extra people shared among the sectors.'});
+        return;
+      }
+      fb.innerHTML = (st.v[bad] < cA[bad])
+        ? T({es:'El sector de <b>'+cn(THA,bad)+'</b> se abrió menos de lo que pide su renglón.',
+             en:'The <b>'+cn(THA,bad)+'</b> sector opened less than its row asks for.'})
+        : T({es:'El sector de <b>'+cn(THA,bad)+'</b> se abrió más de lo que pide su renglón.',
+             en:'The <b>'+cn(THA,bad)+'</b> sector opened more than its row asks for.'});
+    };
+    render();
+  })();
+
+  /* ---- PROBLEMA 1 ---- */
+  addProb(v1 === 0 ? {
+    title:{es:'El círculo completo', en:'The whole circle'},
+    q:{es:'En una gráfica circular sobre '+T(THA.q)+', cada sector se quedó con estas personas.'+qdata(THA,cA)+'¿A cuántas personas representa el círculo completo?',
+       en:'In a circle graph about '+T(THA.q)+', each sector kept these people.'+qdata(THA,cA)+'How many people does the whole circle stand for?'},
+    options: opt4(TA, [TA - sA[0], sA[3]+sA[2], sA[3], TA + kA]),
+    correct: String(TA),
+    hint:{es:'El círculo no deja fuera a nadie: todas las tajadas vuelven a formarlo.',
+          en:'The circle leaves nobody out: all the slices rebuild it.'},
+    exp:{es:'El círculo entero es el total de personas encuestadas, así que hay que juntar los cuatro sectores: '+cA[0]+' + '+cA[1]+' + '+cA[2]+' + '+cA[3]+' = '+TA+'.',
+         en:'The whole circle is the total of people surveyed, so the four sectors must be put together: '+cA[0]+' + '+cA[1]+' + '+cA[2]+' + '+cA[3]+' = '+TA+'.'},
+    showWork:true
+  } : {
+    title:{es:'El sector que falta', en:'The missing sector'},
+    q:{es:'Una gráfica circular sobre '+T(THA.q)+' representa a '+TA+' personas. De sus cuatro sectores solo se alcanzan a leer tres: '+cn(THA,(mA+1)%4)+' con '+cA[(mA+1)%4]+', '+cn(THA,(mA+2)%4)+' con '+cA[(mA+2)%4]+' y '+cn(THA,(mA+3)%4)+' con '+cA[(mA+3)%4]+'. ¿A cuántas personas representa el sector de '+cn(THA,mA)+'?',
+       en:'A circle graph about '+T(THA.q)+' stands for '+TA+' people. Of its four sectors only three can be read: '+cn(THA,(mA+1)%4)+' with '+cA[(mA+1)%4]+', '+cn(THA,(mA+2)%4)+' with '+cA[(mA+2)%4]+' and '+cn(THA,(mA+3)%4)+' with '+cA[(mA+3)%4]+'. How many people does the '+cn(THA,mA)+' sector stand for?'},
+    options: opt4(cA[mA], [TA - cA[mA], cA[mA] + kA, sA[3], sum(restA)]),
+    correct: String(cA[mA]),
+    hint:{es:'Al sector que falta le toca justo lo que le sobra al círculo después de los otros tres.',
+          en:'The missing sector gets exactly what the circle has left after the other three.'},
+    exp:{es:'Los tres sectores visibles ocupan '+restA[0]+' + '+restA[1]+' + '+restA[2]+' = '+sum(restA)+' personas, y el círculo entero vale '+TA+'; lo que queda por cerrar es '+TA+' − '+sum(restA)+' = '+cA[mA]+'.',
+         en:'The three visible sectors take '+restA[0]+' + '+restA[1]+' + '+restA[2]+' = '+sum(restA)+' people, and the whole circle is worth '+TA+'; what is left to close it is '+TA+' − '+sum(restA)+' = '+cA[mA]+'.'},
+    showWork:true
+  });
+
+  /* ============================================================
+     IDEA 2
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'Media rueda, un cuarto de rueda', en:'Half a wheel, a quarter of a wheel'}),
+      '<p>'+T({
+        es:'Como el círculo entero es el total, el tamaño de un sector se puede decir con una fracción del círculo. Un sector que llega justo a la mitad del contorno vale '+mf(1,2)+' del total; uno que cabe cuatro veces vale '+mf(1,4)+'; uno que cabe tres veces vale '+mf(1,3)+'.',
+        en:'Since the whole circle is the total, the size of a sector can be told with a fraction of the circle. A sector that reaches exactly halfway around is worth '+mf(1,2)+' of the total; one that fits four times is worth '+mf(1,4)+'; one that fits three times is worth '+mf(1,3)+'.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Esa fracción es la que conecta el dibujo con las personas. Si el círculo vale 24 personas y un sector es '+mf(1,4)+' del círculo, ese sector vale la cuarta parte de esas 24. Y al revés: si sabes cuántas personas tiene un sector y cuántas tiene el círculo, puedes decir qué parte le tocó.',
+        en:'That fraction is what connects the drawing with the people. If the circle is worth 24 people and a sector is '+mf(1,4)+' of the circle, that sector is worth a quarter of those 24. And the other way around: if you know how many people a sector has and how many the circle has, you can say what part it got.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Dos fracciones distintas pueden dibujar el mismo sector: '+mf(2,4)+' abre exactamente lo mismo que '+mf(1,2)+'. El sector no cambia porque lo partas en más pedacitos.',
+        en:'Two different fractions can draw the same sector: '+mf(2,4)+' opens exactly the same as '+mf(1,2)+'. The sector does not change because you cut it into smaller pieces.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 2: arma la fracción del sector ---- */
+  (function(){
+    var wrap = widget('fraccion');
+    var st = { r:0, num:1, den:2, tries:0, done:false, msg:'' };
+    function tgt(){ return FRR[Math.min(st.r, FRR.length-1)]; }
+    function drawBoth(){
+      var g = tgt();
+      drawPie(document.getElementById('fzT'), {
+        values:[g[0], g[1]-g[0]], labels:null, legend:false, total:g[1], slices:g[1], hi:0
+      });
+      drawPie(document.getElementById('fzM'), {
+        values:[st.num, st.den-st.num], labels:null, legend:false, total:st.den, slices:st.den, hi:0
+      });
+    }
+    function live(){
+      var e = document.getElementById('fzLive');
+      if (!e) return;
+      e.innerHTML = T({es:'Tu sector: ', en:'Your sector: '}) + mf(st.num, st.den) +
+        T({es:' del círculo.', en:' of the circle.'});
+    }
+    function render(){
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Arma la fracción', en:'Build the fraction'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda ', en:'Round '})+Math.min(st.r+1,3)+T({es:' de 3', en:' of 3'})+'</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'A la izquierda hay un sector sombreado. Cambia el número de pedazos del círculo y cuántos tomas, hasta que tu círculo de la derecha abra exactamente igual que el de la izquierda.',
+            en:'On the left there is a shaded sector. Change how many pieces the circle has and how many you take, until your circle on the right opens exactly like the one on the left.'
+          })+'</div>'+
+          '<div class="pierow">'+
+            '<div class="piecol"><div class="piecap">'+T({es:'Sector sombreado', en:'Shaded sector'})+'</div><canvas class="gcanvas" id="fzT"></canvas></div>'+
+            '<div class="piecol"><div class="piecap">'+T({es:'Tu círculo', en:'Your circle'})+'</div><canvas class="gcanvas" id="fzM"></canvas></div>'+
+          '</div>'+
+          '<div class="fracctl">'+
+            '<span class="klbl">'+T({es:'Tomas', en:'You take'})+'</span>'+
+            '<button class="stepbtn" onclick="fzStep(0,-1)">−</button>'+
+            '<span class="cntval" id="fzN">'+st.num+'</span>'+
+            '<button class="stepbtn" onclick="fzStep(0,1)">+</button>'+
+            '<span class="klbl">'+T({es:'Pedazos', en:'Pieces'})+'</span>'+
+            '<button class="stepbtn" onclick="fzStep(1,-1)">−</button>'+
+            '<span class="cntval" id="fzD">'+st.den+'</span>'+
+            '<button class="stepbtn" onclick="fzStep(1,1)">+</button>'+
+          '</div>'+
+          '<div class="livelbl" id="fzLive"></div>'+
+          (st.done ? '' : '<button class="rverify-btn" onclick="fzChk()">'+T({es:'Comparar círculos', en:'Compare circles'})+'</button>')+
+          '<div class="rfb" id="fzFb">'+(st.msg||'')+'</div>'+
+        '</div>';
+      setTimeout(function(){ drawBoth(); live(); }, 30);
+    }
+    window.fzStep = function(which, d){
+      if (st.done) return;
+      if (which === 0) st.num = Math.max(1, Math.min(st.den, st.num + d));
+      else {
+        st.den = Math.max(2, Math.min(12, st.den + d));
+        if (st.num > st.den) st.num = st.den;
+      }
+      var a = document.getElementById('fzN'), b = document.getElementById('fzD');
+      if (a) a.textContent = st.num;
+      if (b) b.textContent = st.den;
+      drawBoth(); live();
+    };
+    window.fzChk = function(){
+      if (st.done) return;
+      var g = tgt(), mine = st.num/st.den, goal = g[0]/g[1], fb = document.getElementById('fzFb');
+      if (Math.abs(mine - goal) < 1e-9){
+        st.r++;
+        if (st.r >= 3){
+          st.done = true;
+          st.msg = '<span class="okmsg">'+T({
+            es:'Tres de tres. Ya lees el tamaño de un sector como una fracción del círculo, no como un dibujo suelto.',
+            en:'Three out of three. You now read a sector size as a fraction of the circle, not as a loose drawing.'
+          })+'</span>';
+          render();
+          return;
+        }
+        st.tries = 0; st.num = 1; st.den = 2;
+        st.msg = '<span class="okmsg">'+T({es:'Igual de abierto. Va la siguiente.', en:'Equally open. Next one.'})+'</span>';
+        render();
+        return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.num = g[0]; st.den = g[1];
+        st.msg = T({es:'El sector sombreado era ', en:'The shaded sector was '}) + mf(g[0],g[1]) +
+                 T({es:' del círculo. Mira cómo coinciden los dos dibujos.', en:' of the circle. See how the two drawings match.'});
+        render();
+        setTimeout(function(){
+          st.r++; st.tries = 0; st.num = 1; st.den = 2; st.msg = '';
+          if (st.r >= 3){
+            st.done = true;
+            st.msg = T({es:'Rondas terminadas: el tamaño de un sector siempre se puede decir como una fracción del círculo.',
+                        en:'Rounds finished: the size of a sector can always be told as a fraction of the circle.'});
+          }
+          render();
+        }, 1700);
+        return;
+      }
+      if (fb) fb.innerHTML = (mine < goal)
+        ? T({es:'Tu sector abre <b>menos</b> que el sombreado: te falta círculo.', en:'Your sector opens <b>less</b> than the shaded one: you are short of circle.'})
+        : T({es:'Tu sector abre <b>más</b> que el sombreado: te sobra círculo.', en:'Your sector opens <b>more</b> than the shaded one: you have circle to spare.'});
+    };
+    render();
+  })();
+
+  /* ---- PROBLEMA 2 ---- */
+  addProb(v2 === 0 ? {
+    title:{es:'De la parte a las personas', en:'From the part to the people'},
+    q:{es:'Una gráfica circular sobre '+T(THB.q)+' representa a '+TB+' '+un(THB)+'. El sector de '+cn(THB,iB)+' ocupa '+T(partName(dB))+' del círculo. ¿A cuántas personas representa ese sector?',
+       en:'A circle graph about '+T(THB.q)+' stands for '+TB+' '+un(THB)+'. The '+cn(THB,iB)+' sector takes '+T(partName(dB))+' of the circle. How many people does that sector stand for?'},
+    options: opt4(cB[iB], [TB - cB[iB], cB[iB] + kB, dB, TB]),
+    correct: String(cB[iB]),
+    hint:{es:'Reparte el total del círculo en tantas partes iguales como indica esa fracción y quédate con una.',
+          en:'Split the circle total into as many equal parts as that fraction says and keep one.'},
+    exp:{es:'Ese sector cabe '+dB+' veces en el círculo, así que el total se reparte en '+dB+' partes iguales: '+TB+' ÷ '+dB+' = '+cB[iB]+' personas.',
+         en:'That sector fits '+dB+' times in the circle, so the total is split into '+dB+' equal parts: '+TB+' ÷ '+dB+' = '+cB[iB]+' people.'},
+    showWork:true
+  } : {
+    title:{es:'Lo que queda fuera', en:'What stays outside'},
+    q:{es:'Una gráfica circular sobre '+T(THB.q)+' representa a '+TB+' '+un(THB)+'. El sector de '+cn(THB,iB)+' ocupa '+T(partName(dB))+' del círculo. ¿A cuántas personas representa todo lo que queda fuera de ese sector?',
+       en:'A circle graph about '+T(THB.q)+' stands for '+TB+' '+un(THB)+'. The '+cn(THB,iB)+' sector takes '+T(partName(dB))+' of the circle. How many people does everything outside that sector stand for?'},
+    options: opt4(TB - cB[iB], [cB[iB], TB, cB[iB] + kB, TB - cB[iB] + kB]),
+    correct: String(TB - cB[iB]),
+    hint:{es:'Primero averigua a cuántas personas llega ese sector; el resto del círculo es lo que sobra del total.',
+          en:'First find how many people that sector reaches; the rest of the circle is what is left of the total.'},
+    exp:{es:'Ese sector cabe '+dB+' veces en el círculo, así que vale '+TB+' ÷ '+dB+' = '+cB[iB]+' personas, y fuera de él queda el resto del total: '+TB+' − '+cB[iB]+' = '+(TB-cB[iB])+'.',
+         en:'That sector fits '+dB+' times in the circle, so it is worth '+TB+' ÷ '+dB+' = '+cB[iB]+' people, and outside it the rest of the total is left: '+TB+' − '+cB[iB]+' = '+(TB-cB[iB])+'.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 3 ---- */
+  addProb(v3 === 0 ? {
+    title:{es:'Qué parte ocupa', en:'Which part it takes'},
+    q:{es:'En una gráfica circular que representa a '+TB+' '+un(THB)+', el sector de '+cn(THB,jB)+' agrupa a '+cB[jB]+' de ellas. ¿Qué parte del círculo ocupa ese sector?',
+       en:'In a circle graph that stands for '+TB+' '+un(THB)+', the '+cn(THB,jB)+' sector gathers '+cB[jB]+' of them. Which part of the circle does that sector take?'},
+    options:{ es:['la mitad','la tercera parte','la cuarta parte','la sexta parte'],
+              en:['half','a third','a quarter','a sixth'] },
+    correct: partName(dB2),
+    hint:{es:'Pregúntate cuántas veces cabe ese grupo de personas dentro del total del círculo.',
+          en:'Ask yourself how many times that group of people fits inside the circle total.'},
+    exp:{es:'El sector agrupa a '+cB[jB]+' de las '+TB+' personas, y ese grupo cabe '+dB2+' veces en el total, así que el sector ocupa '+T(partName(dB2))+' del círculo.',
+         en:'The sector gathers '+cB[jB]+' of the '+TB+' people, and that group fits '+dB2+' times in the total, so the sector takes '+T(partName(dB2))+' of the circle.'},
+    showWork:false
+  } : {
+    title:{es:'La afirmación dudosa', en:'The doubtful claim'},
+    q:{es:'Alguien mira una gráfica circular de '+TB+' '+un(THB)+' y dice que el sector de '+cn(THB,jB)+', que agrupa a '+cB[jB]+' personas, ocupa la mitad del círculo. ¿Qué parte del círculo ocupa en realidad?',
+       en:'Someone looks at a circle graph of '+TB+' '+un(THB)+' and says that the '+cn(THB,jB)+' sector, which gathers '+cB[jB]+' people, takes half the circle. Which part of the circle does it really take?'},
+    options:{ es:['la mitad','la tercera parte','la cuarta parte','la sexta parte'],
+              en:['half','a third','a quarter','a sixth'] },
+    correct: partName(dB2),
+    hint:{es:'Compara ese grupo con el total: cuántas veces cabe dentro del círculo completo.',
+          en:'Compare that group with the total: how many times it fits inside the whole circle.'},
+    exp:{es:'Las '+cB[jB]+' personas del sector caben '+dB2+' veces dentro de las '+TB+' del círculo, así que el sector ocupa '+T(partName(dB2))+' y la afirmación no se sostiene.',
+         en:'The '+cB[jB]+' people in the sector fit '+dB2+' times inside the '+TB+' of the circle, so the sector takes '+T(partName(dB2))+' and the claim does not hold.'},
+    showWork:false
+  });
+
+  /* ============================================================
+     IDEA 3
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'El círculo también se mide en porcentaje', en:'The circle is also measured in percent'}),
+      '<p>'+T({
+        es:'Decir '+mf(1,4)+' funciona bien cuando la fracción es sencilla, pero las encuestas casi nunca se parten en mitades exactas. Por eso el círculo completo se acostumbra medir como 100%: es como si el total siempre se repartiera entre cien pedacitos iguales, sin importar cuántas personas haya en realidad.',
+        en:'Saying '+mf(1,4)+' works well when the fraction is simple, but surveys almost never split into exact halves. That is why the whole circle is usually measured as 100%: it is as if the total were always shared among a hundred equal pieces, no matter how many people there really are.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Con esa medida, la mitad del círculo es 50%, la cuarta parte es 25% y una décima parte es 10%. Y como los sectores vuelven a formar el círculo, los porcentajes de todos los sectores tienen que sumar 100. Si suman menos, falta un sector; si suman más, algo se contó dos veces.',
+        en:'With that measure, half the circle is 50%, a quarter is 25% and a tenth is 10%. And since the sectors rebuild the circle, the percentages of all the sectors have to add up to 100. If they add up to less, a sector is missing; if they add up to more, something was counted twice.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'El porcentaje viaja en los dos sentidos: de las personas al sector y del sector a las personas. Un mismo 25% vale 5 personas en un grupo de 20 y 15 personas en un grupo de 60, aunque el dibujo se vea idéntico.',
+        en:'Percent travels both ways: from the people to the sector and from the sector to the people. The same 25% is worth 5 people in a group of 20 and 15 people in a group of 60, even though the drawing looks identical.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 3: sube el porcentaje ---- */
+  (function(){
+    var wrap = widget('porcentaje');
+    var st = { r:0, pct:0, tries:0, done:false, msg:'' };
+    function rd(){ return PCR[Math.min(st.r, PCR.length-1)]; }
+    function drawIt(){
+      var d = rd();
+      drawPie(document.getElementById('pcCv'), {
+        values:[st.pct, 100-st.pct], labels:null, legend:false, total:100, hi:0, quarters:true
+      });
+      var e = document.getElementById('pcLive');
+      if (e) e.innerHTML = T({
+        es:'Tu sector: <b>'+st.pct+'%</b> del círculo, que en este grupo son <b>'+(st.pct*d.tot/100)+'</b> de las '+d.tot+' personas.',
+        en:'Your sector: <b>'+st.pct+'%</b> of the circle, which in this group is <b>'+(st.pct*d.tot/100)+'</b> of the '+d.tot+' people.'
+      });
+    }
+    function render(){
+      var d = rd();
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Sube el porcentaje', en:'Raise the percent'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda ', en:'Round '})+Math.min(st.r+1,3)+T({es:' de 3', en:' of 3'})+'</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Mueve el control y observa cómo el sector se abre mientras el letrero te dice a cuántas personas alcanza en este grupo.',
+            en:'Move the control and watch the sector open while the label tells you how many people it reaches in this group.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({
+            es:'Meta: el grupo tiene <b>'+d.tot+'</b> personas y el sector debe representar a <b>'+d.meta+'</b> de ellas.',
+            en:'Goal: the group has <b>'+d.tot+'</b> people and the sector must stand for <b>'+d.meta+'</b> of them.'
+          })+'</div>'+
+          '<canvas class="gcanvas" id="pcCv"></canvas>'+
+          '<div class="krow">'+
+            '<span class="klbl">'+T({es:'Sector', en:'Sector'})+'</span>'+
+            '<input type="range" min="0" max="100" step="5" value="'+st.pct+'" oninput="pcSet(this.value)">'+
+            '<span class="kval" id="pcVal">'+st.pct+'%</span>'+
+          '</div>'+
+          '<div class="livelbl" id="pcLive"></div>'+
+          (st.done ? '' : '<button class="rverify-btn" onclick="pcChk()">'+T({es:'Verificar sector', en:'Check sector'})+'</button>')+
+          '<div class="rfb" id="pcFb">'+(st.msg||'')+'</div>'+
+        '</div>';
+      setTimeout(drawIt, 30);
+    }
+    window.pcSet = function(val){
+      if (st.done) return;
+      st.pct = parseInt(val,10) || 0;
+      var e = document.getElementById('pcVal');
+      if (e) e.textContent = st.pct + '%';
+      drawIt();
+    };
+    window.pcChk = function(){
+      if (st.done) return;
+      var d = rd(), mine = st.pct*d.tot/100, fb = document.getElementById('pcFb');
+      if (mine === d.meta){
+        st.r++;
+        if (st.r >= 3){
+          st.done = true;
+          st.msg = '<span class="okmsg">'+T({
+            es:'Tres metas alcanzadas. El mismo porcentaje vale distintas personas según el tamaño del grupo.',
+            en:'Three goals reached. The same percent is worth different people depending on the group size.'
+          })+'</span>';
+          render(); return;
+        }
+        st.tries = 0; st.pct = 0;
+        st.msg = '<span class="okmsg">'+T({es:'Justo. Va otro grupo.', en:'Exactly. Another group is up.'})+'</span>';
+        render(); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.pct = d.pct;
+        st.msg = T({
+          es:'En un grupo de '+d.tot+' personas, '+d.meta+' de ellas ocupan el '+d.pct+'% del círculo. Observa la abertura del sector.',
+          en:'In a group of '+d.tot+' people, '+d.meta+' of them take '+d.pct+'% of the circle. Look at how far the sector opens.'
+        });
+        render();
+        setTimeout(function(){
+          st.r++; st.tries = 0; st.pct = 0; st.msg = '';
+          if (st.r >= 3){
+            st.done = true;
+            st.msg = T({es:'Rondas terminadas: el mismo porcentaje alcanza a más personas cuando el grupo es más grande.',
+                        en:'Rounds finished: the same percent reaches more people when the group is bigger.'});
+          }
+          render();
+        }, 1700);
+        return;
+      }
+      if (fb) fb.innerHTML = (mine < d.meta)
+        ? T({es:'Tu sector alcanza a <b>'+mine+'</b> personas: se quedó corto para la meta.',
+             en:'Your sector reaches <b>'+mine+'</b> people: it fell short of the goal.'})
+        : T({es:'Tu sector alcanza a <b>'+mine+'</b> personas: se pasó de la meta.',
+             en:'Your sector reaches <b>'+mine+'</b> people: it went past the goal.'});
+    };
+    render();
+  })();
+
+  /* ---- PROBLEMA 4 ---- */
+  addProb(v4 === 0 ? {
+    title:{es:'De personas a porcentaje', en:'From people to percent'},
+    q:{es:'En una encuesta sobre '+T(THC.q)+' contestaron '+TC+' '+un(THC)+', y '+cC[iC]+' de ellas eligieron '+cn(THC,iC)+'. ¿Qué porcentaje del círculo ocupa el sector de '+cn(THC,iC)+'?',
+       en:'In a survey about '+T(THC.q)+' there were '+TC+' '+un(THC)+' who answered, and '+cC[iC]+' of them chose '+cn(THC,iC)+'. What percent of the circle does the '+cn(THC,iC)+' sector take?'},
+    options: opt4(pC[iC], [cC[iC], 100 - pC[iC], pC[iC] + 5, pC[iC] - 5]),
+    correct: String(pC[iC]),
+    hint:{es:'Compara ese grupo con el total y luego imagina el mismo reparto en un círculo de cien pedacitos.',
+          en:'Compare that group with the total and then imagine the same share out in a circle of a hundred pieces.'},
+    exp:{es:'Las '+TC+' personas son el círculo completo, es decir el 100%. Para llevar '+cC[iC]+' personas a esa medida se compara con el total y se lleva a cien: '+cC[iC]+' ÷ '+TC+' × 100 = '+pC[iC]+'.',
+         en:'The '+TC+' people are the whole circle, that is 100%. To take '+cC[iC]+' people to that measure you compare with the total and scale to a hundred: '+cC[iC]+' ÷ '+TC+' × 100 = '+pC[iC]+'.'},
+    showWork:true
+  } : {
+    title:{es:'Dos sectores juntos', en:'Two sectors together'},
+    q:{es:'En una encuesta sobre '+T(THC.q)+' contestaron '+TC+' '+un(THC)+'. El sector de '+cn(THC,iC)+' agrupa a '+cC[iC]+' personas y el de '+cn(THC,jC)+' agrupa a '+cC[jC]+'. ¿Qué porcentaje del círculo ocupan los dos sectores juntos?',
+       en:'In a survey about '+T(THC.q)+' there were '+TC+' '+un(THC)+' who answered. The '+cn(THC,iC)+' sector gathers '+cC[iC]+' people and the '+cn(THC,jC)+' one gathers '+cC[jC]+'. What percent of the circle do the two sectors take together?'},
+    options: opt4(pC[iC]+pC[jC], [cC[iC]+cC[jC], 100 - pC[iC] - pC[jC], pC[iC], pC[iC]+pC[jC]+5]),
+    correct: String(pC[iC]+pC[jC]),
+    hint:{es:'Las personas de los dos sectores se pueden juntar antes de compararlas con el total.',
+          en:'The people in the two sectors can be put together before comparing them with the total.'},
+    exp:{es:'Entre los dos sectores hay '+cC[iC]+' + '+cC[jC]+' = '+(cC[iC]+cC[jC])+' personas de las '+TC+' del círculo, y llevado a la medida de cien queda '+(cC[iC]+cC[jC])+' ÷ '+TC+' × 100 = '+(pC[iC]+pC[jC])+'.',
+         en:'Between the two sectors there are '+cC[iC]+' + '+cC[jC]+' = '+(cC[iC]+cC[jC])+' people of the '+TC+' in the circle, and taken to the measure of a hundred it gives '+(cC[iC]+cC[jC])+' ÷ '+TC+' × 100 = '+(pC[iC]+pC[jC])+'.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 5 ---- */
+  addProb(v5 === 0 ? {
+    title:{es:'De porcentaje a personas', en:'From percent to people'},
+    q:{es:'Esta gráfica circular sobre '+T(THC.q)+' representa a '+TC+' '+un(THC)+' y sus sectores están marcados así.'+qdataP(THC,pC)+'¿A cuántas personas representa el sector de '+cn(THC,jC)+'?',
+       en:'This circle graph about '+T(THC.q)+' stands for '+TC+' '+un(THC)+' and its sectors are marked like this.'+qdataP(THC,pC)+'How many people does the '+cn(THC,jC)+' sector stand for?'},
+    options: opt4(cC[jC], [pC[jC], TC - cC[jC], cC[iC], cC[jC] + 5]),
+    correct: String(cC[jC]),
+    hint:{es:'El porcentaje dice qué parte del total le toca al sector; el total del círculo es el número de personas.',
+          en:'The percent says which part of the total the sector gets; the circle total is the number of people.'},
+    exp:{es:'El sector se lleva el '+pC[jC]+'% de un círculo que vale '+TC+' personas, así que le tocan '+TC+' × '+pC[jC]+' ÷ 100 = '+cC[jC]+'.',
+         en:'The sector takes '+pC[jC]+'% of a circle worth '+TC+' people, so it gets '+TC+' × '+pC[jC]+' ÷ 100 = '+cC[jC]+'.'},
+    showWork:true
+  } : {
+    title:{es:'El total escondido', en:'The hidden total'},
+    q:{es:'En una gráfica circular sobre '+T(THC.q)+' el sector de '+cn(THC,jC)+' ocupa el '+pC[jC]+'% del círculo y agrupa a '+cC[jC]+' personas. ¿A cuántas personas representa el círculo completo?',
+       en:'In a circle graph about '+T(THC.q)+' the '+cn(THC,jC)+' sector takes '+pC[jC]+'% of the circle and gathers '+cC[jC]+' people. How many people does the whole circle stand for?'},
+    options: opt4(TC, [cC[jC], TC - cC[jC], pC[jC], TC + 10]),
+    correct: String(TC),
+    hint:{es:'Si ese porcentaje corresponde a esas personas, el círculo entero corresponde al 100%.',
+          en:'If that percent matches those people, the whole circle matches 100%.'},
+    exp:{es:'Ese sector es el '+pC[jC]+'% y vale '+cC[jC]+' personas; el círculo entero es el 100%, así que le corresponden '+cC[jC]+' × 100 ÷ '+pC[jC]+' = '+TC+' personas.',
+         en:'That sector is '+pC[jC]+'% and is worth '+cC[jC]+' people; the whole circle is 100%, so it matches '+cC[jC]+' × 100 ÷ '+pC[jC]+' = '+TC+' people.'},
+    showWork:true
+  });
+
+  /* ============================================================
+     IDEA 4
+     ============================================================ */
+  sec(T({es:'Idea 4', en:'Idea 4'}),
+      T({es:'Para dibujarla hay que abrir ángulos', en:'To draw it you have to open angles'}),
+      '<p>'+T({
+        es:'Leer una gráfica circular es una cosa; dibujarla es otra. Al dibujarla ya no basta con decir que un sector es grande: hay que decidir cuánto se abre. Y lo que abre un sector es su ángulo, medido desde el centro del círculo.',
+        en:'Reading a circle graph is one thing; drawing it is another. When drawing it, saying that a sector is big is no longer enough: you have to decide how far it opens. And what opens a sector is its angle, measured from the center of the circle.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Una vuelta completa alrededor del centro mide 360 grados, y ese giro entero es el total. Por eso media rueda abre 180 grados y un cuarto de rueda abre 90. Los ángulos de los cuatro sectores tienen que completar los 360 grados, igual que sus porcentajes completan el 100%.',
+        en:'A full turn around the center measures 360 degrees, and that whole turn is the total. That is why half a wheel opens 180 degrees and a quarter of a wheel opens 90. The angles of the four sectors have to complete the 360 degrees, just as their percentages complete 100%.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Así, un mismo sector se puede nombrar de tres maneras que dicen lo mismo: como fracción del círculo, como porcentaje y como ángulo. Cambiar entre ellas es lo que permite pasar de una tabla de conteo a una circular bien trazada.',
+        en:'So the same sector can be named in three ways that say the same thing: as a fraction of the circle, as a percent and as an angle. Switching between them is what lets you go from a count table to a properly drawn circle graph.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Vuelta completa',en:'Full turn'})+'</div><div class="deftxt">'+T({es:'El círculo entero abre 360 grados.',en:'The whole circle opens 360 degrees.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Media rueda',en:'Half a wheel'})+'</div><div class="deftxt">'+T({es:'Abre 180 grados y vale el 50%.',en:'It opens 180 degrees and is worth 50%.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Cuarto de rueda',en:'Quarter wheel'})+'</div><div class="deftxt">'+T({es:'Abre 90 grados y vale el 25%.',en:'It opens 90 degrees and is worth 25%.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Cierre',en:'Closing'})+'</div><div class="deftxt">'+T({es:'Los cuatro ángulos completan la vuelta.',en:'The four angles complete the turn.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 4: abre el ángulo ---- */
+  (function(){
+    var wrap = widget('angulo');
+    var st = { r:0, deg:0, tries:0, done:false, msg:'' };
+    function rd(){ return AGR[Math.min(st.r, AGR.length-1)]; }
+    function drawIt(){
+      drawPie(document.getElementById('agCv'), {
+        values:[st.deg, 360-st.deg], labels:null, legend:false, total:360, hi:0, quarters:true
+      });
+      var e = document.getElementById('agLive');
+      if (e) e.innerHTML = T({
+        es:'Tu ángulo abre <b>'+st.deg+'</b> de los 360 grados de la vuelta completa.',
+        en:'Your angle opens <b>'+st.deg+'</b> of the 360 degrees of the full turn.'
+      });
+    }
+    function render(){
+      var d = rd();
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Abre el ángulo', en:'Open the angle'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda ', en:'Round '})+Math.min(st.r+1,3)+T({es:' de 3', en:' of 3'})+'</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Gira el control y observa hasta dónde llega el sector. Las marcas de la orilla te sirven de referencia para los cuartos de vuelta.',
+            en:'Turn the control and watch how far the sector reaches. The marks on the rim serve as a reference for the quarter turns.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({
+            es:'Meta: deja el sector abierto justo en '+T(partName(d.d))+' del círculo.',
+            en:'Goal: leave the sector open at exactly '+T(partName(d.d))+' of the circle.'
+          })+'</div>'+
+          '<canvas class="gcanvas" id="agCv"></canvas>'+
+          '<div class="krow">'+
+            '<span class="klbl">'+T({es:'Ángulo', en:'Angle'})+'</span>'+
+            '<input type="range" min="0" max="360" step="5" value="'+st.deg+'" oninput="agSet(this.value)">'+
+            '<span class="kval" id="agVal">'+st.deg+'</span>'+
+          '</div>'+
+          '<div class="livelbl" id="agLive"></div>'+
+          (st.done ? '' : '<button class="rverify-btn" onclick="agChk()">'+T({es:'Verificar ángulo', en:'Check angle'})+'</button>')+
+          '<div class="rfb" id="agFb">'+(st.msg||'')+'</div>'+
+        '</div>';
+      setTimeout(drawIt, 30);
+    }
+    window.agSet = function(val){
+      if (st.done) return;
+      st.deg = parseInt(val,10) || 0;
+      var e = document.getElementById('agVal');
+      if (e) e.textContent = st.deg;
+      drawIt();
+    };
+    window.agChk = function(){
+      if (st.done) return;
+      var d = rd(), fb = document.getElementById('agFb');
+      if (st.deg === d.deg){
+        st.r++;
+        if (st.r >= 3){
+          st.done = true;
+          st.msg = '<span class="okmsg">'+T({
+            es:'Tres ángulos clavados. Cada parte del círculo tiene su abertura exacta dentro de la vuelta completa.',
+            en:'Three angles nailed. Each part of the circle has its exact opening inside the full turn.'
+          })+'</span>';
+          render(); return;
+        }
+        st.tries = 0; st.deg = 0;
+        st.msg = '<span class="okmsg">'+T({es:'Abertura exacta. Va la siguiente.', en:'Exact opening. Next one.'})+'</span>';
+        render(); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.deg = d.deg;
+        st.msg = T({
+          es:T(partName(d.d))+' del círculo abre '+d.deg+' grados, porque esa parte cabe '+d.d+' veces en la vuelta completa.',
+          en:T(partName(d.d))+' of the circle opens '+d.deg+' degrees, because that part fits '+d.d+' times in the full turn.'
+        });
+        render();
+        setTimeout(function(){
+          st.r++; st.tries = 0; st.deg = 0; st.msg = '';
+          if (st.r >= 3){
+            st.done = true;
+            st.msg = T({es:'Rondas terminadas: cada parte del círculo tiene su propia abertura dentro de la vuelta.',
+                        en:'Rounds finished: each part of the circle has its own opening inside the turn.'});
+          }
+          render();
+        }, 1700);
+        return;
+      }
+      if (fb) fb.innerHTML = (st.deg < d.deg)
+        ? T({es:'Tu sector abre <b>poco</b> para esa parte del círculo: cabría más de '+d.d+' veces en la vuelta.',
+             en:'Your sector opens <b>too little</b> for that part of the circle: it would fit more than '+d.d+' times in the turn.'})
+        : T({es:'Tu sector abre <b>de más</b> para esa parte del círculo: cabría menos de '+d.d+' veces en la vuelta.',
+             en:'Your sector opens <b>too much</b> for that part of the circle: it would fit fewer than '+d.d+' times in the turn.'});
+    };
+    render();
+  })();
+
+  /* ---- PROBLEMA 6 ---- */
+  addProb(v6 === 0 ? {
+    title:{es:'El ángulo del sector', en:'The sector angle'},
+    q:{es:'Para trazar una gráfica circular sobre '+T(THD.q)+' se sabe que el sector de '+cn(THD,iD)+' ocupa el '+pD[iD]+'% del círculo. ¿Cuántos grados debe abrir ese sector?',
+       en:'To draw a circle graph about '+T(THD.q)+' it is known that the '+cn(THD,iD)+' sector takes '+pD[iD]+'% of the circle. How many degrees should that sector open?'},
+    options: opt4(gD[iD], [360 - gD[iD], pD[iD], gD[iD]/2, gD[iD] + 36]),
+    correct: String(gD[iD]),
+    hint:{es:'La vuelta completa mide 360 grados y a ese sector le toca esa parte de la vuelta.',
+          en:'The full turn measures 360 degrees and that sector gets that share of the turn.'},
+    exp:{es:'La vuelta completa del círculo mide 360 grados y al sector le toca el '+pD[iD]+'% de ellos: 360 × '+pD[iD]+' ÷ 100 = '+gD[iD]+'.',
+         en:'The full turn of the circle measures 360 degrees and the sector gets '+pD[iD]+'% of them: 360 × '+pD[iD]+' ÷ 100 = '+gD[iD]+'.'},
+    showWork:true
+  } : {
+    title:{es:'Del recuento al ángulo', en:'From the count to the angle'},
+    q:{es:'Una encuesta sobre '+T(THD.q)+' recogió '+TD+' respuestas y '+cD[iD]+' de ellas fueron '+cn(THD,iD)+'. Al trazar la gráfica circular, ¿cuántos grados debe abrir el sector de '+cn(THD,iD)+'?',
+       en:'A survey about '+T(THD.q)+' collected '+TD+' answers and '+cD[iD]+' of them were '+cn(THD,iD)+'. When drawing the circle graph, how many degrees should the '+cn(THD,iD)+' sector open?'},
+    options: opt4(gD[iD], [360 - gD[iD], cD[iD], pD[iD], gD[iD] + 18]),
+    correct: String(gD[iD]),
+    hint:{es:'Esas respuestas son una parte del total, y la vuelta completa de 360 grados se reparte en esa misma proporción.',
+          en:'Those answers are a part of the total, and the full turn of 360 degrees is shared in that same proportion.'},
+    exp:{es:'El sector se lleva '+cD[iD]+' de las '+TD+' respuestas, y esa misma parte se le da a la vuelta completa: 360 × '+cD[iD]+' ÷ '+TD+' = '+gD[iD]+' grados.',
+         en:'The sector takes '+cD[iD]+' of the '+TD+' answers, and that same share is given to the full turn: 360 × '+cD[iD]+' ÷ '+TD+' = '+gD[iD]+' degrees.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 7 ---- */
+  addProb(v7 === 0 ? {
+    title:{es:'Del ángulo a las personas', en:'From the angle to the people'},
+    q:{es:'En una gráfica circular sobre '+T(THD.q)+' que representa a '+TD+' personas, el sector de '+cn(THD,jD)+' abre '+gD[jD]+' grados. ¿A cuántas personas representa ese sector?',
+       en:'In a circle graph about '+T(THD.q)+' standing for '+TD+' people, the '+cn(THD,jD)+' sector opens '+gD[jD]+' degrees. How many people does that sector stand for?'},
+    options: opt4(cD[jD], [gD[jD], TD - cD[jD], pD[jD], cD[jD] + 2]),
+    correct: String(cD[jD]),
+    hint:{es:'Averigua qué parte de la vuelta completa se llevó ese ángulo y dale esa misma parte del total.',
+          en:'Find what share of the full turn that angle took and give it the same share of the total.'},
+    exp:{es:'El sector se lleva '+gD[jD]+' de los 360 grados de la vuelta, y esa misma parte del total de '+TD+' personas es '+TD+' × '+gD[jD]+' ÷ 360 = '+cD[jD]+'.',
+         en:'The sector takes '+gD[jD]+' of the 360 degrees of the turn, and that same share of the total of '+TD+' people is '+TD+' × '+gD[jD]+' ÷ 360 = '+cD[jD]+'.'},
+    showWork:true
+  } : {
+    title:{es:'Del ángulo al porcentaje', en:'From the angle to the percent'},
+    q:{es:'En una gráfica circular sobre '+T(THD.q)+', el sector de '+cn(THD,jD)+' abre '+gD[jD]+' grados. ¿Qué porcentaje del círculo ocupa ese sector?',
+       en:'In a circle graph about '+T(THD.q)+', the '+cn(THD,jD)+' sector opens '+gD[jD]+' degrees. What percent of the circle does that sector take?'},
+    options: opt4(pD[jD], [gD[jD], 100 - pD[jD], pD[jD] + 5, cD[jD]]),
+    correct: String(pD[jD]),
+    hint:{es:'La vuelta completa son 360 grados y también es el 100% del círculo.',
+          en:'The full turn is 360 degrees and it is also 100% of the circle.'},
+    exp:{es:'La vuelta completa mide 360 grados y equivale al 100%, así que un sector de '+gD[jD]+' grados vale '+gD[jD]+' ÷ 360 × 100 = '+pD[jD]+'.',
+         en:'The full turn measures 360 degrees and equals 100%, so a sector of '+gD[jD]+' degrees is worth '+gD[jD]+' ÷ 360 × 100 = '+pD[jD]+'.'},
+    showWork:true
+  });
+
+  /* ============================================================
+     IDEA 5
+     ============================================================ */
+  sec(T({es:'Idea 5', en:'Idea 5'}),
+      T({es:'Cuándo conviene el círculo y cuándo las barras', en:'When the circle fits and when bars fit'}),
+      '<p>'+T({
+        es:'La gráfica circular es imbatible para una pregunta: ¿cómo se reparte el total? Se ve de inmediato si una respuesta se llevó más de la mitad, si dos respuestas se reparten casi todo o si una quedó en una tajada mínima.',
+        en:'The circle graph is unbeatable for one question: how is the total shared out? You see immediately whether one answer took more than half, whether two answers split almost everything or whether one was left with a tiny slice.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Lo que el círculo no hace bien es dar cantidades exactas. Sin números escritos, nadie puede decir cuántas personas hay en un sector, ni cuántas contestaron en total, ni comparar dos encuestas de distinto tamaño. Para eso conviene una gráfica de barras con su escala, donde cada altura se lee sobre el eje.',
+        en:'What the circle does not do well is give exact amounts. With no written numbers, nobody can tell how many people are in a sector, nor how many answered in total, nor compare two surveys of different sizes. For that a bar graph with its scale is better, where each height is read on the axis.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Conviene además una advertencia: dos círculos del mismo tamaño pueden venir de grupos muy distintos. Comparar sus sectores dice cómo se repartió cada grupo por dentro, nunca cuál de los dos grupos es más numeroso.',
+        en:'A warning is also worth keeping: two circles of the same size can come from very different groups. Comparing their sectors tells how each group split inside, never which of the two groups is larger.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 5: ¿círculo o barras? ---- */
+  (function(){
+    var wrap = widget('clasifica');
+    var BINS = { es:['Gráfica circular','Gráfica de barras'], en:['Circle graph','Bar graph'] };
+    var ITEMS = [
+      { es:'Mostrar qué parte del total se llevó cada respuesta', en:'Show what part of the total each answer took', bin:0 },
+      { es:'Leer cuántos estudiantes exactos eligió cada respuesta', en:'Read exactly how many students each answer got', bin:1 },
+      { es:'Ver de un vistazo si una respuesta se llevó más de la mitad del grupo', en:'See at a glance whether one answer took more than half the group', bin:0 },
+      { es:'Comparar alturas sobre un eje con escala numerada', en:'Compare heights on an axis with a numbered scale', bin:1 },
+      { es:'Repartir el 100% de las personas encuestadas entre cuatro respuestas', en:'Share the 100% of surveyed people among four answers', bin:0 },
+      { es:'Comparar dos grupos de distinto tamaño respuesta por respuesta', en:'Compare two groups of different size answer by answer', bin:1 }
+    ];
+    var st = { i:0, seq:shufA([0,1,2,3,4,5]), tries:0, hits:0, done:false, msg:'' };
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Círculo o barras', en:'Circle or bars'})+'</div>'+
+          '<div class="iw-box"><div class="iw-instr iw-sub">'+T({
+            es:'Cada gráfica contesta bien una pregunta distinta.', en:'Each graph answers a different question well.'
+          })+'</div><div class="livelbl"><span class="okmsg">'+T({es:'Ronda terminada: ', en:'Round finished: '})+st.hits+' / '+ITEMS.length+'</span></div></div>';
+        return;
+      }
+      var it = ITEMS[st.seq[st.i]];
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Círculo o barras', en:'Circle or bars'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+(st.i+1)+' / '+ITEMS.length+'</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Lee para qué se quiere la gráfica y decide cuál de las dos hace mejor ese trabajo.',
+            en:'Read what the graph is wanted for and decide which of the two does that job better.'
+          })+'</div>'+
+          '<div class="itemcard">'+T(it)+'</div>'+
+          '<div class="binrow">'+
+            '<button class="binbtn" onclick="clPick(0)">'+T(BINS)[0]+'</button>'+
+            '<button class="binbtn" onclick="clPick(1)">'+T(BINS)[1]+'</button>'+
+          '</div>'+
+          '<div class="rfb" id="clFb">'+(st.msg||'')+'</div>'+
+        '</div>';
+    }
+    window.clPick = function(bi){
+      if (st.done) return;
+      var it = ITEMS[st.seq[st.i]], fb = document.getElementById('clFb');
+      if (bi === it.bin){
+        st.hits++; st.tries = 0; st.i++;
+        st.msg = '<span class="okmsg">'+T({es:'Sí: esa gráfica contesta justo eso.', en:'Yes: that graph answers exactly that.'})+'</span>';
+        if (st.i >= ITEMS.length) st.done = true;
+        render();
+        return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.msg = T({es:'Era <b>', en:'It was <b>'}) + T(BINS)[it.bin] + '</b>. ' +
+                 T({es:'Pregúntate si lo que se busca es una cantidad exacta o un reparto del total.',
+                    en:'Ask yourself whether what is wanted is an exact amount or a share of the total.'});
+        st.tries = 0; st.i++;
+        if (st.i >= ITEMS.length) st.done = true;
+        setTimeout(render, 1200);
+        return;
+      }
+      if (fb) fb.innerHTML = T({
+        es:'Todavía no. ¿Eso se puede leer sin números escritos, o hace falta una escala?',
+        en:'Not yet. Can that be read with no written numbers, or is a scale needed?'
+      });
+    };
+    render();
+  })();
+
+  /* ---- PROBLEMA 8 ---- */
+  addProb(v8 === 0 ? {
+    title:{es:'Lo que hace falta pedir', en:'What has to be asked for'},
+    q:{es:'A un equipo le entregan una gráfica circular sobre '+T(THE.q)+', dibujada con sus cuatro sectores y sin ningún número escrito, pero necesita informar cuántas personas eligió cada respuesta. ¿Qué dato le falta pedir para poder hacerlo?',
+       en:'A team is handed a circle graph about '+T(THE.q)+', drawn with its four sectors and with no written numbers, but it needs to report how many people chose each answer. Which data does it still have to ask for?'},
+    options:{ es:['El total de personas encuestadas y el porcentaje de cada sector',
+                  'El tamaño en centímetros del círculo que se dibujó',
+                  'El orden en que se acomodaron los sectores del círculo',
+                  'La cantidad de respuestas distintas que muestra el círculo'],
+              en:['The total of people surveyed and the percent of each sector',
+                  'The size in centimeters of the circle that was drawn',
+                  'The order in which the sectors were arranged',
+                  'The number of different answers the circle shows'] },
+    correct:{ es:'El total de personas encuestadas y el porcentaje de cada sector',
+              en:'The total of people surveyed and the percent of each sector' },
+    hint:{es:'Para llegar a personas hacen falta dos cosas: cuántas hay en todo el círculo y qué parte se lleva cada sector.',
+          en:'To reach people two things are needed: how many there are in the whole circle and what part each sector takes.'},
+    exp:{es:'El dibujo solo compara tamaños; para llegar a cantidades hay que saber a cuántas personas equivale el círculo entero y qué parte de él ocupa cada sector. El tamaño del dibujo, el orden de los sectores y su cantidad no aportan nada para contar personas.',
+         en:'The drawing only compares sizes; to reach amounts you need to know how many people the whole circle equals and what part of it each sector takes. The drawing size, the sector order and how many there are add nothing for counting people.'},
+    showWork:false
+  } : {
+    title:{es:'Datos que no cierran', en:'Data that does not close'},
+    q:{es:'En una encuesta sobre '+T(THE.q)+' cada persona podía marcar dos respuestas, y al final los cuatro conteos suman bastante más que el número de personas entrevistadas. ¿Por qué esos datos no se pueden llevar tal cual a una gráfica circular?',
+       en:'In a survey about '+T(THE.q)+' each person could mark two answers, and in the end the four counts add up to quite a bit more than the number of people surveyed. Why can that data not be taken as it is to a circle graph?'},
+    options:{ es:['Porque los sectores ocuparían más que el círculo entero',
+                  'Porque una gráfica circular admite como máximo tres sectores',
+                  'Porque las respuestas no quedan ordenadas de mayor a menor',
+                  'Porque una gráfica circular necesita un total con número par'],
+              en:['Because the sectors would take up more than the whole circle',
+                  'Because a circle graph allows at most three sectors',
+                  'Because the answers do not end up ordered from largest to smallest',
+                  'Because a circle graph needs a total with an even number'] },
+    correct:{ es:'Porque los sectores ocuparían más que el círculo entero',
+              en:'Because the sectors would take up more than the whole circle' },
+    hint:{es:'Vuelve a la regla que sostiene toda la gráfica: los sectores juntos forman el círculo, ni más ni menos.',
+          en:'Go back to the rule that holds the whole graph up: the sectors together form the circle, no more and no less.'},
+    exp:{es:'El círculo representa a cada persona una sola vez, así que los sectores tienen que completarlo exactamente. Si los conteos suman más que las personas entrevistadas, las tajadas se traslaparían y ya no cabrían en el círculo.',
+         en:'The circle stands for each person only once, so the sectors have to complete it exactly. If the counts add up to more than the people surveyed, the slices would overlap and would no longer fit in the circle.'},
+    showWork:false
+  });
+
+  /* ---- MANIPULATIVO 6: cuaderno de la encuesta ---- */
+  (function(){
+    var wrap = widget('reflect');
+    var PROMPTS = [
+      { es:'Inventa una pregunta para tu salón con cuatro respuestas posibles y dibuja cómo se vería su gráfica circular si una respuesta se llevara más de la mitad del grupo.',
+        en:'Invent a question for your class with four possible answers and sketch how its circle graph would look if one answer took more than half the group.' },
+      { es:'Dibuja dos círculos del mismo tamaño: uno para un grupo de 20 personas y otro para uno de 60, ambos con un sector del 25%. Escribe abajo qué se conserva y qué cambia.',
+        en:'Sketch two circles of the same size: one for a group of 20 people and one for a group of 60, both with a 25% sector. Write below what stays the same and what changes.' },
+      { es:'Explica con tus palabras por qué los sectores de una gráfica circular tienen que completar la vuelta, y qué sospecharías si no la completaran.',
+        en:'Explain in your own words why the sectors of a circle graph have to complete the turn, and what you would suspect if they did not.' }
+    ];
+    var pk = PROMPTS[Math.floor(rng()*PROMPTS.length)];
+    wrap.innerHTML =
+      '<div class="iw-tag">'+T({es:'Cuaderno de la encuesta', en:'Survey notebook'})+'</div>'+
+      '<div class="iw-box">'+
+        '<div class="iw-instr iw-sub">'+T({es:'Aquí no hay un solo camino bueno: escribe o dibuja lo que se te ocurra.', en:'There is no single good path here: write or sketch whatever comes to mind.'})+'</div>'+
+        '<div class="reflect-prompt">'+T(pk)+'</div>'+
+        '<div class="wtabs">'+
+          '<button class="wtab active" onclick="rfTab(\'type\',this)">'+t('tab-type')+'</button>'+
+          '<button class="wtab" onclick="rfTab(\'draw\',this)">'+t('tab-draw')+'</button>'+
+        '</div>'+
+        '<div class="wpanel active" id="rf_type"><textarea class="wtextarea" id="rfTa" placeholder="'+t('ph-work')+'"></textarea></div>'+
+        '<div class="wpanel" id="rf_draw">'+
+          '<div class="cvwrap">'+
+            '<canvas class="dcanvas" id="rfCv"></canvas>'+
+            '<div class="ctoolbar">'+
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>'+
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>'+
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>'+
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>'+
+              '<div class="cdot" data-color="#1a1a16" style="background:#1a1a16"></div>'+
+              '<div class="cdot" data-color="#8b2500" style="background:#8b2500"></div>'+
+              '<div class="cdot" data-color="#1d4e89" style="background:#1d4e89"></div>'+
+              '<button class="clrbtn">'+t('btn-clear')+'</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<button class="rverify-btn" onclick="rfSave()">'+T({es:'Guardar en el cuaderno', en:'Save to the notebook'})+'</button>'+
+        '<div class="rfb" id="rfFb"></div>'+
+      '</div>';
+    window.rfTab = function(which, btn){
+      ['type','draw'].forEach(function(k){
+        var p = document.getElementById('rf_'+k);
+        if (p) p.classList.toggle('active', k === which);
+      });
+      wrap.querySelectorAll('.wtab').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      if (which === 'draw') setTimeout(function(){ var c = document.getElementById('rfCv'); if (c) initCanvas(c); }, 60);
+    };
+    window.rfSave = function(){
+      var f = document.getElementById('rfFb');
+      if (f) f.innerHTML = '<span class="okmsg">'+T({
+        es:'Guardado. Esa idea es tuya y sirve para acomodar lo que ya viste.',
+        en:'Saved. That idea is yours and it helps settle what you have already seen.'
+      })+'</span>';
+    };
+  })();
+
+  /* ---- PROBLEMA 9 ---- */
+  addProb(v9 === 0 ? {
+    title:{es:'Dos tajadas del mismo círculo', en:'Two slices of the same circle'},
+    q:{es:'Una gráfica circular sobre '+T(THE.q)+' representa a '+TE+' '+un(THE)+'. El sector de '+cn(THE,aE)+' ocupa el '+pE[aE]+'% y el de '+cn(THE,bE)+' ocupa el '+pE[bE]+'%. ¿A cuántas personas representan juntos esos dos sectores?',
+       en:'A circle graph about '+T(THE.q)+' stands for '+TE+' '+un(THE)+'. The '+cn(THE,aE)+' sector takes '+pE[aE]+'% and the '+cn(THE,bE)+' one takes '+pE[bE]+'%. How many people do those two sectors stand for together?'},
+    options: opt4(cE[aE]+cE[bE], [pE[aE]+pE[bE], cE[aE], TE - cE[aE] - cE[bE], cE[aE]+cE[bE]+5]),
+    correct: String(cE[aE]+cE[bE]),
+    hint:{es:'Los dos sectores se pueden juntar en uno solo antes de llevarlos a personas.',
+          en:'The two sectors can be joined into a single one before turning them into people.'},
+    exp:{es:'Juntos ocupan '+pE[aE]+' + '+pE[bE]+' = '+(pE[aE]+pE[bE])+'% del círculo, y esa parte de las '+TE+' personas es '+TE+' × '+(pE[aE]+pE[bE])+' ÷ 100 = '+(cE[aE]+cE[bE])+'.',
+         en:'Together they take '+pE[aE]+' + '+pE[bE]+' = '+(pE[aE]+pE[bE])+'% of the circle, and that part of the '+TE+' people is '+TE+' × '+(pE[aE]+pE[bE])+' ÷ 100 = '+(cE[aE]+cE[bE])+'.'},
+    showWork:true
+  } : {
+    title:{es:'La diferencia entre dos sectores', en:'The gap between two sectors'},
+    q:{es:'Una gráfica circular sobre '+T(THE.q)+' representa a '+TE+' '+un(THE)+'. El sector de '+cn(THE,aE)+' ocupa el '+pE[aE]+'% y el de '+cn(THE,bE)+' ocupa el '+pE[bE]+'%. ¿Cuántas personas más hay en el sector de '+cn(THE,aE)+' que en el de '+cn(THE,bE)+'?',
+       en:'A circle graph about '+T(THE.q)+' stands for '+TE+' '+un(THE)+'. The '+cn(THE,aE)+' sector takes '+pE[aE]+'% and the '+cn(THE,bE)+' one takes '+pE[bE]+'%. How many more people are in the '+cn(THE,aE)+' sector than in the '+cn(THE,bE)+' one?'},
+    options: opt4(cE[aE]-cE[bE], [pE[aE]-pE[bE], cE[aE]+cE[bE], cE[aE], cE[aE]-cE[bE]+5]),
+    correct: String(cE[aE]-cE[bE]),
+    hint:{es:'Lleva cada sector a personas por separado y después compáralos.',
+          en:'Turn each sector into people separately and then compare them.'},
+    exp:{es:'El sector de '+cn(THE,aE)+' vale '+TE+' × '+pE[aE]+' ÷ 100 = '+cE[aE]+' personas y el de '+cn(THE,bE)+' vale '+cE[bE]+'; la diferencia entre ellos es '+cE[aE]+' − '+cE[bE]+' = '+(cE[aE]-cE[bE])+'.',
+         en:'The '+cn(THE,aE)+' sector is worth '+TE+' × '+pE[aE]+' ÷ 100 = '+cE[aE]+' people and the '+cn(THE,bE)+' one is worth '+cE[bE]+'; the gap between them is '+cE[aE]+' − '+cE[bE]+' = '+(cE[aE]-cE[bE])+'.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 10 ---- */
+  addProb(v10 === 0 ? {
+    title:{es:'El porcentaje borrado', en:'The erased percent'},
+    q:{es:'En una gráfica circular sobre '+T(THE.q)+' se borró la etiqueta de un sector. Los otros tres ocupan el '+restPE[0]+'%, el '+restPE[1]+'% y el '+restPE[2]+'%. ¿Qué porcentaje del círculo ocupa el sector de '+cn(THE,mE)+'?',
+       en:'In a circle graph about '+T(THE.q)+' the label of one sector was erased. The other three take '+restPE[0]+'%, '+restPE[1]+'% and '+restPE[2]+'%. What percent of the circle does the '+cn(THE,mE)+' sector take?'},
+    options: opt4(pE[mE], [sum(restPE), pE[mE] + 5, pE[mE] - 5, 100 - pE[mE]]),
+    correct: String(pE[mE]),
+    hint:{es:'Los cuatro sectores no pueden dejar hueco: entre todos completan el círculo entero.',
+          en:'The four sectors cannot leave a gap: together they complete the whole circle.'},
+    exp:{es:'El círculo entero vale 100% y los tres sectores visibles suman '+restPE[0]+' + '+restPE[1]+' + '+restPE[2]+' = '+sum(restPE)+', así que al borrado le toca 100 − '+sum(restPE)+' = '+pE[mE]+'.',
+         en:'The whole circle is worth 100% and the three visible sectors add up to '+restPE[0]+' + '+restPE[1]+' + '+restPE[2]+' = '+sum(restPE)+', so the erased one gets 100 − '+sum(restPE)+' = '+pE[mE]+'.'},
+    showWork:true
+  } : {
+    title:{es:'El ángulo que falta', en:'The missing angle'},
+    q:{es:'Al trazar una gráfica circular sobre '+T(THE.q)+' ya se dibujaron tres sectores, que abren '+restGE[0]+', '+restGE[1]+' y '+restGE[2]+' grados. ¿Cuántos grados debe abrir el sector de '+cn(THE,mE)+'?',
+       en:'While drawing a circle graph about '+T(THE.q)+' three sectors are already drawn, opening '+restGE[0]+', '+restGE[1]+' and '+restGE[2]+' degrees. How many degrees should the '+cn(THE,mE)+' sector open?'},
+    options: opt4(pE[mE]*18/5, [sum(restGE), pE[mE], pE[mE]*18/5 + 18, 360 - pE[mE]*18/5 - 18]),
+    correct: String(pE[mE]*18/5),
+    hint:{es:'Los cuatro ángulos tienen que completar la vuelta entera del círculo.',
+          en:'The four angles have to complete the whole turn of the circle.'},
+    exp:{es:'La vuelta completa mide 360 grados y los tres sectores dibujados abren '+restGE[0]+' + '+restGE[1]+' + '+restGE[2]+' = '+sum(restGE)+', así que para cerrar el círculo falta 360 − '+sum(restGE)+' = '+(pE[mE]*18/5)+'.',
+         en:'The full turn measures 360 degrees and the three drawn sectors open '+restGE[0]+' + '+restGE[1]+' + '+restGE[2]+' = '+sum(restGE)+', so to close the circle what is missing is 360 − '+sum(restGE)+' = '+(pE[mE]*18/5)+'.'},
+    showWork:true
+  });
+}
+</script>
+</body>
+</html>
