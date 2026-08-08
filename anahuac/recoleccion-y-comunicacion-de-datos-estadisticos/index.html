@@ -1,0 +1,2310 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recolección y Comunicación de Datos Estadísticos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Recolección y Comunicación de Datos Estadísticos</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 2° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Recolección y Comunicación de Datos Estadísticos</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        
+/* ── GUIDE-SPECIFIC: recolección y comunicación de datos ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-instr { font-size:.88rem; color:var(--text2); margin-bottom:.7rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.rverify-btn.ghostbtn { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.rverify-btn.ghostbtn:hover { background:var(--surface2); border-color:var(--green); color:var(--green); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.gcanvas { display:block; width:100%; height:250px; border:1px solid var(--border); border-radius:8px; background:var(--surface); touch-action:manipulation; cursor:pointer; }
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; flex-wrap:wrap; }
+.binrow { display:grid; grid-template-columns:repeat(5,1fr); gap:.4rem; margin-top:.7rem; }
+.binbtn { min-height:44px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.78rem; font-weight:600; cursor:pointer; font-family:inherit; padding:.35rem .2rem; }
+.binbtn:hover { border-color:var(--green); color:var(--green); }
+.bigval { font-family:'IBM Plex Mono',monospace; font-size:1.5rem; font-weight:700; color:var(--green-dark); text-align:center; margin:.4rem 0; }
+.steprow { display:grid; grid-template-columns:repeat(5,1fr); gap:.4rem; margin-top:.7rem; }
+.stepcell { border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); padding:.4rem .2rem; text-align:center; }
+.steplbl { font-family:'IBM Plex Mono',monospace; font-size:.68rem; color:var(--text3); }
+.stepval { font-family:'IBM Plex Mono',monospace; font-size:1.05rem; font-weight:700; color:var(--green); margin:.15rem 0; }
+.stepbtns { display:flex; gap:.25rem; justify-content:center; }
+.stepbtn { min-width:44px; min-height:44px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text); font-size:.95rem; font-weight:700; cursor:pointer; font-family:inherit; }
+.stepbtn:hover { border-color:var(--green); color:var(--green); }
+.dtable { width:100%; border-collapse:collapse; margin:.7rem 0; font-size:.83rem; }
+.dtable th, .dtable td { border:1px solid var(--border); padding:.35rem .5rem; text-align:center; }
+.dtable th { background:var(--surface2); color:var(--text3); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+.dtable td { color:var(--text2); font-family:'IBM Plex Mono',monospace; }
+.dtable tr.hot td { background:var(--gold-bg); color:var(--text); }
+.tallymk { color:var(--gold); letter-spacing:.14em; font-weight:700; }
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.reflect-prompt { font-size:.92rem; color:var(--text); background:var(--surface2); border-radius:8px; padding:.6rem .75rem; margin:.5rem 0 .8rem; }
+@media (max-width:600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .binrow { grid-template-columns:repeat(2,1fr); }
+  .steprow { grid-template-columns:repeat(2,1fr); }
+  .gcanvas { height:230px; }
+  .dtable th, .dtable td { padding:.28rem .25rem; font-size:.76rem; }
+  .stepbtn { min-width:40px; }
+}
+</style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#1a4a8a', primaryDark:'#0c2547', primaryBg:'#e7edf6',
+  accent:'#e07b1a', accentBg:'#fbeddf',
+  darkPrimary:'#437bc6', darkPrimaryDark:'#74a5e6', darkPrimaryBg:'#0c203a',
+  darkAccent:'#ed9e51', darkAccentBg:'#291909',
+  pBR:26, pBG:74, pBB:138, pAR:224, pAG:123, pAB:26,
+  logoLeftB64:'data:image/jpeg;base64,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7XZq+CvdGds5HGCYfMbOv/UvJx7IL66/wY/klsORwmfy5Ldcads0jXepbzgkOHfr017dxpNebDYrVFfpb6yiiFxljET59dS0f7j2G/kPZUj+nhBK2SikLM5F7i351wrrf1AZonR1kYfjBtY3/Oliu6mggpqdkFNDHDDG3lZHG0Na0ewA6BfoiL0q82s2+ParczCcboNDklurpifUFkLmj+0P5BSTwWW5lLwShqw0B1fcKiZ5135XeUP0jXoeJ3hhfeJmO2uksFZboKigqnTFlYXNEgcA06e0O5dDZ1o76dQprwmxJuC8O7Pi3ntqH0MGppWN02SRzi55A9uZx18l0HzM7k2MHN1TbE7vJedrKTsjZGNMY1o9gNL6Vc8VMkuxulDiGKSPF3qyJJXsOjFH6df4d62T6AfMKa45QVNts8FJWXGe41LRuWomPV7j30PQew9lxIqtss74mA2bueV+n16rry0higZK8i7thzt1+nTqvRRefkl0jstirLtLE+WOliMjmMOi4D0G14XD3OaPMn1raWhqKX7IGF3mlp5ubm7a/wA1bvqoWTNhc74nbBaMpZnwuma34W7lS1ERWFXREREREREREREREREREREREREREREREREREREREREUH41337lwiojik5amvP2aLXcA9Xn+iCPxCzi6nnbSR1ZjcIJJHRsk9C5oaXD6gPb+asDj7ezc8xZbInc0Ftj8vQ9ZX6Lv05R9QVLMqwo0vBWno2Rbrrc0Vsmh1Ljsyj6AOP8ARC+f6rHJqtVMWfxiGPqN/wC/Je+0uSPS6SESfylPodv681NuGd8/ugwu3173804j8qo9xI3od/XofxX9zzLqLEKGnq66lqahk8pjaIeXYOt9dkeyrDw53wwXStsEr/2dS37RAD2D29HD6luj/sr3PEn/AHt2v+eH+o5dyPVHv0fvLD8bRbxBt67+K4r9LY3V+7PHwON/Ai/pt4LvruL+OwWSmr4oKmaoqC7VIC3njDSRt5BIaDrp3J9lyWnjTYqmsZDX26roYnHXnEiRrfm4DqB9AVHuDHD+13y1S3u+ROqInSmOngDy1vw/vOOjs9egG/Q/LXLxswe245FR3azxOgpp5DBLCXlwa/Rc0jez1Ad0+QXOdXawKUVt28NgbWyR18fkdlfbQ6Oao0dncVzm+Aenh8xur6hljmhZNFI2SORocx7T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7MKvNJfMZoa+jewtdE1r2NP/AHbwAHNPsQV+eZZVacUtzKy6PefMeGRxRAOkefXQJHQDqTv9SAqIkxTiHitdIy3U10bz9PNtznPZIB6nl6/0gF9W/Bs6ym6NlucFdCHdJKq4lwLR8g74j8gBr6K9++1hjELYHdrttj6/mPmqP7HRiUzOnHZb75+n5n5K78IzC3ZdBUz22mrIo6d7WONRG1vMSN9NOPb1+oUjXkYjj1BjNkitdvaeRnxPkd+9I893H5/8l669PSiYQt7c3fzsvM1RhMzuwFmcroiIrCgREREREREREREREREREREREREREREREREREREREREREVNccMvyufObFwswKqZb7xdoXVdZcnt5vslMOYbaPc8juvfoANc2xJFEZHcIWj3hguVcqKh4eGvGHErtQ3bF+JtTk480fb7ffppGwys9eU7fyn06AEdOp1pfXELIs4zjizJwuwi7HHKW2UrKm+3SMc0rHPa1zYmHp6Ob2IJJd1AaQZhTBx+FwI3J6KPtiBluVeyLOGRf9IXAq4Wm/V2bXDMcQqqtlJcobjszU3N2kY5xcfRx7gbABHUETXDr9davxL5pY5brUz2mmtNHNS0rn7ijc5rC5zR6E8347WHUxA4mm4tf1A/tGzXPCRYq2kVO3K+3uPxZUmPMutW2zvxQ1LqISHyjL5sg5+X+VoDr8lCfCnnWW1uWVFqy68Vtypr1Sy1FolqZvM5XU0xZLGPUEhwdr2aCs90dwF99gD5/6TtxxBtlphFmKoz3K7v4pbXT0V6rIcTdd5rTFSxzaiqH00AdMS3sfjkHX6ey7PEpxCzC2Z7T0eE1NUKbFKNl3vscDtNma+aNrYn9OoDTsj+S9zv4em4oXl7WXGRf6fmy1NS0NLrbGy0ii47HcqS82Wiu9BIJaStp2VEDx/Ex7Q4H8iuxUiLbqzuiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIipPjlYMnsnESw8W8QtUl6ntlM6hudtjG5Jac8xDmAAkkc7t6BP7vQjauxFJFKY3XC0kZxiyo6n40Zdk91oLThHC++xzyvH2upvsDqenp2ep5m73+JBOugPpw8QqHLuGnGOq4n4/YanIrJe6aOnvVFRtJmikY1rRI1oBOtMaQe2y8HWwVf6KYVDWn4WC1rEZyozE4jLsrNeZXfJePlXbMPteGXzH8YirI6q8XC7QeS9zG9o2Deiep6Akk8p6AHfRdcjqMA8SOW3yow/KrtQVttpKaCS2W50zeZscZPxHQI6a6E9VoxFsKoD4eH4bWtfrbn4LBgJzxZVE0v3hePFLZMnjsd3pLfV4S089TSOZ5L3SSO8qQ9WtkAI23e1XNlsGVWXgXY8ytFjrW5Ji2R1c8FM+jk82SnqD5cgDAA4g8zD09Gla8RZbWFtgG4x5C/3uhp78/z8CzE3Erlh964JCa2XGc2+O53C8zw0r5PLmljjkfzkDod8zQDrfLpcWD8M+J2bW3I8uflIxQ5dPMK23Vlp8yV8ALmNY8vILW8pLQPYA+2tVIs9/fbAF+u/Mn7n0WO7NJ3x+BVD4WXX63YVX4ZkVFWQVeN3CSjimmhe2OogLiWOjc4ac3fMBr0DVbyIqssnaPL7Wupo2cDQ1ERFGt0RERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERF/9k=', logoRightB64:'', logoAlt:'Prepa Anáhuac Colima',
+  guideTitle:{ es:'Recolección y Comunicación de Datos Estadísticos', en:'Collecting and Communicating Statistical Data' },
+  courseName:{ es:'Matemáticas · 2° de Secundaria', en:'Mathematics · 2° de Secundaria' }, filePrefix:'mat2_t10_g02'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_mat2_t10_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Recolección y Comunicación de Datos Estadísticos','wcourse':'Matemáticas · 2° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','fillboth':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Collecting and Communicating Statistical Data','wcourse':'Mathematics · 2° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','fillboth':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_mat2_t10_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_mat2_t10_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_mat2_t10_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_mat2_t10_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('mat2_t10_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+/* ================================================
+   buildLesson — mat2_t10_g02
+   Recolección y Comunicación de Datos Estadísticos
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function sumA(a){ var t=0, i; for (i=0;i<a.length;i++) t+=a[i]; return t; }
+  var REDRAW = [];
+
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w0 = cv.clientWidth || 320, h0 = cv.clientHeight || 240;
+    cv.width = Math.round(w0*dpr); cv.height = Math.round(h0*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w0,h0);
+    return { ctx:ctx, w:w0, h:h0 };
+  }
+  function uniq4(c, cands, fmt){
+    var out=[c], i, v, k=1;
+    for (i=0;i<cands.length && out.length<4;i++){ v=cands[i]; if (v>=0 && out.indexOf(v)<0) out.push(v); }
+    while (out.length<4){
+      if (c+k>=0 && out.indexOf(c+k)<0) out.push(c+k);
+      if (out.length<4 && c-k>=0 && out.indexOf(c-k)<0) out.push(c-k);
+      k++;
+    }
+    return out.map(fmt || String);
+  }
+  function pctS(v){ return v+' %'; }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = T(spec.correct);
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ---- histograma en canvas ---- */
+  function drawHist(cv, edges, counts, o){
+    o = o || {};
+    var g = fitCv(cv), ctx = g.ctx, W = g.w, H = g.h;
+    var L = 34, Rm = 12, Tp = 14, B = 26;
+    var n = counts.length, pw = W-L-Rm, ph = H-Tp-B, i, v, y;
+    var mx = 1;
+    for (i=0;i<n;i++) if (counts[i] > mx) mx = counts[i];
+    if (o.mxMin && o.mxMin > mx) mx = o.mxMin;
+    var bw = pw/n;
+    var col = cssv('--green'), colA = cssv('--gold'), bd = cssv('--border');
+    var tx = cssv('--text3'), sf = cssv('--surface');
+    ctx.font = '500 10px "IBM Plex Sans", sans-serif';
+    ctx.textAlign = 'right'; ctx.fillStyle = tx; ctx.strokeStyle = bd; ctx.lineWidth = 1;
+    var stp = mx<=9 ? 1 : (mx<=18 ? 2 : 5);
+    for (v=0; v<=mx; v+=stp){
+      y = Tp+ph-(v/mx)*ph;
+      ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(W-Rm,y); ctx.stroke();
+      ctx.fillText(String(v), L-5, y+3);
+    }
+    for (i=0;i<n;i++){
+      var bh = (counts[i]/mx)*ph;
+      ctx.fillStyle = (o.hi===i) ? colA : col;
+      ctx.globalAlpha = (o.hi===i) ? 0.95 : 0.78;
+      ctx.fillRect(L+i*bw, Tp+ph-bh, bw, bh);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = sf; ctx.lineWidth = 1;
+      ctx.strokeRect(L+i*bw, Tp+ph-bh, bw, bh);
+    }
+    ctx.strokeStyle = tx; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(L,Tp+ph); ctx.lineTo(W-Rm,Tp+ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(L,Tp); ctx.lineTo(L,Tp+ph); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillStyle = tx;
+    for (i=0;i<=n;i++) ctx.fillText(String(edges[i]), L+i*bw, Tp+ph+13);
+    return { L:L, Tp:Tp, ph:ph, bw:bw, mx:mx, n:n };
+  }
+
+  /* ---- retícula con puntos (polígono y línea) ---- */
+  function drawGrid(cv, xl, ymin, ymax, step, pts, o){
+    o = o || {};
+    var g = fitCv(cv), ctx = g.ctx, W = g.w, H = g.h;
+    var L = 38, Rm = 12, Tp = 14, B = 26;
+    var n = xl.length, pw = W-L-Rm, ph = H-Tp-B, i, v, y;
+    var cw = pw/n;
+    var col = cssv('--green'), colA = cssv('--gold'), bd = cssv('--border');
+    var tx = cssv('--text3');
+    function yOf(val){ return Tp+ph-((val-ymin)/(ymax-ymin))*ph; }
+    function xOf(k){ return L+(k+0.5)*cw; }
+    ctx.font = '500 10px "IBM Plex Sans", sans-serif';
+    if (o.ghost){
+      ctx.fillStyle = col; ctx.globalAlpha = 0.16;
+      for (i=0;i<n;i++){ var gy = yOf(o.ghost[i]); ctx.fillRect(L+i*cw, gy, cw, (Tp+ph)-gy); }
+      ctx.globalAlpha = 1;
+    }
+    var nl = Math.round((ymax-ymin)/step)+1, every = nl<=13 ? 1 : 2, li = 0;
+    ctx.textAlign = 'right'; ctx.strokeStyle = bd; ctx.lineWidth = 1;
+    for (v=ymin; v<=ymax+0.001; v+=step){
+      y = yOf(v);
+      ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(W-Rm,y); ctx.stroke();
+      if (li % every === 0){ ctx.fillStyle = tx; ctx.fillText(String(v), L-5, y+3); }
+      li++;
+    }
+    ctx.strokeStyle = bd;
+    for (i=0;i<n;i++){
+      ctx.beginPath(); ctx.moveTo(xOf(i), Tp); ctx.lineTo(xOf(i), Tp+ph); ctx.stroke();
+    }
+    ctx.strokeStyle = tx; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(L,Tp+ph); ctx.lineTo(W-Rm,Tp+ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(L,Tp); ctx.lineTo(L,Tp+ph); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillStyle = tx;
+    for (i=0;i<n;i++) ctx.fillText(String(xl[i]), xOf(i), Tp+ph+14);
+    if (o.target){
+      ctx.strokeStyle = colA; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      for (i=0;i<n;i++){ if (i===0) ctx.moveTo(xOf(i), yOf(o.target[i])); else ctx.lineTo(xOf(i), yOf(o.target[i])); }
+      ctx.stroke();
+    }
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath();
+    var started = false;
+    for (i=0;i<n;i++){
+      if (pts[i] === null || pts[i] === undefined){ started = false; continue; }
+      if (!started){ ctx.moveTo(xOf(i), yOf(pts[i])); started = true; }
+      else ctx.lineTo(xOf(i), yOf(pts[i]));
+    }
+    ctx.stroke();
+    for (i=0;i<n;i++){
+      if (pts[i] === null || pts[i] === undefined) continue;
+      ctx.beginPath(); ctx.arc(xOf(i), yOf(pts[i]), 4.5, 0, 6.2832);
+      ctx.fillStyle = col; ctx.fill();
+    }
+    return { L:L, Tp:Tp, ph:ph, cw:cw, n:n };
+  }
+
+  /* ---- fábrica de manipulativos de puntos (reversible, pista dirigida, revelado) ---- */
+  function plotWidget(cfg){
+    var wrap = widget(cfg.kind);
+    var pts = [], i;
+    for (i=0;i<cfg.target.length;i++) pts.push(null);
+    var st = { tries:0, done:false, reveal:false };
+    var geom = null;
+    function draw(){
+      var cv = document.getElementById(cfg.kind+'Cv'); if (!cv) return;
+      geom = drawGrid(cv, cfg.xl, cfg.ymin, cfg.ymax, cfg.step, pts,
+        { ghost: st.reveal ? cfg.ghost : null, target: st.reveal ? cfg.target : null });
+    }
+    function fbSet(msg, ok){
+      var e = document.getElementById(cfg.kind+'Fb'); if (!e) return;
+      e.innerHTML = ok ? '<span class="okmsg">'+msg+'</span>' : msg;
+    }
+    function missMsg(k){
+      var lab = cfg.labels[k], cur = pts[k], d;
+      if (cur === null || cur === undefined){
+        return T({ es:'Falta el punto de '+lab.es+'. Tócalo en su columna, a la altura que le corresponde.',
+                   en:'The point for '+lab.en+' is missing. Tap it in its column, at the height it needs.' });
+      }
+      d = cfg.target[k] - cur;
+      if (d > 0) return T({ es:'El punto de '+lab.es+' está '+d+' '+cfg.unit.es+' por debajo de '+cfg.ref.es+'. Súbelo.',
+                            en:'The point for '+lab.en+' is '+d+' '+cfg.unit.en+' below '+cfg.ref.en+'. Move it up.' });
+      return T({ es:'El punto de '+lab.es+' está '+(-d)+' '+cfg.unit.es+' por arriba de '+cfg.ref.es+'. Bájalo.',
+                 en:'The point for '+lab.en+' is '+(-d)+' '+cfg.unit.en+' above '+cfg.ref.en+'. Move it down.' });
+    }
+    function onTap(ev){
+      if (st.done || !geom) return;
+      var cv = ev.currentTarget, r = cv.getBoundingClientRect();
+      var x = ev.clientX - r.left, y = ev.clientY - r.top;
+      var c = Math.floor((x - geom.L) / geom.cw);
+      if (c < 0) c = 0;
+      if (c >= geom.n) c = geom.n - 1;
+      var frac = ((geom.Tp + geom.ph) - y) / geom.ph;
+      var val = cfg.ymin + Math.round(frac*(cfg.ymax-cfg.ymin)/cfg.step)*cfg.step;
+      if (val < cfg.ymin) val = cfg.ymin;
+      if (val > cfg.ymax) val = cfg.ymax;
+      pts[c] = val;
+      draw();
+      fbSet(T({ es:'Colocaste el punto de '+cfg.labels[c].es+' a la altura '+val+'. Puedes moverlo tocando otra vez su columna.',
+                en:'You placed the point for '+cfg.labels[c].en+' at height '+val+'. You can move it by tapping its column again.' }));
+    }
+    function check(){
+      if (st.done) return;
+      var miss = -1, k;
+      for (k=0;k<cfg.target.length;k++){ if (pts[k] === null || pts[k] !== cfg.target[k]){ miss = k; break; } }
+      if (miss < 0){ st.done = true; draw(); fbSet(cfg.okMsg, true); return; }
+      st.tries++;
+      if (st.tries >= 3){
+        for (k=0;k<cfg.target.length;k++) pts[k] = cfg.target[k];
+        st.done = true; st.reveal = true; draw(); fbSet(cfg.revealMsg); return;
+      }
+      fbSet(missMsg(miss));
+    }
+    function clearPts(){
+      if (st.done) return;
+      for (var k=0;k<pts.length;k++) pts[k] = null;
+      draw();
+      fbSet(T({ es:'Retícula limpia. Empieza de nuevo por la izquierda.', en:'Grid cleared. Start again from the left.' }));
+    }
+    function render(){
+      wrap.innerHTML =
+        '<div class="iw-tag">'+cfg.tag+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-instr iw-sub">'+cfg.instr+'</div>'+
+          '<div class="goalbar">'+cfg.goal+'</div>'+
+          (cfg.tbl||'')+
+          '<canvas class="gcanvas" id="'+cfg.kind+'Cv"></canvas>'+
+          '<div class="krow">'+
+            '<button class="rverify-btn" data-act="chk">'+T({es:'Verificar',en:'Check'})+'</button>'+
+            '<button class="rverify-btn ghostbtn" data-act="clr">'+T({es:'Quitar los puntos',en:'Remove the points'})+'</button>'+
+          '</div>'+
+          '<div class="rfb" id="'+cfg.kind+'Fb"></div>'+
+        '</div>';
+      var cv = document.getElementById(cfg.kind+'Cv');
+      if (cv) cv.addEventListener('click', onTap);
+      wrap.querySelectorAll('[data-act]').forEach(function(b){
+        b.addEventListener('click', function(){
+          if (b.getAttribute('data-act') === 'chk') check(); else clearPts();
+        });
+      });
+      draw();
+    }
+    render();
+    REDRAW.push(draw);
+  }
+
+  /* ============================================================
+     VALORES CON SEMILLA (en orden fijo)
+     ============================================================ */
+  var vsel = [], vi, SP, i, k;
+  for (vi=0; vi<10; vi++) vsel.push(Math.floor(rng()*2));
+
+  var CTXS = [
+    { u:{es:'minutos', en:'minutes'}, base:0, w:10,
+      lbl:{es:'minutos de lectura diaria', en:'daily reading minutes'},
+      reg:function(n){ return { es:'los minutos que '+n+' estudiantes dedicaron a leer el día anterior',
+                                en:'the minutes '+n+' students spent reading the day before' }; } },
+    { u:{es:'mensajes', en:'messages'}, base:0, w:20,
+      lbl:{es:'mensajes enviados en un día', en:'messages sent in one day'},
+      reg:function(n){ return { es:'los mensajes que '+n+' estudiantes enviaron en un día',
+                                en:'the messages '+n+' students sent in one day' }; } },
+    { u:{es:'minutos', en:'minutes'}, base:0, w:10,
+      lbl:{es:'minutos de traslado a la escuela', en:'travel minutes to school'},
+      reg:function(n){ return { es:'los minutos que '+n+' estudiantes tardan en llegar a la escuela',
+                                en:'the minutes '+n+' students take to get to school' }; } }
+  ];
+  var C = CTXS[Math.floor(rng()*CTXS.length)];
+  var w = C.w;
+  var s = C.base + w*ri(0,1);
+
+  var FP = [[3,5,7,4,1],[2,6,8,3,1],[4,7,6,5,3],[3,6,9,5,2],[5,8,6,4,2],[2,5,9,3,1]];
+  var f = FP[Math.floor(rng()*FP.length)];
+  if (rng() < 0.5) f = f.slice().reverse();
+  var N = sumA(f);
+
+  var E5 = []; for (i=0;i<=5;i++) E5.push(s+i*w);
+  function eLo(j){ return s + j*w; }
+  function eHi(j){ return s + (j+1)*w; }
+  function mcv(j){ return s + j*w + w/2; }
+  var SEP = (LANG==='es') ? ' a ' : ' to ';
+  function clsL(j){ return { es:'la clase de '+eLo(j)+' a '+eHi(j), en:'the class from '+eLo(j)+' to '+eHi(j) }; }
+
+  var raw = [];
+  for (i=0;i<5;i++) for (k=0;k<f[i];k++) raw.push(s + i*w + 1 + Math.floor(rng()*(w-1)));
+  raw = shufA(raw);
+  var listTxt = raw.join(', ');
+
+  var maxF = f[0], modeIdx = 0, minF = f[0], minIdx = 0;
+  for (i=1;i<5;i++){
+    if (f[i] > maxF){ maxF = f[i]; modeIdx = i; }
+    if (f[i] < minF){ minF = f[i]; minIdx = i; }
+  }
+  var secondF = -1, secondIdx = -1;
+  for (i=0;i<5;i++){ if (i !== modeIdx && f[i] > secondF){ secondF = f[i]; secondIdx = i; } }
+
+  function tblHTML(){
+    var h = (LANG==='es') ? '<tr><th>Clase</th><th>Frecuencia</th></tr>'
+                          : '<tr><th>Class</th><th>Frequency</th></tr>';
+    var r = '', j;
+    for (j=0;j<5;j++) r += '<tr><td>'+eLo(j)+SEP+eHi(j)+'</td><td>'+f[j]+'</td></tr>';
+    return '<table class="dtable">'+h+r+'</table>';
+  }
+
+  /* datos del registro mensual */
+  var MON = { es:['enero','febrero','marzo','abril','mayo','junio'],
+              en:['January','February','March','April','May','June'] };
+  var MSH = { es:['Ene','Feb','Mar','Abr','May','Jun'],
+              en:['Jan','Feb','Mar','Apr','May','Jun'] };
+  var LCTXS = [
+    { n:{es:'los libros que la biblioteca escolar prestó cada mes', en:'the books the school library lent each month'}, u:{es:'libros',en:'books'} },
+    { n:{es:'las botellas que el grupo juntó cada mes para reciclar', en:'the bottles the group collected each month for recycling'}, u:{es:'botellas',en:'bottles'} },
+    { n:{es:'los litros de agua que la escuela ahorró cada mes', en:'the litres of water the school saved each month'}, u:{es:'litros',en:'litres'} }
+  ];
+  var LC = LCTXS[Math.floor(rng()*LCTXS.length)];
+  var DP = [[10,-5,15,5,-10],[5,15,-10,10,-5],[15,5,-5,10,-10],[10,20,-15,5,-5],[-5,10,20,5,-10],[5,-10,15,20,-5]];
+  var ld = DP[Math.floor(rng()*DP.length)];
+  var lv = [5*ri(6,10)];
+  for (i=0;i<5;i++) lv.push(lv[i]+ld[i]);
+  var upIdx = 0, dnIdx = 0;
+  for (i=1;i<5;i++){ if (ld[i] > ld[upIdx]) upIdx = i; if (ld[i] < ld[dnIdx]) dnIdx = i; }
+  var dUp = ld[upIdx], dDn = -ld[dnIdx];
+  var totChg = lv[5] - lv[0], totSum = sumA(lv);
+  var lmin = lv[0], lmax = lv[0];
+  for (i=1;i<6;i++){ if (lv[i] < lmin) lmin = lv[i]; if (lv[i] > lmax) lmax = lv[i]; }
+  var gmin = Math.max(0, lmin-10), gmax = lmax+10;
+  function ltblHTML(){
+    var a = '<tr>', b = '<tr>', j;
+    for (j=0;j<6;j++){ a += '<th>'+MON[LANG][j]+'</th>'; b += '<td>'+lv[j]+'</td>'; }
+    return '<table class="dtable">'+a+'</tr>'+b+'</tr></table>';
+  }
+
+  /* selecciones de los problemas */
+  var kp = ri(0,4);
+  var k2 = ri(1,2);
+  var j4 = ri(2,3);
+  var kfix = 5*ri(1,3);
+  var jm = ri(1,4);
+  function cntAbove(j){ var c2 = 0, m; for (m=0;m<6;m++) if (lv[m] > lv[j]) c2++; return c2; }
+  var jtC = [1,2,3].filter(function(x){ return cntAbove(x) > 0; });
+  var jt = jtC[Math.floor(rng()*jtC.length)];
+
+  /* ============================================================
+     IDEA 1 — preguntar, registrar, contar
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'Antes de la gráfica hay una pregunta', en:'Before the graph there is a question'}),
+      '<p>'+T({
+        es:'Ninguna gráfica aparece sola: antes hay una pregunta y un registro. Primero se decide qué se va a medir, y esa medición recibe el nombre de variable. Después se decide a quién se le pregunta. Cuando no se puede preguntar a todos, se toma una muestra, y para que la muestra hable del conjunto conviene elegirla al azar y no por comodidad: si un grupo de personas no tiene ninguna posibilidad de aparecer, el registro se inclina hacia las que sí la tienen.',
+        en:'No graph appears on its own: first there is a question and a record. You first decide what will be measured, and that measurement is called the variable. Then you decide who gets asked. When you cannot ask everyone, you take a sample, and for the sample to speak about the whole it is better to choose it at random and not out of convenience: if a group of people has no chance of showing up, the record leans towards those who do.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Las respuestas llegan sueltas, en el orden en que se recogen. Para poder leerlas se reparten en clases del mismo ancho y se cuenta cuántos datos caen en cada una: ese conteo es la frecuencia de la clase. La tabla de frecuencias guarda las clases con sus conteos y trae una señal de control muy útil: la suma de todas las frecuencias devuelve exactamente la cantidad de datos que se recogieron, ni uno más ni uno menos.',
+        en:'The answers arrive loose, in the order they are collected. To be able to read them they are spread into classes of equal width and you count how many values fall in each one: that count is the frequency of the class. The frequency table keeps the classes with their counts and brings a very useful control signal: adding all the frequencies gives back exactly the amount of data that was collected, not one more and not one less.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Variable',en:'Variable'})+'</div><div class="deftxt">'+T({es:'Lo que se decide medir en cada persona o cosa observada.',en:'What you decide to measure on each person or thing observed.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Muestra',en:'Sample'})+'</div><div class="deftxt">'+T({es:'La parte del conjunto a la que sí se alcanza a preguntar.',en:'The part of the whole that you actually manage to ask.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Clase',en:'Class'})+'</div><div class="deftxt">'+T({es:'Un tramo de valores con el mismo ancho que todos los demás.',en:'A stretch of values with the same width as all the others.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Frecuencia',en:'Frequency'})+'</div><div class="deftxt">'+T({es:'Cuántos datos del registro caen dentro de esa clase.',en:'How many values of the record fall inside that class.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p>'+T({
+        es:'Cuando un dato cae justo sobre el límite entre dos clases hace falta una regla fija para decidir a cuál pertenece. En esta guía ningún dato cae sobre un límite, así que cada valor tiene un solo lugar posible.',
+        en:'When a value falls exactly on the boundary between two classes, a fixed rule is needed to decide where it belongs. In this guide no value falls on a boundary, so each one has a single possible place.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 1: llena la tabla de frecuencias ---- */
+  (function(){
+    var wrap = widget('registro');
+    var PICKS = shufA(raw).slice(0, 6);
+    var cnt = [0,0,0,0,0];
+    var st = { i:0, tries:0, done:false, lock:false, hot:-1 };
+    function binOf(v){ return Math.max(0, Math.min(4, Math.floor((v-s)/w))); }
+    function tally(n2){
+      if (n2 === 0) return '·';
+      var out = '', j;
+      for (j=0;j<n2;j++) out += (j>0 && j%5===0) ? ' |' : '|';
+      return out;
+    }
+    function tbl(){
+      var h = (LANG==='es') ? '<tr><th>Clase</th><th>Conteo</th><th>Frecuencia</th></tr>'
+                            : '<tr><th>Class</th><th>Tally</th><th>Frequency</th></tr>';
+      var r = '', j;
+      for (j=0;j<5;j++){
+        r += '<tr'+(st.hot===j ? ' class="hot"' : '')+'><td>'+eLo(j)+SEP+eHi(j)+
+             '</td><td class="tallymk">'+tally(cnt[j])+'</td><td>'+cnt[j]+'</td></tr>';
+      }
+      return '<table class="dtable">'+h+r+'</table>';
+    }
+    function fbSet(msg, ok){
+      var e = document.getElementById('rgFb'); if (!e) return;
+      e.innerHTML = ok ? '<span class="okmsg">'+msg+'</span>' : msg;
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Llena la tabla', en:'Fill in the table'})+'</div>'+
+          '<div class="iw-box">'+
+            '<div class="iw-instr iw-sub">'+T({es:'Los seis datos ya están registrados en la tabla.', en:'The six values are now recorded in the table.'})+'</div>'+
+            tbl()+
+            '<div class="rfb"><span class="okmsg">'+T({
+              es:'Así se registra un conjunto de datos: '+cnt.join(' + ')+' = 6, la misma cantidad de datos que se repartieron.',
+              en:'That is how a set of data is recorded: '+cnt.join(' + ')+' = 6, the same amount of data that was handed out.'
+            })+'</span></div>'+
+          '</div>';
+        return;
+      }
+      var v = PICKS[st.i], b = '', j;
+      for (j=0;j<5;j++) b += '<button class="binbtn" data-bin="'+j+'">'+eLo(j)+SEP+eHi(j)+'</button>';
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Llena la tabla', en:'Fill in the table'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Dato',en:'Value'})+' '+(st.i+1)+' / '+PICKS.length+'</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Toca la clase a la que pertenece el dato: la marca de conteo y la frecuencia se actualizan al instante.',
+            en:'Tap the class the value belongs to: the tally mark and the frequency update instantly.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'Registra este dato en su clase.', en:'Record this value in its class.'})+'</div>'+
+          '<div class="bigval">'+v+' '+T(C.u)+'</div>'+
+          tbl()+
+          '<div class="binrow">'+b+'</div>'+
+          '<div class="rfb" id="rgFb"></div>'+
+        '</div>';
+      wrap.querySelectorAll('.binbtn').forEach(function(btn){
+        btn.addEventListener('click', function(){ pick(parseInt(btn.getAttribute('data-bin'),10)); });
+      });
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.i++; st.tries = 0; st.lock = false; st.hot = -1;
+        if (st.i >= PICKS.length) st.done = true;
+        render();
+      }, ms);
+    }
+    function pick(bi){
+      if (st.done || st.lock) return;
+      var v = PICKS[st.i], c = binOf(v);
+      if (bi === c){
+        cnt[c]++; st.hot = c; render();
+        fbSet(T({
+          es:'Correcto: '+v+' está entre '+eLo(c)+' y '+eHi(c)+', y esa clase ya reúne '+cnt[c]+'.',
+          en:'Correct: '+v+' lies between '+eLo(c)+' and '+eHi(c)+', and that class now holds '+cnt[c]+'.'
+        }), true);
+        adv(1300); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        cnt[c]++; st.hot = c; render();
+        fbSet(T({
+          es:'Aquí va: '+v+' es mayor que '+eLo(c)+' y menor que '+eHi(c)+', así que se registra en esa clase.',
+          en:'Here it goes: '+v+' is greater than '+eLo(c)+' and smaller than '+eHi(c)+', so it is recorded in that class.'
+        }));
+        adv(2500); return;
+      }
+      fbSet((bi < c)
+        ? T({ es:'Todavía no: '+v+' es mayor que '+eHi(bi)+', el final de la clase que tocaste. Busca una clase más a la derecha.',
+              en:'Not yet: '+v+' is greater than '+eHi(bi)+', the end of the class you tapped. Look one class further right.' })
+        : T({ es:'Todavía no: '+v+' es menor que '+eLo(bi)+', el inicio de la clase que tocaste. Busca una clase más a la izquierda.',
+              en:'Not yet: '+v+' is smaller than '+eLo(bi)+', the start of the class you tapped. Look one class further left.' }));
+    }
+    render();
+  })();
+
+  /* ---- P1 ---- */
+  (function(){
+    if (vsel[0] === 0){
+      SP = {
+        title:{es:'A quién se le pregunta', en:'Who gets asked'},
+        q:{ es:'Una escuela de 480 estudiantes quiere conocer los '+C.lbl.es+' de su comunidad, pero solo hay tiempo para preguntar a 40 estudiantes. ¿Cómo conviene elegir a esos 40 para que el registro hable de toda la escuela?',
+            en:'A school of 480 students wants to know the '+C.lbl.en+' of its community, but there is only time to ask 40 students. How should those 40 be chosen so that the record speaks about the whole school?' },
+        options:{ es:['Sortear los nombres de la lista completa de la escuela',
+                      'Preguntar a quienes están en la biblioteca durante el recreo',
+                      'Preguntar a los primeros que lleguen a la escuela ese día',
+                      'Preguntar al grupo que tuvo el mejor promedio del año'],
+                  en:['Draw the names at random from the full school list',
+                      'Ask those who are in the library during the break',
+                      'Ask the first ones to arrive at school that day',
+                      'Ask the group that had the best average of the year'] },
+        correct:{ es:'Sortear los nombres de la lista completa de la escuela',
+                  en:'Draw the names at random from the full school list' },
+        hint:{ es:'Revisa quién queda fuera con cada forma de elegir y pregúntate si todos los estudiantes de la escuela tienen la misma posibilidad de terminar en la muestra.',
+               en:'Check who is left out by each way of choosing and ask yourself whether every student in the school has the same chance of ending up in the sample.' },
+        exp:{ es:'El sorteo sobre la lista completa da a cada estudiante la misma posibilidad de aparecer. Las otras tres formas reúnen personas que comparten un hábito, un horario o un rendimiento, y ese parecido se traslada a los datos.',
+               en:'A draw over the full list gives every student the same chance of appearing. The other three ways gather people who share a habit, a schedule or a performance, and that likeness carries over into the data.' },
+        showWork:false
+      };
+    } else {
+      SP = {
+        title:{es:'La pregunta que se puede agrupar', en:'The question that can be grouped'},
+        q:{ es:'Un equipo quiere levantar un registro que después pueda repartirse en clases del mismo ancho. ¿Cuál de estas preguntas produce respuestas con las que eso es posible?',
+            en:'A team wants to build a record that can later be spread into classes of equal width. Which of these questions produces answers that make that possible?' },
+        options:{ es:['¿Cuántos minutos leíste ayer?',
+                      '¿Te gusta leer antes de dormir?',
+                      '¿Cuál fue el último libro que leíste?',
+                      '¿Prefieres leer en papel o en pantalla?'],
+                  en:['How many minutes did you read yesterday?',
+                      'Do you like reading before going to sleep?',
+                      'Which was the last book you read?',
+                      'Do you prefer reading on paper or on a screen?'] },
+        correct:{ es:'¿Cuántos minutos leíste ayer?', en:'How many minutes did you read yesterday?' },
+        hint:{ es:'Fíjate en el tipo de respuesta que devuelve cada pregunta: unas devuelven una cantidad que se puede ordenar de menor a mayor, otras devuelven una preferencia o un nombre.',
+               en:'Look at the type of answer each question returns: some return an amount that can be ordered from smallest to largest, others return a preference or a name.' },
+        exp:{ es:'Solo la primera devuelve una cantidad, y las cantidades se ordenan y se reparten en tramos de valores. Las demás devuelven categorías: se pueden contar por tipo, pero no forman clases con un ancho.',
+               en:'Only the first one returns an amount, and amounts can be ordered and spread over stretches of values. The others return categories: they can be counted by type, but they do not form classes with a width.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P2 ---- */
+  (function(){
+    var lim2 = s + k2*w, above2 = 0, j;
+    for (j=k2;j<5;j++) above2 += f[j];
+    if (vsel[1] === 0){
+      SP = {
+        title:{es:'El control de la tabla', en:'The table check'},
+        q:{ es:'La lista reúne '+C.reg(N).es+': '+listTxt+'. Los datos se van a registrar en clases de ancho '+w+' a partir de '+s+'. ¿Cuántos registros debe haber en total en la columna de frecuencias?',
+            en:'The list gathers '+C.reg(N).en+': '+listTxt+'. The data will be recorded in classes of width '+w+' starting at '+s+'. How many records must the frequency column hold in total?' },
+        options: uniq4(N, [N-1, N+1, 5, N-f[0]]),
+        correct: String(N),
+        hint:{ es:'Cada dato de la lista entra en una sola clase y ninguna clase repite datos, así que la columna reparte todo el registro sin perder ni duplicar nada.',
+               en:'Each value of the list enters one single class and no class repeats values, so the column spreads the whole record without losing or duplicating anything.' },
+        exp:{ es:'La lista trae '+N+' datos y las cinco clases los reparten sin traslape: '+f.join(' + ')+' = '+N+'.',
+              en:'The list brings '+N+' values and the five classes spread them with no overlap: '+f.join(' + ')+' = '+N+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'Del registro al conteo', en:'From the record to the count'},
+        q:{ es:'La lista reúne '+C.reg(N).es+': '+listTxt+'. Los datos se van a registrar en clases de ancho '+w+' a partir de '+s+'. ¿Cuántos registros son mayores que '+lim2+'?',
+            en:'The list gathers '+C.reg(N).en+': '+listTxt+'. The data will be recorded in classes of width '+w+' starting at '+s+'. How many records are greater than '+lim2+'?' },
+        options: uniq4(above2, [above2+1, above2-1, N-above2, f[k2]]),
+        correct: String(above2),
+        hint:{ es:'Aporta cada clase que empieza en ese valor o después; agrupa la lista en esas clases y suma solo sus conteos.',
+               en:'Every class that starts at that value or later contributes; group the list into those classes and add only their counts.' },
+        exp:{ es:'Las clases que empiezan en '+lim2+' o después reúnen '+f.slice(k2).join(' + ')+' = '+above2+'.',
+              en:'The classes that start at '+lim2+' or later gather '+f.slice(k2).join(' + ')+' = '+above2+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 2 — de la tabla al histograma
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'La tabla se vuelve figura', en:'The table turns into a figure'}),
+      '<p>'+T({
+        es:'El histograma es la tabla puesta de pie. En el eje horizontal van las clases, una junto a otra en el orden de los valores, y sobre cada clase se levanta una barra cuya altura es su frecuencia. Las barras se dibujan pegadas porque cada clase continúa donde termina la anterior y en el eje no queda ningún hueco sin cubrir. Con la figura terminada, la comparación entre clases se hace de un vistazo, sin volver a contar.',
+        en:'The histogram is the table standing up. The classes go on the horizontal axis, one next to another in the order of the values, and above each class a bar rises whose height is its frequency. The bars are drawn touching because each class continues where the previous one ends and no gap is left uncovered on the axis. With the figure finished, comparing classes takes one glance, with no need to count again.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Para comunicar el resultado no siempre basta decir cuántos datos tiene una clase. Muchas veces interesa qué parte del total representa, y esa parte se expresa por cada cien datos: es la frecuencia relativa en porcentaje. Sirve para dos cosas: dice de un golpe si una clase es mayoritaria o marginal, y permite comparar grupos de distinto tamaño, porque lleva a los dos a la misma referencia de cien.',
+        en:'To communicate the result it is not always enough to say how many values a class holds. Often what matters is which part of the total it represents, and that part is expressed per hundred values: it is the relative frequency as a percentage. It serves two purposes: it says at once whether a class is a majority or marginal, and it lets you compare groups of different sizes, because it brings both to the same reference of one hundred.'
+      })+'</p>'+
+      '<div class="callout"><p>'+T({
+        es:'Al sumar las frecuencias de varias clases seguidas se responden preguntas de otro tipo: cuántos datos quedan por debajo de cierto valor, o cuántos lo alcanzan y lo superan. Ese acumulado también puede comunicarse en porcentaje.',
+        en:'Adding the frequencies of several consecutive classes answers questions of another kind: how many values stay below a certain value, or how many reach it and go past it. That accumulated amount can also be communicated as a percentage.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 2: levanta las barras del histograma ---- */
+  (function(){
+    var wrap = widget('histograma');
+    var cur = [0,0,0,0,0];
+    var st = { tries:0, done:false };
+    function draw(){
+      var cv = document.getElementById('hgCv'); if (!cv) return;
+      drawHist(cv, E5, cur, { mxMin: maxF+1 });
+    }
+    function fbSet(msg, ok){
+      var e = document.getElementById('hgFb'); if (!e) return;
+      e.innerHTML = ok ? '<span class="okmsg">'+msg+'</span>' : msg;
+    }
+    function render(){
+      var cells = '', j;
+      for (j=0;j<5;j++){
+        cells += '<div class="stepcell">'+
+          '<div class="steplbl">'+eLo(j)+SEP+eHi(j)+'</div>'+
+          '<div class="stepval">'+cur[j]+'</div>'+
+          '<div class="stepbtns">'+
+            '<button class="stepbtn" data-i="'+j+'" data-d="-1">−</button>'+
+            '<button class="stepbtn" data-i="'+j+'" data-d="1">+</button>'+
+          '</div>'+
+        '</div>';
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Levanta las barras', en:'Raise the bars'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Sube y baja cada barra con sus botones: el histograma se redibuja en cuanto cambias una altura.',
+            en:'Raise and lower each bar with its buttons: the histogram is redrawn as soon as you change a height.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({
+            es:'Deja el histograma diciendo exactamente lo mismo que la tabla.',
+            en:'Leave the histogram saying exactly the same as the table.'
+          })+'</div>'+
+          tblHTML()+
+          '<canvas class="gcanvas" id="hgCv"></canvas>'+
+          '<div class="steprow">'+cells+'</div>'+
+          '<div class="krow"><button class="rverify-btn" id="hgChk">'+T({es:'Verificar',en:'Check'})+'</button></div>'+
+          '<div class="rfb" id="hgFb"></div>'+
+        '</div>';
+      wrap.querySelectorAll('.stepbtn').forEach(function(b){
+        b.addEventListener('click', function(){
+          if (st.done) return;
+          var idx = parseInt(b.getAttribute('data-i'),10);
+          var dd  = parseInt(b.getAttribute('data-d'),10);
+          cur[idx] = Math.max(0, Math.min(maxF+1, cur[idx]+dd));
+          var vEl = wrap.querySelectorAll('.stepval')[idx];
+          if (vEl) vEl.textContent = cur[idx];
+          draw();
+          fbSet(T({
+            es:'La barra de la clase de '+eLo(idx)+' a '+eHi(idx)+' mide '+cur[idx]+'.',
+            en:'The bar of the class from '+eLo(idx)+' to '+eHi(idx)+' measures '+cur[idx]+'.'
+          }));
+        });
+      });
+      var chk = document.getElementById('hgChk');
+      if (chk) chk.addEventListener('click', function(){
+        if (st.done) return;
+        var miss = -1, j2;
+        for (j2=0;j2<5;j2++) if (cur[j2] !== f[j2]){ miss = j2; break; }
+        if (miss < 0){
+          st.done = true;
+          fbSet(T({
+            es:'Terminado: una barra por clase, pegadas entre sí, y cada altura es la frecuencia de su clase.',
+            en:'Done: one bar per class, touching each other, and each height is the frequency of its class.'
+          }), true);
+          return;
+        }
+        st.tries++;
+        if (st.tries >= 3){
+          for (j2=0;j2<5;j2++) cur[j2] = f[j2];
+          st.done = true; render();
+          fbSet(T({
+            es:'Estas son las alturas de la tabla. Observa que ninguna barra deja hueco con la siguiente, porque las clases tampoco lo dejan.',
+            en:'These are the heights from the table. Notice that no bar leaves a gap with the next one, because the classes do not leave one either.'
+          }));
+          return;
+        }
+        var d = f[miss] - cur[miss];
+        fbSet(d > 0
+          ? T({ es:'La barra de la clase de '+eLo(miss)+' a '+eHi(miss)+' está '+d+' por debajo de su frecuencia. Súbela.',
+                en:'The bar of the class from '+eLo(miss)+' to '+eHi(miss)+' is '+d+' below its frequency. Raise it.' })
+          : T({ es:'La barra de la clase de '+eLo(miss)+' a '+eHi(miss)+' está '+(-d)+' por arriba de su frecuencia. Bájala.',
+                en:'The bar of the class from '+eLo(miss)+' to '+eHi(miss)+' is '+(-d)+' above its frequency. Lower it.' }));
+      });
+      draw();
+    }
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P3 ---- */
+  (function(){
+    if (vsel[2] === 0){
+      var p3 = 100*f[kp]/N;
+      SP = {
+        title:{es:'La parte que representa una clase', en:'The part one class represents'},
+        q:{ es:'La tabla registra '+C.reg(N).es+'.'+tblHTML()+'¿Qué porcentaje del total de datos quedó en la clase de '+eLo(kp)+' a '+eHi(kp)+'?',
+            en:'The table records '+C.reg(N).en+'.'+tblHTML()+'What percentage of the total data ended up in the class from '+eLo(kp)+' to '+eHi(kp)+'?' },
+        options: uniq4(p3, [f[kp], 100-p3, Math.round(100*f[(kp+1)%5]/N)], pctS),
+        correct: pctS(p3),
+        hint:{ es:'Divide la frecuencia de esa clase entre el total de datos de la tabla y multiplica el resultado por cien.',
+               en:'Divide the frequency of that class by the total data of the table and multiply the result by one hundred.' },
+        exp:{ es:'La clase reúne '+f[kp]+' de los '+N+' datos registrados, y esa parte llevada a cada cien datos da '+p3+' %.',
+              en:'The class gathers '+f[kp]+' of the '+N+' recorded values, and that part taken per hundred values gives '+p3+' %.' },
+        showWork:true
+      };
+    } else {
+      var pm = 100*maxF/N;
+      SP = {
+        title:{es:'La clase que domina el registro', en:'The class that dominates the record'},
+        q:{ es:'La tabla registra '+C.reg(N).es+'.'+tblHTML()+'¿Qué porcentaje del total de datos quedó en la clase con más registros?',
+            en:'The table records '+C.reg(N).en+'.'+tblHTML()+'What percentage of the total data ended up in the class with the most records?' },
+        options: uniq4(pm, [maxF, 100-pm, Math.round(100*secondF/N)], pctS),
+        correct: pctS(pm),
+        hint:{ es:'Localiza primero la frecuencia mayor de la tabla, divídela entre el total de datos y multiplica por cien.',
+               en:'First locate the largest frequency in the table, divide it by the total data and multiply by one hundred.' },
+        exp:{ es:'La clase de '+eLo(modeIdx)+' a '+eHi(modeIdx)+' es la que más reúne, '+maxF+' de '+N+' datos, y eso equivale a '+pm+' %.',
+              en:'The class from '+eLo(modeIdx)+' to '+eHi(modeIdx)+' gathers the most, '+maxF+' of '+N+' values, and that amounts to '+pm+' %.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P4 ---- */
+  (function(){
+    var lim4 = s + j4*w, below4 = 0, j;
+    for (j=0;j<j4;j++) below4 += f[j];
+    var above4 = N - below4;
+    if (vsel[3] === 0){
+      var pB = 100*below4/N;
+      SP = {
+        title:{es:'Comunicar el acumulado', en:'Communicating the accumulated part'},
+        q:{ es:'La tabla registra '+C.reg(N).es+'.'+tblHTML()+'¿Qué porcentaje de los datos quedó por debajo de '+lim4+' '+C.u.es+'?',
+            en:'The table records '+C.reg(N).en+'.'+tblHTML()+'What percentage of the data ended up below '+lim4+' '+C.u.en+'?' },
+        options: uniq4(pB, [below4, 100-pB, Math.round(100*(below4-f[j4-1])/N)], pctS),
+        correct: pctS(pB),
+        hint:{ es:'Suma las frecuencias de las clases que terminan en ese valor o antes, divide esa suma entre el total de datos y multiplica por cien.',
+               en:'Add the frequencies of the classes that end at that value or earlier, divide that sum by the total data and multiply by one hundred.' },
+        exp:{ es:'Las clases que terminan en '+lim4+' o antes suman '+f.slice(0,j4).join(' + ')+' = '+below4+' datos de '+N+', es decir '+pB+' %.',
+              en:'The classes that end at '+lim4+' or earlier add up to '+f.slice(0,j4).join(' + ')+' = '+below4+' values out of '+N+', that is '+pB+' %.' },
+        showWork:true
+      };
+    } else {
+      var pA = 100*above4/N;
+      SP = {
+        title:{es:'Comunicar el acumulado', en:'Communicating the accumulated part'},
+        q:{ es:'La tabla registra '+C.reg(N).es+'.'+tblHTML()+'¿Qué porcentaje de los datos alcanzó '+lim4+' '+C.u.es+' o más?',
+            en:'The table records '+C.reg(N).en+'.'+tblHTML()+'What percentage of the data reached '+lim4+' '+C.u.en+' or more?' },
+        options: uniq4(pA, [above4, 100-pA, Math.round(100*(above4-f[j4])/N)], pctS),
+        correct: pctS(pA),
+        hint:{ es:'Suma las frecuencias de las clases que empiezan en ese valor o después, divide esa suma entre el total de datos y multiplica por cien.',
+               en:'Add the frequencies of the classes that start at that value or later, divide that sum by the total data and multiply by one hundred.' },
+        exp:{ es:'Las clases que empiezan en '+lim4+' o después suman '+f.slice(j4).join(' + ')+' = '+above4+' datos de '+N+', es decir '+pA+' %.',
+              en:'The classes that start at '+lim4+' or later add up to '+f.slice(j4).join(' + ')+' = '+above4+' values out of '+N+', that is '+pA+' %.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 3 — el polígono de frecuencias
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'Un punto por clase y una sola línea', en:'One point per class and a single line'}),
+      '<p>'+T({
+        es:'El polígono de frecuencias nace del mismo conteo, pero cambia las barras por puntos. Cada punto se coloca en el centro de su clase, valor que se llama marca de clase, y a la altura de la frecuencia de esa clase. Al unir los puntos con segmentos aparece una línea quebrada que muestra la forma del conjunto de un solo trazo: dónde se apilan los datos y hacia dónde se adelgazan.',
+        en:'The frequency polygon comes from the same count, but it swaps bars for points. Each point is placed at the centre of its class, a value called the class mark, and at the height of that class frequency. Joining the points with segments produces a broken line that shows the shape of the whole in a single stroke: where the data pile up and where they thin out.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Esa forma es lo que vuelve útil al polígono cuando hay que comparar: dos polígonos caben en los mismos ejes sin taparse, algo que dos histogramas no permiten porque sus barras se estorban. A cambio, el polígono exige cuidado al comunicar: hace falta un título, el nombre de la variable en el eje horizontal, la frecuencia en el vertical y una escala que avance siempre con el mismo paso.',
+        en:'That shape is what makes the polygon useful when comparing: two polygons fit on the same axes without hiding each other, something two histograms do not allow because their bars get in the way. In exchange, the polygon demands care when communicating: it needs a title, the name of the variable on the horizontal axis, the frequency on the vertical one and a scale that always advances with the same step.'
+      })+'</p>'+
+      '<div class="callout"><p>'+T({
+        es:'La marca de clase queda a la mitad entre los dos límites, así que el punto se apoya justo arriba del centro de la barra que tendría esa clase en el histograma.',
+        en:'The class mark sits halfway between the two boundaries, so the point rests right above the centre of the bar that class would have in the histogram.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 3: coloca los vértices del polígono ---- */
+  (function(){
+    var xl = [], labs = [], j;
+    for (j=0;j<5;j++){ xl.push(String(mcv(j))); labs.push(clsL(j)); }
+    plotWidget({
+      kind:'poligono',
+      tag: T({es:'Coloca los vértices', en:'Place the vertices'}),
+      instr: T({
+        es:'Toca cada columna a la altura que le corresponde: el punto se coloca sobre la marca de clase y la línea se traza sola en cuanto hay dos puntos vecinos.',
+        en:'Tap each column at the height it needs: the point lands on the class mark and the line draws itself as soon as two neighbouring points exist.'
+      }),
+      goal: T({
+        es:'Cinco vértices, uno por clase, cada uno a la altura de su frecuencia. Puedes moverlos cuantas veces quieras.',
+        en:'Five vertices, one per class, each at the height of its frequency. You can move them as many times as you want.'
+      }),
+      tbl: tblHTML(),
+      xl: xl,
+      labels: labs,
+      ymin: 0, ymax: maxF+1, step: 1,
+      target: f,
+      ghost: f,
+      unit:{es:'unidades', en:'units'},
+      ref:{es:'su frecuencia', en:'its frequency'},
+      okMsg: T({
+        es:'Polígono completo: la línea quebrada ya cuenta la misma historia que la tabla, y su punto más alto señala la clase que reúne más datos.',
+        en:'Polygon complete: the broken line now tells the same story as the table, and its highest point marks the class that gathers the most data.'
+      }),
+      revealMsg: T({
+        es:'Estas son las alturas del registro. Las barras del fondo muestran de dónde sale cada vértice: el centro de la clase y la altura de su frecuencia.',
+        en:'These are the heights of the record. The bars in the background show where each vertex comes from: the centre of the class and the height of its frequency.'
+      })
+    });
+  })();
+
+  /* ---- P5 ---- */
+  (function(){
+    if (vsel[4] === 0){
+      var d5 = f[modeIdx] - f[modeIdx+1];
+      SP = {
+        title:{es:'Dos vértices vecinos', en:'Two neighbouring vertices'},
+        q:{ es:'El polígono de frecuencias de esta tabla ya está trazado.'+tblHTML()+'¿Cuántas unidades de altura separan al vértice de la clase de '+eLo(modeIdx)+' a '+eHi(modeIdx)+' del vértice de la clase de '+eLo(modeIdx+1)+' a '+eHi(modeIdx+1)+'?',
+            en:'The frequency polygon of this table is already drawn.'+tblHTML()+'How many units of height separate the vertex of the class from '+eLo(modeIdx)+' to '+eHi(modeIdx)+' from the vertex of the class from '+eLo(modeIdx+1)+' to '+eHi(modeIdx+1)+'?' },
+        options: uniq4(d5, [f[modeIdx], f[modeIdx+1], d5+1, d5-1]),
+        correct: String(d5),
+        hint:{ es:'La altura de cada vértice es la frecuencia de su clase, así que basta restar la menor de la mayor.',
+               en:'The height of each vertex is the frequency of its class, so it is enough to subtract the smaller from the larger.' },
+        exp:{ es:'El primer vértice se apoya a la altura '+f[modeIdx]+' y el segundo a la altura '+f[modeIdx+1]+', de modo que '+f[modeIdx]+' − '+f[modeIdx+1]+' = '+d5+'.',
+              en:'The first vertex rests at height '+f[modeIdx]+' and the second at height '+f[modeIdx+1]+', so '+f[modeIdx]+' − '+f[modeIdx+1]+' = '+d5+'.' },
+        showWork:true
+      };
+    } else {
+      var dd = maxF - minF;
+      SP = {
+        title:{es:'Del vértice más alto al más bajo', en:'From the highest vertex to the lowest'},
+        q:{ es:'El polígono de frecuencias de esta tabla ya está trazado.'+tblHTML()+'¿Cuántas unidades de altura separan al vértice más alto del vértice más bajo?',
+            en:'The frequency polygon of this table is already drawn.'+tblHTML()+'How many units of height separate the highest vertex from the lowest one?' },
+        options: uniq4(dd, [maxF, minF, dd+1, dd-1]),
+        correct: String(dd),
+        hint:{ es:'Identifica la frecuencia mayor y la menor de la tabla; esas dos son las alturas de los vértices que la pregunta compara.',
+               en:'Identify the largest and the smallest frequency in the table; those two are the heights of the vertices the question compares.' },
+        exp:{ es:'El vértice más alto se apoya a la altura '+maxF+' y el más bajo a la altura '+minF+', de modo que '+maxF+' − '+minF+' = '+dd+'.',
+              en:'The highest vertex rests at height '+maxF+' and the lowest at height '+minF+', so '+maxF+' − '+minF+' = '+dd+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P6 ---- */
+  (function(){
+    if (vsel[5] === 0){
+      SP = {
+        title:{es:'Un vértice mal apoyado', en:'A badly placed vertex'},
+        q:{ es:'Un compañero trazó su polígono colocando cada vértice sobre el límite donde termina la clase, en lugar del centro. Las alturas que usó son las frecuencias correctas. ¿Qué le pasa a su gráfica?',
+            en:'A classmate drew a polygon placing every vertex on the boundary where the class ends, instead of the centre. The heights used are the correct frequencies. What happens to the graph?' },
+        options:{ es:['Cada vértice queda corrido hacia la derecha y ya no cae sobre el tramo que representa',
+                      'Las alturas se vuelven mayores, porque el límite superior es mayor que el centro',
+                      'La gráfica termina con un vértice menos que el número de clases de la tabla',
+                      'La suma de las alturas deja de coincidir con el total de datos registrados'],
+                  en:['Every vertex shifts to the right and no longer sits over the stretch it represents',
+                      'The heights become larger, because the upper boundary is larger than the centre',
+                      'The graph ends up with one vertex fewer than the number of classes in the table',
+                      'Adding the heights no longer matches the total amount of recorded data'] },
+        correct:{ es:'Cada vértice queda corrido hacia la derecha y ya no cae sobre el tramo que representa',
+                  en:'Every vertex shifts to the right and no longer sits over the stretch it represents' },
+        hint:{ es:'Cada punto lleva dos datos: en qué lugar del eje horizontal está y a qué altura llega. Pregúntate cuál de los dos se movió al cambiar la referencia.',
+               en:'Every point carries two facts: where it stands on the horizontal axis and how high it reaches. Ask yourself which of the two moved when the reference changed.' },
+        exp:{ es:'Las alturas siguen siendo las frecuencias y sigue habiendo un punto por clase. Lo que cambia es la posición horizontal: cada punto se corre hasta el final de su clase y queda encima del tramo vecino.',
+              en:'The heights are still the frequencies and there is still one point per class. What changes is the horizontal position: each point slides to the end of its class and ends up above the neighbouring stretch.' },
+        showWork:false
+      };
+    } else {
+      SP = {
+        title:{es:'Comparar dos grupos desiguales', en:'Comparing two unequal groups'},
+        q:{ es:'Un grupo de 25 estudiantes y otro de 50 registraron la misma variable con las mismas clases, y se quieren comparar en unos mismos ejes. ¿Qué conviene llevar al eje vertical?',
+            en:'A group of 25 students and another of 50 recorded the same variable with the same classes, and they are to be compared on the same axes. What should go on the vertical axis?' },
+        options:{ es:['El porcentaje que representa cada clase dentro de su propio grupo',
+                      'La cantidad de datos de cada clase, tal como quedó en cada tabla',
+                      'El total de datos que reunió cada uno de los dos grupos',
+                      'La suma de las clases anteriores a cada clase de la tabla'],
+                  en:['The percentage each class represents inside its own group',
+                      'The amount of data of each class, just as it stands in each table',
+                      'The total amount of data each of the two groups gathered',
+                      'The sum of the classes before each class of the table'] },
+        correct:{ es:'El porcentaje que representa cada clase dentro de su propio grupo',
+                  en:'The percentage each class represents inside its own group' },
+        hint:{ es:'Imagina que los dos grupos se reparten igual entre las clases; piensa qué altura alcanzaría cada uno si el eje llevara conteos.',
+               en:'Imagine both groups spread out the same way across the classes; think what height each would reach if the axis carried counts.' },
+        exp:{ es:'Con conteos, el grupo de 50 queda arriba en casi todas las clases solo por ser más numeroso. Al llevar cada clase al porcentaje de su propio grupo, las dos líneas quedan en la misma referencia y la comparación se sostiene.',
+              en:'With counts, the group of 50 stays above in almost every class just for being larger. Taking each class to a percentage of its own group puts both lines on the same reference and the comparison holds.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 4 — la gráfica de línea
+     ============================================================ */
+  sec(T({es:'Idea 4', en:'Idea 4'}),
+      T({es:'Cuando el eje lleva tiempo', en:'When the axis carries time'}),
+      '<p>'+T({
+        es:'Si la misma medición se repite en momentos sucesivos, el eje horizontal deja de llevar clases y lleva tiempo ordenado: meses, semanas, días. Sobre cada momento se marca el valor registrado y los puntos se unen. La línea no invita a leer los puntos por separado, sino los tramos que van de uno al siguiente: dónde sube, dónde baja y qué tan rápido lo hace.',
+        en:'If the same measurement is repeated at successive moments, the horizontal axis stops carrying classes and carries ordered time: months, weeks, days. Above each moment the recorded value is marked and the points are joined. The line does not invite you to read the points separately, but the stretches that go from one to the next: where it rises, where it falls and how fast it does so.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Cada tramo se lee comparando dos registros vecinos, y el tramo más inclinado hacia arriba es el del mayor crecimiento de un momento al siguiente. Aquí aparece una responsabilidad de quien comunica: la escala vertical decide qué tan pronunciada se ve una subida, así que hay que declarar dónde empieza el eje y de cuánto en cuánto avanza. Con los mismos datos y dos escalas distintas, una misma subida puede verse leve o dramática.',
+        en:'Each stretch is read by comparing two neighbouring records, and the stretch tilted most steeply upwards is the one with the greatest growth from one moment to the next. Here a responsibility of whoever communicates appears: the vertical scale decides how steep a rise looks, so you have to declare where the axis starts and by how much it advances. With the same data and two different scales, one same rise can look mild or dramatic.'
+      })+'</p>'+
+      '<div class="callout"><p>'+T({
+        es:'En una gráfica de línea el orden del eje horizontal no se puede cambiar: los momentos van como ocurrieron. En un histograma tampoco, porque las clases van como crecen los valores.',
+        en:'In a line graph the order of the horizontal axis cannot be changed: the moments go as they happened. In a histogram it cannot either, because the classes go as the values grow.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 4: traza la línea del registro ---- */
+  (function(){
+    var xl = [], labs = [], j;
+    for (j=0;j<6;j++){ xl.push(MSH[LANG][j]); labs.push({ es:MON.es[j], en:MON.en[j] }); }
+    plotWidget({
+      kind:'linea',
+      tag: T({es:'Traza la línea del registro', en:'Draw the line of the record'}),
+      instr: T({
+        es:'Toca la columna de cada mes a la altura de su registro: los puntos se unen en el orden del tiempo conforme los colocas.',
+        en:'Tap the column of each month at the height of its record: the points join in time order as you place them.'
+      }),
+      goal: T({
+        es:'Un punto por mes, en el orden en que se recogieron los datos. Si un punto queda mal, tócalo otra vez en su columna.',
+        en:'One point per month, in the order the data were collected. If a point is off, tap its column again.'
+      }),
+      tbl: ltblHTML(),
+      xl: xl,
+      labels: labs,
+      ymin: gmin, ymax: gmax, step: 5,
+      target: lv,
+      ghost: null,
+      unit: LC.u,
+      ref:{es:'lo que dice la tabla', en:'what the table says'},
+      okMsg: T({
+        es:'La línea ya cuenta el periodo completo: los tramos que suben marcan los meses de aumento y los que bajan, los de caída.',
+        en:'The line now tells the whole period: the stretches that rise mark the months of increase and those that fall, the months of decline.'
+      }),
+      revealMsg: T({
+        es:'Estos son los puntos del registro. Fíjate en la inclinación de cada tramo: mientras más inclinado, mayor fue el cambio de un mes al siguiente.',
+        en:'These are the points of the record. Look at the tilt of each stretch: the steeper it is, the greater the change from one month to the next.'
+      })
+    });
+  })();
+
+  /* ---- P7 ---- */
+  (function(){
+    if (vsel[6] === 0){
+      SP = {
+        title:{es:'El tramo que más creció', en:'The stretch that grew the most'},
+        q:{ es:'La tabla registra '+LC.n.es+' durante seis meses.'+ltblHTML()+'¿De cuántos '+LC.u.es+' fue el mayor aumento de un mes al siguiente?',
+            en:'The table records '+LC.n.en+' over six months.'+ltblHTML()+'By how many '+LC.u.en+' was the largest increase from one month to the next?' },
+        options: uniq4(dUp, [dDn, totChg, dUp+5, dUp-5, dUp+10, dDn+5]),
+        correct: String(dUp),
+        hint:{ es:'Compara cada registro con el del mes anterior y quédate con la subida mayor; no importa qué tan grandes son los registros, sino cuánto cambian.',
+               en:'Compare each record with the previous month and keep the largest rise; the size of the records does not matter, only how much they change.' },
+        exp:{ es:'De '+MON.es[upIdx]+' a '+MON.es[upIdx+1]+' el registro pasó de '+lv[upIdx]+' a '+lv[upIdx+1]+', así que el aumento fue '+lv[upIdx+1]+' − '+lv[upIdx]+' = '+dUp+'.',
+              en:'From '+MON.en[upIdx]+' to '+MON.en[upIdx+1]+' the record went from '+lv[upIdx]+' to '+lv[upIdx+1]+', so the increase was '+lv[upIdx+1]+' − '+lv[upIdx]+' = '+dUp+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'Del primer al último registro', en:'From the first to the last record'},
+        q:{ es:'La tabla registra '+LC.n.es+' durante seis meses.'+ltblHTML()+'¿Cuántos '+LC.u.es+' más se registraron en el último mes que en el primero?',
+            en:'The table records '+LC.n.en+' over six months.'+ltblHTML()+'How many more '+LC.u.en+' were recorded in the last month than in the first one?' },
+        options: uniq4(totChg, [dUp, dDn, totChg+5, totChg-5, totChg+10, dUp+5]),
+        correct: String(totChg),
+        hint:{ es:'Los meses de en medio suben y bajan, pero la pregunta solo compara el registro inicial con el final.',
+               en:'The months in between rise and fall, but the question only compares the starting record with the final one.' },
+        exp:{ es:'El primer registro es '+lv[0]+' y el último '+lv[5]+', de modo que '+lv[5]+' − '+lv[0]+' = '+totChg+'.',
+              en:'The first record is '+lv[0]+' and the last one '+lv[5]+', so '+lv[5]+' − '+lv[0]+' = '+totChg+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P8 ---- */
+  (function(){
+    if (vsel[7] === 0){
+      var ans8 = totSum + kfix;
+      SP = {
+        title:{es:'El total del periodo corregido', en:'The corrected total of the period'},
+        q:{ es:'La tabla registra '+LC.n.es+'.'+ltblHTML()+'Al revisar el registro se vio que en '+MON.es[jm]+' faltó anotar '+kfix+' '+LC.u.es+'. Con esa corrección, ¿cuál es el total de los seis meses?',
+            en:'The table records '+LC.n.en+'.'+ltblHTML()+'On reviewing the record it turned out that in '+MON.en[jm]+' there were '+kfix+' '+LC.u.en+' left unwritten. With that correction, what is the total of the six months?' },
+        options: uniq4(ans8, [totSum, ans8+kfix, totSum-kfix, ans8+5, ans8-5, ans8+10]),
+        correct: String(ans8),
+        hint:{ es:'Reúne primero los seis registros de la tabla en una sola suma y agrega al final lo que faltaba en ese mes.',
+               en:'First gather the six records of the table into a single sum and add at the end what was missing in that month.' },
+        exp:{ es:'Los seis registros suman '+lv.join(' + ')+' = '+totSum+', y con la corrección '+totSum+' + '+kfix+' = '+ans8+'.',
+              en:'The six records add up to '+lv.join(' + ')+' = '+totSum+', and with the correction '+totSum+' + '+kfix+' = '+ans8+'.' },
+        showWork:true
+      };
+    } else {
+      var ans8b = totSum - kfix;
+      SP = {
+        title:{es:'El total del periodo corregido', en:'The corrected total of the period'},
+        q:{ es:'La tabla registra '+LC.n.es+'.'+ltblHTML()+'Al revisar el registro se vio que en '+MON.es[jm]+' se anotaron '+kfix+' '+LC.u.es+' de más. Con esa corrección, ¿cuál es el total de los seis meses?',
+            en:'The table records '+LC.n.en+'.'+ltblHTML()+'On reviewing the record it turned out that in '+MON.en[jm]+' there were '+kfix+' '+LC.u.en+' written in excess. With that correction, what is the total of the six months?' },
+        options: uniq4(ans8b, [totSum, ans8b-kfix, totSum+kfix, ans8b+5, ans8b-5, ans8b+10]),
+        correct: String(ans8b),
+        hint:{ es:'Reúne primero los seis registros de la tabla en una sola suma y quita de ella lo que se anotó de más en ese mes.',
+               en:'First gather the six records of the table into a single sum and take away from it what was written in excess in that month.' },
+        exp:{ es:'Los seis registros suman '+lv.join(' + ')+' = '+totSum+', y con la corrección '+totSum+' − '+kfix+' = '+ans8b+'.',
+              en:'The six records add up to '+lv.join(' + ')+' = '+totSum+', and with the correction '+totSum+' − '+kfix+' = '+ans8b+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     CIERRE
+     ============================================================ */
+  sec(T({es:'Cierre', en:'Wrap-up'}),
+      T({es:'Lo que tu registro permite afirmar', en:'What your record lets you claim'}),
+      '<p>'+T({
+        es:'Antes de responder las dos últimas preguntas, ordena en una frase lo que tu registro deja decir y lo que no. Las situaciones que siguen son distintas entre sí, así que conviene leerlas con calma.',
+        en:'Before answering the last two questions, sort out in one sentence what your record lets you say and what it does not. The situations that follow differ from each other, so it is worth reading them calmly.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 5: comunica el resultado ---- */
+  (function(){
+    var wrap = widget('reflect');
+    var PR = [
+      { es:'Escribe el título y los rótulos de los dos ejes que le pondrías a tu histograma para que alguien lo entienda sin que tú se lo expliques.',
+        en:'Write the title and the labels of the two axes you would give your histogram so that someone understands it without you explaining it.' },
+      { es:'En una sola frase, comunica lo que muestra la gráfica de línea del periodo: dónde subió, dónde bajó y qué convendría revisar.',
+        en:'In one single sentence, communicate what the line graph of the period shows: where it rose, where it fell and what would be worth looking into.' },
+      { es:'Dibuja cómo se vería el polígono de frecuencias de un grupo en el que casi todos los datos caen en las clases del centro, y escribe qué se leería en esa forma.',
+        en:'Sketch how the frequency polygon of a group would look if almost all the data fell in the middle classes, and write what that shape would say.' }
+    ];
+    var pk = PR[Math.floor(rng()*PR.length)];
+    wrap.innerHTML =
+      '<div class="iw-tag">'+T({es:'Comunica', en:'Communicate'})+'</div>'+
+      '<div class="iw-box">'+
+        '<div class="iw-instr iw-sub">'+T({
+          es:'Escribe o dibuja tu respuesta: aquí hay varias formas de decirlo bien.',
+          en:'Write or sketch your answer: here there are several good ways to say it.'
+        })+'</div>'+
+        '<div class="reflect-prompt">'+T(pk)+'</div>'+
+        '<div class="wtabs">'+
+          '<button class="wtab active" data-p="type">'+t('tab-type')+'</button>'+
+          '<button class="wtab" data-p="draw">'+t('tab-draw')+'</button>'+
+        '</div>'+
+        '<div class="wpanel active" id="rfType"><textarea class="wtextarea" id="rfTa" placeholder="'+t('ph-work')+'"></textarea></div>'+
+        '<div class="wpanel" id="rfDraw">'+
+          '<div class="cvwrap">'+
+            '<canvas class="dcanvas" id="rfCv"></canvas>'+
+            '<div class="ctoolbar">'+
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>'+
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>'+
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>'+
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>'+
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>'+
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>'+
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>'+
+              '<button class="clrbtn">'+t('btn-clear')+'</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="krow"><button class="rverify-btn" id="rfSave">'+T({es:'Guardar',en:'Save'})+'</button></div>'+
+        '<div class="rfb" id="rfFb"></div>'+
+      '</div>';
+    wrap.querySelectorAll('.wtab').forEach(function(b){
+      b.addEventListener('click', function(){
+        var p = b.getAttribute('data-p');
+        document.getElementById('rfType').classList.toggle('active', p === 'type');
+        document.getElementById('rfDraw').classList.toggle('active', p === 'draw');
+        wrap.querySelectorAll('.wtab').forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        if (p === 'draw') setTimeout(function(){
+          var c = document.getElementById('rfCv');
+          if (c && c.getAttribute('data-ready') !== '1'){ c.setAttribute('data-ready','1'); initCanvas(c); }
+        }, 60);
+      });
+    });
+    var sv = document.getElementById('rfSave');
+    if (sv) sv.addEventListener('click', function(){
+      var e = document.getElementById('rfFb'); if (!e) return;
+      e.innerHTML = '<span class="okmsg">'+T({
+        es:'Guardado. Un título claro y unos ejes con nombre hacen la mitad del trabajo de comunicar.',
+        en:'Saved. A clear title and named axes do half the work of communicating.'
+      })+'</span>';
+    });
+  })();
+
+  /* ---- P9 ---- */
+  (function(){
+    if (vsel[8] === 0){
+      SP = {
+        title:{es:'Dos escalas, un registro', en:'Two scales, one record'},
+        q:{ es:'Dos personas grafican el mismo registro mensual. Una empieza el eje vertical en cero y avanza de diez en diez; la otra lo empieza justo debajo del registro más pequeño y avanza de dos en dos. ¿Qué produce esa diferencia?',
+            en:'Two people graph the same monthly record. One starts the vertical axis at zero and advances in tens; the other starts it just below the smallest record and advances in twos. What does that difference produce?' },
+        options:{ es:['En la segunda gráfica las subidas y bajadas se ven mucho más pronunciadas',
+                      'En la segunda gráfica los registros resultan mayores, porque la escala los aumenta',
+                      'Las dos gráficas quedan idénticas, porque la escala no altera la línea',
+                      'En la segunda gráfica desaparecen los meses en los que el registro bajó'],
+                  en:['In the second graph the rises and falls look far steeper',
+                      'In the second graph the records turn out larger, because the scale increases them',
+                      'The two graphs come out identical, because the scale does not alter the line',
+                      'In the second graph the months where the record fell disappear'] },
+        correct:{ es:'En la segunda gráfica las subidas y bajadas se ven mucho más pronunciadas',
+                  en:'In the second graph the rises and falls look far steeper' },
+        hint:{ es:'Imagina un cambio de dos unidades dibujado en dos ejes: uno que abarca cien unidades de alto y otro que abarca solo diez.',
+               en:'Imagine a change of two units drawn on two axes: one that spans one hundred units of height and another that spans only ten.' },
+        exp:{ es:'Los datos no cambian; lo que cambia es cuánto espacio del dibujo ocupa cada unidad. Con el eje recortado y pasos pequeños, un cambio pequeño llena la altura y parece enorme, y por eso al comunicar hay que declarar la escala.',
+              en:'The data do not change; what changes is how much drawing space each unit takes. With a cropped axis and small steps, a small change fills the height and looks huge, which is why the scale has to be declared when communicating.' },
+        showWork:false
+      };
+    } else {
+      SP = {
+        title:{es:'Lo que sostiene el histograma', en:'What the histogram supports'},
+        q:{ es:'Un equipo presenta el histograma de '+C.reg(N).es+', sin ningún otro texto. ¿Qué afirmación se puede sostener solo con esa gráfica?',
+            en:'A team presents the histogram of '+C.reg(N).en+', with no other text. Which claim can be supported with that graph alone?' },
+        options:{ es:['Que la mayor parte de los datos se concentra en un tramo de valores',
+                      'Que un estudiante en particular registró el valor más alto de todos',
+                      'Que otro grupo obtendría este mismo reparto si se le preguntara',
+                      'Que cada valor posible de la variable apareció por lo menos una vez'],
+                  en:['That most of the data pile up in one stretch of values',
+                      'That one particular student recorded the highest value of all',
+                      'That another group would get this same spread if it were asked',
+                      'That every possible value of the variable showed up at least once'] },
+        correct:{ es:'Que la mayor parte de los datos se concentra en un tramo de valores',
+                  en:'That most of the data pile up in one stretch of values' },
+        hint:{ es:'Pregúntate qué guarda una barra: cuántos datos cayeron en su tramo, o cuáles fueron esos datos uno por uno.',
+               en:'Ask yourself what a bar keeps: how many values fell in its stretch, or which those values were one by one.' },
+        exp:{ es:'La barra solo dice cuántos datos cayeron en su tramo, así que la gráfica sostiene afirmaciones sobre dónde se concentran los datos, no sobre un dato en particular, ni sobre otro grupo, ni sobre valores sueltos dentro de una clase.',
+              en:'A bar only says how many values fell in its stretch, so the graph supports claims about where the data pile up, not about one particular value, nor about another group, nor about single values inside a class.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P10 ---- */
+  (function(){
+    if (vsel[9] === 0){
+      var ref10 = lv[jt], cnt10 = cntAbove(jt), names = [], j;
+      for (j=0;j<6;j++) if (lv[j] > ref10) names.push({ es:MON.es[j], en:MON.en[j] });
+      var nES = names.map(function(o){ return o.es; }).join(', ');
+      var nEN = names.map(function(o){ return o.en; }).join(', ');
+      SP = {
+        title:{es:'Meses por encima de la referencia', en:'Months above the reference'},
+        q:{ es:'La tabla registra '+LC.n.es+'.'+ltblHTML()+'¿En cuántos meses el registro fue mayor que el de '+MON.es[jt]+'?',
+            en:'The table records '+LC.n.en+'.'+ltblHTML()+'In how many months was the record greater than the one of '+MON.en[jt]+'?' },
+        options: uniq4(cnt10, [cnt10+1, cnt10-1, 6-cnt10, 6]),
+        correct: String(cnt10),
+        hint:{ es:'Toma el registro de ese mes como referencia y recorre la tabla comparando uno por uno; el mes de referencia no se cuenta a sí mismo.',
+               en:'Take that month record as the reference and go through the table comparing one by one; the reference month does not count itself.' },
+        exp:{ es:'La referencia es '+ref10+'. Los meses por encima de esa referencia: '+nES+'. Total: '+cnt10+'.',
+              en:'The reference is '+ref10+'. The months above that reference: '+nEN+'. Total: '+cnt10+'.' },
+        showWork:true
+      };
+    } else {
+      var out10 = N - maxF - secondF;
+      SP = {
+        title:{es:'Fuera de las dos clases mayores', en:'Outside the two largest classes'},
+        q:{ es:'La tabla registra '+C.reg(N).es+'.'+tblHTML()+'¿Cuántos datos quedaron fuera de las dos clases con más registros?',
+            en:'The table records '+C.reg(N).en+'.'+tblHTML()+'How many values ended up outside the two classes with the most records?' },
+        options: uniq4(out10, [maxF+secondF, out10+1, out10-1, N-maxF]),
+        correct: String(out10),
+        hint:{ es:'Localiza las dos frecuencias mayores de la tabla, súmalas y quita esa suma del total de datos registrados.',
+               en:'Locate the two largest frequencies of the table, add them and take that sum away from the total recorded data.' },
+        exp:{ es:'Las dos clases con más registros reúnen '+maxF+' y '+secondF+' datos, así que '+N+' − '+maxF+' − '+secondF+' = '+out10+'.',
+              en:'The two classes with the most records gather '+maxF+' and '+secondF+' values, so '+N+' − '+maxF+' − '+secondF+' = '+out10+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* los canvas se redibujan cuando la pantalla ya es visible */
+  setTimeout(function(){
+    for (var q=0;q<REDRAW.length;q++){ try { REDRAW[q](); } catch(e){} }
+  }, 220);
+}
+</script>
+</body>
+</html>

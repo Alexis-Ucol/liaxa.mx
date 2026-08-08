@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procedimientos de Conteo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── WIDGETS DE ESTA GUÍA (procedimientos de conteo) ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-instr { font-size:.86rem; color:var(--text2); margin-bottom:.7rem; }
+.iw-sub { color:var(--text3); font-size:.82rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.wdone { font-weight:700; color:var(--ok); text-align:center; padding:.7rem; font-size:.95rem; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; margin-top:.7rem; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.goalbar b { color:var(--green-dark); }
+.livelbl { margin-top:.6rem; font-size:.88rem; color:var(--text2); }
+.livelbl b { color:var(--green-dark); }
+
+/* tabla de doble entrada */
+.tb-grid { display:grid; gap:.3rem; margin:.6rem 0 .2rem; }
+.tb-h { font-size:.74rem; color:var(--text3); text-align:center; padding:.35rem .2rem; font-weight:600; overflow-wrap:anywhere; }
+.tb-cell { border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); min-height:44px; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; font-size:1rem; color:var(--green-dark); }
+.tb-cell.on { background:var(--green-bg); border-color:var(--green); font-weight:700; }
+.tb-cell.lock { cursor:default; }
+.predrow { display:flex; align-items:center; gap:.5rem; margin-top:.5rem; flex-wrap:wrap; }
+.predlbl { font-size:.82rem; color:var(--text2); }
+.stepbtn { border:1.5px solid var(--border); background:var(--surface2); color:var(--green-dark); border-radius:8px; min-width:44px; min-height:44px; font-size:1.05rem; font-weight:700; cursor:pointer; font-family:inherit; }
+.stepval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1.1rem; color:var(--green); min-width:34px; text-align:center; }
+
+/* máquina de caminos */
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.5rem; flex-wrap:wrap; }
+.krow input[type=range] { flex:1; min-width:120px; accent-color:var(--green); height:34px; }
+.klbl { font-size:.78rem; color:var(--text3); min-width:86px; }
+.kval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.95rem; color:var(--green); min-width:26px; text-align:right; }
+.gcanvas { display:block; width:100%; height:240px; border:1px solid var(--border); border-radius:8px; background:var(--surface); touch-action:manipulation; }
+
+/* clasificador */
+.cls-card { border:1.5px solid var(--border); border-radius:10px; background:var(--surface2); padding:.7rem .8rem; font-weight:600; text-align:center; font-size:.86rem; margin:.6rem 0; }
+.cls-bins { display:flex; flex-wrap:wrap; gap:.5rem; }
+.cls-bin { border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text2); padding:.5rem .9rem; font-size:.84rem; cursor:pointer; min-height:44px; flex:1; font-family:inherit; }
+.cls-bin:hover { border-color:var(--green); background:var(--green-bg); color:var(--green-dark); }
+
+/* definiciones y datos */
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.qdata { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.5rem .7rem; margin:.55rem 0 .1rem; font-size:.84rem; color:var(--text2); }
+.qdata b { color:var(--green-dark); }
+.reflect-prompt { font-size:.9rem; color:var(--text2); margin:.4rem 0 .8rem; }
+@media (max-width: 600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .gcanvas { height:215px; }
+  .klbl { min-width:70px; font-size:.74rem; }
+  .tb-h { font-size:.68rem; }
+  .cls-bin { flex:1 1 100%; }
+}
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Procedimientos de Conteo</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 1° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Procedimientos de Conteo</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#84246c', primaryDark:'#431136', primaryBg:'#f5e8f2',
+  accent:'#585858', accentBg:'#ededed',
+  darkPrimary:'#bb4ea0', darkPrimaryDark:'#dd7dc5', darkPrimaryBg:'#360f2d',
+  darkAccent:'#9f9f9f', darkAccentBg:'#191919',
+  pBR:132, pBG:36, pBB:108, pAR:88, pAG:88, pAB:88,
+  logoLeftB64:'data:image/jpeg;base64,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TqTOn87Zqb85xtx6+i6x25kbCyKOGFhOSyGIRNJ7QAFwbax0gldFA6YfBndC0yDow8jI9qgUihk4lVaJ8dkZSmO01TZH1T+CEWQdUEndsIG30L23ypiqJbBJDPBUxjSOnYX08wnaHdpBPSNitT7c1+OEjimxnBmiEuPRkbEbbWNADYoYw14kY1kLWBrxzgY39qkZxWTyW+rvFyhBc6e8XK1Sau/Lmgs9jgfYvbQPFko9Io49s8FRTUtK1u+SoLCBjtyS71FXk27OctjIL+EcDGCDJ/iOzf27+1fQtw3lkZOuJMujBOuNxzjf0Hego9h17PcrZwtFPb6atpWW2rkmkbIyoqtpa7YTz5G3d7VpbB5oXhbQNOA9jJGhweGyMDwHDs6V72jAQcrjVHQuUQcALlEQEREBERAREQEREBERAREQEREBeealZINoC9CIIl1paHazPNIOwtOCuxlATjXe94G7WeSpJEHTFTtZuAXbhcogIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAiIgIiICIiAipyIlcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORBcUVORB//2Q==', logoRightB64:'', logoAlt:'Instituto Ateneo de Colima',
+  guideTitle:{ es:'Procedimientos de Conteo', en:'Counting Procedures' },
+  courseName:{ es:'Matemáticas · 1° de Secundaria', en:'Mathematics · 1° de Secundaria' }, filePrefix:'mat1_t13_g02'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'mat1_t13_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Procedimientos de Conteo','wcourse':'Matemáticas · 1° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Counting Procedures','wcourse':'Mathematics · 1° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'mat1_t13_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'mat1_t13_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'mat1_t13_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'mat1_t13_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('mat1_t13_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+/* ================================================
+   buildLesson: Procedimientos de conteo (1° de Secundaria).
+   Interleaved: idea -> manipulativo -> problema(s). Tarjetas inline.
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 320;
+    var h = cv.clientHeight || 240;
+    cv.width  = Math.round(w*dpr);
+    cv.height = Math.round(h*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  /* cuatro opciones numéricas distintas: la correcta y los distractores que sí quepan */
+  function opt4(correct, cands){
+    var out = [String(correct)], i, v, k = 1;
+    for (i=0;i<cands.length && out.length<4;i++){
+      v = cands[i];
+      if (v === null || v === undefined || isNaN(v) || v < 0) continue;
+      v = String(Math.round(v));
+      if (out.indexOf(v) === -1) out.push(v);
+    }
+    while (out.length < 4){
+      v = String(Number(correct) + k);
+      if (out.indexOf(v) === -1) out.push(v);
+      k++;
+    }
+    return out;
+  }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = String(T(spec.correct));
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ============================================================
+     VALORES SEMBRADOS (se sacan una sola vez, en orden fijo)
+     ============================================================ */
+  var v1 = ri(0,1), a1 = ri(3,4), b1 = ri(3,5);
+  var v2 = ri(0,1);
+  var a3 = ri(2,3), b3 = ri(3,4), c3 = ri(2,3), ans3 = a3*b3*c3;
+  var a4 = ri(3,4), b4 = ri(3,5), t4 = a4*b4;
+  var v5 = ri(0,1), L5 = ri(3,4);
+  var ans5 = (v5 === 0) ? L5*L5 : L5*(L5-1);
+  var LT5 = (L5 === 3) ? { es:'A, B y C', en:'A, B and C' } : { es:'A, B, C y D', en:'A, B, C and D' };
+  var v6 = ri(0,1);
+  var v7 = ri(0,1), C7 = ri(3,4);
+  var ans7 = (v7 === 0) ? C7*(C7-1) : C7;
+  var v8 = ri(0,1), k8 = ri(3,5);
+  var ans8 = (v8 === 0) ? 2*k8 : 6*k8;
+  var v9 = ri(0,1), g9 = ri(3,4), n9 = ri(3,4);
+  var v10 = ri(0,1), N10 = ri(5,6), M10 = ri(4,5);
+  var ans10 = (v10 === 0) ? N10*(N10-1) : M10*(M10-1)*(M10-2);
+
+  /* rondas de la tabla de doble entrada */
+  var TBC = [
+    { nm:{es:'Nieves: sabor y presentación', en:'Ice cream: flavor and serving'},
+      rows:[{es:'fresa',en:'strawberry'},{es:'chocolate',en:'chocolate'},{es:'limón',en:'lemon'},{es:'mango',en:'mango'}],
+      cols:[{es:'cono',en:'cone'},{es:'vaso',en:'cup'},{es:'paleta',en:'popsicle'}] },
+    { nm:{es:'Ropa: playera y pantalón', en:'Clothes: shirt and pants'},
+      rows:[{es:'playera roja',en:'red shirt'},{es:'playera azul',en:'blue shirt'},{es:'playera blanca',en:'white shirt'}],
+      cols:[{es:'pantalón negro',en:'black pants'},{es:'mezclilla',en:'jeans'},{es:'pantalón beige',en:'beige pants'}] },
+    { nm:{es:'Comida: sopa y guisado', en:'Meal: soup and main dish'},
+      rows:[{es:'sopa de fideo',en:'noodle soup'},{es:'sopa de verduras',en:'vegetable soup'},{es:'arroz',en:'rice'}],
+      cols:[{es:'pollo',en:'chicken'},{es:'pescado',en:'fish'},{es:'bistec',en:'steak'}] },
+    { nm:{es:'Rutas: calle y cruce', en:'Routes: street and crossing'},
+      rows:[{es:'calle Norte',en:'North street'},{es:'calle Centro',en:'Center street'},{es:'calle Sur',en:'South street'}],
+      cols:[{es:'puente',en:'bridge'},{es:'túnel',en:'tunnel'},{es:'andador',en:'walkway'}] },
+    { nm:{es:'Desayuno: platillo y bebida', en:'Breakfast: dish and drink'},
+      rows:[{es:'torta',en:'sandwich'},{es:'tamal',en:'tamal'},{es:'quesadilla',en:'quesadilla'}],
+      cols:[{es:'atole',en:'atole'},{es:'café',en:'coffee'},{es:'jugo',en:'juice'},{es:'leche',en:'milk'}] }
+  ];
+  var TBR = [];
+  (function(){
+    var ord = shufA([0,1,2,3,4]).slice(0,3), i, c, nr, nc;
+    for (i=0;i<3;i++){
+      c = TBC[ord[i]];
+      nr = ri(2, c.rows.length);
+      nc = ri(2, c.cols.length);
+      TBR.push({ nm:c.nm, rows:c.rows.slice(0,nr), cols:c.cols.slice(0,nc) });
+    }
+  })();
+
+  /* rondas de la máquina de caminos */
+  var MQR = [];
+  (function(){
+    var i, a, b, c;
+    for (i=0;i<3;i++){
+      a = ri(2,5); b = ri(2,4); c = ri(1,3);
+      if (a*b*c < 8){ a = ri(3,5); b = ri(3,4); c = ri(2,3); }
+      MQR.push({ a:a, b:b, c:c, t:a*b*c });
+    }
+  })();
+
+  /* tarjetas del clasificador */
+  var CLI = shufA([
+    { es:'Lanzar un dado, anotar el número y volver a lanzarlo.', en:'Rolling a die, writing the number and rolling it again.', bin:0 },
+    { es:'Elegir quién llega en primer lugar y quién en segundo en una carrera.', en:'Choosing who finishes first and who finishes second in a race.', bin:1 },
+    { es:'Girar dos veces una ruleta de colores y anotar los dos colores.', en:'Spinning a color wheel twice and writing down both colors.', bin:0 },
+    { es:'Sentar a tres amigos distintos en tres sillas.', en:'Seating three different friends in three chairs.', bin:1 },
+    { es:'Escoger la letra de la primera casilla y la de la segunda casilla de una clave.', en:'Choosing the letter for the first slot and for the second slot of a code.', bin:0 },
+    { es:'Repartir dos premios distintos entre dos ganadores distintos.', en:'Handing two different prizes to two different winners.', bin:1 }
+  ]).slice(0,5);
+
+  /* ============================================================
+     IDEA 1
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'Juntar dos elecciones sin perder ninguna', en:'Pairing two choices without losing any'}),
+      '<p>'+T({
+        es:'Muy seguido hay que contar de cuántas formas distintas se pueden juntar dos elecciones: una playera con un pantalón, una sopa con un guisado, una calle con un cruce. Si vas anotando las parejas de memoria, es facilísimo repetir una o dejar otra fuera, y entonces la cuenta sale mal aunque el razonamiento parezca bueno.',
+        en:'Very often you need to count how many different ways two choices can be joined: a shirt with pants, a soup with a main dish, a street with a crossing. If you jot down the pairs from memory, it is very easy to repeat one or leave another out, and then the count comes out wrong even if the reasoning looked fine.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Una tabla de doble entrada acomoda ese desorden: una elección va en las filas, la otra en las columnas, y cada casilla guarda exactamente una pareja. Ninguna casilla se repite y ninguna pareja se queda afuera, así que contar casillas es lo mismo que contar parejas.',
+        en:'A double entry table tidies that up: one choice goes in the rows, the other in the columns, and each box holds exactly one pair. No box repeats and no pair is left out, so counting boxes is the same as counting pairs.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Fila',en:'Row'})+'</div><div class="deftxt">'+T({es:'Una opción de la primera elección, con todas sus parejas a lo largo.',en:'One option of the first choice, with all its pairs along it.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Columna',en:'Column'})+'</div><div class="deftxt">'+T({es:'Una opción de la segunda elección, con todas sus parejas hacia abajo.',en:'One option of the second choice, with all its pairs going down.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Casilla',en:'Box'})+'</div><div class="deftxt">'+T({es:'El cruce de una fila con una columna: una sola pareja posible.',en:'The crossing of a row with a column: one single possible pair.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Ojo',en:'Careful'})+'</div><div class="deftxt">'+T({es:'Una tabla con huecos no es una lista completa: cada casilla cuenta.',en:'A table with gaps is not a complete list: every box counts.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 1: predice y llena la tabla ---- */
+  (function(){
+    var wrap = widget('tabla');
+    var st = { r:0, sel:[], pred:2, tries:0, lock:false, done:false };
+    function R(){ return TBR[st.r]; }
+    function total(){ return R().rows.length * R().cols.length; }
+    function reset(){
+      st.sel = []; st.pred = 2; st.tries = 0; st.lock = false;
+      var n = total(), i;
+      for (i=0;i<n;i++) st.sel.push(false);
+    }
+    function filled(){ var n=0,i; for(i=0;i<st.sel.length;i++) if(st.sel[i]) n++; return n; }
+    function live(){
+      var e = document.getElementById('tbLive'); if (!e) return;
+      e.innerHTML = T({es:'Tu predicción: ',en:'Your prediction: '})+'<b>'+st.pred+'</b>'+
+                    T({es:' · casillas marcadas: ',en:' · boxes marked: '})+'<b>'+filled()+'</b>';
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML = '<div class="iw-tag">'+T({es:'Predice y llena la tabla',en:'Predict and fill the table'})+'</div>'+
+          '<div class="iw-box"><div class="wdone">🎉 '+T({es:'Tres tablas armadas.',en:'Three tables built.'})+'</div></div>';
+        return;
+      }
+      var r = R(), grid = '', i, j, k;
+      grid += '<div class="tb-grid" style="grid-template-columns:repeat('+(r.cols.length+1)+',1fr)">';
+      grid += '<div class="tb-h"></div>';
+      for (j=0;j<r.cols.length;j++) grid += '<div class="tb-h">'+T(r.cols[j])+'</div>';
+      for (i=0;i<r.rows.length;i++){
+        grid += '<div class="tb-h">'+T(r.rows[i])+'</div>';
+        for (j=0;j<r.cols.length;j++){
+          k = i*r.cols.length + j;
+          grid += '<div class="tb-cell'+(st.sel[k]?' on':'')+(st.lock?' lock':'')+'" onclick="tbTap('+k+')">'+(st.sel[k]?'✓':'')+'</div>';
+        }
+      }
+      grid += '</div>';
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Predice y llena la tabla',en:'Predict and fill the table'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Tabla ',en:'Table '})+(st.r+1)+T({es:' de 3',en:' of 3'})+'</div>'+
+          '<div class="goalbar"><b>'+T(r.nm)+'</b></div>'+
+          '<div class="iw-instr">'+T({
+            es:'Primero ajusta tu predicción de cuántas parejas distintas salen. Luego toca cada casilla que se pueda armar; si te arrepientes, tócala otra vez para quitarla.',
+            en:'First set your prediction of how many different pairs come out. Then tap each box that can be formed; if you change your mind, tap it again to remove it.'
+          })+'</div>'+
+          '<div class="predrow">'+
+            '<span class="predlbl">'+T({es:'Creo que son',en:'I think there are'})+'</span>'+
+            '<button class="stepbtn" onclick="tbPred(-1)">−</button>'+
+            '<span class="stepval">'+st.pred+'</span>'+
+            '<button class="stepbtn" onclick="tbPred(1)">+</button>'+
+            '<span class="predlbl">'+T({es:'parejas',en:'pairs'})+'</span>'+
+          '</div>'+
+          grid+
+          '<div class="livelbl" id="tbLive"></div>'+
+          '<button class="rverify-btn" onclick="tbCheck()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="tbFb"></div>';
+      live();
+    }
+    function nextRound(){
+      st.r++;
+      if (st.r >= 3){ st.done = true; render(); return; }
+      reset(); render();
+    }
+    window.tbTap = function(k){
+      if (st.lock) return;
+      st.sel[k] = !st.sel[k];
+      var cells = wrap.querySelectorAll('.tb-cell');
+      if (cells[k]){ cells[k].classList.toggle('on', st.sel[k]); cells[k].innerHTML = st.sel[k] ? '✓' : ''; }
+      live();
+    };
+    window.tbPred = function(d){
+      if (st.lock) return;
+      st.pred = Math.max(1, Math.min(30, st.pred + d));
+      var sv = wrap.querySelector('.stepval');
+      if (sv) sv.textContent = st.pred;
+      live();
+    };
+    window.tbCheck = function(){
+      if (st.lock) return;
+      var r = R(), tot = total(), fb = document.getElementById('tbFb');
+      if (st.pred === tot && filled() === tot){
+        st.lock = true;
+        fb.innerHTML = '<span class="okmsg">🎉 '+T({
+          es:'Predicción y tabla coinciden: '+r.rows.length+' filas por '+r.cols.length+' columnas dan '+tot+' parejas.',
+          en:'Prediction and table agree: '+r.rows.length+' rows by '+r.cols.length+' columns give '+tot+' pairs.'
+        })+'</span>';
+        setTimeout(nextRound, 1500);
+        return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.lock = true;
+        var i;
+        for (i=0;i<st.sel.length;i++) st.sel[i] = true;
+        st.pred = tot;
+        render();
+        document.getElementById('tbFb').innerHTML = T({
+          es:'Mira la tabla llena: cada fila aporta una casilla por cada columna, así que '+r.rows.length+' × '+r.cols.length+' = '+tot+' parejas.',
+          en:'Look at the full table: each row adds one box per column, so '+r.rows.length+' × '+r.cols.length+' = '+tot+' pairs.'
+        });
+        setTimeout(nextRound, 2600);
+        return;
+      }
+      if (filled() < tot){
+        fb.textContent = T({
+          es:'Todavía hay casillas vacías: revisa si cada fila ya se cruzó con todas las columnas.',
+          en:'There are still empty boxes: check whether each row has been crossed with every column.'
+        });
+      } else if (st.pred < tot){
+        fb.textContent = T({
+          es:'Tu predicción se quedó corta: ya marcaste más casillas de las que predijiste. Súbela.',
+          en:'Your prediction fell short: you already marked more boxes than you predicted. Raise it.'
+        });
+      } else {
+        fb.textContent = T({
+          es:'Tu predicción se pasó: la tabla llena tiene menos casillas que ese número. Bájala.',
+          en:'Your prediction went over: the full table has fewer boxes than that number. Lower it.'
+        });
+      }
+    };
+    reset(); render();
+  })();
+
+  /* ---- PROBLEMA 1 ---- */
+  addProb(v1 === 0 ? {
+    title:{es:'La tabla de Renata', en:'Renata and her table'},
+    q:{es:'Renata tiene '+a1+' blusas de colores distintos y '+b1+' faldas distintas, y quiere saber cuántos atuendos diferentes puede armar tomando una blusa y una falda. ¿Cuántos atuendos distintos puede formar?',
+       en:'Renata has '+a1+' tops of different colors and '+b1+' different skirts, and wants to know how many different outfits she can put together taking one top and one skirt. How many different outfits can she form?'},
+    options: opt4(a1*b1, [a1+b1, a1*b1-b1, a1*b1+b1, 2*(a1+b1)]),
+    correct: String(a1*b1),
+    hint:{es:'Cada blusa ocupa una fila completa, y esa fila tiene una casilla por cada falda. Cuenta las casillas de toda la tabla.',
+          en:'Each top takes a whole row, and that row has one box per skirt. Count the boxes of the whole table.'},
+    exp:{es:'La tabla tiene '+a1+' filas y '+b1+' columnas, y cada casilla es un atuendo distinto: '+a1+' × '+b1+' = '+(a1*b1)+'.',
+         en:'The table has '+a1+' rows and '+b1+' columns, and each box is a different outfit: '+a1+' × '+b1+' = '+(a1*b1)+'.'},
+    showWork:true
+  } : {
+    title:{es:'La tabla de Renata', en:'Renata and her table'},
+    q:{es:'Renata acomodó sus '+a1+' blusas de colores distintos en las filas y sus '+b1+' faldas distintas en las columnas, y ya llenó la tabla completa de atuendos. Una de sus blusas es verde. ¿Cuántos de esos atuendos usan la blusa verde?',
+       en:'Renata placed her '+a1+' tops of different colors in the rows and her '+b1+' different skirts in the columns, and has already filled the complete table of outfits. One of her tops is green. How many of those outfits use the green top?'},
+    options: opt4(b1, [a1*b1, a1, a1+b1, b1+2]),
+    correct: String(b1),
+    hint:{es:'La blusa verde ocupa una sola fila de la tabla. Fíjate cuántas casillas tiene esa fila.',
+          en:'The green top takes just one row of the table. Look at how many boxes that row has.'},
+    exp:{es:'La blusa verde ocupa una sola fila y esa fila tiene una casilla por cada falda, así que el conteo de la fila es 1 × '+b1+' = '+b1+'.',
+         en:'The green top takes a single row and that row has one box per skirt, so the count of that row is 1 × '+b1+' = '+b1+'.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 2 ---- */
+  addProb(v2 === 0 ? {
+    title:{es:'La lista del puesto', en:'The stand list'},
+    q:{es:'En un puesto se arman tortas juntando un tipo de pan con un tipo de queso. Hay pan blanco y pan integral, y hay queso amarillo, panela y manchego. Iván anotó así las tortas que se pueden armar:'+
+         '<div class="qdata"><b>blanco con amarillo, blanco con panela, blanco con manchego, integral con amarillo, integral con panela</b></div>'+
+         '¿Qué le pasa a la lista que escribió Iván?',
+       en:'At a stand, sandwiches are built by joining one kind of bread with one kind of cheese. There is white bread and whole wheat bread, and there is yellow cheese, panela and manchego. Ivan wrote the sandwiches that can be built like this:'+
+         '<div class="qdata"><b>white with yellow, white with panela, white with manchego, whole wheat with yellow, whole wheat with panela</b></div>'+
+         'What is going on with the list Ivan wrote?'},
+    options:{
+      es:['Le falta una torta que sí se puede armar.','Repite una torta que ya había anotado.','Está completa y sin repetir.','Incluye una torta que no se puede armar.'],
+      en:['It is missing a sandwich that can be built.','It repeats a sandwich already written down.','It is complete with no repeats.','It includes a sandwich that cannot be built.']
+    },
+    correct:{es:'Le falta una torta que sí se puede armar.', en:'It is missing a sandwich that can be built.'},
+    hint:{es:'Acomoda los dos panes como filas y los tres quesos como columnas: cada casilla debe aparecer una vez en la lista.',
+          en:'Place the two breads as rows and the three cheeses as columns: every box must appear once in the list.'},
+    exp:{es:'Con dos panes y tres quesos la tabla tiene seis casillas, pero la lista solo trae cinco renglones: falta la torta de pan integral con queso manchego.',
+         en:'With two breads and three cheeses the table has six boxes, but the list only has five lines: the whole wheat with manchego sandwich is missing.'},
+    showWork:false
+  } : {
+    title:{es:'La lista del puesto', en:'The stand list'},
+    q:{es:'En un puesto se arman tortas juntando un tipo de pan con un tipo de queso. Hay pan blanco y pan integral, y hay queso amarillo, panela y manchego. Iván anotó así las tortas que se pueden armar:'+
+         '<div class="qdata"><b>blanco con amarillo, blanco con panela, blanco con manchego, integral con amarillo, integral con panela, integral con manchego, blanco con panela</b></div>'+
+         '¿Qué le pasa a la lista que escribió Iván?',
+       en:'At a stand, sandwiches are built by joining one kind of bread with one kind of cheese. There is white bread and whole wheat bread, and there is yellow cheese, panela and manchego. Ivan wrote the sandwiches that can be built like this:'+
+         '<div class="qdata"><b>white with yellow, white with panela, white with manchego, whole wheat with yellow, whole wheat with panela, whole wheat with manchego, white with panela</b></div>'+
+         'What is going on with the list Ivan wrote?'},
+    options:{
+      es:['Repite una torta que ya había anotado.','Le falta una torta que sí se puede armar.','Está completa y sin repetir.','Incluye una torta que no se puede armar.'],
+      en:['It repeats a sandwich already written down.','It is missing a sandwich that can be built.','It is complete with no repeats.','It includes a sandwich that cannot be built.']
+    },
+    correct:{es:'Repite una torta que ya había anotado.', en:'It repeats a sandwich already written down.'},
+    hint:{es:'Acomoda los dos panes como filas y los tres quesos como columnas: cada casilla debe aparecer una sola vez en la lista.',
+          en:'Place the two breads as rows and the three cheeses as columns: every box must appear only once in the list.'},
+    exp:{es:'La lista tiene siete renglones, pero las tortas distintas son seis: la de pan blanco con queso panela aparece dos veces.',
+         en:'The list has seven lines, but there are only six different sandwiches: white bread with panela appears twice.'},
+    showWork:false
+  });
+
+  /* ============================================================
+     IDEA 2
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'Cuando hay más de dos etapas', en:'When there are more than two stages'}),
+      '<p>'+T({
+        es:'Algunos conteos tienen tres momentos de decisión, no dos: primero la sopa, luego el guisado, luego el postre. Ahí una tabla plana ya no alcanza, porque cada pareja de las dos primeras etapas se vuelve a abrir con todas las opciones de la tercera.',
+        en:'Some counts have three decision moments, not two: first the soup, then the main dish, then the dessert. A flat table is no longer enough there, because each pair from the first two stages opens up again with every option of the third.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Conviene verlo como un camino: sales de una opción de la etapa 1, pasas por una de la etapa 2 y terminas en una de la etapa 3. Cada camino completo y distinto es un resultado distinto. Lo interesante es lo que pasa al mover una etapa: agregar una sola opción no agrega un solo camino, agrega un montón de golpe.',
+        en:'It helps to see it as a path: you leave from an option in stage 1, pass through one in stage 2 and end at one in stage 3. Each complete, different path is a different result. The interesting part is what happens when you move a stage: adding a single option does not add a single path, it adds a whole batch at once.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 2: máquina de caminos ---- */
+  (function(){
+    var wrap = widget('maquina');
+    var st = { r:0, a:2, b:2, c:1, tries:0, lock:false, done:false };
+    function R(){ return MQR[st.r]; }
+    function prod(){ return st.a*st.b*st.c; }
+    function paint(){
+      var cv = document.getElementById('mqCv'); if (!cv) return;
+      var f = fitCv(cv), ctx = f.ctx, w = f.w, h = f.h;
+      var ns = [st.a, st.b, st.c];
+      var xs = [w*0.16, w*0.5, w*0.84];
+      var pts = [], i, j, k, n, y;
+      for (i=0;i<3;i++){
+        n = ns[i]; pts.push([]);
+        for (j=0;j<n;j++){
+          y = h*0.14 + (h*0.66) * (n === 1 ? 0.5 : j/(n-1));
+          pts[i].push([xs[i], y]);
+        }
+      }
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = cssv('--border');
+      for (i=0;i<2;i++){
+        for (j=0;j<pts[i].length;j++){
+          for (k=0;k<pts[i+1].length;k++){
+            ctx.beginPath();
+            ctx.moveTo(pts[i][j][0], pts[i][j][1]);
+            ctx.lineTo(pts[i+1][k][0], pts[i+1][k][1]);
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.strokeStyle = cssv('--gold'); ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0][0], pts[0][0][1]);
+      ctx.lineTo(pts[1][0][0], pts[1][0][1]);
+      ctx.lineTo(pts[2][0][0], pts[2][0][1]);
+      ctx.stroke();
+      ctx.fillStyle = cssv('--green');
+      for (i=0;i<3;i++){
+        for (j=0;j<pts[i].length;j++){
+          ctx.beginPath(); ctx.arc(pts[i][j][0], pts[i][j][1], 7, 0, Math.PI*2); ctx.fill();
+        }
+      }
+      ctx.fillStyle = cssv('--text3');
+      ctx.font = '11px "IBM Plex Sans", sans-serif';
+      ctx.textAlign = 'center';
+      var labs = [T({es:'Etapa 1',en:'Stage 1'}), T({es:'Etapa 2',en:'Stage 2'}), T({es:'Etapa 3',en:'Stage 3'})];
+      for (i=0;i<3;i++) ctx.fillText(labs[i], xs[i], h-6);
+    }
+    function live(){
+      var e = document.getElementById('mqLive'); if (!e) return;
+      var t = R().t, p = prod(), tail;
+      if (p === t) tail = T({es:' · ¡justo en la meta!', en:' · right on target!'});
+      else if (p < t) tail = T({es:' · te faltan caminos para la meta', en:' · you are short of the target'});
+      else tail = T({es:' · te pasaste de la meta', en:' · you went over the target'});
+      e.innerHTML = T({es:'Caminos: ',en:'Paths: '})+'<b>'+st.a+' × '+st.b+' × '+st.c+' = '+p+'</b>'+
+                    T({es:' · meta: ',en:' · target: '})+'<b>'+t+'</b>'+tail;
+    }
+    function slider(key, lbl){
+      return '<div class="krow"><span class="klbl">'+lbl+'</span>'+
+             '<input type="range" min="1" max="5" step="1" value="'+st[key]+'" oninput="mqSet(\''+key+'\',this.value)">'+
+             '<span class="kval" id="mqv_'+key+'">'+st[key]+'</span></div>';
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML = '<div class="iw-tag">'+T({es:'Máquina de caminos',en:'Path machine'})+'</div>'+
+          '<div class="iw-box"><div class="wdone">🎉 '+T({es:'Tres metas alcanzadas.',en:'Three targets reached.'})+'</div></div>';
+        return;
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Máquina de caminos',en:'Path machine'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Meta ',en:'Target '})+(st.r+1)+T({es:' de 3',en:' of 3'})+'</div>'+
+          '<div class="goalbar">'+T({es:'Consigue exactamente ',en:'Get exactly '})+'<b>'+R().t+'</b>'+T({es:' caminos distintos.',en:' different paths.'})+'</div>'+
+          '<div class="iw-instr">'+T({
+            es:'Mueve cuántas opciones tiene cada etapa y observa cómo cambia el dibujo. Cada camino que va de la izquierda a la derecha es un resultado.',
+            en:'Move how many options each stage has and watch the drawing change. Each path running from left to right is one result.'
+          })+'</div>'+
+          '<canvas class="gcanvas" id="mqCv"></canvas>'+
+          slider('a', T({es:'Etapa 1',en:'Stage 1'}))+
+          slider('b', T({es:'Etapa 2',en:'Stage 2'}))+
+          slider('c', T({es:'Etapa 3',en:'Stage 3'}))+
+          '<div class="livelbl" id="mqLive"></div>'+
+          '<button class="rverify-btn" onclick="mqCheck()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="mqFb"></div>';
+      setTimeout(function(){ paint(); live(); }, 40);
+    }
+    function nextRound(){
+      st.r++;
+      if (st.r >= 3){ st.done = true; render(); return; }
+      st.a = 2; st.b = 2; st.c = 1; st.tries = 0; st.lock = false;
+      render();
+    }
+    window.mqSet = function(key, val){
+      if (st.lock) return;
+      st[key] = parseInt(val, 10);
+      var e = document.getElementById('mqv_'+key); if (e) e.textContent = st[key];
+      paint(); live();
+    };
+    window.mqCheck = function(){
+      if (st.lock) return;
+      var t = R().t, fb = document.getElementById('mqFb');
+      if (prod() === t){
+        st.lock = true;
+        fb.innerHTML = '<span class="okmsg">🎉 '+T({
+          es:'Exacto: '+st.a+' × '+st.b+' × '+st.c+' da los '+t+' caminos pedidos.',
+          en:'Exactly: '+st.a+' × '+st.b+' × '+st.c+' gives the '+t+' paths asked for.'
+        })+'</span>';
+        setTimeout(nextRound, 1600);
+        return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.lock = true;
+        var s = R();
+        st.a = s.a; st.b = s.b; st.c = s.c;
+        render();
+        setTimeout(function(){
+          var f2 = document.getElementById('mqFb');
+          if (f2) f2.innerHTML = T({
+            es:'Una manera de llegar: '+s.a+' opciones en la primera etapa, '+s.b+' en la segunda y '+s.c+' en la tercera. Cada opción nueva multiplica los caminos que ya había.',
+            en:'One way to get there: '+s.a+' options in the first stage, '+s.b+' in the second and '+s.c+' in the third. Each new option multiplies the paths that were already there.'
+          });
+        }, 90);
+        setTimeout(nextRound, 3000);
+        return;
+      }
+      fb.textContent = (prod() < t)
+        ? T({es:'Vas por debajo de la meta. Sube las opciones de alguna etapa y mira cuántos caminos aparecen de golpe.',
+             en:'You are below the target. Raise the options of some stage and watch how many paths appear at once.'})
+        : T({es:'Te pasaste de la meta. Baja las opciones de alguna etapa y mira cuántos caminos desaparecen de golpe.',
+             en:'You went over the target. Lower the options of some stage and watch how many paths vanish at once.'});
+    };
+    render();
+  })();
+
+  /* ---- PROBLEMA 3 ---- */
+  addProb({
+    title:{es:'La comida corrida', en:'The set meal'},
+    q:{es:'Una fonda ofrece comida corrida: se escoge una sopa, un guisado y un postre. Hoy hay '+a3+' sopas, '+b3+' guisados y '+c3+' postres. ¿Cuántas comidas distintas se pueden pedir?',
+       en:'A small restaurant offers a set meal: you pick one soup, one main dish and one dessert. Today there are '+a3+' soups, '+b3+' main dishes and '+c3+' desserts. How many different meals can be ordered?'},
+    options: opt4(ans3, [a3+b3+c3, a3*b3, b3*c3, ans3+c3]),
+    correct: String(ans3),
+    hint:{es:'Piensa en un camino de tres etapas: cada sopa se abre en todos los guisados, y cada una de esas parejas se vuelve a abrir en todos los postres.',
+          en:'Think of a three stage path: each soup opens into every main dish, and each of those pairs opens again into every dessert.'},
+    exp:{es:'Por cada sopa hay '+b3+' guisados, y cada una de esas parejas se abre en '+c3+' postres: '+a3+' × '+b3+' × '+c3+' = '+ans3+'.',
+         en:'For each soup there are '+b3+' main dishes, and each of those pairs opens into '+c3+' desserts: '+a3+' × '+b3+' × '+c3+' = '+ans3+'.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 4 ---- */
+  addProb({
+    title:{es:'El tramo que falta', en:'The missing stretch'},
+    q:{es:'Para ir del salón a la biblioteca hay que pasar por el patio. Del salón al patio hay '+a4+' rutas distintas, y del patio a la biblioteca hay otras cuantas. Contando todos los caminos completos del salón a la biblioteca salen '+t4+' caminos distintos. ¿Cuántas rutas hay del patio a la biblioteca?',
+       en:'To go from the classroom to the library you must pass through the yard. From the classroom to the yard there are '+a4+' different routes, and from the yard to the library there are some others. Counting all the complete paths from the classroom to the library gives '+t4+' different paths. How many routes are there from the yard to the library?'},
+    options: opt4(b4, [t4-a4, a4, b4+2, t4]),
+    correct: String(b4),
+    hint:{es:'Cada ruta del primer tramo se continúa con todas las del segundo, así que el total se reparte en partes iguales entre las rutas del primer tramo.',
+          en:'Each route of the first stretch continues with every route of the second, so the total splits evenly among the routes of the first stretch.'},
+    exp:{es:'Si '+a4+' rutas del primer tramo producen '+t4+' caminos completos, cada una aporta la misma cantidad: '+t4+' ÷ '+a4+' = '+b4+'.',
+         en:'If '+a4+' routes of the first stretch produce '+t4+' complete paths, each one contributes the same amount: '+t4+' ÷ '+a4+' = '+b4+'.'},
+    showWork:true
+  });
+
+  /* ============================================================
+     IDEA 3
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'La segunda vez, ¿queda la misma opción?', en:'The second time, is the same option still there?'}),
+      '<p>'+T({
+        es:'Hay conteos donde la opción que ya usaste sigue disponible para la siguiente etapa: si lanzas un dado y lo vuelves a lanzar, el 4 puede salir otra vez, porque el dado no se acuerda del tiro anterior. Ahí las dos etapas tienen exactamente las mismas opciones.',
+        en:'There are counts where the option you already used is still available for the next stage: if you roll a die and roll it again, the 4 can come up again, because the die does not remember the previous roll. There both stages have exactly the same options.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Hay otros donde la opción se gasta: el corredor que se llevó el primer lugar ya no puede llevarse el segundo, y la silla ocupada ya no recibe a otro amigo. Ahí la segunda etapa tiene una opción menos que la primera. Antes de contar conviene preguntarse siempre si la opción regresa o si se queda fuera, porque el resultado cambia.',
+        en:'There are others where the option is used up: the runner who took first place can no longer take second, and an occupied chair takes no other friend. There the second stage has one option fewer than the first. Before counting it is always worth asking whether the option comes back or stays out, because the result changes.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 3: clasifica la situación ---- */
+  (function(){
+    var wrap = widget('clasifica');
+    var BINS = { es:['Se puede repetir','No se puede repetir'], en:['Can repeat','Cannot repeat'] };
+    var st = { i:0, tries:0, correct:0, done:false };
+    function render(){
+      if (st.done){
+        wrap.innerHTML = '<div class="iw-tag">'+T({es:'Clasifica la situación',en:'Sort the situation'})+'</div>'+
+          '<div class="iw-box"><div class="wdone">🎉 '+T({es:'Tarjetas revisadas: ',en:'Cards reviewed: '})+st.correct+' / '+CLI.length+'</div></div>';
+        return;
+      }
+      var it = CLI[st.i];
+      var bins = T(BINS).map(function(b, bi){
+        return '<button class="cls-bin" onclick="clsPick('+bi+')">'+b+'</button>';
+      }).join('');
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Clasifica la situación',en:'Sort the situation'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+(st.i+1)+' / '+CLI.length+'</div>'+
+          '<div class="iw-instr">'+T({
+            es:'Lee la situación y decide si la opción que se usa en la primera etapa puede volver a aparecer en la segunda.',
+            en:'Read the situation and decide whether the option used in the first stage can show up again in the second.'
+          })+'</div>'+
+          '<div class="cls-card">'+T(it)+'</div>'+
+          '<div class="cls-bins">'+bins+'</div>'+
+          '<div class="rfb" id="clsFb"></div>';
+    }
+    function advance(){
+      st.i++; st.tries = 0;
+      if (st.i >= CLI.length) st.done = true;
+      render();
+    }
+    window.clsPick = function(bi){
+      var it = CLI[st.i], fb = document.getElementById('clsFb');
+      if (bi === it.bin){
+        st.correct++;
+        fb.innerHTML = '<span class="okmsg">✓ '+T({es:'Así es.',en:'That is it.'})+'</span>';
+        setTimeout(advance, 800);
+        return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        fb.innerHTML = T({
+          es:'Aquí la respuesta era <b>'+T(BINS)[it.bin]+'</b>. '+(it.bin === 0
+              ? 'La primera elección no quita nada para la segunda.'
+              : 'Lo que se usó en la primera etapa ya no está disponible para la segunda.'),
+          en:'Here the answer was <b>'+T(BINS)[it.bin]+'</b>. '+(it.bin === 0
+              ? 'The first choice takes nothing away from the second.'
+              : 'What was used in the first stage is no longer available for the second.')
+        });
+        setTimeout(advance, 2200);
+        return;
+      }
+      fb.textContent = T({
+        es:'Todavía no. Imagina que ya hiciste la primera elección: ¿esa misma opción sigue sobre la mesa para la segunda?',
+        en:'Not yet. Imagine you already made the first choice: is that same option still on the table for the second one?'
+      });
+    };
+    render();
+  })();
+
+  /* ---- PROBLEMA 5 ---- */
+  addProb(v5 === 0 ? {
+    title:{es:'Claves de dos letras', en:'Two letter codes'},
+    q:{es:'Una casilla de lockers usa claves de dos letras tomadas de '+T(LT5)+'. La misma letra se puede usar en las dos casillas de la clave. ¿Cuántas claves distintas se pueden formar?',
+       en:'A locker uses two letter codes taken from '+T(LT5)+'. The same letter may be used in both slots of the code. How many different codes can be formed?'},
+    options: opt4(ans5, [L5*(L5-1), 2*L5, L5+L5+1, ans5+1]),
+    correct: String(ans5),
+    hint:{es:'Cuenta las opciones de la primera casilla y las de la segunda por separado; como se puede repetir, la segunda tiene las mismas que la primera.',
+          en:'Count the options of the first slot and of the second one separately; since repeating is allowed, the second has the same ones as the first.'},
+    exp:{es:'La primera casilla admite '+L5+' letras y la segunda otra vez '+L5+', porque la letra puede repetirse: '+L5+' × '+L5+' = '+ans5+'.',
+         en:'The first slot takes '+L5+' letters and the second one takes '+L5+' again, because the letter may repeat: '+L5+' × '+L5+' = '+ans5+'.'},
+    showWork:true
+  } : {
+    title:{es:'Claves de dos letras', en:'Two letter codes'},
+    q:{es:'Una casilla de lockers usa claves de dos letras tomadas de '+T(LT5)+'. Las dos letras de la clave deben ser distintas. ¿Cuántas claves distintas se pueden formar?',
+       en:'A locker uses two letter codes taken from '+T(LT5)+'. The two letters of the code must be different. How many different codes can be formed?'},
+    options: opt4(ans5, [L5*L5, 2*L5, ans5-1, L5+2]),
+    correct: String(ans5),
+    hint:{es:'Cuenta primero las opciones de la casilla izquierda; para la derecha, quita la letra que ya usaste.',
+          en:'First count the options for the left slot; for the right one, remove the letter you already used.'},
+    exp:{es:'La primera casilla admite '+L5+' letras y, usada una, para la segunda quedan '+(L5-1)+': '+L5+' × '+(L5-1)+' = '+ans5+'.',
+         en:'The first slot takes '+L5+' letters and, once one is used, '+(L5-1)+' remain for the second: '+L5+' × '+(L5-1)+' = '+ans5+'.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 6 ---- */
+  addProb(v6 === 0 ? {
+    title:{es:'Se gasta o regresa', en:'Used up or back again'},
+    q:{es:'¿En cuál de estas situaciones una misma opción ya NO puede volver a usarse en la segunda etapa?',
+       en:'In which of these situations can the same option NOT be used again in the second stage?'},
+    options:{
+      es:['Elegir quién gana el primer lugar y quién gana el segundo lugar de una carrera.',
+          'Lanzar un dado, anotar el número y volver a lanzarlo.',
+          'Girar una ruleta de colores, anotar el color y girarla otra vez.',
+          'Escoger la letra de la primera casilla y la de la segunda casilla de una clave que admite letras repetidas.'],
+      en:['Choosing who wins first place and who wins second place in a race.',
+          'Rolling a die, writing the number and rolling it again.',
+          'Spinning a color wheel, writing the color and spinning it again.',
+          'Choosing the letter of the first slot and of the second slot of a code that allows repeated letters.']
+    },
+    correct:{es:'Elegir quién gana el primer lugar y quién gana el segundo lugar de una carrera.',
+             en:'Choosing who wins first place and who wins second place in a race.'},
+    hint:{es:'Pregúntate en cada caso si lo que se usó en la primera etapa sigue disponible para la segunda o si quedó ocupado.',
+          en:'Ask yourself in each case whether what was used in the first stage is still available for the second or is already taken.'},
+    exp:{es:'El corredor que se llevó el primer lugar queda fuera de la disputa por el segundo, así que la segunda etapa tiene una opción menos. En los otros casos el dado, la ruleta y las letras siguen completos para la segunda etapa.',
+         en:'The runner who took first place is out of the running for second, so the second stage has one option fewer. In the other cases the die, the wheel and the letters are still complete for the second stage.'},
+    showWork:false
+  } : {
+    title:{es:'Se gasta o regresa', en:'Used up or back again'},
+    q:{es:'¿En cuál de estas situaciones una misma opción SÍ puede volver a aparecer en la segunda etapa?',
+       en:'In which of these situations CAN the same option show up again in the second stage?'},
+    options:{
+      es:['Sacar una canica de una bolsa, regresarla a la bolsa y sacar otra vez.',
+          'Elegir al capitán y al subcapitán de un equipo, que deben ser personas distintas.',
+          'Repartir dos premios distintos entre dos ganadores distintos.',
+          'Elegir quién gana el primer lugar y quién gana el segundo lugar de una carrera.'],
+      en:['Drawing a marble from a bag, putting it back and drawing again.',
+          'Choosing the captain and the vice captain of a team, who must be different people.',
+          'Handing two different prizes to two different winners.',
+          'Choosing who wins first place and who wins second place in a race.']
+    },
+    correct:{es:'Sacar una canica de una bolsa, regresarla a la bolsa y sacar otra vez.',
+             en:'Drawing a marble from a bag, putting it back and drawing again.'},
+    hint:{es:'Pregúntate en cada caso si lo que se usó en la primera etapa sigue disponible para la segunda o si quedó ocupado.',
+          en:'Ask yourself in each case whether what was used in the first stage is still available for the second or is already taken.'},
+    exp:{es:'Al regresar la canica, la bolsa queda igual que al principio y la segunda extracción tiene las mismas opciones que la primera. En los otros casos la persona o el premio ya se ocupó y no vuelve a estar disponible.',
+         en:'Putting the marble back leaves the bag just as it started, and the second draw has the same options as the first. In the other cases the person or the prize is already taken and is not available again.'},
+    showWork:false
+  });
+
+  /* ============================================================
+     IDEA 4
+     ============================================================ */
+  sec(T({es:'Idea 4', en:'Idea 4'}),
+      T({es:'Contar para decidir qué es más probable', en:'Counting to decide what is more likely'}),
+      '<p>'+T({
+        es:'Cuando ya sabes cuántos resultados posibles tiene un experimento, comparar eventos deja de ser cuestión de opinión: basta contar cuántos de esos resultados le sirven a cada evento. Entre dos eventos del mismo experimento, el que tiene más resultados a su favor es el más probable.',
+        en:'Once you know how many possible results an experiment has, comparing events stops being a matter of opinion: you just count how many of those results work for each event. Between two events of the same experiment, the one with more results in its favor is the more likely one.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Por eso el conteo y la probabilidad viajan juntos: primero se arma la lista completa de resultados posibles, y luego se cuenta cuántos cumplen la condición del evento. Un evento sin resultados a su favor es imposible, y uno que se lleva todos los resultados es seguro.',
+        en:'That is why counting and probability travel together: first you build the complete list of possible results, then you count how many meet the condition of the event. An event with no results in its favor is impossible, and one that takes every result is certain.'
+      })+'</p>');
+
+  /* ---- PROBLEMA 7 ---- */
+  addProb(v7 === 0 ? {
+    title:{es:'Dos giros de la ruleta', en:'Two spins of the wheel'},
+    q:{es:'Una ruleta está partida en '+C7+' partes iguales, cada una de un color distinto. Se gira dos veces y se anota el color de cada giro, en orden. ¿En cuántos de los resultados posibles los dos colores anotados son distintos?',
+       en:'A wheel is split into '+C7+' equal parts, each one a different color. It is spun twice and the color of each spin is written down, in order. In how many of the possible results are the two colors written down different?'},
+    options: opt4(ans7, [C7*C7, C7, C7+C7, C7*C7-1]),
+    correct: String(ans7),
+    hint:{es:'Cuenta primero todos los resultados posibles de los dos giros; luego quita los que repiten color, que son uno por cada color.',
+          en:'First count all the possible results of the two spins; then remove the ones that repeat a color, which are one per color.'},
+    exp:{es:'Los resultados posibles son '+C7+' × '+C7+' = '+(C7*C7)+'. En '+C7+' de ellos el segundo giro cae en el mismo color que el primero, así que los de colores distintos son '+(C7*C7)+' − '+C7+' = '+ans7+'.',
+         en:'The possible results are '+C7+' × '+C7+' = '+(C7*C7)+'. In '+C7+' of them the second spin lands on the same color as the first, so the ones with different colors are '+(C7*C7)+' − '+C7+' = '+ans7+'.'},
+    showWork:true
+  } : {
+    title:{es:'Dos giros de la ruleta', en:'Two spins of the wheel'},
+    q:{es:'Una ruleta está partida en '+C7+' partes iguales, cada una de un color distinto. Se gira dos veces y se anota el color de cada giro, en orden. ¿En cuántos de los resultados posibles los dos giros dan el mismo color?',
+       en:'A wheel is split into '+C7+' equal parts, each one a different color. It is spun twice and the color of each spin is written down, in order. In how many of the possible results do the two spins give the same color?'},
+    options: opt4(ans7, [C7*C7, C7*(C7-1), C7+C7, C7*C7-1]),
+    correct: String(ans7),
+    hint:{es:'Los dos giros coinciden cuando el segundo cae justo donde cayó el primero: hay un caso así por cada color.',
+          en:'The two spins match when the second lands exactly where the first did: there is one such case per color.'},
+    exp:{es:'Los resultados posibles son '+C7+' × '+C7+' = '+(C7*C7)+'. Coinciden solo cuando el segundo giro repite el color del primero, y eso ocurre una vez por cada color: '+C7+' × 1 = '+ans7+'.',
+         en:'The possible results are '+C7+' × '+C7+' = '+(C7*C7)+'. They match only when the second spin repeats the color of the first, and that happens once per color: '+C7+' × 1 = '+ans7+'.'},
+    showWork:true
+  });
+
+  /* ---- MANIPULATIVO 4: cuaderno de conteo ---- */
+  (function(){
+    var wrap = widget('reflect');
+    var PROMPTS = [
+      { es:'Inventa una situación de tu escuela que se cuente con una tabla de doble entrada, dibuja la tabla y escribe cuántas casillas tiene y por qué.',
+        en:'Invent a situation from your school that can be counted with a double entry table, sketch the table and write how many boxes it has and why.' },
+      { es:'Explica con tus palabras, y con un dibujo si te ayuda, por qué agregar una opción a una etapa no agrega un solo camino sino varios.',
+        en:'Explain in your own words, with a sketch if it helps, why adding one option to a stage does not add a single path but several.' },
+      { es:'Inventa dos situaciones parecidas, una donde la opción se pueda repetir y otra donde no, y escribe en qué cambia el conteo.',
+        en:'Invent two similar situations, one where the option can repeat and one where it cannot, and write what changes in the count.' }
+    ];
+    var pk = PROMPTS[Math.floor(rng()*PROMPTS.length)];
+    wrap.innerHTML =
+      '<div class="iw-tag">'+T({es:'Cuaderno de conteo', en:'Counting notebook'})+'</div>'+
+      '<div class="iw-box">'+
+        '<div class="iw-instr iw-sub">'+T({es:'Aquí no hay un solo camino bueno: escribe o dibuja lo que se te ocurra.', en:'There is no single good path here: write or sketch whatever comes to mind.'})+'</div>'+
+        '<div class="reflect-prompt">'+T(pk)+'</div>'+
+        '<div class="wtabs">'+
+          '<button class="wtab active" onclick="rfTab(\'type\',this)">'+t('tab-type')+'</button>'+
+          '<button class="wtab" onclick="rfTab(\'draw\',this)">'+t('tab-draw')+'</button>'+
+        '</div>'+
+        '<div class="wpanel active" id="rf_type"><textarea class="wtextarea" id="rfTa" placeholder="'+t('ph-work')+'"></textarea></div>'+
+        '<div class="wpanel" id="rf_draw">'+
+          '<div class="cvwrap">'+
+            '<canvas class="dcanvas" id="rfCv"></canvas>'+
+            '<div class="ctoolbar">'+
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>'+
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>'+
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>'+
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>'+
+              '<div class="cdot" data-color="#1a1a16" style="background:#1a1a16"></div>'+
+              '<div class="cdot" data-color="#8b2500" style="background:#8b2500"></div>'+
+              '<div class="cdot" data-color="#1d4e89" style="background:#1d4e89"></div>'+
+              '<button class="clrbtn">'+t('btn-clear')+'</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<button class="rverify-btn" onclick="rfSave()">'+T({es:'Guardar en el cuaderno', en:'Save to the notebook'})+'</button>'+
+        '<div class="rfb" id="rfFb"></div>'+
+      '</div>';
+    window.rfTab = function(which, btn){
+      ['type','draw'].forEach(function(k){
+        var p = document.getElementById('rf_'+k);
+        if (p) p.classList.toggle('active', k === which);
+      });
+      wrap.querySelectorAll('.wtab').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      if (which === 'draw') setTimeout(function(){ var c = document.getElementById('rfCv'); if (c) initCanvas(c); }, 60);
+    };
+    window.rfSave = function(){
+      var f = document.getElementById('rfFb');
+      if (f) f.innerHTML = '<span class="okmsg">'+T({
+        es:'Guardado. Esa idea es tuya y sirve para amarrar lo que ya viste.',
+        en:'Saved. That idea is yours and it helps tie together what you have already seen.'
+      })+'</span>';
+    };
+  })();
+
+  /* ---- PROBLEMA 8 ---- */
+  addProb(v8 === 0 ? {
+    title:{es:'Moneda y ruleta', en:'Coin and wheel'},
+    q:{es:'Se lanza una moneda y se gira una ruleta partida en '+k8+' partes de colores distintos. Se anota la cara de la moneda y el color de la ruleta. ¿Cuántos resultados distintos puede tener este experimento?',
+       en:'A coin is tossed and a wheel split into '+k8+' parts of different colors is spun. The face of the coin and the color of the wheel are written down. How many different results can this experiment have?'},
+    options: opt4(ans8, [k8+2, k8, ans8+2, 4*k8]),
+    correct: String(ans8),
+    hint:{es:'La moneda aporta dos caras y cada una se junta con cada color de la ruleta.',
+          en:'The coin contributes two faces and each one joins with every color of the wheel.'},
+    exp:{es:'La moneda da 2 resultados y la ruleta da '+k8+'. Cada cara se junta con cada color: 2 × '+k8+' = '+ans8+'.',
+         en:'The coin gives 2 results and the wheel gives '+k8+'. Each face joins with each color: 2 × '+k8+' = '+ans8+'.'},
+    showWork:true
+  } : {
+    title:{es:'Dado y ruleta', en:'Die and wheel'},
+    q:{es:'Se lanza un dado común y se gira una ruleta partida en '+k8+' partes de colores distintos. Se anota el número del dado y el color de la ruleta. ¿Cuántos resultados distintos puede tener este experimento?',
+       en:'A common die is rolled and a wheel split into '+k8+' parts of different colors is spun. The number of the die and the color of the wheel are written down. How many different results can this experiment have?'},
+    options: opt4(ans8, [6+k8, ans8-k8, ans8+k8, 6*6]),
+    correct: String(ans8),
+    hint:{es:'El dado aporta seis caras y cada una se junta con cada color de la ruleta.',
+          en:'The die contributes six faces and each one joins with every color of the wheel.'},
+    exp:{es:'El dado da 6 resultados y la ruleta da '+k8+'. Cada número se junta con cada color: 6 × '+k8+' = '+ans8+'.',
+         en:'The die gives 6 results and the wheel gives '+k8+'. Each number joins with each color: 6 × '+k8+' = '+ans8+'.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 9 ---- */
+  addProb(v9 === 0 ? {
+    title:{es:'El conteo de Rosa', en:'The count Rosa made'},
+    q:{es:'Rosa quiso contar los resultados de girar una ruleta de '+g9+' colores y luego lanzar una moneda. Anotó que hay '+(g9+2)+' resultados posibles, y su cuenta no es la correcta. ¿Cuál fue su error?',
+       en:'Rosa tried to count the results of spinning a wheel with '+g9+' colors and then tossing a coin. She wrote that there are '+(g9+2)+' possible results, and her count is not the right one. What was her mistake?'},
+    options:{
+      es:['Juntó en un solo montón las opciones de cada etapa, en lugar de acompañar cada color con cada cara.',
+          'Olvidó que la moneda tiene dos caras distintas.',
+          'Contó dos veces uno de los colores de la ruleta.',
+          'Supuso que la ruleta tiene más colores de los que realmente tiene.'],
+      en:['She put the options of each stage into a single pile, instead of pairing each color with each face.',
+          'She forgot that the coin has two different faces.',
+          'She counted one of the colors of the wheel twice.',
+          'She assumed the wheel has more colors than it really has.']
+    },
+    correct:{es:'Juntó en un solo montón las opciones de cada etapa, en lugar de acompañar cada color con cada cara.',
+             en:'She put the options of each stage into a single pile, instead of pairing each color with each face.'},
+    hint:{es:'Arma la tabla: los colores en las filas y las dos caras en las columnas, y cuenta las casillas que aparecen.',
+          en:'Build the table: the colors in the rows and the two faces in the columns, and count the boxes that appear.'},
+    exp:{es:'Rosa usó las opciones de las dos etapas por separado. La tabla de esta situación tiene '+g9+' filas y 2 columnas, y cada casilla es un resultado, así que hay '+(2*g9)+' resultados y no '+(g9+2)+'.',
+         en:'Rosa used the options of the two stages separately. The table of this situation has '+g9+' rows and 2 columns, and each box is a result, so there are '+(2*g9)+' results and not '+(g9+2)+'.'},
+    showWork:false
+  } : {
+    title:{es:'El conteo de Tomás', en:'The count Tomas made'},
+    q:{es:'Para contar cuántas parejas de baile se pueden formar con '+(n9+1)+' niñas y '+n9+' niños, tomando una niña y un niño, Tomás anotó '+(2*n9+1)+' parejas, y su cuenta no es la correcta. ¿Cuál fue su error?',
+       en:'To count how many dance pairs can be formed with '+(n9+1)+' girls and '+n9+' boys, taking one girl and one boy, Tomas wrote down '+(2*n9+1)+' pairs, and his count is not the right one. What was his mistake?'},
+    options:{
+      es:['Juntó en un solo montón a los dos grupos, en lugar de acompañar a cada niña con cada niño.',
+          'Dejó fuera del conteo a una de las niñas.',
+          'Contó dos veces a uno de los niños.',
+          'Formó parejas de dos niñas, que no valen en este conteo.'],
+      en:['He put the two groups into a single pile, instead of pairing each girl with each boy.',
+          'He left one of the girls out of the count.',
+          'He counted one of the boys twice.',
+          'He formed pairs of two girls, which do not count here.']
+    },
+    correct:{es:'Juntó en un solo montón a los dos grupos, en lugar de acompañar a cada niña con cada niño.',
+             en:'He put the two groups into a single pile, instead of pairing each girl with each boy.'},
+    hint:{es:'Arma la tabla: las niñas en las filas y los niños en las columnas, y cuenta las casillas que aparecen.',
+          en:'Build the table: the girls in the rows and the boys in the columns, and count the boxes that appear.'},
+    exp:{es:'Tomás usó los dos grupos por separado. La tabla tiene '+(n9+1)+' filas y '+n9+' columnas, y cada casilla es una pareja distinta, así que hay '+(n9*(n9+1))+' parejas y no '+(2*n9+1)+'.',
+         en:'Tomas used the two groups separately. The table has '+(n9+1)+' rows and '+n9+' columns, and each box is a different pair, so there are '+(n9*(n9+1))+' pairs and not '+(2*n9+1)+'.'},
+    showWork:false
+  });
+
+  /* ---- PROBLEMA 10 ---- */
+  addProb(v10 === 0 ? {
+    title:{es:'Primero y segundo', en:'First and second'},
+    q:{es:'En una carrera de la escuela corren '+N10+' niños y no hay empates. ¿De cuántas maneras distintas pueden quedar el primer lugar y el segundo lugar?',
+       en:'In a school race '+N10+' children run and there are no ties. In how many different ways can first place and second place turn out?'},
+    options: opt4(ans10, [N10*N10, ans10/2, N10+N10, N10-1]),
+    correct: String(ans10),
+    hint:{es:'Piensa en dos etapas: primero se decide quién gana, y para el segundo lugar ya no está disponible quien ganó.',
+          en:'Think of two stages: first you decide who wins, and for second place the winner is no longer available.'},
+    exp:{es:'Para el primer lugar hay '+N10+' corredores; ocupado ese lugar, para el segundo quedan '+(N10-1)+': '+N10+' × '+(N10-1)+' = '+ans10+'.',
+         en:'For first place there are '+N10+' runners; with that place taken, '+(N10-1)+' remain for second: '+N10+' × '+(N10-1)+' = '+ans10+'.'},
+    showWork:true
+  } : {
+    title:{es:'El podio completo', en:'The full podium'},
+    q:{es:'En una carrera de la escuela corren '+M10+' niños y no hay empates. ¿De cuántas maneras distintas puede quedar el podio con el primer, el segundo y el tercer lugar?',
+       en:'In a school race '+M10+' children run and there are no ties. In how many different ways can the podium of first, second and third place turn out?'},
+    options: opt4(ans10, [M10*M10*M10, M10*(M10-1), ans10/2, M10+M10+M10]),
+    correct: String(ans10),
+    hint:{es:'Son tres etapas seguidas, y en cada una queda un corredor menos disponible que en la anterior.',
+          en:'There are three stages in a row, and in each one there is one runner fewer available than in the previous one.'},
+    exp:{es:'Para el primer lugar hay '+M10+' corredores, para el segundo quedan '+(M10-1)+' y para el tercero '+(M10-2)+': '+M10+' × '+(M10-1)+' × '+(M10-2)+' = '+ans10+'.',
+         en:'For first place there are '+M10+' runners, for second '+(M10-1)+' remain and for third '+(M10-2)+': '+M10+' × '+(M10-1)+' × '+(M10-2)+' = '+ans10+'.'},
+    showWork:true
+  });
+}
+</script>
+</body>
+</html>
