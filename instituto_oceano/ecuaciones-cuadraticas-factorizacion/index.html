@@ -247,7 +247,6 @@ img.pp{max-width:100%;border-radius:6px;margin-top:.4rem;display:none}
       <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
     </div>
     <button class="tbtn" onclick="toggleTheme()" title="Tema">🌙</button>
-    <button class="tbtn" onclick="showResults()" id="h-finish">✔ Terminar</button>
   </div>
   <div class="progbar"><div class="progfill" id="progFill"></div></div>
   <div class="lbody" id="lessonBody"></div>
@@ -275,6 +274,45 @@ var SCHOOL = {
   guideTitle:{ es:'', en:'' }, courseName:{ es:'', en:'' }, filePrefix:'guia'
 };
 
+/* ── Drawing palette, derived from the school's colours ──────────────────
+   slots 1-2 : school primary + accent
+   slots 3-4 : the two of black/red/blue least similar to the school colours
+   ───────────────────────────────────────────────────────────────────── */
+var DRAW_PALETTE = (function () {
+  function hex2rgb(h) {
+    h = String(h).replace('#', '');
+    if (h.length === 3) { h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2]; }
+    return [parseInt(h.substr(0,2),16), parseInt(h.substr(2,2),16), parseInt(h.substr(4,2),16)];
+  }
+  function dist(a, b) {
+    var dr = a[0]-b[0], dg = a[1]-b[1], db = a[2]-b[2];
+    return Math.sqrt(2*dr*dr + 4*dg*dg + 3*db*db);
+  }
+  var COMMON = ['#1a1a16', '#c0392b', '#1d4e89'];   /* black, red, blue */
+  var schoolRGB;
+  try {
+    schoolRGB = [hex2rgb(SCHOOL.primary), hex2rgb(SCHOOL.accent)];
+  } catch (e) {
+    return [SCHOOL.primary, SCHOOL.accent, '#1a1a16', '#1d4e89'];
+  }
+  var scored = COMMON.map(function (c, idx) {
+    var rgb = hex2rgb(c);
+    var nearest = Math.min(dist(rgb, schoolRGB[0]), dist(rgb, schoolRGB[1]));
+    return { c: c, idx: idx, d: nearest };
+  });
+  scored.sort(function (a, b) { return b.d - a.d; });      /* farthest first */
+  var keep = scored.slice(0, 2);
+  keep.sort(function (a, b) { return a.idx - b.idx; });    /* restore visual order */
+  return [SCHOOL.primary, SCHOOL.accent, keep[0].c, keep[1].c];
+})();
+
+function drawDotsHTML() {
+  return DRAW_PALETTE.map(function (c, i) {
+    return '<div class="cdot' + (i === 0 ? ' sel' : '') + '" data-color="' + c +
+           '" style="background:' + c + '"></div>';
+  }).join('');
+}
+
 /* ═══ LANGUAGE ═══ */
 var LANG = 'es';
 var TX = {
@@ -285,7 +323,6 @@ var TX = {
   btnStart:  {es:'Comenzar →', en:'Start →'},
   hTitle:    {es:'Factorización', en:'Factoring'},
   hChip:     {es:'Mate 3°', en:'Math 3rd'},
-  hFinish:   {es:'✔ Terminar', en:'✔ Finish'},
   rbTitle:   {es:'📂 Sesión guardada encontrada', en:'📂 Saved session found'},
   rbMsg:     {es:'¿Deseas continuar donde la dejaste?', en:'Do you want to continue where you left off?'},
   rbYes:     {es:'Retomar sesión', en:'Resume session'},
@@ -302,8 +339,8 @@ function setLang(l,skipBuild){
   if(!skipBuild)buildLessonContent();
 }
 function applyUIStrings(){
-  var ids=['wtitle','wcourse','h-title','h-chip','h-finish','rb-title','rb-msg','rb-yes','rb-no','res-label','dlBtn','lbl-name','lbl-group','btn-start'];
-  var keys=['wtitle','wcourse','hTitle','hChip','hFinish','rbTitle','rbMsg','rbYes','rbNo','resLabel','dlBtn','lblName','lblGroup','btnStart'];
+  var ids=['wtitle','wcourse','h-title','h-chip','rb-title','rb-msg','rb-yes','rb-no','res-label','dlBtn','lbl-name','lbl-group','btn-start'];
+  var keys=['wtitle','wcourse','hTitle','hChip','rbTitle','rbMsg','rbYes','rbNo','resLabel','dlBtn','lblName','lblGroup','btnStart'];
   ids.forEach(function(id,i){var el=document.getElementById(id);if(el&&TX[keys[i]])el.innerHTML=TX[keys[i]][LANG];});
 }
 
@@ -543,6 +580,9 @@ function loadPhoto(idx,input){var f=input.files[0];if(!f)return;var r=new FileRe
 function updateProgress(){
   var done=problems.filter(function(p){return p.done;}).length;
   document.getElementById('progFill').style.width=(done/10*100)+'%';
+  /* auto-results */
+  if(done===problems.length&&problems.length>0){setTimeout(showResults,700);}
+
 }
 
 /* Sections reveal */
