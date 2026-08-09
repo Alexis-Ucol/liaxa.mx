@@ -1,0 +1,2611 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Localización, Distribución y Temporalidad</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Localización, Distribución y Temporalidad</div>
+    <div class="wcourse" id="wcourse-el">Geografía · 1° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Localización, Distribución y Temporalidad</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c3c9c', primaryDark:'#041d4f', primaryBg:'#e5ebf8',
+  accent:'#9cb4e4', accentBg:'#e3e9f7',
+  darkPrimary:'#3369d6', darkPrimaryDark:'#6595f5', darkPrimaryBg:'#061940',
+  darkAccent:'#678cd8', darkAccentBg:'#0d1525',
+  pBR:12, pBG:60, pBB:156, pAR:156, pAG:180, pAB:228,
+  logoLeftB64:'data:image/png;base64,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UMe6BgvmeSuSZsrUj076GbL5sTvDWctkF1k0VJcaqC03YtQpSQF2V5hpZ5hgOE5xvpbifKnIaEZmsNxqD2J3SWMeFUV6yoqutHCX+syZkvvVZQYaKk1crTT9pCPE6GQAqz1AIHSl1L9WrSDfrKa2XCrtMvezZbrmliqzRDqbbrHPLNz8VnVQEQRBEG4ui99+CIIgCMJ1EEFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByJn/C/h7+n5PWdtHAAAAAElFTkSuQmCC', logoRightB64:'', logoAlt:'Pan American',
+  guideTitle:{ es:'Localización, Distribución y Temporalidad', en:'Location, Distribution and Temporality' },
+  courseName:{ es:'Geografía · 1° de Secundaria', en:'Geography · Grade 1 of Secondary' }, filePrefix:'geo1_t02_g02'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'geo1_t02_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Localización, Distribución y Temporalidad','wcourse':'Geografía · 1° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Location, Distribution and Temporality','wcourse':'Geography · Grade 1 of Secondary',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'geo1_t02_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'geo1_t02_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'geo1_t02_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'geo1_t02_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
+  }
+
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('geo1_t02_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+/* ══════════════════════════════════════════════════════════════════════════
+   GUÍA :: Categorías de análisis espacial · Localización, Distribución y
+   Temporalidad. Contenido bilingüe, variantes por semilla (Rule 4),
+   manipulativos propios del tema junto a cada concepto.
+   ══════════════════════════════════════════════════════════════════════════ */
+function L(o){ return (o && o[LANG] !== undefined) ? o[LANG] : (o ? o.es : ''); }
+function ri(rng, a, b){ return a + Math.floor(rng() * (b - a + 1)); }
+function pk(rng, a){ return a[Math.floor(rng() * a.length)]; }
+function uniq(a){ var m = {}, i; for (i = 0; i < a.length; i++){ var k = '' + a[i]; if (m[k]) return false; m[k] = 1; } return true; }
+function gen(rng, mk){ var i, d; for (i = 0; i < 90; i++){ d = mk(rng); if (d && uniq(d.vals)) return d; } return d; }
+function nums(a){ return [String(a[0]), String(a[1]), String(a[2]), String(a[3])]; }
+function mil(n){ var s = String(n), o = '', c = 0, i; for (i = s.length - 1; i >= 0; i--){ o = s.charAt(i) + o; c++; if (c % 3 === 0 && i > 0) o = ' ' + o; } return o; }
+
+function say(host, cls, msg){
+  var e = host.querySelector('.gw-fb');
+  if (!e) return;
+  e.className = 'gw-fb' + (cls ? ' ' + cls : '');
+  e.innerHTML = msg;
+}
+
+function rcard(name, form, note){
+  return '<div class="rcard"><div class="rname">' + name + '</div><div class="rform">' + form + '</div><div class="rnote">' + note + '</div></div>';
+}
+
+function sec(tag, title, html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = '<div class="stag">' + tag + '</div><h2>' + title + '</h2>' + html;
+  document.getElementById('lessonBody').appendChild(d);
+  return d;
+}
+
+function widgetHost(parent, id){
+  var d = document.createElement('div');
+  d.className = 'gw';
+  d.id = id;
+  parent.appendChild(d);
+  return d;
+}
+
+function addProblem(rng, spec){
+  var idx = problems.length;
+  var correctVal = spec.options[spec.correct];
+  var sh = shuffle(spec.options, rng);
+  var prob = {
+    title: spec.title,
+    questionText: spec.q,
+    fn: spec.fn || '',
+    hint: spec.hint || '',
+    explanation: spec.exp || '',
+    options: sh,
+    correctIdx: sh.indexOf(correctVal),
+    showWork: !!spec.showWork,
+    studentChoice: null,
+    pendingChoice: null
+  };
+  problems.push(prob);
+  buildOneCard(prob, idx);
+}
+
+function injectGuideCSS(){
+  if (document.getElementById('guideCSS')) return;
+  var s = document.createElement('style');
+  s.id = 'guideCSS';
+  s.textContent = [
+    '.gw{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin:1.1rem 0;}',
+    '.gw-h{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.55rem;}',
+    '.gw-q{font-size:1rem;font-weight:600;margin-bottom:.5rem;color:var(--text);}',
+    '.gw-mini{font-size:.76rem;color:var(--text3);margin-bottom:.6rem;}',
+    '.gw-lbl{font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:.6rem 0 .3rem;}',
+    '.gw-row{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center;margin:.6rem 0 0;}',
+    '.gw-btn{min-width:44px;min-height:44px;padding:.5rem .85rem;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);font-family:inherit;font-size:.85rem;cursor:pointer;transition:all .14s;}',
+    '.gw-btn:hover{border-color:var(--green);background:var(--green-bg);}',
+    '.gw-btn.solved{background:var(--ok-bg);color:var(--ok);border-color:var(--ok);}',
+    '.gw-btn[disabled]{opacity:.45;cursor:default;}',
+    '.gw-fb{font-size:.84rem;padding:.6rem .8rem;border-radius:8px;margin-top:.6rem;background:var(--surface2);color:var(--text2);}',
+    '.gw-fb.warm{background:var(--gold-bg);color:var(--text2);border-left:3px solid var(--gold);}',
+    '.gw-fb.good{background:var(--ok-bg);color:var(--ok);border-left:3px solid var(--ok);}',
+    '.gw-fb.miss{background:var(--bad-bg);color:var(--bad);border-left:3px solid var(--bad);}',
+    '.gw-val{font-family:"IBM Plex Mono",monospace;font-weight:600;color:var(--green);font-size:.84rem;}',
+    '.gw-range{width:100%;accent-color:var(--green);height:32px;}',
+    /* mapa de coordenadas */
+    '.gw-plane{position:relative;width:100%;max-width:330px;height:210px;margin:.7rem auto .2rem;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);overflow:hidden;}',
+    '.gw-hl{position:absolute;left:0;right:0;height:1px;background:var(--border);}',
+    '.gw-vl{position:absolute;top:0;bottom:0;width:1px;background:var(--border);}',
+    '.gw-eq{position:absolute;left:0;right:0;top:50%;height:2px;background:var(--gold);}',
+    '.gw-mer{position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--gold);}',
+    '.gw-tag{position:absolute;font-size:.6rem;letter-spacing:.06em;color:var(--text3);padding:1px 3px;}',
+    '.gw-dot{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--green);border:2px solid var(--surface);transition:left .12s,top .12s;}',
+    '.gw-goal{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px dashed var(--gold);display:none;}',
+    '.gw-read{text-align:center;font-family:"IBM Plex Mono",monospace;font-weight:600;color:var(--green);font-size:.92rem;}',
+    '.gw-hemi{text-align:center;font-size:.74rem;color:var(--text3);margin-bottom:.2rem;}',
+    /* tablero de distribución */
+    '.gw-board{display:grid;grid-template-columns:repeat(5,1fr);gap:.3rem;max-width:300px;margin:.7rem auto .3rem;}',
+    '.gw-sq{min-height:46px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface2);cursor:pointer;padding:0;transition:all .12s;}',
+    '.gw-sq:hover{border-color:var(--green);}',
+    '.gw-sq.on{background:var(--green);border-color:var(--green);}',
+    '.gw-sq.hint{border-color:var(--gold);border-width:2.5px;}',
+    '.gw-count{text-align:center;font-size:.76rem;color:var(--text3);}',
+    /* tabla de criterios */
+    '.gw-tbl{display:flex;flex-direction:column;gap:.35rem;margin:.6rem 0 .3rem;}',
+    '.gw-tr{display:flex;align-items:center;justify-content:space-between;gap:.5rem;min-height:46px;padding:.45rem .6rem;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;text-align:left;font-family:inherit;transition:all .13s;}',
+    '.gw-tr:hover{border-color:var(--green);}',
+    '.gw-tr.on{background:var(--green-bg);border-color:var(--green);}',
+    '.gw-tr.mark{border-color:var(--gold);border-width:2.5px;}',
+    '.gw-tn{font-size:.82rem;font-weight:600;color:var(--text);}',
+    '.gw-td{font-size:.7rem;color:var(--text3);}',
+    /* barras del tiempo */
+    '.gw-bars{margin:.6rem 0 .2rem;}',
+    '.gw-brow{margin-bottom:.5rem;}',
+    '.gw-bh{display:flex;justify-content:space-between;font-size:.72rem;color:var(--text3);margin-bottom:.2rem;}',
+    '.gw-btrk{height:16px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);overflow:hidden;}',
+    '.gw-bfil{height:100%;border-radius:8px;transition:width .18s;}',
+    '.gw-bfil.gr{background:var(--ok);}',
+    '.gw-bfil.hs{background:var(--green);}',
+    '.gw-year{text-align:center;font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:1.05rem;color:var(--green);}',
+    /* cadena de interacción */
+    '.gw-chain{display:flex;flex-direction:column;gap:.3rem;margin:.6rem 0;}',
+    '.gw-link{display:flex;gap:.5rem;align-items:flex-start;padding:.5rem .65rem;border:1.5px solid var(--ok);border-radius:8px;background:var(--ok-bg);font-size:.8rem;color:var(--text);}',
+    '.gw-lnum{font-family:"IBM Plex Mono",monospace;font-weight:700;color:var(--ok);flex-shrink:0;}',
+    '.gw-pool{display:flex;flex-direction:column;gap:.35rem;}',
+    '.gw-tile{min-height:44px;padding:.5rem .65rem;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-family:inherit;font-size:.8rem;cursor:pointer;text-align:left;transition:all .13s;}',
+    '.gw-tile:hover{border-color:var(--green);background:var(--green-bg);}',
+    '.gw-tile[disabled]{opacity:.4;cursor:default;}',
+    '@media (max-width:600px){.gw{padding:.8rem;}.gw-plane{height:180px;}.gw-sq{min-height:42px;}}'
+  ].join('');
+  document.head.appendChild(s);
+}
+
+function buildLesson(rng){
+  injectGuideCSS();
+
+  /* ── Apertura ── */
+  sec(
+    L({ es:'Punto de partida', en:'Starting point' }),
+    L({ es:'Tres preguntas que sostienen un mapa', en:'Three questions that hold up a map' }),
+    '<p>' + L({
+      es:'Frente a cualquier mapa se pueden hacer tres preguntas distintas. ¿Dónde está esto exactamente? ¿Cómo se reparte por el terreno? ¿Desde cuándo se ve así? Cada pregunta usa una herramienta diferente del estudio del espacio geográfico: la localización, la distribución y la temporalidad. Con las tres juntas se pasa de mirar un dibujo a leer un espacio vivo.',
+      en:'Facing any map, three different questions can be asked. Where exactly is this? How is it spread across the ground? Since when has it looked like this? Each question uses a different tool from the study of geographic space: location, distribution and temporality. With the three together you move from looking at a drawing to reading a living space.'
+    }) + '</p>' +
+    '<div class="callout"><p><strong>' + L({ es:'Idea clave: ', en:'Key idea: ' }) + '</strong>' + L({
+      es:'localizar responde dónde, la distribución responde cómo se reparte, la diversidad responde en qué se diferencian los sitios, la temporalidad responde desde cuándo y la interacción responde quién cambia a quién. Son cinco lentes sobre el mismo espacio.',
+      en:'locating answers where, distribution answers how it is spread, diversity answers how sites differ, temporality answers since when, and interaction answers who changes whom. They are five lenses on the same space.'
+    }) + '</p></div>'
+  );
+
+  /* ══ CONCEPTO 1 :: localización ══ */
+  var s1 = sec(
+    L({ es:'Concepto 1', en:'Concept 1' }),
+    L({ es:'Localizar: decir dónde de dos maneras', en:'Locating: saying where in two ways' }),
+    '<p>' + L({
+      es:'Hay dos maneras de decir dónde está algo. La localización relativa usa referencias cercanas: junto al manantial, dos calles arriba del mercado, del lado donde sale el Sol. Es la forma más antigua y sigue siendo la más usada en la vida diaria; los pueblos originarios de México ubicaban sus sitios con los cerros, los ríos, los vientos y el rumbo del amanecer, y así organizaban la siembra y la traza de sus poblados.',
+      en:'There are two ways of saying where something is. Relative location uses nearby references: next to the spring, two streets above the market, on the side where the Sun rises. It is the oldest form and it is still the most used in daily life; the original peoples of Mexico located their sites with the hills, the rivers, the winds and the bearing of sunrise, and that is how they organized sowing and the layout of their settlements.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'La localización absoluta usa una malla de líneas imaginarias que cubre toda la Tierra. Las líneas horizontales, los paralelos, se cuentan desde el ecuador y dan la latitud, hacia el norte o hacia el sur. Las verticales, los meridianos, se cuentan desde el meridiano de Greenwich y dan la longitud, hacia el este o hacia el oeste. Con esos dos datos, un punto queda señalado sin necesidad de ninguna referencia cercana.',
+      en:'Absolute location uses a mesh of imaginary lines covering the whole Earth. The horizontal lines, the parallels, are counted from the equator and give the latitude, towards the north or the south. The vertical ones, the meridians, are counted from the Greenwich meridian and give the longitude, towards the east or the west. With those two figures, a point is marked without needing any nearby reference.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard(L({ es:'Latitud', en:'Latitude' }), L({ es:'0 a 90', en:'0 to 90' }), L({ es:'se cuenta desde el ecuador, norte o sur', en:'counted from the equator, north or south' })) +
+      rcard(L({ es:'Longitud', en:'Longitude' }), L({ es:'0 a 180', en:'0 to 180' }), L({ es:'se cuenta desde Greenwich, este u oeste', en:'counted from Greenwich, east or west' })) +
+      rcard(L({ es:'Relativa', en:'Relative' }), L({ es:'referencias', en:'references' }), L({ es:'junto a, frente a, arriba de', en:'next to, in front of, above' })) +
+      rcard(L({ es:'Absoluta', en:'Absolute' }), L({ es:'coordenadas', en:'coordinates' }), L({ es:'un solo punto en toda la Tierra', en:'a single point on the whole Earth' })) +
+    '</div>' +
+    '<div class="callout"><p>' + L({
+      es:'Las dos formas ubican el mismo sitio y ninguna sustituye a la otra: la relativa sirve para llegar caminando, la absoluta sirve para que alguien de otro país encuentre el punto en un mapa.',
+      en:'Both forms locate the same site and neither replaces the other: the relative one helps you get there on foot, the absolute one lets someone from another country find the point on a map.'
+    }) + '</p></div>'
+  );
+  w1(rng, widgetHost(s1, 'w_coord'));
+  addProblem(rng, mkP1(rng));
+  addProblem(rng, mkP2(rng));
+
+  /* ══ CONCEPTO 2 :: distribución ══ */
+  var s2 = sec(
+    L({ es:'Concepto 2', en:'Concept 2' }),
+    L({ es:'Distribución: cómo se reparte lo que hay', en:'Distribution: how what exists is spread out' }),
+    '<p>' + L({
+      es:'La distribución describe la forma en que los elementos se reparten sobre el espacio. Las mismas veinte casas pueden quedar apretadas en una manzana, alineadas a lo largo de un camino o separadas una de otra por varios kilómetros. Nada cambió en la cantidad, cambió el acomodo, y ese acomodo explica cómo vive la gente y qué tan lejos le queda el agua, la escuela o el transporte.',
+      en:'Distribution describes the way elements are spread over space. The same twenty houses can end up packed into one block, lined up along a road, or separated from one another by several kilometres. Nothing changed in the amount, the arrangement changed, and that arrangement explains how people live and how far the water, the school or the transport is for them.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard(L({ es:'Concentrada', en:'Clustered' }), L({ es:'todo junto', en:'all together' }), L({ es:'ocupa una zona pequeña del mapa', en:'takes up a small zone of the map' })) +
+      rcard(L({ es:'Lineal', en:'Linear' }), L({ es:'en fila', en:'in a row' }), L({ es:'sigue un río, un camino o una costa', en:'follows a river, a road or a coast' })) +
+      rcard(L({ es:'Dispersa', en:'Scattered' }), L({ es:'separada', en:'separated' }), L({ es:'se reparte por todo el terreno', en:'spread across the whole ground' })) +
+      rcard(L({ es:'Densidad', en:'Density' }), L({ es:'por km2', en:'per km2' }), L({ es:'cuánto hay en cada unidad de superficie', en:'how much there is in each unit of surface' })) +
+    '</div>' +
+    '<div class="callout"><p>' + L({
+      es:'La densidad es la medida numérica de la distribución: reparte la cantidad total entre la superficie que ocupa y permite comparar dos lugares de tamaño distinto con una sola cifra.',
+      en:'Density is the numeric measure of distribution: it splits the total amount over the surface it occupies and lets two places of different size be compared with a single figure.'
+    }) + '</p></div>'
+  );
+  w2(rng, widgetHost(s2, 'w_dist'));
+  addProblem(rng, mkP3(rng));
+  addProblem(rng, mkP4(rng));
+
+  /* ══ CONCEPTO 3 :: diversidad ══ */
+  var s3 = sec(
+    L({ es:'Concepto 3', en:'Concept 3' }),
+    L({ es:'Diversidad: comparar con un criterio', en:'Diversity: comparing with a criterion' }),
+    '<p>' + L({
+      es:'Dos localidades separadas por unos cuantos kilómetros pueden tener lluvias distintas, cultivos distintos y lenguas distintas. Esa variedad es la diversidad del espacio geográfico, y se estudia comparando. Para comparar hace falta elegir un criterio: el clima, el cultivo principal, la lengua que se habla. Al aplicar un criterio se ve qué sitios se parecen y se pueden agrupar, y al cambiar el criterio el grupo cambia aunque las localidades sean las mismas.',
+      en:'Two localities a few kilometres apart can have different rainfall, different crops and different languages. That variety is the diversity of geographic space, and it is studied by comparing. To compare you need to choose a criterion: the climate, the main crop, the language spoken. Applying a criterion shows which sites resemble each other and can be grouped, and changing the criterion changes the group even though the localities are the same.'
+    }) + '</p>' +
+    '<div class="callout"><p>' + L({
+      es:'Por eso una misma comunidad aparece en varios mapas a la vez: en el del clima templado, en el del café y en el de las lenguas originarias. Cada mapa contestó una pregunta diferente sobre ella.',
+      en:'That is why one community appears on several maps at once: on the temperate climate map, on the coffee map and on the indigenous languages map. Each map answered a different question about it.'
+    }) + '</p></div>'
+  );
+  w3(rng, widgetHost(s3, 'w_crit'));
+  addProblem(rng, mkP5(rng));
+
+  /* ══ CONCEPTO 4 :: temporalidad y cambio ══ */
+  var s4 = sec(
+    L({ es:'Concepto 4', en:'Concept 4' }),
+    L({ es:'Temporalidad: el espacio tiene fecha', en:'Temporality: space has a date' }),
+    '<p>' + L({
+      es:'Ningún espacio geográfico está terminado. El bosque que hoy cubre una ladera puede ser una parcela en veinte años, y el arroyo que hoy pasa por la orilla del pueblo puede haber corrido antes por otro cauce. La temporalidad es la mirada que compara el mismo espacio en momentos distintos para medir qué cambió, cuánto cambió y a qué ritmo.',
+      en:'No geographic space is finished. The forest that today covers a hillside may be a plot in twenty years, and the stream that today runs along the edge of the town may have flowed through another channel before. Temporality is the view that compares the same space at different moments to measure what changed, how much it changed and at what pace.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'El ritmo importa tanto como el cambio. Un derrumbe modifica una ladera en una noche; la erosión que forma esa misma ladera trabaja durante siglos. Para comparar ritmos se reparte el cambio total entre el tiempo transcurrido, por año o por década, y así dos periodos se vuelven comparables.',
+      en:'The pace matters as much as the change. A landslide modifies a hillside in one night; the erosion that forms that same hillside works for centuries. To compare paces, the total change is divided by the time elapsed, per year or per decade, and in that way two periods become comparable.'
+    }) + '</p>' +
+    '<div class="callout"><p>' + L({
+      es:'Una década son diez años. Comparar por década sirve para ver de golpe si el cambio se aceleró o se frenó, incluso cuando los periodos tienen distinta duración.',
+      en:'A decade is ten years. Comparing by decade helps you see at a glance whether the change sped up or slowed down, even when the periods last different amounts of time.'
+    }) + '</p></div>'
+  );
+  w4(rng, widgetHost(s4, 'w_time'));
+  addProblem(rng, mkP6(rng));
+  addProblem(rng, mkP7(rng));
+
+  /* ══ CONCEPTO 5 :: interacción ══ */
+  var s5 = sec(
+    L({ es:'Concepto 5', en:'Concept 5' }),
+    L({ es:'Interacción: quién cambia a quién', en:'Interaction: who changes whom' }),
+    '<p>' + L({
+      es:'La interacción es la relación de ida y vuelta entre la sociedad y la naturaleza. La gente abre caminos, siembra, construye y saca agua; el relieve, la lluvia y el suelo responden y, a su vez, obligan a la gente a cambiar lo que hace. Casi nunca es un solo paso: es una cadena en la que cada eslabón necesita que el anterior ya haya ocurrido.',
+      en:'Interaction is the two-way relationship between society and nature. People open roads, sow, build and draw water; the relief, the rain and the soil respond and, in turn, force people to change what they do. It is almost never a single step: it is a chain in which each link needs the previous one to have already happened.'
+    }) + '</p>' +
+    '<div class="callout"><p>' + L({
+      es:'Reconstruir el orden de la cadena es lo que permite explicar y no solo describir. Cuando el orden queda claro, también queda claro en qué eslabón conviene actuar.',
+      en:'Rebuilding the order of the chain is what allows you to explain and not only describe. When the order is clear, it is also clear at which link it is worth acting.'
+    }) + '</p></div>'
+  );
+  w5(rng, widgetHost(s5, 'w_inter'));
+  addProblem(rng, mkP8(rng));
+
+  /* ══ CIERRE :: sin explicación previa ══ */
+  sec(
+    L({ es:'Cierre', en:'Closing' }),
+    L({ es:'Dos situaciones sin pistas previas', en:'Two situations with no prior clues' }),
+    '<p>' + L({
+      es:'Las dos situaciones que siguen llegan sin aviso de cuál mirada les toca. Lee con calma, decide qué se está preguntando y responde.',
+      en:'The two situations that follow arrive with no notice of which view they belong to. Read calmly, decide what is being asked and answer.'
+    }) + '</p>'
+  );
+  addProblem(rng, mkP9(rng));
+  addProblem(rng, mkP10(rng));
+}
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 1 :: Coloca el punto en la malla de coordenadas
+   ══════════════════════════════════════════════════════════════════════════ */
+function w1(rng, host){
+  var POOL = [
+    { lat:20, lon:-100,
+      clue:{ es:'El punto está 20 grados al norte del ecuador y 100 grados al oeste del meridiano de Greenwich.',
+             en:'The point is 20 degrees north of the equator and 100 degrees west of the Greenwich meridian.' },
+      why:{ es:'La latitud se cuenta hacia arriba desde el ecuador y la longitud hacia la izquierda desde Greenwich: quedó en el hemisferio norte y en el hemisferio occidental.',
+            en:'Latitude is counted upward from the equator and longitude leftward from Greenwich: it ended up in the northern and western hemispheres.' } },
+    { lat:0, lon:30,
+      clue:{ es:'El punto cae justo sobre el ecuador, 30 grados al este de Greenwich.',
+             en:'The point falls right on the equator, 30 degrees east of Greenwich.' },
+      why:{ es:'Sobre el ecuador la latitud vale cero, así que solo se mueve la longitud, y hacia el este se avanza a la derecha del meridiano cero.',
+            en:'On the equator latitude is zero, so only longitude moves, and going east means moving right of the zero meridian.' } },
+    { lat:-30, lon:-60,
+      clue:{ es:'El punto está 30 grados al sur del ecuador y 60 grados al oeste de Greenwich.',
+             en:'The point is 30 degrees south of the equator and 60 degrees west of Greenwich.' },
+      why:{ es:'Al sur del ecuador la latitud baja y al oeste de Greenwich la longitud va a la izquierda: hemisferio sur y hemisferio occidental.',
+            en:'South of the equator latitude goes down and west of Greenwich longitude goes left: southern and western hemispheres.' } },
+    { lat:40, lon:0,
+      clue:{ es:'El punto está sobre el meridiano de Greenwich, 40 grados arriba del ecuador.',
+             en:'The point is on the Greenwich meridian, 40 degrees above the equator.' },
+      why:{ es:'Sobre Greenwich la longitud vale cero, de modo que el punto solo sube por el paralelo 40 del hemisferio norte.',
+            en:'On Greenwich longitude is zero, so the point only rises along parallel 40 of the northern hemisphere.' } },
+    { lat:-10, lon:120,
+      clue:{ es:'El punto está 10 grados al sur del ecuador y 120 grados al este de Greenwich.',
+             en:'The point is 10 degrees south of the equator and 120 degrees east of Greenwich.' },
+      why:{ es:'Una latitud pequeña deja el punto muy cerca del ecuador, y 120 grados al este lo llevan lejos, hacia el borde derecho de la malla.',
+            en:'A small latitude leaves the point very close to the equator, and 120 degrees east carry it far, towards the right edge of the mesh.' } },
+    { lat:50, lon:-20,
+      clue:{ es:'El punto está 50 grados al norte del ecuador y 20 grados al oeste de Greenwich.',
+             en:'The point is 50 degrees north of the equator and 20 degrees west of Greenwich.' },
+      why:{ es:'La latitud alta lo acerca al borde superior y la longitud pequeña lo deja apenas a la izquierda del meridiano cero.',
+            en:'The high latitude brings it near the top edge and the small longitude leaves it just left of the zero meridian.' } }
+  ];
+  var R = shuffle(POOL, rng).slice(0, 3);
+  var lat = ri(rng, -4, 4) * 10, lon = ri(rng, -12, 12) * 10;
+  var rd = 0, tries = 0, locked = false, done = false;
+
+  var glines = '';
+  [16.666, 33.333, 66.666, 83.333].forEach(function(p){ glines += '<div class="gw-hl" style="top:' + p + '%"></div>'; });
+  [16.666, 33.333, 66.666, 83.333].forEach(function(p){ glines += '<div class="gw-vl" style="left:' + p + '%"></div>'; });
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Coloca el punto con sus coordenadas', en:'Place the point with its coordinates' }) + '</div>' +
+    '<div class="gw-q" data-r="clue"></div>' +
+    '<div class="gw-mini">' + L({ es:'Mueve los dos deslizadores hasta que el punto quede donde dice la pista.', en:'Move the two sliders until the point sits where the clue says.' }) + '</div>' +
+    '<div class="gw-plane">' + glines +
+      '<div class="gw-eq"></div><div class="gw-mer"></div>' +
+      '<div class="gw-tag" style="top:2px;left:4px" data-r="tN"></div>' +
+      '<div class="gw-tag" style="bottom:2px;left:4px" data-r="tS"></div>' +
+      '<div class="gw-tag" style="bottom:2px;right:4px" data-r="tE"></div>' +
+      '<div class="gw-tag" style="top:2px;right:4px" data-r="tW"></div>' +
+      '<div class="gw-goal" data-r="goal"></div>' +
+      '<div class="gw-dot" data-r="dot"></div>' +
+    '</div>' +
+    '<div class="gw-read" data-r="read"></div>' +
+    '<div class="gw-hemi" data-r="hemi"></div>' +
+    '<div class="gw-lbl" data-r="llat"></div>' +
+    '<input class="gw-range" type="range" min="-60" max="60" step="10" data-r="slat">' +
+    '<div class="gw-lbl" data-r="llon"></div>' +
+    '<input class="gw-range" type="range" min="-150" max="150" step="10" data-r="slon">' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elClue = host.querySelector('[data-r="clue"]'),
+      elDot  = host.querySelector('[data-r="dot"]'),
+      elGoal = host.querySelector('[data-r="goal"]'),
+      elRead = host.querySelector('[data-r="read"]'),
+      elHemi = host.querySelector('[data-r="hemi"]'),
+      elSlat = host.querySelector('[data-r="slat"]'),
+      elSlon = host.querySelector('[data-r="slon"]'),
+      elChk  = host.querySelector('[data-r="chk"]');
+  host.querySelector('[data-r="tN"]').textContent = L({ es:'norte', en:'north' });
+  host.querySelector('[data-r="tS"]').textContent = L({ es:'sur', en:'south' });
+  host.querySelector('[data-r="tE"]').textContent = L({ es:'este', en:'east' });
+  host.querySelector('[data-r="tW"]').textContent = L({ es:'oeste', en:'west' });
+  host.querySelector('[data-r="llat"]').textContent = L({ es:'Latitud', en:'Latitude' });
+  host.querySelector('[data-r="llon"]').textContent = L({ es:'Longitud', en:'Longitude' });
+
+  function fLat(v){
+    if (v === 0) return L({ es:'0° ecuador', en:'0° equator' });
+    return Math.abs(v) + '° ' + (v > 0 ? 'N' : 'S');
+  }
+  function fLon(v){
+    if (v === 0) return L({ es:'0° Greenwich', en:'0° Greenwich' });
+    return Math.abs(v) + '° ' + (v > 0 ? 'E' : L({ es:'O', en:'W' }));
+  }
+  function hemis(){
+    var a = lat > 0 ? L({ es:'hemisferio norte', en:'northern hemisphere' }) : (lat < 0 ? L({ es:'hemisferio sur', en:'southern hemisphere' }) : L({ es:'sobre el ecuador', en:'on the equator' }));
+    var b = lon > 0 ? L({ es:'hemisferio oriental', en:'eastern hemisphere' }) : (lon < 0 ? L({ es:'hemisferio occidental', en:'western hemisphere' }) : L({ es:'sobre el meridiano cero', en:'on the zero meridian' }));
+    return a + ' · ' + b;
+  }
+  function draw(){
+    elDot.style.left = ((lon + 150) / 300 * 100) + '%';
+    elDot.style.top  = ((60 - lat) / 120 * 100) + '%';
+    elSlat.value = lat; elSlon.value = lon;
+    elRead.textContent = fLat(lat) + '   ' + fLon(lon);
+    elHemi.textContent = hemis();
+    elClue.innerHTML = L(R[rd].clue);
+  }
+  function showGoal(){
+    elGoal.style.left = ((R[rd].lon + 150) / 300 * 100) + '%';
+    elGoal.style.top  = ((60 - R[rd].lat) / 120 * 100) + '%';
+    elGoal.style.display = 'block';
+  }
+  function advance(){
+    rd++;
+    elGoal.style.display = 'none';
+    if (rd >= 3){
+      done = true;
+      elSlat.disabled = true; elSlon.disabled = true;
+      elChk.textContent = L({ es:'Completado', en:'Completed' });
+      elChk.className = 'gw-btn solved';
+      say(host, 'good', L({
+        es:'Tres puntos localizados con solo dos datos. Así funciona la localización absoluta: una latitud y una longitud señalan un único sitio en toda la Tierra.',
+        en:'Three points located with only two figures. That is how absolute location works: one latitude and one longitude mark a single site on the whole Earth.'
+      }));
+      return;
+    }
+    locked = false; tries = 0;
+    elChk.textContent = L({ es:'Comprobar', en:'Check' });
+    elChk.className = 'gw-btn';
+    say(host, '', L({ es:'Nueva pista. Vuelve a mover los deslizadores.', en:'New clue. Move the sliders again.' }));
+    draw();
+  }
+  function close(cls, txt){
+    locked = true;
+    elChk.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente pista', en:'Next clue' });
+    elChk.className = 'gw-btn solved';
+    draw();
+    say(host, cls, txt);
+  }
+  function check(){
+    if (done) return;
+    if (locked){ advance(); return; }
+    var dl = R[rd].lat - lat, dn = R[rd].lon - lon;
+    if (dl === 0 && dn === 0){ close('good', L(R[rd].why)); return; }
+    tries++;
+    if (tries >= 3){
+      lat = R[rd].lat; lon = R[rd].lon;
+      showGoal();
+      close('warm', L({ es:'Aquí estaba el punto. ', en:'Here was the point. ' }) + L(R[rd].why));
+      return;
+    }
+    var parts = [];
+    if (dl > 0) parts.push(dl + L({ es:' grados hacia el norte', en:' degrees towards the north' }));
+    if (dl < 0) parts.push((-dl) + L({ es:' grados hacia el sur', en:' degrees towards the south' }));
+    if (dn > 0) parts.push(dn + L({ es:' grados hacia el este', en:' degrees towards the east' }));
+    if (dn < 0) parts.push((-dn) + L({ es:' grados hacia el oeste', en:' degrees towards the west' }));
+    say(host, 'miss', L({
+      es:'El punto está en ' + fLat(lat) + ' y ' + fLon(lon) + '. Te faltan ' + parts.join(L({ es:' y ', en:' and ' })) + '.',
+      en:'The point is at ' + fLat(lat) + ' and ' + fLon(lon) + '. You still need ' + parts.join(' and ') + '.'
+    }));
+    draw();
+  }
+
+  elSlat.addEventListener('input', function(){
+    if (done || locked){ elSlat.value = lat; return; }
+    lat = parseInt(elSlat.value, 10); draw();
+  });
+  elSlon.addEventListener('input', function(){
+    if (done || locked){ elSlon.value = lon; return; }
+    lon = parseInt(elSlon.value, 10); draw();
+  });
+  elChk.addEventListener('click', check);
+  say(host, '', L({ es:'Lee la pista, coloca el punto y comprueba.', en:'Read the clue, place the point and check.' }));
+  draw();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 2 :: Tablero de distribución (concentrada, lineal, dispersa)
+   ══════════════════════════════════════════════════════════════════════════ */
+function w2(rng, host){
+  var MODES = {
+    con:{ need:6,
+      q:{ es:'Acomoda 6 caseríos con una distribución concentrada.', en:'Arrange 6 hamlets with a clustered distribution.' },
+      why:{ es:'Concentrada: los seis caseríos caben en un bloque pequeño del mapa. Así se ven los pueblos que crecieron alrededor de un solo manantial o de una plaza.',
+            en:'Clustered: the six hamlets fit inside a small block of the map. That is how towns that grew around a single spring or a square look.' },
+      sol:[6,7,8,11,12,13] },
+    lin:{ need:5,
+      q:{ es:'Acomoda 5 caseríos con una distribución lineal.', en:'Arrange 5 hamlets with a linear distribution.' },
+      why:{ es:'Lineal: los cinco quedan sobre una misma fila o columna. Así se acomodan las casas que siguen un río, una carretera o la orilla del mar.',
+            en:'Linear: the five sit on the same row or column. That is how houses following a river, a road or the seashore are arranged.' },
+      sol:[10,11,12,13,14] },
+    dis:{ need:5,
+      q:{ es:'Acomoda 5 caseríos con una distribución dispersa.', en:'Arrange 5 hamlets with a scattered distribution.' },
+      why:{ es:'Dispersa: ninguno toca a otro y ocupan filas y columnas distintas. Así viven los ranchos separados por parcelas y cerros.',
+            en:'Scattered: none touches another and they occupy different rows and columns. That is how ranches separated by plots and hills live.' },
+      sol:[0,2,14,21,23] }
+  };
+  var ORD = shuffle(['con','lin','dis'], rng);
+  var on = [], i, rd = 0, tries = 0, locked = false, done = false;
+  for (i = 0; i < 25; i++) on.push(false);
+
+  var sq = '';
+  for (i = 0; i < 25; i++) sq += '<button class="gw-sq" data-i="' + i + '"></button>';
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Tablero de distribución', en:'Distribution board' }) + '</div>' +
+    '<div class="gw-q" data-r="task"></div>' +
+    '<div class="gw-mini">' + L({ es:'Toca una casilla para poner un caserío y tócala de nuevo para quitarlo.', en:'Tap a square to place a hamlet and tap it again to remove it.' }) + '</div>' +
+    '<div class="gw-board">' + sq + '</div>' +
+    '<div class="gw-count" data-r="cnt"></div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button>' +
+      '<button class="gw-btn" data-r="clr">' + L({ es:'Vaciar tablero', en:'Empty board' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elTask = host.querySelector('[data-r="task"]'),
+      elCnt  = host.querySelector('[data-r="cnt"]'),
+      elChk  = host.querySelector('[data-r="chk"]'),
+      elClr  = host.querySelector('[data-r="clr"]'),
+      sqs    = host.querySelectorAll('.gw-sq');
+
+  function mode(){ return MODES[ORD[rd]]; }
+  function cells(){
+    var out = [], k;
+    for (k = 0; k < 25; k++) if (on[k]) out.push({ r:Math.floor(k / 5), c:k % 5, k:k });
+    return out;
+  }
+  function stats(){
+    var cs = cells(), rows = {}, cols = {}, k, j, adj = false;
+    var rmin = 9, rmax = -1, cmin = 9, cmax = -1;
+    for (k = 0; k < cs.length; k++){
+      rows[cs[k].r] = 1; cols[cs[k].c] = 1;
+      if (cs[k].r < rmin) rmin = cs[k].r;
+      if (cs[k].r > rmax) rmax = cs[k].r;
+      if (cs[k].c < cmin) cmin = cs[k].c;
+      if (cs[k].c > cmax) cmax = cs[k].c;
+      for (j = k + 1; j < cs.length; j++){
+        if (Math.abs(cs[k].r - cs[j].r) + Math.abs(cs[k].c - cs[j].c) === 1) adj = true;
+      }
+    }
+    return { n:cs.length, nr:Object.keys(rows).length, nc:Object.keys(cols).length,
+             sr:(rmax < 0 ? 0 : rmax - rmin + 1), sc:(cmax < 0 ? 0 : cmax - cmin + 1), adj:adj };
+  }
+  function okNow(){
+    var s = stats(), m = mode();
+    if (s.n !== m.need) return false;
+    if (ORD[rd] === 'con') return s.sr <= 3 && s.sc <= 3;
+    if (ORD[rd] === 'lin') return s.nr === 1 || s.nc === 1;
+    return !s.adj && s.nr >= 3 && s.nc >= 3;
+  }
+  function paint(){
+    var k;
+    for (k = 0; k < 25; k++){
+      sqs[k].className = 'gw-sq' + (on[k] ? ' on' : '');
+    }
+    var s = stats();
+    elTask.innerHTML = L(mode().q);
+    elCnt.textContent = s.n + L({ es:' de ', en:' of ' }) + mode().need +
+      L({ es:' caseríos · abarcan ', en:' hamlets · they span ' }) + s.sr +
+      L({ es:' filas y ', en:' rows and ' }) + s.sc + L({ es:' columnas', en:' columns' });
+  }
+  function advance(){
+    rd++;
+    if (rd >= 3){
+      done = true;
+      elChk.textContent = L({ es:'Completado', en:'Completed' });
+      elChk.className = 'gw-btn solved';
+      elClr.disabled = true;
+      say(host, 'good', L({
+        es:'Con la misma cantidad de caseríos salieron tres mapas distintos. La distribución no habla de cuántos hay, habla de cómo se reparten.',
+        en:'With the same number of hamlets three different maps came out. Distribution is not about how many there are, it is about how they are spread.'
+      }));
+      return;
+    }
+    locked = false; tries = 0;
+    var k; for (k = 0; k < 25; k++) on[k] = false;
+    elChk.textContent = L({ es:'Comprobar', en:'Check' });
+    elChk.className = 'gw-btn';
+    paint();
+    say(host, '', L({ es:'Tablero vacío y nueva consigna.', en:'Empty board and a new instruction.' }));
+  }
+  function close(cls, txt){
+    locked = true;
+    elChk.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente consigna', en:'Next instruction' });
+    elChk.className = 'gw-btn solved';
+    say(host, cls, txt);
+  }
+  function nudge(){
+    var s = stats(), m = mode();
+    if (s.n < m.need) return L({ es:'Te faltan ' + (m.need - s.n) + ' caseríos por colocar.', en:'You still need to place ' + (m.need - s.n) + ' hamlets.' });
+    if (s.n > m.need) return L({ es:'Tienes ' + (s.n - m.need) + ' caseríos de más: quita los que sobran.', en:'You have ' + (s.n - m.need) + ' hamlets too many: remove the extras.' });
+    if (ORD[rd] === 'con') return L({
+      es:'Tus caseríos se extienden por ' + s.sr + ' filas y ' + s.sc + ' columnas. Acércalos hasta que todos quepan en un cuadro de tres por tres.',
+      en:'Your hamlets stretch over ' + s.sr + ' rows and ' + s.sc + ' columns. Bring them closer until they all fit in a three by three square.'
+    });
+    if (ORD[rd] === 'lin') return L({
+      es:'Ocupas ' + s.nr + ' filas y ' + s.nc + ' columnas distintas. Deja los cinco en una sola fila o en una sola columna.',
+      en:'You occupy ' + s.nr + ' different rows and ' + s.nc + ' different columns. Leave the five in a single row or a single column.'
+    });
+    if (s.adj) return L({ es:'Dos de tus caseríos quedaron pegados. Sepáralos por lo menos una casilla.', en:'Two of your hamlets ended up touching. Separate them by at least one square.' });
+    return L({
+      es:'Solo usas ' + s.nr + ' filas y ' + s.nc + ' columnas: se ven agrupados. Repártelos por lo menos en tres filas y tres columnas.',
+      en:'You only use ' + s.nr + ' rows and ' + s.nc + ' columns: they look grouped. Spread them over at least three rows and three columns.'
+    });
+  }
+  function check(){
+    if (done) return;
+    if (locked){ advance(); return; }
+    if (okNow()){ close('good', L(mode().why)); return; }
+    tries++;
+    if (tries >= 3){
+      var k, sol = mode().sol;
+      for (k = 0; k < 25; k++) on[k] = false;
+      for (k = 0; k < sol.length; k++) on[sol[k]] = true;
+      paint();
+      for (k = 0; k < sol.length; k++) sqs[sol[k]].className = 'gw-sq on hint';
+      close('warm', L({ es:'Así queda. ', en:'This is how it looks. ' }) + L(mode().why));
+      return;
+    }
+    say(host, 'miss', nudge());
+  }
+
+  sqs.forEach(function(b){
+    b.addEventListener('click', function(){
+      if (done || locked) return;
+      var k = parseInt(b.dataset.i, 10);
+      on[k] = !on[k];
+      paint();
+      say(host, '', okNow() ? L({ es:'El acomodo ya cumple la consigna. Comprueba para confirmarlo.', en:'The arrangement already meets the instruction. Check to confirm it.' })
+                            : nudge());
+    });
+  });
+  elClr.addEventListener('click', function(){
+    if (done || locked) return;
+    var k; for (k = 0; k < 25; k++) on[k] = false;
+    paint();
+    say(host, '', L({ es:'Tablero vacío. Empieza de nuevo cuando quieras.', en:'Empty board. Start again whenever you want.' }));
+  });
+  elChk.addEventListener('click', check);
+  paint();
+  say(host, '', L({ es:'Coloca los caseríos y comprueba el acomodo.', en:'Place the hamlets and check the arrangement.' }));
+}
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 3 :: Filtro de criterios (diversidad y agrupación)
+   ══════════════════════════════════════════════════════════════════════════ */
+function w3(rng, host){
+  var VAL = {
+    tem:{ es:'clima templado', en:'temperate climate' },
+    cal:{ es:'clima cálido', en:'warm climate' },
+    sec:{ es:'clima seco', en:'dry climate' },
+    caf:{ es:'café', en:'coffee' },
+    mai:{ es:'maíz', en:'maize' },
+    can:{ es:'caña', en:'sugar cane' },
+    nah:{ es:'náhuatl', en:'Nahuatl' },
+    zap:{ es:'zapoteco', en:'Zapotec' },
+    esp:{ es:'español', en:'Spanish' }
+  };
+  var LOCS = [
+    { n:'Agua Verde',  clima:'tem', cultivo:'caf', lengua:'nah' },
+    { n:'El Pedregal', clima:'cal', cultivo:'can', lengua:'esp' },
+    { n:'Los Sauces',  clima:'tem', cultivo:'mai', lengua:'nah' },
+    { n:'Tepetate',    clima:'sec', cultivo:'mai', lengua:'esp' },
+    { n:'La Cañada',   clima:'tem', cultivo:'caf', lengua:'zap' },
+    { n:'Peña Blanca', clima:'cal', cultivo:'caf', lengua:'esp' }
+  ];
+  var CRIT = [
+    { key:'clima', val:'tem',
+      q:{ es:'Agrupa las localidades donde el clima es templado.', en:'Group the localities where the climate is temperate.' },
+      why:{ es:'Con el criterio del clima templado quedan tres localidades en el mismo grupo, aunque siembren cosas distintas y hablen lenguas distintas.',
+            en:'With the temperate climate criterion three localities end up in the same group, even though they sow different things and speak different languages.' } },
+    { key:'cultivo', val:'caf',
+      q:{ es:'Agrupa las localidades donde el cultivo principal es el café.', en:'Group the localities where the main crop is coffee.' },
+      why:{ es:'El criterio del cultivo arma otro grupo: entran localidades de clima templado y de clima cálido, porque ahora lo que importa es lo que se siembra.',
+            en:'The crop criterion builds another group: localities of temperate and of warm climate come in, because now what matters is what is sown.' } },
+    { key:'lengua', val:'nah',
+      q:{ es:'Agrupa las localidades donde se habla náhuatl.', en:'Group the localities where Nahuatl is spoken.' },
+      why:{ es:'El criterio de la lengua deja fuera a vecinas muy parecidas en clima y cultivo: cada criterio recorta el mapa de otra manera.',
+            en:'The language criterion leaves out neighbours that are very similar in climate and crop: each criterion cuts the map in another way.' } },
+    { key:'cultivo', val:'mai',
+      q:{ es:'Agrupa las localidades donde el cultivo principal es el maíz.', en:'Group the localities where the main crop is maize.' },
+      why:{ es:'Dos localidades con climas distintos comparten el mismo cultivo, así que un criterio puede unir sitios que en otro mapa quedarían separados.',
+            en:'Two localities with different climates share the same crop, so a criterion can join sites that another map would keep apart.' } },
+    { key:'clima', val:'cal',
+      q:{ es:'Agrupa las localidades donde el clima es cálido.', en:'Group the localities where the climate is warm.' },
+      why:{ es:'El grupo del clima cálido es más pequeño que el del templado: la diversidad se nota justo en ese desequilibrio.',
+            en:'The warm climate group is smaller than the temperate one: diversity shows precisely in that imbalance.' } }
+  ];
+  var R = shuffle(CRIT, rng).slice(0, 3);
+  var ROWS = shuffle(LOCS, rng);
+  var sel = [], i, rd = 0, tries = 0, locked = false, done = false;
+  for (i = 0; i < ROWS.length; i++) sel.push(false);
+
+  var rowsHtml = '';
+  for (i = 0; i < ROWS.length; i++){
+    rowsHtml += '<button class="gw-tr" data-i="' + i + '">' +
+      '<span class="gw-tn">' + ROWS[i].n + '</span>' +
+      '<span class="gw-td">' + L(VAL[ROWS[i].clima]) + ' · ' + L(VAL[ROWS[i].cultivo]) + ' · ' + L(VAL[ROWS[i].lengua]) + '</span>' +
+      '</button>';
+  }
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Filtro de criterios', en:'Criterion filter' }) + '</div>' +
+    '<div class="gw-q" data-r="task"></div>' +
+    '<div class="gw-mini">' + L({ es:'Toca las localidades que cumplen el criterio. Toca otra vez para sacarlas del grupo.', en:'Tap the localities that meet the criterion. Tap again to take them out of the group.' }) + '</div>' +
+    '<div class="gw-tbl">' + rowsHtml + '</div>' +
+    '<div class="gw-count" data-r="cnt"></div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elTask = host.querySelector('[data-r="task"]'),
+      elCnt  = host.querySelector('[data-r="cnt"]'),
+      elChk  = host.querySelector('[data-r="chk"]'),
+      trs    = host.querySelectorAll('.gw-tr');
+
+  function matches(k){ return ROWS[k][R[rd].key] === R[rd].val; }
+  function paint(){
+    var k, n = 0;
+    for (k = 0; k < ROWS.length; k++){
+      trs[k].className = 'gw-tr' + (sel[k] ? ' on' : '');
+      if (sel[k]) n++;
+    }
+    elTask.innerHTML = L(R[rd].q);
+    elCnt.textContent = n + L({ es:' localidades en el grupo', en:' localities in the group' });
+  }
+  function okNow(){
+    var k;
+    for (k = 0; k < ROWS.length; k++) if (sel[k] !== matches(k)) return false;
+    return true;
+  }
+  function nudge(){
+    var k;
+    for (k = 0; k < ROWS.length; k++){
+      if (sel[k] && !matches(k)) return L({
+        es:'Incluiste ' + ROWS[k].n + ', y su dato es ' + L(VAL[ROWS[k][R[rd].key]]) + '. Sácala del grupo.',
+        en:'You included ' + ROWS[k].n + ', and its value is ' + L(VAL[ROWS[k][R[rd].key]]) + '. Take it out of the group.'
+      });
+    }
+    var falta = 0;
+    for (k = 0; k < ROWS.length; k++) if (!sel[k] && matches(k)) falta++;
+    if (falta > 0) return L({
+      es:'Van bien las que elegiste, pero todavía faltan ' + falta + ' que cumplen el criterio.',
+      en:'The ones you chose are fine, but ' + falta + ' more that meet the criterion are still missing.'
+    });
+    return L({ es:'Revisa el grupo con calma.', en:'Look over the group calmly.' });
+  }
+  function advance(){
+    rd++;
+    var k;
+    for (k = 0; k < ROWS.length; k++) sel[k] = false;
+    if (rd >= 3){
+      done = true;
+      elChk.textContent = L({ es:'Completado', en:'Completed' });
+      elChk.className = 'gw-btn solved';
+      paint();
+      say(host, 'good', L({
+        es:'Las seis localidades nunca cambiaron y aun así formaron tres grupos distintos. Eso es la diversidad: el criterio decide qué se parece a qué.',
+        en:'The six localities never changed and still they formed three different groups. That is diversity: the criterion decides what resembles what.'
+      }));
+      return;
+    }
+    locked = false; tries = 0;
+    elChk.textContent = L({ es:'Comprobar', en:'Check' });
+    elChk.className = 'gw-btn';
+    paint();
+    say(host, '', L({ es:'Nuevo criterio, mismas localidades.', en:'New criterion, same localities.' }));
+  }
+  function close(cls, txt){
+    locked = true;
+    elChk.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente criterio', en:'Next criterion' });
+    elChk.className = 'gw-btn solved';
+    say(host, cls, txt);
+  }
+  function check(){
+    if (done) return;
+    if (locked){ advance(); return; }
+    if (okNow()){ close('good', L(R[rd].why)); return; }
+    tries++;
+    if (tries >= 3){
+      var k;
+      for (k = 0; k < ROWS.length; k++){
+        sel[k] = matches(k);
+      }
+      paint();
+      for (k = 0; k < ROWS.length; k++) if (sel[k]) trs[k].className = 'gw-tr on mark';
+      close('warm', L({ es:'Este es el grupo. ', en:'This is the group. ' }) + L(R[rd].why));
+      return;
+    }
+    say(host, 'miss', nudge());
+  }
+
+  trs.forEach(function(b){
+    b.addEventListener('click', function(){
+      if (done || locked) return;
+      var k = parseInt(b.dataset.i, 10);
+      sel[k] = !sel[k];
+      paint();
+      say(host, '', okNow() ? L({ es:'El grupo ya coincide con el criterio. Comprueba para confirmarlo.', en:'The group already matches the criterion. Check to confirm it.' }) : nudge());
+    });
+  });
+  elChk.addEventListener('click', check);
+  paint();
+  say(host, '', L({ es:'Lee el criterio y arma el grupo.', en:'Read the criterion and build the group.' }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 4 :: Deslizador del tiempo (temporalidad y ritmo de cambio)
+   ══════════════════════════════════════════════════════════════════════════ */
+function w4(rng, host){
+  var YRS = [1970, 1980, 1990, 2000, 2010, 2020];
+  var u = 100 * ri(rng, 2, 4);
+  var fast = ri(rng, 1, 3);
+  var tail = 100 * ri(rng, 3, 8);
+  var drops = [], i;
+  for (i = 0; i < 5; i++) drops.push(i === fast ? u * 2 : u);
+  var B0 = tail; for (i = 0; i < 5; i++) B0 += drops[i];
+  var bosque = [B0];
+  for (i = 0; i < 5; i++) bosque.push(bosque[i] - drops[i]);
+  var gbase = 10 * ri(rng, 2, 5);
+  var C0 = 10 * ri(rng, 6, 12);
+  var casas = [C0];
+  for (i = 0; i < 5; i++) casas.push(casas[i] + (i === fast ? gbase * 4 : gbase));
+
+  var k1 = ri(rng, 2, 4), X = bosque[k1] + 50;
+  var k3 = ri(rng, 2, 4), M = casas[k3] - 5;
+  var TASKS = [
+    { ans:k1,
+      q:{ es:'Coloca el año en que el bosque quedó por primera vez con menos de ' + mil(X) + ' hectáreas.',
+          en:'Place the year when the forest was first left with less than ' + mil(X) + ' hectares.' },
+      why:{ es:'Ese es el primer momento de la serie en que el bosque baja de ' + mil(X) + ' hectáreas. Antes de ese año todavía estaba por encima.',
+            en:'That is the first moment in the series when the forest drops below ' + mil(X) + ' hectares. Before that year it was still above.' } },
+    { ans:fast + 1,
+      q:{ es:'Coloca el año en que termina la década con la pérdida de bosque más rápida.',
+          en:'Place the year that ends the decade with the fastest forest loss.' },
+      why:{ es:'En esa década se perdieron ' + mil(u * 2) + ' hectáreas, el doble que en cualquier otra. Ahí el cambio se aceleró y las casas también crecieron más.',
+            en:'In that decade ' + mil(u * 2) + ' hectares were lost, twice as many as in any other. There the change sped up and the houses also grew more.' } },
+    { ans:k3,
+      q:{ es:'Coloca el año en que el número de casas pasó por primera vez de ' + mil(M) + '.',
+          en:'Place the year when the number of houses first went past ' + mil(M) + '.' },
+      why:{ es:'Ese es el primer año de la serie con más de ' + mil(M) + ' casas: el crecimiento del caserío también tiene fecha.',
+            en:'That is the first year of the series with more than ' + mil(M) + ' houses: the growth of the settlement also has a date.' } }
+  ];
+  var cur = 0, rd = 0, tries = 0, locked = false, done = false;
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Deslizador del tiempo', en:'Time slider' }) + '</div>' +
+    '<div class="gw-q" data-r="task"></div>' +
+    '<div class="gw-mini">' + L({ es:'Mueve el año y observa cómo cambian el bosque y las casas de la misma comunidad.', en:'Move the year and watch how the forest and the houses of the same community change.' }) + '</div>' +
+    '<div class="gw-year" data-r="yr"></div>' +
+    '<div class="gw-bars">' +
+      '<div class="gw-brow"><div class="gw-bh"><span data-r="l1"></span><span class="gw-val" data-r="v1"></span></div>' +
+        '<div class="gw-btrk"><div class="gw-bfil gr" data-r="b1"></div></div></div>' +
+      '<div class="gw-brow"><div class="gw-bh"><span data-r="l2"></span><span class="gw-val" data-r="v2"></span></div>' +
+        '<div class="gw-btrk"><div class="gw-bfil hs" data-r="b2"></div></div></div>' +
+    '</div>' +
+    '<input class="gw-range" type="range" min="0" max="5" step="1" data-r="sl">' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button>' +
+      '<span class="gw-val" data-r="dec"></span></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elTask = host.querySelector('[data-r="task"]'),
+      elYr   = host.querySelector('[data-r="yr"]'),
+      elV1   = host.querySelector('[data-r="v1"]'),
+      elV2   = host.querySelector('[data-r="v2"]'),
+      elB1   = host.querySelector('[data-r="b1"]'),
+      elB2   = host.querySelector('[data-r="b2"]'),
+      elSl   = host.querySelector('[data-r="sl"]'),
+      elChk  = host.querySelector('[data-r="chk"]'),
+      elDec  = host.querySelector('[data-r="dec"]');
+  host.querySelector('[data-r="l1"]').textContent = L({ es:'Bosque (hectáreas)', en:'Forest (hectares)' });
+  host.querySelector('[data-r="l2"]').textContent = L({ es:'Casas', en:'Houses' });
+
+  function draw(){
+    elSl.value = cur;
+    elYr.textContent = YRS[cur];
+    elV1.textContent = mil(bosque[cur]);
+    elV2.textContent = mil(casas[cur]);
+    elB1.style.width = (bosque[cur] / B0 * 100) + '%';
+    elB2.style.width = (casas[cur] / casas[5] * 100) + '%';
+    elTask.innerHTML = L(TASKS[rd].q);
+    if (cur === 0) elDec.textContent = L({ es:'inicio de la serie', en:'start of the series' });
+    else elDec.textContent = L({
+      es:'en esta década se perdieron ' + mil(bosque[cur - 1] - bosque[cur]) + ' ha',
+      en:'in this decade ' + mil(bosque[cur - 1] - bosque[cur]) + ' ha were lost'
+    });
+  }
+  function advance(){
+    rd++;
+    if (rd >= 3){
+      done = true; elSl.disabled = true;
+      elChk.textContent = L({ es:'Completado', en:'Completed' });
+      elChk.className = 'gw-btn solved';
+      say(host, 'good', L({
+        es:'El mismo espacio, cinco décadas y tres respuestas distintas. La temporalidad no solo dice que algo cambió: dice cuándo y a qué ritmo.',
+        en:'The same space, five decades and three different answers. Temporality does not only say that something changed: it says when and how fast.'
+      }));
+      return;
+    }
+    locked = false; tries = 0;
+    elChk.textContent = L({ es:'Comprobar', en:'Check' });
+    elChk.className = 'gw-btn';
+    say(host, '', L({ es:'Nueva consigna sobre la misma serie de años.', en:'New instruction about the same series of years.' }));
+    draw();
+  }
+  function close(cls, txt){
+    locked = true;
+    elChk.textContent = rd === 2 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente consigna', en:'Next instruction' });
+    elChk.className = 'gw-btn solved';
+    draw();
+    say(host, cls, txt);
+  }
+  function nudge(){
+    var ans = TASKS[rd].ans;
+    if (rd === 0){
+      if (bosque[cur] >= X) return L({
+        es:'En ' + YRS[cur] + ' el bosque todavía cubre ' + mil(bosque[cur]) + ' hectáreas. Avanza el año.',
+        en:'In ' + YRS[cur] + ' the forest still covers ' + mil(bosque[cur]) + ' hectares. Move the year forward.'
+      });
+      return L({
+        es:'En ' + YRS[cur] + ' ya está por debajo, pero un año anterior también lo estaba. Regresa el deslizador.',
+        en:'In ' + YRS[cur] + ' it is already below, but an earlier year was below too. Move the slider back.'
+      });
+    }
+    if (rd === 1){
+      if (cur === 0) return L({
+        es:'1970 es el inicio de la serie y no cierra ninguna década. Elige el año en que termina un periodo.',
+        en:'1970 is the start of the series and does not close any decade. Choose the year that ends a period.'
+      });
+      return L({
+        es:'Entre ' + YRS[cur - 1] + ' y ' + YRS[cur] + ' se perdieron ' + mil(bosque[cur - 1] - bosque[cur]) + ' hectáreas. Busca una década con una pérdida mayor.',
+        en:'Between ' + YRS[cur - 1] + ' and ' + YRS[cur] + ' ' + mil(bosque[cur - 1] - bosque[cur]) + ' hectares were lost. Look for a decade with a bigger loss.'
+      });
+    }
+    if (casas[cur] <= M) return L({
+      es:'En ' + YRS[cur] + ' hay ' + mil(casas[cur]) + ' casas, todavía no pasa de ' + mil(M) + '. Avanza el año.',
+      en:'In ' + YRS[cur] + ' there are ' + mil(casas[cur]) + ' houses, still not past ' + mil(M) + '. Move the year forward.'
+    });
+    return L({
+      es:'En ' + YRS[cur] + ' ya pasa de ' + mil(M) + ', pero un año anterior también. Regresa el deslizador.',
+      en:'In ' + YRS[cur] + ' it is already past ' + mil(M) + ', but an earlier year was too. Move the slider back.'
+    });
+  }
+  function check(){
+    if (done) return;
+    if (locked){ advance(); return; }
+    if (cur === TASKS[rd].ans){ close('good', L(TASKS[rd].why)); return; }
+    tries++;
+    if (tries >= 3){
+      cur = TASKS[rd].ans;
+      close('warm', L({ es:'Este es el año. ', en:'This is the year. ' }) + L(TASKS[rd].why));
+      return;
+    }
+    say(host, 'miss', nudge());
+  }
+
+  elSl.addEventListener('input', function(){
+    if (done || locked){ elSl.value = cur; return; }
+    cur = parseInt(elSl.value, 10);
+    draw();
+  });
+  elChk.addEventListener('click', check);
+  draw();
+  say(host, '', L({ es:'Recorre los años y comprueba cuando lo tengas.', en:'Run through the years and check when you have it.' }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 5 :: Cadena de interacción sociedad y naturaleza
+   ══════════════════════════════════════════════════════════════════════════ */
+function w5(rng, host){
+  var CHAINS = [
+    { title:{ es:'La ladera sin árboles', en:'The hillside without trees' },
+      steps:[
+        { es:'Se cortan los árboles de la parte alta del cerro para abrir una parcela.', en:'The trees on the upper part of the hill are cut to open a plot.' },
+        { es:'Sin raíces, el suelo de la ladera ya no retiene el agua de lluvia.', en:'With no roots, the hillside soil no longer holds the rainwater.' },
+        { es:'El agua baja rápido y arrastra tierra hacia el arroyo.', en:'The water runs down fast and drags soil towards the stream.' },
+        { es:'La tierra arrastrada tapa el canal que riega las parcelas de abajo.', en:'The dragged soil blocks the channel that waters the plots below.' },
+        { es:'La asamblea acuerda sembrar árboles en la parte alta y limpiar el canal.', en:'The assembly agrees to plant trees on the upper part and clear the channel.' }
+      ],
+      why:{ es:'La cadena va de la sociedad a la naturaleza y regresa: una decisión sobre los árboles termina cambiando el riego, y el riego obliga a tomar otra decisión.',
+            en:'The chain goes from society to nature and back: a decision about the trees ends up changing the irrigation, and the irrigation forces another decision.' } },
+    { title:{ es:'El camino nuevo', en:'The new road' },
+      steps:[
+        { es:'Se abre un camino que conecta al pueblo con la carretera principal.', en:'A road is opened connecting the town with the main highway.' },
+        { es:'Los camiones llegan hasta el pueblo y sacan la cosecha el mismo día.', en:'Trucks reach the town and take the harvest out the same day.' },
+        { es:'Al vender más, las familias amplían la superficie sembrada.', en:'Selling more, families widen the sown area.' },
+        { es:'El monte que rodeaba al pueblo se reduce y llega menos agua al manantial.', en:'The woodland around the town shrinks and less water reaches the spring.' },
+        { es:'La comunidad decide dejar una franja de monte sin tocar alrededor del manantial.', en:'The community decides to leave an untouched strip of woodland around the spring.' }
+      ],
+      why:{ es:'El camino no cambió el clima ni el relieve, pero cambió lo que la gente podía vender, y eso terminó cambiando el monte y el agua.',
+            en:'The road did not change the climate or the relief, but it changed what people could sell, and that ended up changing the woodland and the water.' } }
+  ];
+  var R = shuffle(CHAINS, rng);
+  var rd = 0, placed = 0, tries = 0, locked = false, done = false;
+  var order = shuffle([0, 1, 2, 3, 4], rng);
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Arma la cadena de interacción', en:'Build the interaction chain' }) + '</div>' +
+    '<div class="gw-q" data-r="task"></div>' +
+    '<div class="gw-mini">' + L({ es:'Toca los pasos en el orden en que ocurren. Si te equivocas, la cadena te dice qué falta antes.', en:'Tap the steps in the order they happen. If you slip, the chain tells you what is missing first.' }) + '</div>' +
+    '<div class="gw-chain" data-r="chain"></div>' +
+    '<div class="gw-pool" data-r="pool"></div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="undo">' + L({ es:'Quitar el último', en:'Remove the last' }) + '</button>' +
+      '<button class="gw-btn" data-r="nxt" style="display:none"></button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elTask  = host.querySelector('[data-r="task"]'),
+      elChain = host.querySelector('[data-r="chain"]'),
+      elPool  = host.querySelector('[data-r="pool"]'),
+      elUndo  = host.querySelector('[data-r="undo"]'),
+      elNxt   = host.querySelector('[data-r="nxt"]');
+
+  function render(){
+    var st = R[rd].steps, i, h = '';
+    elTask.innerHTML = L({ es:'Cadena: ', en:'Chain: ' }) + L(R[rd].title);
+    for (i = 0; i < placed; i++){
+      h += '<div class="gw-link"><span class="gw-lnum">' + (i + 1) + '</span><span>' + L(st[i]) + '</span></div>';
+    }
+    elChain.innerHTML = h;
+    h = '';
+    for (i = 0; i < order.length; i++){
+      var idx = order[i];
+      if (idx < placed) continue;
+      h += '<button class="gw-tile" data-i="' + idx + '"' + (locked ? ' disabled' : '') + '>' + L(st[idx]) + '</button>';
+    }
+    elPool.innerHTML = h;
+    elPool.querySelectorAll('.gw-tile').forEach(function(b){
+      b.addEventListener('click', function(){ tap(parseInt(b.dataset.i, 10)); });
+    });
+    elUndo.disabled = (placed === 0 || locked || done);
+  }
+  function finishRound(cls, txt){
+    locked = true;
+    elNxt.style.display = 'inline-block';
+    elNxt.textContent = rd === R.length - 1 ? L({ es:'Terminar', en:'Finish' }) : L({ es:'Siguiente cadena', en:'Next chain' });
+    elNxt.className = 'gw-btn solved';
+    render();
+    say(host, cls, txt);
+  }
+  function tap(idx){
+    if (locked || done) return;
+    if (idx === placed){
+      placed++;
+      render();
+      if (placed === R[rd].steps.length){ finishRound('good', L(R[rd].why)); return; }
+      say(host, '', L({
+        es:'Eslabón ' + placed + ' en su sitio. ¿Qué ocurre justo después?',
+        en:'Link ' + placed + ' in place. What happens right after?'
+      }));
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      placed = R[rd].steps.length;
+      render();
+      finishRound('warm', L({ es:'Esta es la cadena completa. ', en:'This is the full chain. ' }) + L(R[rd].why));
+      return;
+    }
+    if (idx < placed) return;
+    say(host, 'miss', L({
+      es:'Ese paso necesita que antes ocurra otra cosa. Busca el eslabón que explica por qué llegaría a pasar.',
+      en:'That step needs something else to happen first. Look for the link that explains why it would come to happen.'
+    }));
+  }
+  elUndo.addEventListener('click', function(){
+    if (locked || done || placed === 0) return;
+    placed--;
+    render();
+    say(host, '', L({ es:'Quitaste el último eslabón. Puedes volver a elegir.', en:'You removed the last link. You can choose again.' }));
+  });
+  elNxt.addEventListener('click', function(){
+    rd++;
+    if (rd >= R.length){
+      done = true;
+      elNxt.style.display = 'none';
+      elUndo.disabled = true;
+      say(host, 'good', L({
+        es:'Dos cadenas, el mismo patrón: la sociedad cambia la naturaleza, la naturaleza responde y la sociedad vuelve a decidir.',
+        en:'Two chains, the same pattern: society changes nature, nature responds and society decides again.'
+      }));
+      return;
+    }
+    placed = 0; tries = 0; locked = false;
+    order = shuffle([0, 1, 2, 3, 4], rng);
+    elNxt.style.display = 'none';
+    render();
+    say(host, '', L({ es:'Otra cadena. Empieza por el primer eslabón.', en:'Another chain. Start with the first link.' }));
+  });
+  render();
+  say(host, '', L({ es:'Elige el paso que ocurre primero.', en:'Choose the step that happens first.' }));
+}
+/* ══════════════════════════════════════════════════════════════════════════
+   PROBLEMAS GRADUADOS 1 a 5 — cada uno con variantes por semilla (Rule 4)
+   ══════════════════════════════════════════════════════════════════════════ */
+function mkP1(rng){
+  if (rng() < 0.5){
+    return {
+      title: L({ es:'Dos maneras de decir dónde', en:'Two ways of saying where' }),
+      q: L({
+        es:'Una alumna dice que vive dos calles arriba del mercado, justo frente a la escuela. Un compañero dice que vive en la latitud 19 grados norte y la longitud 98 grados oeste. Los dos hablan de la misma casa. ¿Qué tienen en común las dos respuestas?',
+        en:'A student says she lives two streets above the market, right in front of the school. A classmate says he lives at latitude 19 north and longitude 98 west. Both are talking about the same house. What do the two answers have in common?'
+      }),
+      hint: L({
+        es:'Compara en qué se apoya cada respuesta: una usa lo que hay alrededor y la otra usa la malla de paralelos y meridianos.',
+        en:'Compare what each answer leans on: one uses what is around, the other uses the mesh of parallels and meridians.'
+      }),
+      exp: L({
+        es:'La localización relativa se apoya en referencias del entorno y la absoluta en la latitud y la longitud. Las dos terminan señalando el mismo punto por caminos distintos.',
+        en:'Relative location leans on references from the surroundings and absolute location on latitude and longitude. Both end up marking the same point by different routes.'
+      }),
+      options: [
+        L({ es:'Las dos localizan el mismo punto, una con referencias cercanas y otra con coordenadas', en:'Both locate the same point, one with nearby references and the other with coordinates' }),
+        L({ es:'Las dos son coordenadas, solo cambia si se miden en calles o se miden en grados', en:'Both are coordinates, the only change is whether they are measured in streets or in degrees' }),
+        L({ es:'Una localiza una casa y la otra localiza la región completa donde está la casa', en:'One locates a house and the other locates the whole region where the house is' }),
+        L({ es:'Una sirve para ubicar en el mapa y la otra sirve para medir la distancia recorrida', en:'One is for placing on the map and the other is for measuring the distance travelled' })
+      ],
+      correct: 0, showWork: false
+    };
+  }
+  return {
+    title: L({ es:'Hemisferios de un punto', en:'Hemispheres of a point' }),
+    q: L({
+      es:'Un mapa marca un punto en la latitud 15 grados sur y la longitud 45 grados este. ¿En qué hemisferios queda ese punto?',
+      en:'A map marks a point at latitude 15 south and longitude 45 east. In which hemispheres does that point lie?'
+    }),
+    hint: L({
+      es:'La latitud dice si el punto está arriba o abajo del ecuador; la longitud dice si está a la derecha o a la izquierda del meridiano de Greenwich.',
+      en:'Latitude says whether the point is above or below the equator; longitude says whether it is right or left of the Greenwich meridian.'
+    }),
+    exp: L({
+      es:'Una latitud sur coloca el punto abajo del ecuador y una longitud este lo coloca a la derecha de Greenwich, es decir en el hemisferio sur y en el hemisferio oriental.',
+      en:'A southern latitude places the point below the equator and an eastern longitude places it right of Greenwich, that is in the southern and the eastern hemisphere.'
+    }),
+    options: [
+      L({ es:'En el hemisferio sur y en el hemisferio oriental', en:'In the southern hemisphere and the eastern hemisphere' }),
+      L({ es:'En el hemisferio norte y en el hemisferio oriental', en:'In the northern hemisphere and the eastern hemisphere' }),
+      L({ es:'En el hemisferio sur y en el hemisferio occidental', en:'In the southern hemisphere and the western hemisphere' }),
+      L({ es:'En el hemisferio norte y en el hemisferio occidental', en:'In the northern hemisphere and the western hemisphere' })
+    ],
+    correct: 0, showWork: false
+  };
+}
+
+function mkP2(rng){
+  if (rng() < 0.5){
+    var d = gen(rng, function(r){
+      var a = ri(r, 3, 9), diff = ri(r, 3, 8), b = a + diff;
+      return { a:a, b:b, diff:diff, vals:[diff * 111, (a + b) * 111, diff * 100, (diff - 1) * 111] };
+    });
+    return {
+      title: L({ es:'Distancia entre dos paralelos', en:'Distance between two parallels' }),
+      q: L({
+        es:'Dos comunidades están sobre el mismo meridiano. Una se ubica en la latitud ' + d.a + ' grados norte y la otra en la latitud ' + d.b + ' grados norte. Cada grado de latitud equivale a 111 kilómetros. ¿Cuántos kilómetros hay entre las dos comunidades?',
+        en:'Two communities lie on the same meridian. One sits at latitude ' + d.a + ' north and the other at latitude ' + d.b + ' north. Each degree of latitude equals 111 kilometres. How many kilometres are there between the two communities?'
+      }),
+      hint: L({
+        es:'Saca primero cuántos grados de latitud las separan y después reparte 111 kilómetros a cada uno de esos grados.',
+        en:'First work out how many degrees of latitude separate them and then give 111 kilometres to each of those degrees.'
+      }),
+      exp: L({
+        es:'Entre los dos paralelos hay ' + d.diff + ' grados y cada grado mide 111 km: ' + d.diff + ' × 111 = ' + (d.diff * 111) + '.',
+        en:'Between the two parallels there are ' + d.diff + ' degrees and each degree measures 111 km: ' + d.diff + ' × 111 = ' + (d.diff * 111) + '.'
+      }),
+      options: nums(d.vals), correct: 0, showWork: true
+    };
+  }
+  var e = gen(rng, function(r){
+    var m = ri(r, 4, 10), n = ri(r, 2, 8);
+    if (n === m) n = (m > 4 ? m - 2 : m + 2);
+    return { m:m, n:n, vals:[(m + n) * 111, Math.abs(m - n) * 111, (m + n) * 100, (m + n + 1) * 111] };
+  });
+  return {
+    title: L({ es:'Paralelos en dos hemisferios', en:'Parallels in two hemispheres' }),
+    q: L({
+      es:'Dos comunidades comparten el mismo meridiano. Una está en la latitud ' + e.m + ' grados norte y la otra en la latitud ' + e.n + ' grados sur. Cada grado de latitud equivale a 111 kilómetros. ¿Cuántos kilómetros las separan?',
+      en:'Two communities share the same meridian. One is at latitude ' + e.m + ' north and the other at latitude ' + e.n + ' south. Each degree of latitude equals 111 kilometres. How many kilometres separate them?'
+    }),
+    hint: L({
+      es:'Cuando los puntos quedan en hemisferios distintos, el recorrido pasa por el ecuador, así que los grados de cada lado se acumulan.',
+      en:'When the points lie in different hemispheres the route crosses the equator, so the degrees on each side add up.'
+    }),
+    exp: L({
+      es:'Del punto norte al ecuador hay ' + e.m + ' grados y del ecuador al punto sur hay ' + e.n + ', o sea ' + (e.m + e.n) + ' grados en total: ' + (e.m + e.n) + ' × 111 = ' + ((e.m + e.n) * 111) + '.',
+      en:'From the northern point to the equator there are ' + e.m + ' degrees and from the equator to the southern point ' + e.n + ', that is ' + (e.m + e.n) + ' degrees in all: ' + (e.m + e.n) + ' × 111 = ' + ((e.m + e.n) * 111) + '.'
+    }),
+    options: nums(e.vals), correct: 0, showWork: true
+  };
+}
+
+function mkP3(rng){
+  if (rng() < 0.5){
+    return {
+      title: L({ es:'La forma que dibujan las casas', en:'The shape the houses draw' }),
+      q: L({
+        es:'En el mapa de una zona rural las casas aparecen una tras otra a lo largo de la orilla de un río, y el resto del valle queda sin construir. ¿Qué distribución tienen esas casas?',
+        en:'On the map of a rural area the houses appear one after another along the bank of a river, and the rest of the valley is left unbuilt. What distribution do those houses have?'
+      }),
+      hint: L({
+        es:'Mira la figura que forman todos los puntos juntos y con qué rasgo del terreno coincide esa figura.',
+        en:'Look at the figure all the points form together and which feature of the ground that figure matches.'
+      }),
+      exp: L({
+        es:'Cuando los elementos se acomodan siguiendo un río, un camino o una costa, forman una franja angosta y larga: esa es la distribución lineal.',
+        en:'When elements arrange themselves along a river, a road or a coast they form a narrow long strip: that is linear distribution.'
+      }),
+      options: [
+        L({ es:'Lineal, porque se acomodan siguiendo un rasgo alargado del terreno', en:'Linear, because they follow an elongated feature of the ground' }),
+        L({ es:'Concentrada, porque todas caben dentro de una zona pequeña del valle', en:'Clustered, because they all fit inside a small zone of the valley' }),
+        L({ es:'Dispersa, porque quedan separadas unas de otras por el terreno', en:'Scattered, because they end up separated from one another by the ground' }),
+        L({ es:'Sin forma definida, porque el río no influye en dónde se construye', en:'With no defined shape, because the river does not influence where people build' })
+      ],
+      correct: 0, showWork: false
+    };
+  }
+  return {
+    title: L({ es:'Treinta viviendas en dos manzanas', en:'Thirty homes in two blocks' }),
+    q: L({
+      es:'En una hoja de mapa, treinta viviendas ocupan solamente dos manzanas del centro y el resto de la hoja aparece vacío. ¿Qué distribución muestran las viviendas?',
+      en:'On one map sheet, thirty homes take up only two blocks in the centre and the rest of the sheet appears empty. What distribution do the homes show?'
+    }),
+    hint: L({
+      es:'Compara el tamaño de la superficie ocupada con el tamaño de toda la hoja del mapa.',
+      en:'Compare the size of the occupied surface with the size of the whole map sheet.'
+    }),
+    exp: L({
+      es:'Toda la cantidad se reúne en una superficie pequeña y alrededor queda espacio libre: esa es la distribución concentrada.',
+      en:'The whole amount gathers into a small surface and free space is left around it: that is clustered distribution.'
+    }),
+    options: [
+      L({ es:'Concentrada, porque casi todo queda reunido en una zona pequeña', en:'Clustered, because nearly everything gathers in a small zone' }),
+      L({ es:'Lineal, porque las dos manzanas del centro forman una fila', en:'Linear, because the two central blocks form a row' }),
+      L({ es:'Dispersa, porque la mayor parte de la hoja del mapa está vacía', en:'Scattered, because most of the map sheet is empty' }),
+      L({ es:'Regular, porque las viviendas guardan la misma distancia entre sí', en:'Regular, because the homes keep the same distance from each other' })
+    ],
+    correct: 0, showWork: false
+  };
+}
+
+function mkP4(rng){
+  if (rng() < 0.5){
+    var d = gen(rng, function(r){
+      var A = pk(r, [50, 60, 80, 120, 150]), dens = ri(r, 20, 90);
+      var x1 = ri(r, 6, 14), x2 = ri(r, 6, 14);
+      return { A:A, dens:dens, P:A * dens, vals:[dens, dens * 2, dens + x1, dens - x2] };
+    });
+    return {
+      title: L({ es:'Habitantes por kilómetro cuadrado', en:'Inhabitants per square kilometre' }),
+      q: L({
+        es:'Un municipio tiene ' + mil(d.P) + ' habitantes repartidos en ' + d.A + ' kilómetros cuadrados. ¿Cuántos habitantes por kilómetro cuadrado le corresponden?',
+        en:'A municipality has ' + mil(d.P) + ' inhabitants spread over ' + d.A + ' square kilometres. How many inhabitants per square kilometre does it have?'
+      }),
+      hint: L({
+        es:'La densidad reparte por igual la población total entre cada kilómetro cuadrado de la superficie.',
+        en:'Density shares the total population evenly across each square kilometre of the surface.'
+      }),
+      exp: L({
+        es:'La población se reparte entre la superficie: ' + mil(d.P) + ' ÷ ' + d.A + ' = ' + d.dens + '.',
+        en:'The population is divided by the surface: ' + mil(d.P) + ' ÷ ' + d.A + ' = ' + d.dens + '.'
+      }),
+      options: nums(d.vals), correct: 0, showWork: true
+    };
+  }
+  var e = gen(rng, function(r){
+    var A = pk(r, [40, 50, 80]), d1 = ri(r, 40, 90), d2 = ri(r, 10, 35);
+    return { A:A, d1:d1, d2:d2, P1:A * d1, P2:A * d2, vals:[d1 - d2, d1 + d2, d1, d2] };
+  });
+  return {
+    title: L({ es:'Dos localidades, misma superficie', en:'Two localities, same surface' }),
+    q: L({
+      es:'Dos localidades ocupan la misma superficie de ' + e.A + ' kilómetros cuadrados. En la primera viven ' + mil(e.P1) + ' personas y en la segunda viven ' + mil(e.P2) + '. ¿Cuántos habitantes por kilómetro cuadrado tiene la primera más que la segunda?',
+      en:'Two localities occupy the same surface of ' + e.A + ' square kilometres. ' + mil(e.P1) + ' people live in the first and ' + mil(e.P2) + ' live in the second. How many more inhabitants per square kilometre does the first have than the second?'
+    }),
+    hint: L({
+      es:'Obtén la densidad de cada localidad por separado y después compara las dos cifras.',
+      en:'Get the density of each locality separately and then compare the two figures.'
+    }),
+    exp: L({
+      es:'Cada localidad reparte su población entre la misma superficie: ' + mil(e.P1) + ' ÷ ' + e.A + ' = ' + e.d1 + ' y ' + mil(e.P2) + ' ÷ ' + e.A + ' = ' + e.d2 + '. La diferencia es ' + e.d1 + ' − ' + e.d2 + ' = ' + (e.d1 - e.d2) + '.',
+      en:'Each locality divides its population by the same surface: ' + mil(e.P1) + ' ÷ ' + e.A + ' = ' + e.d1 + ' and ' + mil(e.P2) + ' ÷ ' + e.A + ' = ' + e.d2 + '. The difference is ' + e.d1 + ' − ' + e.d2 + ' = ' + (e.d1 - e.d2) + '.'
+    }),
+    options: nums(e.vals), correct: 0, showWork: true
+  };
+}
+
+function mkP5(rng){
+  if (rng() < 0.5){
+    return {
+      title: L({ es:'La comunidad en dos mapas', en:'The community on two maps' }),
+      q: L({
+        es:'Una misma comunidad aparece marcada en el mapa de las zonas de clima templado y también en el mapa de las zonas donde se cultiva café. ¿Por qué puede pertenecer a los dos grupos al mismo tiempo?',
+        en:'One community appears marked on the map of temperate climate zones and also on the map of zones where coffee is grown. Why can it belong to both groups at the same time?'
+      }),
+      hint: L({
+        es:'Revisa con qué pregunta se armó cada mapa antes de decidir si los grupos se contradicen.',
+        en:'Check which question each map was built with before deciding whether the groups contradict each other.'
+      }),
+      exp: L({
+        es:'Cada mapa agrupó con un criterio distinto, el clima en uno y el cultivo en otro, y la comunidad cumple los dos sin ninguna contradicción.',
+        en:'Each map grouped with a different criterion, climate in one and crop in the other, and the community meets both with no contradiction.'
+      }),
+      options: [
+        L({ es:'Porque cada mapa agrupa con un criterio distinto y la comunidad cumple los dos', en:'Because each map groups with a different criterion and the community meets both' }),
+        L({ es:'Porque los límites de los grupos se traslapan por un error de medición', en:'Because the limits of the groups overlap through a measuring error' }),
+        L({ es:'Porque un grupo es más grande y siempre contiene por completo al otro', en:'Because one group is bigger and always contains the other completely' }),
+        L({ es:'Porque la comunidad se dividió en dos partes con actividades diferentes', en:'Because the community split into two parts with different activities' })
+      ],
+      correct: 0, showWork: false
+    };
+  }
+  return {
+    title: L({ es:'Dos vecinas muy distintas', en:'Two very different neighbours' }),
+    q: L({
+      es:'Dos localidades vecinas, separadas por unos pocos kilómetros, reciben lluvias muy distintas y siembran cultivos distintos. ¿Qué idea del estudio del espacio se está usando al comparar esas diferencias?',
+      en:'Two neighbouring localities, a few kilometres apart, receive very different rainfall and sow different crops. Which idea from the study of space is being used when comparing those differences?'
+    }),
+    hint: L({
+      es:'Piensa en qué pregunta contesta la comparación: no dónde están ni desde cuándo, sino en qué se distinguen.',
+      en:'Think about which question the comparison answers: not where they are or since when, but how they differ.'
+    }),
+    exp: L({
+      es:'Comparar sitios cercanos para ver en qué se distinguen es trabajar con la diversidad del espacio geográfico.',
+      en:'Comparing nearby sites to see how they differ means working with the diversity of geographic space.'
+    }),
+    options: [
+      L({ es:'La diversidad, porque muestra en qué se diferencian dos sitios cercanos', en:'Diversity, because it shows how two nearby sites differ' }),
+      L({ es:'La localización, porque señala dónde queda cada una de las dos', en:'Location, because it marks where each of the two lies' }),
+      L({ es:'La temporalidad, porque mide cuánto han cambiado con los años', en:'Temporality, because it measures how much they have changed over the years' }),
+      L({ es:'La distribución, porque describe cómo se reparten las casas de cada una', en:'Distribution, because it describes how the houses of each are spread' })
+    ],
+    correct: 0, showWork: false
+  };
+}
+/* ══════════════════════════════════════════════════════════════════════════
+   PROBLEMAS GRADUADOS 6 a 10 — variantes por semilla (Rule 4)
+   ══════════════════════════════════════════════════════════════════════════ */
+function mkP6(rng){
+  if (rng() < 0.5){
+    var d = gen(rng, function(r){
+      var y1 = 2020 - 10 * ri(r, 0, 2), dec = ri(r, 3, 6), y0 = y1 - 10 * dec;
+      return { y0:y0, y1:y1, dec:dec, vals:[dec, dec + 1, dec - 1, dec * 10] };
+    });
+    return {
+      title: L({ es:'Décadas del periodo', en:'Decades of the period' }),
+      q: L({ es:'Calcula: (' + d.y1 + ' − ' + d.y0 + ') ÷ 10', en:'Calculate: (' + d.y1 + ' − ' + d.y0 + ') ÷ 10' }),
+      fn: '(' + d.y1 + ' − ' + d.y0 + ') ÷ 10',
+      hint: L({
+        es:'Resuelve primero lo que está entre paréntesis y después divide ese resultado entre 10.',
+        en:'First solve what is inside the parentheses and then divide that result by 10.'
+      }),
+      exp: L({
+        es:'Dentro del paréntesis quedan ' + (d.y1 - d.y0) + ' años, y como cada década son 10 años: (' + d.y1 + ' − ' + d.y0 + ') ÷ 10 = ' + d.dec + '.',
+        en:'Inside the parentheses there are ' + (d.y1 - d.y0) + ' years, and since each decade is 10 years: (' + d.y1 + ' − ' + d.y0 + ') ÷ 10 = ' + d.dec + '.'
+      }),
+      options: nums(d.vals), correct: 0, showWork: true
+    };
+  }
+  var e = gen(rng, function(r){
+    var y0 = 1950 + 10 * ri(r, 0, 3), n = ri(r, 3, 7);
+    return { y0:y0, n:n, vals:[y0 + 10 * n, y0 + 10 * n + 10, y0 + 10 * n - 10, y0 + n] };
+  });
+  return {
+    title: L({ es:'Avanzar décadas completas', en:'Moving whole decades forward' }),
+    q: L({ es:'Calcula: ' + e.y0 + ' + 10 × ' + e.n, en:'Calculate: ' + e.y0 + ' + 10 × ' + e.n }),
+    fn: e.y0 + ' + 10 × ' + e.n,
+    hint: L({
+      es:'La multiplicación se resuelve antes que la suma, aunque aparezca a la derecha.',
+      en:'The multiplication is solved before the addition, even though it appears on the right.'
+    }),
+    exp: L({
+      es:'Primero se multiplica 10 × ' + e.n + ' = ' + (10 * e.n) + ' y ese resultado se suma: ' + e.y0 + ' + 10 × ' + e.n + ' = ' + (e.y0 + 10 * e.n) + '.',
+      en:'First multiply 10 × ' + e.n + ' = ' + (10 * e.n) + ' and then add that result: ' + e.y0 + ' + 10 × ' + e.n + ' = ' + (e.y0 + 10 * e.n) + '.'
+    }),
+    options: nums(e.vals), correct: 0, showWork: true
+  };
+}
+
+function mkP7(rng){
+  if (rng() < 0.5){
+    var d = gen(rng, function(r){
+      var per = ri(r, 15, 40), E = 100 * ri(r, 8, 15);
+      var x1 = ri(r, 4, 9), x2 = ri(r, 4, 9);
+      return { per:per, E:E, S:E + 30 * per, vals:[per, per * 10, per + x1, per - x2] };
+    });
+    return {
+      title: L({ es:'Ritmo de la pérdida de bosque', en:'Pace of the forest loss' }),
+      q: L({
+        es:'En 1990 el bosque de una comunidad cubría ' + mil(d.S) + ' hectáreas y en 2020 cubría ' + mil(d.E) + ' hectáreas. La pérdida fue la misma cada año. ¿Cuántas hectáreas de bosque se perdieron cada año?',
+        en:'In 1990 the forest of a community covered ' + mil(d.S) + ' hectares and in 2020 it covered ' + mil(d.E) + ' hectares. The loss was the same every year. How many hectares of forest were lost each year?'
+      }),
+      hint: L({
+        es:'Obtén primero la pérdida total del periodo y después repártela entre los años que transcurrieron.',
+        en:'First get the total loss of the period and then share it out among the years that passed.'
+      }),
+      exp: L({
+        es:'La pérdida total fue ' + mil(d.S) + ' − ' + mil(d.E) + ' = ' + mil(30 * d.per) + ' hectáreas en 30 años, y repartida por año da ' + mil(30 * d.per) + ' ÷ 30 = ' + d.per + '.',
+        en:'The total loss was ' + mil(d.S) + ' − ' + mil(d.E) + ' = ' + mil(30 * d.per) + ' hectares in 30 years, and shared by year it gives ' + mil(30 * d.per) + ' ÷ 30 = ' + d.per + '.'
+      }),
+      options: nums(d.vals), correct: 0, showWork: true
+    };
+  }
+  var e = gen(rng, function(r){
+    var perDec = 100 * ri(r, 2, 8), P0 = 100 * ri(r, 5, 12);
+    return { perDec:perDec, P0:P0, P1:P0 + 4 * perDec, vals:[perDec, perDec * 4, perDec + 100, perDec - 100] };
+  });
+  return {
+    title: L({ es:'Crecimiento por década', en:'Growth by decade' }),
+    q: L({
+      es:'Una localidad tenía ' + mil(e.P0) + ' habitantes en 1980 y llegó a ' + mil(e.P1) + ' habitantes en 2020. El aumento se repartió por igual entre las cuatro décadas del periodo. ¿Cuántos habitantes aumentó en cada década?',
+      en:'A locality had ' + mil(e.P0) + ' inhabitants in 1980 and reached ' + mil(e.P1) + ' inhabitants in 2020. The increase was spread evenly across the four decades of the period. How many inhabitants did it grow in each decade?'
+    }),
+    hint: L({
+      es:'Calcula primero el aumento total y después divídelo entre el número de décadas que cabe en el periodo.',
+      en:'First work out the total increase and then divide it by the number of decades that fit in the period.'
+    }),
+    exp: L({
+      es:'El aumento total fue ' + mil(e.P1) + ' − ' + mil(e.P0) + ' = ' + mil(4 * e.perDec) + ' habitantes en cuatro décadas: ' + mil(4 * e.perDec) + ' ÷ 4 = ' + e.perDec + '.',
+      en:'The total increase was ' + mil(e.P1) + ' − ' + mil(e.P0) + ' = ' + mil(4 * e.perDec) + ' inhabitants across four decades: ' + mil(4 * e.perDec) + ' ÷ 4 = ' + e.perDec + '.'
+    }),
+    options: nums(e.vals), correct: 0, showWork: true
+  };
+}
+
+function mkP8(rng){
+  if (rng() < 0.5){
+    return {
+      title: L({ es:'La ladera y las parcelas de abajo', en:'The hillside and the plots below' }),
+      q: L({
+        es:'En una ladera sin árboles la lluvia arrastra el suelo y deja sin tierra fértil las parcelas de abajo, así que la comunidad decide sembrar árboles en la parte alta. ¿Qué muestra esta secuencia?',
+        en:'On a hillside with no trees the rain drags the soil away and leaves the plots below without fertile earth, so the community decides to plant trees on the upper part. What does this sequence show?'
+      }),
+      hint: L({
+        es:'Sigue el orden de los hechos y fíjate si el cambio va solo en un sentido o si regresa.',
+        en:'Follow the order of the facts and notice whether the change goes only one way or comes back.'
+      }),
+      exp: L({
+        es:'Lo que hace la sociedad en la parte alta cambia la naturaleza abajo, y ese cambio obliga a la sociedad a decidir de nuevo: es una interacción de ida y vuelta.',
+        en:'What society does on the upper part changes nature below, and that change forces society to decide again: it is a two-way interaction.'
+      }),
+      options: [
+        L({ es:'Una interacción, porque la sociedad cambia la naturaleza y la naturaleza obliga a decidir', en:'An interaction, because society changes nature and nature forces a decision' }),
+        L({ es:'Una distribución, porque describe en qué parte de la ladera quedan las parcelas', en:'A distribution, because it describes where on the hillside the plots lie' }),
+        L({ es:'Una localización, porque indica a qué altura sobre el nivel del mar está la ladera', en:'A location, because it tells at what height above sea level the hillside is' }),
+        L({ es:'Una diversidad, porque compara la ladera con otra ladera de un cerro vecino', en:'A diversity, because it compares the hillside with another hillside on a nearby hill' })
+      ],
+      correct: 0, showWork: false
+    };
+  }
+  return {
+    title: L({ es:'El pozo y los turnos de riego', en:'The well and the watering turns' }),
+    q: L({
+      es:'Un pueblo abre un pozo nuevo, llegan más familias a vivir cerca y el nivel del agua del manantial baja, por lo que la asamblea fija turnos de riego. ¿Cómo se explica mejor esta cadena de hechos?',
+      en:'A town opens a new well, more families come to live nearby and the water level of the spring drops, so the assembly sets watering turns. How is this chain of facts best explained?'
+    }),
+    hint: L({
+      es:'Identifica qué eslabones son decisiones de la gente y qué eslabones son respuestas del agua y del suelo.',
+      en:'Identify which links are decisions by people and which links are responses of the water and the soil.'
+    }),
+    exp: L({
+      es:'Las decisiones de la gente cambian el recurso natural y el estado del recurso cambia las decisiones: esa relación de ida y vuelta es la interacción.',
+      en:'People decisions change the natural resource and the state of the resource changes the decisions: that two-way relationship is interaction.'
+    }),
+    options: [
+      L({ es:'Como una interacción entre las decisiones de la gente y el agua del sitio', en:'As an interaction between people decisions and the water of the site' }),
+      L({ es:'Como una localización, porque fija el punto exacto donde se abrió el pozo', en:'As a location, because it fixes the exact point where the well was opened' }),
+      L({ es:'Como una temporalidad, porque solo importa el año en que se abrió el pozo', en:'As a temporality, because only the year the well was opened matters' }),
+      L({ es:'Como una distribución, porque cuenta cuántas familias hay por kilómetro cuadrado', en:'As a distribution, because it counts how many families there are per square kilometre' })
+    ],
+    correct: 0, showWork: false
+  };
+}
+
+function mkP9(rng){
+  if (rng() < 0.5){
+    return {
+      title: L({ es:'Ocho tiendas en una calle', en:'Eight shops on one street' }),
+      q: L({
+        es:'En la calle principal de un pueblo hay ocho tiendas juntas y en todo el resto del pueblo hay solamente dos. ¿Qué pregunta se está respondiendo al describir así al pueblo?',
+        en:'On the main street of a town there are eight shops together and in the whole rest of the town there are only two. Which question is being answered by describing the town this way?'
+      }),
+      hint: L({
+        es:'Cada mirada del espacio contesta una pregunta propia: dónde está, cómo se reparte, en qué se diferencia, desde cuándo es así.',
+        en:'Each view of space answers its own question: where it is, how it is spread, how it differs, since when it has been like this.'
+      }),
+      exp: L({
+        es:'Decir cuántas tiendas hay en cada parte y cómo quedan acomodadas es describir la distribución de las tiendas en el espacio del pueblo.',
+        en:'Saying how many shops there are in each part and how they are arranged is describing the distribution of the shops in the space of the town.'
+      }),
+      options: [
+        L({ es:'¿Cómo se reparten las tiendas en el espacio del pueblo?', en:'How are the shops spread across the space of the town?' }),
+        L({ es:'¿En qué latitud y longitud está la calle principal?', en:'At what latitude and longitude is the main street?' }),
+        L({ es:'¿Desde qué año existen las tiendas de esa calle?', en:'Since what year have the shops on that street existed?' }),
+        L({ es:'¿Qué diferencias de clima hay entre las dos zonas?', en:'What climate differences are there between the two zones?' })
+      ],
+      correct: 0, showWork: false
+    };
+  }
+  return {
+    title: L({ es:'Una noche y varios siglos', en:'One night and several centuries' }),
+    q: L({
+      es:'Un derrumbe cambia una ladera en una sola noche, mientras que la erosión que formó esa misma ladera trabajó durante siglos. ¿Qué muestra esta comparación sobre el espacio geográfico?',
+      en:'A landslide changes a hillside in a single night, while the erosion that formed that same hillside worked for centuries. What does this comparison show about geographic space?'
+    }),
+    hint: L({
+      es:'Compara el tamaño del cambio con el tiempo que tardó en ocurrir en cada caso.',
+      en:'Compare the size of the change with the time it took to happen in each case.'
+    }),
+    exp: L({
+      es:'Los dos hechos modifican el mismo espacio, pero uno tarda una noche y el otro siglos: el cambio geográfico ocurre a ritmos muy distintos.',
+      en:'Both facts modify the same space, but one takes a night and the other centuries: geographic change happens at very different paces.'
+    }),
+    options: [
+      L({ es:'Que sus cambios ocurren a ritmos distintos, algunos rápidos y otros muy lentos', en:'That its changes happen at different paces, some fast and others very slow' }),
+      L({ es:'Que solamente los cambios rápidos modifican de verdad el espacio geográfico', en:'That only fast changes really modify geographic space' }),
+      L({ es:'Que los cambios lentos son obra de la sociedad y los rápidos de la naturaleza', en:'That slow changes are the work of society and fast ones the work of nature' }),
+      L({ es:'Que el espacio geográfico regresa a su estado original después de cada cambio', en:'That geographic space returns to its original state after each change' })
+    ],
+    correct: 0, showWork: false
+  };
+}
+
+function mkP10(rng){
+  if (rng() < 0.5){
+    var d = gen(rng, function(r){
+      var E = pk(r, [10, 15, 20, 25, 30]), C = ri(r, 4, 9);
+      return { E:E, C:C, vals:[E * C, E + C, E * (C - 1), E * (C + 1)] };
+    });
+    return {
+      title: L({ es:'Del mapa al terreno', en:'From the map to the ground' }),
+      q: L({
+        es:'En un mapa, un centímetro representa ' + d.E + ' kilómetros del terreno. Dos ciudades aparecen separadas por ' + d.C + ' centímetros en ese mapa. ¿Cuántos kilómetros hay entre las dos ciudades?',
+        en:'On a map, one centimetre represents ' + d.E + ' kilometres of ground. Two cities appear ' + d.C + ' centimetres apart on that map. How many kilometres are there between the two cities?'
+      }),
+      hint: L({
+        es:'Cada centímetro del papel vale la misma cantidad de kilómetros, así que basta repetir ese valor tantas veces como centímetros haya.',
+        en:'Each centimetre of paper is worth the same number of kilometres, so it is enough to repeat that value as many times as there are centimetres.'
+      }),
+      exp: L({
+        es:'Cada centímetro vale ' + d.E + ' km y hay ' + d.C + ' centímetros: ' + d.E + ' × ' + d.C + ' = ' + (d.E * d.C) + '.',
+        en:'Each centimetre is worth ' + d.E + ' km and there are ' + d.C + ' centimetres: ' + d.E + ' × ' + d.C + ' = ' + (d.E * d.C) + '.'
+      }),
+      options: nums(d.vals), correct: 0, showWork: true
+    };
+  }
+  var e = gen(rng, function(r){
+    var E = pk(r, [10, 15, 20, 25]), C = ri(r, 4, 12);
+    return { E:E, C:C, D:E * C, vals:[C, C * 2, C + E, E] };
+  });
+  return {
+    title: L({ es:'Del terreno al mapa', en:'From the ground to the map' }),
+    q: L({
+      es:'Una carretera mide ' + mil(e.D) + ' kilómetros. En un mapa, cada centímetro representa ' + e.E + ' kilómetros del terreno. ¿Cuántos centímetros mide esa carretera en el mapa?',
+      en:'A road measures ' + mil(e.D) + ' kilometres. On a map, each centimetre represents ' + e.E + ' kilometres of ground. How many centimetres does that road measure on the map?'
+    }),
+    hint: L({
+      es:'Averigua cuántas veces cabe en la carretera la cantidad de kilómetros que vale un centímetro.',
+      en:'Work out how many times the number of kilometres worth one centimetre fits into the road.'
+    }),
+    exp: L({
+      es:'Los kilómetros del terreno se reparten entre los que vale cada centímetro: ' + mil(e.D) + ' ÷ ' + e.E + ' = ' + e.C + '.',
+      en:'The kilometres of ground are divided by those each centimetre is worth: ' + mil(e.D) + ' ÷ ' + e.E + ' = ' + e.C + '.'
+    }),
+    options: nums(e.vals), correct: 0, showWork: true
+  };
+}
+</script>
+</body>
+</html>

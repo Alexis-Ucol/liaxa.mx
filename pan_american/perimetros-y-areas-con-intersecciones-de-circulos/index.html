@@ -1,0 +1,2122 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perímetros y Áreas con Intersecciones de Círculos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── INTERACTIVE WIDGETS ── */
+.iwrap { background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--gold); border-radius:12px; padding:1.1rem 1.1rem 1.2rem; }
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:700; margin-bottom:.4rem; }
+.iw-goal { font-size:.92rem; color:var(--text); font-weight:600; margin-bottom:.5rem; }
+.iw-sub { font-size:.79rem; color:var(--text3); margin-bottom:.75rem; }
+.ivcanvas { display:block; width:100%; height:250px; background:var(--surface); }
+.iw-ctrl { display:flex; align-items:center; gap:.6rem; margin:.85rem 0 .5rem; }
+.iw-ctrl input[type=range] { flex:1; accent-color:var(--green); min-height:34px; }
+.iw-btn { min-width:44px; min-height:44px; border:1.5px solid var(--border); background:var(--surface2); color:var(--text); border-radius:9px; font-size:1.05rem; font-weight:700; cursor:pointer; font-family:inherit; }
+.iw-btn:hover { border-color:var(--green); color:var(--green); }
+.iw-read { font-family:'IBM Plex Mono',monospace; font-size:.8rem; color:var(--green-dark); background:var(--green-bg); border-radius:8px; padding:.45rem .7rem; text-align:center; }
+.rverify-btn { margin-top:.85rem; min-height:44px; padding:.55rem 1.25rem; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:.86rem; font-weight:600; cursor:pointer; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.rfb { min-height:1.35rem; margin-top:.6rem; font-size:.85rem; color:var(--text2); }
+.tl-list, .tsl-bins, .tsl-chips { display:flex; flex-wrap:wrap; gap:.5rem; margin:.75rem 0; }
+.tl-list { flex-direction:column; }
+.tl-chip { border:1.5px solid var(--border); border-radius:9px; padding:.5rem .8rem; cursor:pointer; background:var(--surface2); font-size:.83rem; min-height:44px; display:flex; align-items:center; gap:.55rem; color:var(--text); }
+.tl-chip.sel { border-color:var(--gold); background:var(--gold-bg); }
+.tl-chip.locked { cursor:default; }
+.tl-num { font-family:'IBM Plex Mono',monospace; color:var(--text3); font-weight:700; }
+.tsl-bin { border:1.5px solid var(--border); border-radius:9px; padding:.5rem .75rem; background:var(--surface2); color:var(--text); cursor:pointer; font-size:.8rem; font-family:inherit; min-height:44px; }
+.tsl-bin:hover { border-color:var(--green); color:var(--green); }
+.tsl-chip { border:1.5px solid var(--gold); background:var(--gold-bg); color:var(--text); border-radius:20px; padding:.4rem .85rem; font-size:.79rem; cursor:pointer; min-height:38px; display:flex; align-items:center; }
+.tsl-chip.fixed { border-color:var(--green); background:var(--green-bg); cursor:default; }
+.tsl-sum { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.92rem; color:var(--green-dark); text-align:center; margin-top:.45rem; }
+.reflect-prompt { font-size:.92rem; color:var(--text2); margin:.4rem 0 .85rem; }
+.cls-prog { font-family:'IBM Plex Mono',monospace; font-size:.74rem; color:var(--text3); text-align:center; letter-spacing:.08em; }
+.cls-card { border:1.5px solid var(--border); background:var(--surface2); border-radius:10px; padding:.85rem .8rem; text-align:center; font-weight:600; font-size:.88rem; margin:.6rem 0 .2rem; color:var(--text); }
+.cls-done { font-weight:700; color:var(--ok); text-align:center; padding:.6rem; font-size:.92rem; }
+.pk-list { display:flex; flex-wrap:wrap; gap:.5rem; margin:.75rem 0 .3rem; }
+.pk-chip { border:1.5px solid var(--border); background:var(--surface2); color:var(--text); border-radius:20px; padding:.45rem .85rem; font-size:.78rem; cursor:pointer; min-height:38px; display:flex; align-items:center; font-family:inherit; }
+.pk-chip:hover { border-color:var(--green); }
+.pk-chip.on { border-color:var(--gold); background:var(--gold-bg); color:var(--text); font-weight:600; }
+.ct-sum { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.86rem; color:var(--green-dark); background:var(--green-bg); border-radius:8px; padding:.45rem .7rem; text-align:center; margin-top:.4rem; }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--gold-bg); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ivcanvas { height: 230px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+  .iwrap { padding: .85rem .8rem 1rem; }
+  .tsl-bin { font-size: .76rem; padding: .45rem .6rem; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from the rebrand step -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Perímetros y Áreas con Intersecciones de Círculos</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 2° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 2A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Perímetros y Áreas con Intersecciones de Círculos</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ <span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. The downstream build substitutes these exact
+   fields (BRAND_FIELDS / RGB_FIELDS / logo*); :root/dark stay as fallback.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c3c9c', primaryDark:'#041d4f', primaryBg:'#e5ebf8',
+  accent:'#9cb4e4', accentBg:'#e3e9f7',
+  darkPrimary:'#3369d6', darkPrimaryDark:'#6595f5', darkPrimaryBg:'#061940',
+  darkAccent:'#678cd8', darkAccentBg:'#0d1525',
+  pBR:12, pBG:60, pBB:156, pAR:156, pAG:180, pAB:228,
+  logoLeftB64:'data:image/png;base64,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UMe6BgvmeSuSZsrUj076GbL5sTvDWctkF1k0VJcaqC03YtQpSQF2V5hpZ5hgOE5xvpbifKnIaEZmsNxqD2J3SWMeFUV6yoqutHCX+syZkvvVZQYaKk1crTT9pCPE6GQAqz1AIHSl1L9WrSDfrKa2XCrtMvezZbrmliqzRDqbbrHPLNz8VnVQEQRBEG4ui99+CIIgCMJ1EEFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByBkRVARBEIScEUFFEARByJn/C/h7+n5PWdtHAAAAAElFTkSuQmCC', logoRightB64:'', logoAlt:'Pan American',
+  guideTitle:{ es:'Perímetros y Áreas con Intersecciones de Círculos', en:'Perimeters and Areas with Intersections of Circles' },
+  courseName:{ es:'Matemáticas · 2° de Secundaria', en:'Mathematics · Grade 2 Secondary' },
+  filePrefix:'mat2_t08_g02'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10): ES/EN, full rebuild + answer replay.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'mat2_t08_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Perímetros y Áreas con Intersecciones de Círculos','wcourse':'Matemáticas · 2° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Perimeters and Areas with Intersections of Circles','wcourse':'Mathematics · Grade 2 Secondary',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'mat2_t08_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'mat2_t08_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'mat2_t08_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'mat2_t08_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+  if (typeof window.redrawWidgets === 'function') window.redrawWidgets();
+}
+(function() {
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  if (!tb) return;
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER: two-tap confirmation (Rule 6)
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm, used by restoreSession and setLang to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD ONE CARD: inline construction, per-problem showWork branch (Rule 5)
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF (Rule 12)
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF...';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString(LANG === 'es' ? 'es-MX' : 'en-US', { dateStyle:'long', timeStyle:'short' });
+
+  var att = currentAttempt(name, group);
+  var raw = name + '|' + group + '|' + att + '|' + total;
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  var L = (LANG === 'es')
+    ? { student:'ALUMNO', group:'GRUPO', of:' correcta(s) de ', qs:' preguntas', summary:'RESUMEN DE PROBLEMAS',
+        cont:'RESUMEN DE PROBLEMAS (continuacion)', prob:'Problema ', pOf:' de ', ok:'Correcto', bad:'Incorrecto',
+        question:'PREGUNTA', work:'TRABAJO DEL ALUMNO', chose:'Alumno: ', corr:'Correcto: ', sol:'Solucion: ', codeLbl:'Codigo: ', page:'Pagina ' }
+    : { student:'STUDENT', group:'GROUP', of:' correct out of ', qs:' questions', summary:'PROBLEM SUMMARY',
+        cont:'PROBLEM SUMMARY (continued)', prob:'Problem ', pOf:' of ', ok:'Correct', bad:'Incorrect',
+        question:'QUESTION', work:'STUDENT WORK', chose:'Student: ', corr:'Correct: ', sol:'Solution: ', codeLbl:'Code: ', page:'Page ' };
+
+  // ── PDF COLORS: from SCHOOL (Rule 16) ──
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/→/g,'->').replace(/−/g,'-').replace(/²/g,'^2')
+      .replace(/³/g,'^3').replace(/×/g,'x').replace(/÷/g,'/')
+      .replace(/≠/g,'!=').replace(/≤/g,'<=').replace(/≥/g,'>=')
+      .replace(/√/g,'sqrt').replace(/π/g,'pi').replace(/…/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');
+
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
+  }
+
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text(L.student, M+4, 79); doc.text(L.group, 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+L.of+total+L.qs, PW/2, 131, {align:'center'});
+
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text(L.summary, M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text(L.cont, M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'x':'-', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(L.prob+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?L.ok:L.bad, PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text(L.prob+(i+1)+L.pOf+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(L.question, M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize(L.chose+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize(L.corr+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize(L.sol+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'x':'-', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text(L.work, M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer with verification code on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  '+L.codeLbl+code+'  ·  '+L.page+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save(SCHOOL.filePrefix + '_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ ' + t('btn-pdf');
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+
+/* ════════════════════════════════════════════════════════════════════════
+   GUIDE CONTENT: circle-and-figure helpers, manipulatives and buildLesson
+   ════════════════════════════════════════════════════════════════════════ */
+var WIDGET_REDRAW = [];
+window.redrawWidgets = function(){ WIDGET_REDRAW.forEach(function(f){ try { f(); } catch(e){} }); };
+
+var PI314 = 3.14;
+
+function cssVar(n){ var v=''; try { v = getComputedStyle(document.documentElement).getPropertyValue(n); } catch(e){} return (v||'').trim(); }
+
+function n1(x){ return String(Math.round(x*10)/10); }
+
+function addSection(tag, title, html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+html;
+  document.getElementById('lessonBody').appendChild(d);
+}
+
+function shuffleOpts(opts, correct, rng){
+  var a = opts.slice();
+  for (var i = a.length-1; i > 0; i--){ var j = Math.floor(rng()*(i+1)); var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+  return { opts:a, idx:a.indexOf(correct) };
+}
+
+function permOf(n, rng){
+  var a = []; for (var i=0;i<n;i++) a.push(i);
+  for (var k=a.length-1;k>0;k--){ var j=Math.floor(rng()*(k+1)); var tmp=a[k]; a[k]=a[j]; a[j]=tmp; }
+  var sorted = true; for (var q=0;q<n;q++) if (a[q]!==q) sorted = false;
+  if (sorted){ var s=a[0]; a[0]=a[n-1]; a[n-1]=s; }
+  return a;
+}
+
+function fitCanvas(cv, hh){
+  var dpr = window.devicePixelRatio || 1;
+  var w = cv.clientWidth || 320;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(hh*dpr);
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return { ctx:ctx, w:w, h:hh };
+}
+
+/* sweep of `span` degrees counterclockwise starting at `aDeg` (y grows down) */
+function sweepArc(ctx, cx, cy, R, aDeg, span){
+  ctx.arc(cx, cy, R, -aDeg*Math.PI/180, -(aDeg+span)*Math.PI/180, true);
+}
+
+/* ── MANIPULATIVE 1: open a slice and watch its arc and its area grow ── */
+function buildRebanada(rng){
+  var es = (LANG === 'es');
+  var POOL = [
+    { ang:90,  es:'la cuarta parte',   en:'a quarter' },
+    { ang:180, es:'la mitad',          en:'half' },
+    { ang:120, es:'la tercera parte',  en:'a third' },
+    { ang:60,  es:'la sexta parte',    en:'a sixth' },
+    { ang:45,  es:'la octava parte',   en:'an eighth' },
+    { ang:30,  es:'la doceava parte',  en:'a twelfth' }
+  ];
+  var TG = shuffle(POOL, rng).slice(0,3);
+  var st = { ang:70, rad:8, r:0, tries:0, lock:false, done:false };
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap sectorwrap section';
+  wrap.setAttribute('data-widget', 'rebanada');
+  wrap.id = 'rebanadaW';
+  wrap.innerHTML =
+    '<div class="iw-tag">'+(es?'Taller de rebanadas':'Slice workshop')+'</div>'+
+    '<div class="iw-goal" id="secGoal"></div>'+
+    '<div class="iw-sub">'+(es
+      ? 'Un control abre la rebanada y el otro estira el radio. Mira cómo cambian el arco y la superficie pintada mientras mueves cada uno.'
+      : 'One control opens the slice and the other stretches the radius. Watch how the arc and the painted surface change while you move each one.')+'</div>'+
+    '<div class="cvwrap"><canvas class="ivcanvas" id="secCv"></canvas></div>'+
+    '<div class="iw-ctrl"><span class="tl-num">'+(es?'Ángulo':'Angle')+'</span><input type="range" min="5" max="355" step="5" value="70" id="secA" oninput="secSet(0,this.value)"></div>'+
+    '<div class="iw-ctrl"><span class="tl-num">'+(es?'Radio':'Radius')+'</span><input type="range" min="4" max="20" step="1" value="8" id="secR" oninput="secSet(1,this.value)"></div>'+
+    '<div class="iw-read" id="secRead"></div>'+
+    '<button class="rverify-btn" onclick="secCheck()">'+(es?'Verificar':'Check')+'</button>'+
+    '<div class="rfb" id="secFb"></div>';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function arcLen(){ return 2*PI314*st.rad*st.ang/360; }
+  function secArea(){ return PI314*st.rad*st.rad*st.ang/360; }
+
+  function draw(){
+    var cv = document.getElementById('secCv'); if (!cv) return;
+    var f = fitCanvas(cv, cv.clientHeight || 250), ctx = f.ctx, w = f.w, hh = f.h;
+    ctx.clearRect(0,0,w,hh);
+    var cx = w/2, cy = hh/2, Rmax = Math.min(w,hh)/2 - 28;
+    var R = Rmax * (0.35 + 0.65*(st.rad-4)/16);
+    ctx.strokeStyle = cssVar('--border'); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx,cy,Rmax,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(cx,cy); sweepArc(ctx,cx,cy,R,20,st.ang); ctx.closePath();
+    ctx.fillStyle = cssVar('--green-bg'); ctx.fill();
+    ctx.strokeStyle = cssVar('--gold'); ctx.lineWidth = 5;
+    ctx.beginPath(); sweepArc(ctx,cx,cy,R,20,st.ang); ctx.stroke();
+    ctx.strokeStyle = cssVar('--green'); ctx.lineWidth = 2.2;
+    var a1 = 20*Math.PI/180, a2 = (20+st.ang)*Math.PI/180;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+R*Math.cos(a1), cy-R*Math.sin(a1)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+R*Math.cos(a2), cy-R*Math.sin(a2)); ctx.stroke();
+    ctx.strokeStyle = cssVar('--green-dark'); ctx.lineWidth = 2.2;
+    ctx.beginPath(); sweepArc(ctx,cx,cy,R*0.22,20,st.ang); ctx.stroke();
+    ctx.fillStyle = cssVar('--text');
+    ctx.beginPath(); ctx.arc(cx,cy,2.8,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = cssVar('--gold'); ctx.font = '700 13px IBM Plex Sans, sans-serif'; ctx.textAlign = 'center';
+    var am = (20+st.ang/2)*Math.PI/180;
+    ctx.fillText(st.ang+'°', cx + R*0.42*Math.cos(am), cy - R*0.42*Math.sin(am) + 4);
+    ctx.fillStyle = cssVar('--text3'); ctx.font = '600 11px IBM Plex Sans, sans-serif';
+    ctx.fillText((es?'radio ':'radius ')+st.rad+' m', cx, cy + Rmax + 18);
+  }
+  WIDGET_REDRAW.push(draw);
+
+  function readout(){
+    var el = document.getElementById('secRead'); if (!el) return;
+    el.textContent = (es ? 'Arco: ' : 'Arc: ') + n1(arcLen()) + ' m     ' +
+                     (es ? 'área de la rebanada: ' : 'slice area: ') + n1(secArea()) + ' m²     ' +
+                     (es ? 'círculo completo: ' : 'whole circle: ') + n1(PI314*st.rad*st.rad) + ' m²';
+  }
+  function goalText(){
+    var el = document.getElementById('secGoal'); if (!el || st.r >= TG.length) return;
+    el.textContent = es
+      ? 'Reto ' + (st.r+1) + ' de 3: abre la rebanada para que se lleve ' + TG[st.r].es + ' del círculo.'
+      : 'Challenge ' + (st.r+1) + ' of 3: open the slice so it takes ' + TG[st.r].en + ' of the circle.';
+  }
+  function advance(ms){
+    st.lock = true;
+    setTimeout(function(){
+      st.r++; st.tries = 0;
+      var fb = document.getElementById('secFb');
+      if (st.r >= TG.length){
+        st.done = true;
+        if (fb) fb.innerHTML = '<span style="color:var(--ok);font-weight:700">'+(es
+          ? 'Ya viste el reparto: los grados de la rebanada deciden qué parte del círculo y del contorno curvo se lleva.'
+          : 'You saw the sharing: the degrees of the slice decide what share of the circle and of the curved rim it takes.')+'</span>';
+        return;
+      }
+      st.lock = false;
+      if (fb) fb.textContent = '';
+      goalText(); draw(); readout();
+    }, ms);
+  }
+
+  window.secSet = function(which, v){
+    if (st.lock || st.done) return;
+    var n = parseInt(v,10) || 0;
+    if (which === 0) st.ang = n; else st.rad = n;
+    draw(); readout();
+  };
+  window.secCheck = function(){
+    if (st.lock || st.done) return;
+    var tg = TG[st.r], fb = document.getElementById('secFb');
+    if (st.ang === tg.ang){
+      fb.innerHTML = '<span style="color:var(--ok);font-weight:700">🎉 '+(es
+        ? 'Exacto: ' + tg.ang + ' de los 360 grados de la vuelta son ' + tg.es + ', y la rebanada se lleva esa misma parte del área.'
+        : 'Exactly: ' + tg.ang + ' of the 360 degrees of the turn are ' + tg.en + ', and the slice takes that same share of the area.')+'</span>';
+      advance(1900); return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      st.ang = tg.ang;
+      var sl = document.getElementById('secA'); if (sl) sl.value = st.ang;
+      draw(); readout();
+      fb.textContent = es
+        ? 'Así se ve ' + tg.es + ' del círculo: el ángulo central abre ' + tg.ang + ' grados dentro de los 360 de la vuelta, y tanto el arco como el área se reparten en esa misma proporción.'
+        : 'This is what ' + tg.en + ' of the circle looks like: the central angle opens ' + tg.ang + ' degrees within the 360 of the turn, and both the arc and the area are shared in that same proportion.';
+      advance(3200); return;
+    }
+    var d = tg.ang - st.ang;
+    fb.textContent = (d > 0)
+      ? (es ? 'La rebanada se quedó chica por ' + d + ' grados. Ábrela un poco más y observa cómo crecen el arco y el área.'
+            : 'The slice is ' + d + ' degrees too small. Open it a little more and watch the arc and the area grow.')
+      : (es ? 'Te pasaste por ' + (-d) + ' grados. Ciérrala un poco: el arco y el área bajan juntos.'
+            : 'You went over by ' + (-d) + ' degrees. Close it a little: the arc and the area come down together.');
+  };
+
+  goalText();
+  setTimeout(function(){ draw(); readout(); }, 70);
+}
+
+/* ── MANIPULATIVE 2: decide, before calculating, what each figure asks for ── */
+function buildOperacion(rng){
+  var es = (LANG === 'es');
+  var BINS = es ? ['Sumar piezas','Quitar un hueco','Tomar parte de un círculo']
+                : ['Add pieces','Remove a hole','Take part of a circle'];
+  var ITEMS = [
+    { es:'Una lámina cuadrada a la que se le recortó un círculo justo en el centro, y se quiere el área que sobra.',
+      en:'A square sheet with a circle cut right out of its centre, and the leftover area is wanted.', bin:1,
+      wEs:'El círculo abre un hueco dentro de la figura, así que su área se le descuenta al cuadrado.',
+      wEn:'The circle opens a hole inside the figure, so its area is discounted from the square.' },
+    { es:'Un rectángulo con un semicírculo pegado en uno de sus lados, y se quiere el área de toda la figura.',
+      en:'A rectangle with a semicircle attached along one of its sides, and the area of the whole figure is wanted.', bin:0,
+      wEs:'El semicírculo agrega superficie nueva junto al rectángulo, así que las dos áreas se juntan.',
+      wEn:'The semicircle adds new surface next to the rectangle, so the two areas are put together.' },
+    { es:'Una rebanada de pizza que abarca un ángulo central de 60 grados, y se quiere su área.',
+      en:'A pizza slice spanning a central angle of 60 degrees, and its area is wanted.', bin:2,
+      wEs:'La rebanada se lleva la parte del círculo que le tocan sus grados dentro de los 360 de la vuelta.',
+      wEn:'The slice takes the share of the circle that its degrees get within the 360 of the turn.' },
+    { es:'Un anillo formado por dos círculos con el mismo centro y distinto radio, y se quiere el área del anillo.',
+      en:'A ring formed by two circles with the same centre and different radii, and the ring area is wanted.', bin:1,
+      wEs:'El círculo pequeño es el hueco del grande, así que al grande se le quita el pequeño.',
+      wEn:'The small circle is the hole of the big one, so the small one is taken away from the big one.' },
+    { es:'Un cuadrado con un cuarto de círculo pegado por fuera en una de sus esquinas, y se quiere el área total.',
+      en:'A square with a quarter circle attached outside at one of its corners, and the total area is wanted.', bin:0,
+      wEs:'La pieza curva se pega por fuera y aporta superficie, así que se suma a la del cuadrado.',
+      wEn:'The curved piece is attached outside and brings surface in, so it adds to the square one.' },
+    { es:'Una placa rectangular a la que se le hicieron cuatro perforaciones circulares iguales, y se quiere el material que queda.',
+      en:'A rectangular plate with four equal circular holes drilled in it, and the remaining material is wanted.', bin:1,
+      wEs:'Cada perforación se lleva un pedazo de placa, así que las cuatro áreas se le descuentan al rectángulo.',
+      wEn:'Each hole takes a piece of the plate away, so the four areas are discounted from the rectangle.' },
+    { es:'La parte de un jardín circular que queda encerrada entre dos radios que abren 150 grados.',
+      en:'The part of a circular garden caught between two radii opening 150 degrees.', bin:2,
+      wEs:'Es un sector: se lleva la parte del círculo que marcan sus grados dentro de la vuelta completa.',
+      wEn:'It is a sector: it takes the share of the circle marked by its degrees within the full turn.' }
+  ];
+  var st = { i:0, seq:permOf(ITEMS.length, rng), tries:0, hits:0, lock:false, done:false };
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap opwrap section';
+  wrap.setAttribute('data-widget', 'operacion');
+  wrap.id = 'operacionW';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function render(){
+    if (st.done){
+      wrap.innerHTML =
+        '<div class="iw-tag">'+(es?'Antes de calcular':'Before calculating')+'</div>'+
+        '<div class="cls-done">🎉 '+(es?'Figuras leídas: ':'Figures read: ')+st.hits+' / '+ITEMS.length+'</div>';
+      return;
+    }
+    var it = ITEMS[st.seq[st.i]];
+    wrap.innerHTML =
+      '<div class="iw-tag">'+(es?'Antes de calcular':'Before calculating')+'</div>'+
+      '<div class="iw-sub">'+(es
+        ? 'Lee la figura y decide qué le pide a tus cuentas. Si fallas, la tarjeta se queda para que la vuelvas a leer.'
+        : 'Read the figure and decide what it asks your arithmetic for. If you miss, the card stays so you can read it again.')+'</div>'+
+      '<div class="cls-prog">'+(st.i+1)+' / '+ITEMS.length+'</div>'+
+      '<div class="cls-card">'+it[LANG]+'</div>'+
+      '<div class="tsl-bins">'+ BINS.map(function(b,bi){
+          return '<button class="tsl-bin" onclick="opPick('+bi+')">'+b+'</button>';
+        }).join('') +'</div>'+
+      '<div class="rfb" id="opFb"></div>';
+  }
+  function next(ms){
+    st.lock = true;
+    setTimeout(function(){
+      st.i++; st.tries = 0; st.lock = false;
+      if (st.i >= ITEMS.length) st.done = true;
+      render();
+    }, ms);
+  }
+
+  window.opPick = function(bi){
+    if (st.lock || st.done) return;
+    var it = ITEMS[st.seq[st.i]], fb = document.getElementById('opFb');
+    if (bi === it.bin){
+      st.hits++;
+      fb.innerHTML = '<span style="color:var(--ok);font-weight:700">✓ '+(es?it.wEs:it.wEn)+'</span>';
+      next(1600); return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      fb.innerHTML = (es?'Era <b>':'It was <b>')+BINS[it.bin]+'</b>. '+(es?it.wEs:it.wEn);
+      next(3000); return;
+    }
+    fb.textContent = es
+      ? 'Todavía no. Pregúntate si la pieza redonda ocupa lugar dentro de la figura, si abre un hueco, o si la figura es un pedazo del círculo.'
+      : 'Not yet. Ask yourself whether the round piece takes up room inside the figure, opens a hole, or whether the figure is a piece of the circle.';
+  };
+
+  render();
+}
+
+/* ── MANIPULATIVE 3: mark only the tramos the pencil really walks ── */
+function buildContorno(rng){
+  var es = (LANG === 'es');
+  var FIGS = [
+    { id:'cs', total:45.7,
+      es:'Un cuadrado de 10 cm de lado con un semicírculo pegado sobre su lado derecho.',
+      en:'A square of side 10 cm with a semicircle attached on its right side.',
+      pieces:[
+        { id:'top',   ok:true,  es:'lado de arriba del cuadrado, 10 cm',  en:'top side of the square, 10 cm' },
+        { id:'bot',   ok:true,  es:'lado de abajo del cuadrado, 10 cm',   en:'bottom side of the square, 10 cm' },
+        { id:'left',  ok:true,  es:'lado izquierdo del cuadrado, 10 cm',  en:'left side of the square, 10 cm' },
+        { id:'right', ok:false, es:'lado derecho del cuadrado, 10 cm',    en:'right side of the square, 10 cm' },
+        { id:'arc',   ok:true,  es:'arco del semicírculo, 15.7 cm',       en:'arc of the semicircle, 15.7 cm' },
+        { id:'radio', ok:false, es:'radio del semicírculo, 5 cm',         en:'radius of the semicircle, 5 cm' }
+      ] },
+    { id:'q', total:35.7,
+      es:'Un cuarto de círculo de 10 cm de radio, como una rebanada recta de pastel.',
+      en:'A quarter circle of radius 10 cm, like a straight cake slice.',
+      pieces:[
+        { id:'rh',    ok:true,  es:'radio horizontal, 10 cm',                    en:'horizontal radius, 10 cm' },
+        { id:'rv',    ok:true,  es:'radio vertical, 10 cm',                      en:'vertical radius, 10 cm' },
+        { id:'arc',   ok:true,  es:'arco del cuarto de circunferencia, 15.7 cm', en:'arc of the quarter circle, 15.7 cm' },
+        { id:'chord', ok:false, es:'cuerda entre los extremos del arco, 14.1 cm',en:'chord between the ends of the arc, 14.1 cm' },
+        { id:'full',  ok:false, es:'circunferencia completa, 62.8 cm',           en:'whole circumference, 62.8 cm' }
+      ] },
+    { id:'ring', total:100.5,
+      es:'Un anillo plano: un círculo de 10 cm de radio con un agujero de 6 cm de radio en el mismo centro.',
+      en:'A flat ring: a circle of radius 10 cm with a hole of radius 6 cm at the same centre.',
+      pieces:[
+        { id:'outer', ok:true,  es:'circunferencia de afuera, 62.8 cm', en:'outer circumference, 62.8 cm' },
+        { id:'inner', ok:true,  es:'circunferencia del agujero, 37.7 cm', en:'circumference of the hole, 37.7 cm' },
+        { id:'radioG',ok:false, es:'radio del círculo grande, 10 cm',   en:'radius of the big circle, 10 cm' },
+        { id:'ancho', ok:false, es:'ancho del anillo, 4 cm',            en:'width of the ring, 4 cm' }
+      ] },
+    { id:'track', total:122.8,
+      es:'Una pista: un rectángulo de 30 cm de largo por 20 cm de ancho con un semicírculo de 10 cm de radio pegado en cada extremo corto.',
+      en:'A track: a rectangle 30 cm long by 20 cm wide with a semicircle of radius 10 cm attached at each short end.',
+      pieces:[
+        { id:'top',   ok:true,  es:'lado largo de arriba, 30 cm',        en:'long top side, 30 cm' },
+        { id:'bot',   ok:true,  es:'lado largo de abajo, 30 cm',         en:'long bottom side, 30 cm' },
+        { id:'arcL',  ok:true,  es:'arco del extremo izquierdo, 31.4 cm',en:'arc of the left end, 31.4 cm' },
+        { id:'arcR',  ok:true,  es:'arco del extremo derecho, 31.4 cm',  en:'arc of the right end, 31.4 cm' },
+        { id:'sideL', ok:false, es:'lado corto izquierdo, 20 cm',        en:'left short side, 20 cm' },
+        { id:'sideR', ok:false, es:'lado corto derecho, 20 cm',          en:'right short side, 20 cm' }
+      ] }
+  ];
+  var ROUNDS = shuffle(FIGS, rng).slice(0,3);
+  var st = { r:0, sel:{}, tries:0, lock:false, done:false };
+
+  function lenOf(p){ var m = (p.es || '').match(/([0-9]+(?:\.[0-9])?) cm/); return m ? parseFloat(m[1]) : 0; }
+  function selSum(){
+    var f = ROUNDS[st.r], s = 0;
+    f.pieces.forEach(function(p){ if (st.sel[p.id]) s += lenOf(p); });
+    return s;
+  }
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap ctwrap section';
+  wrap.setAttribute('data-widget', 'contorno');
+  wrap.id = 'contornoW';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function draw(){
+    var cv = document.getElementById('ctCv'); if (!cv) return;
+    var f = fitCanvas(cv, cv.clientHeight || 250), ctx = f.ctx, w = f.w, hh = f.h;
+    ctx.clearRect(0,0,w,hh);
+    var fig = ROUNDS[st.r]; if (!fig) return;
+    function style(id){
+      var on = !!st.sel[id];
+      ctx.strokeStyle = on ? cssVar('--gold') : cssVar('--border');
+      ctx.lineWidth = on ? 5 : 1.6;
+    }
+    function seg(x1,y1,x2,y2,id){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); style(id); ctx.stroke(); }
+    if (fig.id === 'cs'){
+      var S = Math.min(hh-70, 120), x0 = (w - S*1.5)/2, y0 = (hh-S)/2;
+      seg(x0+S, y0+S/2, x0+S+S/2, y0+S/2, 'radio');
+      seg(x0, y0, x0+S, y0, 'top');
+      seg(x0, y0+S, x0+S, y0+S, 'bot');
+      seg(x0, y0, x0, y0+S, 'left');
+      seg(x0+S, y0, x0+S, y0+S, 'right');
+      ctx.beginPath(); ctx.arc(x0+S, y0+S/2, S/2, -Math.PI/2, Math.PI/2); style('arc'); ctx.stroke();
+    } else if (fig.id === 'q'){
+      var Rq = Math.min(hh-70, 130), cxq = w/2 - Rq/2, cyq = hh/2 + Rq/2;
+      ctx.beginPath(); ctx.arc(cxq, cyq, Rq, 0, Math.PI*2); style('full'); ctx.stroke();
+      seg(cxq+Rq, cyq, cxq, cyq-Rq, 'chord');
+      ctx.beginPath(); ctx.arc(cxq, cyq, Rq, -Math.PI/2, 0); style('arc'); ctx.stroke();
+      seg(cxq, cyq, cxq+Rq, cyq, 'rh');
+      seg(cxq, cyq, cxq, cyq-Rq, 'rv');
+    } else if (fig.id === 'ring'){
+      var Ro = Math.min(hh-60, 200)/2, Ri = Ro*0.6, cxr = w/2, cyr = hh/2;
+      seg(cxr, cyr, cxr + Ro*Math.cos(-0.8), cyr + Ro*Math.sin(-0.8), 'radioG');
+      seg(cxr-Ro, cyr, cxr-Ri, cyr, 'ancho');
+      ctx.beginPath(); ctx.arc(cxr, cyr, Ro, 0, Math.PI*2); style('outer'); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cxr, cyr, Ri, 0, Math.PI*2); style('inner'); ctx.stroke();
+    } else {
+      var Rt = Math.min(hh-70, 110)/2, L = Math.min(w-4*Rt-30, 180), x1 = (w-L)/2, cyt = hh/2;
+      seg(x1, cyt-Rt, x1, cyt+Rt, 'sideL');
+      seg(x1+L, cyt-Rt, x1+L, cyt+Rt, 'sideR');
+      seg(x1, cyt-Rt, x1+L, cyt-Rt, 'top');
+      seg(x1, cyt+Rt, x1+L, cyt+Rt, 'bot');
+      ctx.beginPath(); ctx.arc(x1, cyt, Rt, Math.PI/2, -Math.PI/2); style('arcL'); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x1+L, cyt, Rt, -Math.PI/2, Math.PI/2); style('arcR'); ctx.stroke();
+    }
+  }
+  WIDGET_REDRAW.push(draw);
+
+  function render(){
+    if (st.done){
+      wrap.innerHTML =
+        '<div class="iw-tag">'+(es?'Arma el contorno':'Build the outline')+'</div>'+
+        '<div class="cls-done">🎉 '+(es
+          ? 'Ya distingues el borde por el que sí pasa el lápiz.'
+          : 'You can now tell apart the edge the pencil really walks.')+'</div>';
+      return;
+    }
+    var fig = ROUNDS[st.r];
+    wrap.innerHTML =
+      '<div class="iw-tag">'+(es?'Arma el contorno':'Build the outline')+'</div>'+
+      '<div class="iw-goal">'+(es?'Figura ':'Figure ')+(st.r+1)+(es?' de 3: ':' of 3: ')+fig[LANG]+'</div>'+
+      '<div class="iw-sub">'+(es
+        ? 'Marca los tramos por los que pasa el lápiz al recorrer el borde sin despegarlo. Cada tramo que marcas se ilumina en la figura.'
+        : 'Mark the stretches the pencil goes through while tracing the edge without lifting it. Every stretch you mark lights up in the figure.')+'</div>'+
+      '<div class="cvwrap"><canvas class="ivcanvas" id="ctCv"></canvas></div>'+
+      '<div class="pk-list">'+ fig.pieces.map(function(p){
+          return '<button class="pk-chip'+(st.sel[p.id]?' on':'')+'" onclick="ctTap(\''+p.id+'\')">'+p[LANG]+'</button>';
+        }).join('') +'</div>'+
+      '<div class="ct-sum" id="ctSum"></div>'+
+      '<button class="rverify-btn" onclick="ctCheck()">'+(es?'Verificar':'Check')+'</button>'+
+      '<div class="rfb" id="ctFb"></div>';
+    sumOut();
+    setTimeout(draw, 60);
+  }
+  function sumOut(){
+    var el = document.getElementById('ctSum'); if (!el) return;
+    el.textContent = (es ? 'Suma de los tramos marcados: ' : 'Sum of the marked stretches: ') + n1(selSum()) + ' cm';
+  }
+  function next(ms){
+    st.lock = true;
+    setTimeout(function(){
+      st.r++; st.tries = 0; st.sel = {}; st.lock = false;
+      if (st.r >= ROUNDS.length) st.done = true;
+      render();
+    }, ms);
+  }
+
+  window.ctTap = function(id){
+    if (st.lock || st.done) return;
+    st.sel[id] = !st.sel[id];
+    var fig = ROUNDS[st.r];
+    var btns = wrap.querySelectorAll('.pk-chip');
+    fig.pieces.forEach(function(p, i){ if (btns[i]) btns[i].classList.toggle('on', !!st.sel[p.id]); });
+    sumOut(); draw();
+    var fb = document.getElementById('ctFb'); if (fb) fb.textContent = '';
+  };
+  window.ctCheck = function(){
+    if (st.lock || st.done) return;
+    var fig = ROUNDS[st.r], fb = document.getElementById('ctFb');
+    var extra = null, missing = null;
+    fig.pieces.forEach(function(p){
+      if (st.sel[p.id] && !p.ok && !extra) extra = p;
+      if (!st.sel[p.id] && p.ok && !missing) missing = p;
+    });
+    if (!extra && !missing){
+      fb.innerHTML = '<span style="color:var(--ok);font-weight:700">🎉 '+(es
+        ? 'Contorno completo: mide ' + n1(fig.total) + ' cm.'
+        : 'Outline complete: it measures ' + n1(fig.total) + ' cm.')+'</span>';
+      next(2000); return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      st.sel = {};
+      fig.pieces.forEach(function(p){ if (p.ok) st.sel[p.id] = true; });
+      render();
+      var fb2 = document.getElementById('ctFb');
+      if (fb2) fb2.textContent = es
+        ? 'Este es el borde completo, y suma ' + n1(fig.total) + ' cm. Los tramos que quedaron sin marcar están por dentro o ni siquiera se dibujan en el borde.'
+        : 'This is the whole edge, and it adds up to ' + n1(fig.total) + ' cm. The stretches left unmarked lie inside or are not even drawn on the edge.';
+      next(3600); return;
+    }
+    fb.textContent = extra
+      ? (es ? 'El tramo "' + extra.es + '" no forma parte del borde: recorre la figura con el dedo y verás que el lápiz nunca pasa por ahí.'
+            : 'The stretch "' + extra.en + '" is not part of the edge: trace the figure with your finger and you will see the pencil never goes there.')
+      : (es ? 'Te falta un tramo del borde: fíjate en "' + missing.es + '", el dedo tiene que pasar por ahí para cerrar el recorrido.'
+            : 'You are missing a stretch of the edge: look at "' + missing.en + '", your finger has to go there to close the trip.');
+  };
+
+  render();
+}
+
+/* ── MANIPULATIVE 4: slide one circle into the other and watch the common region ── */
+function buildDosCirculos(rng){
+  var es = (LANG === 'es');
+  var R1 = 5, R2 = 3;
+  var TASKS = [
+    { key:'sec',  es:'que los dos círculos se crucen y aparezca una región común',
+                  en:'the two circles to cross so a common region appears' },
+    { key:'ext',  es:'que los dos círculos queden separados, sin ningún punto en común',
+                  en:'the two circles to stay apart, with no point in common' },
+    { key:'tanE', es:'que los dos círculos apenas se toquen en un solo punto por fuera',
+                  en:'the two circles to barely touch at a single point from outside' },
+    { key:'in',   es:'que el círculo chico quede completamente dentro del grande, sin tocar su borde',
+                  en:'the small circle to sit fully inside the big one, without touching its rim' }
+  ];
+  var T = shuffle(TASKS, rng).slice(0,3);
+  var st = { d:11, r:0, tries:0, lock:false, done:false };
+  var SUM = R1+R2, DIF = R1-R2;
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap dcwrap section';
+  wrap.setAttribute('data-widget', 'traslape');
+  wrap.id = 'dosCirculosW';
+  wrap.innerHTML =
+    '<div class="iw-tag">'+(es?'Traslape':'Overlap')+'</div>'+
+    '<div class="iw-goal" id="dcGoal"></div>'+
+    '<div class="iw-sub">'+(es
+      ? 'El control acerca y aleja los dos círculos, uno de 5 cm de radio y otro de 3 cm. La región que pertenece a los dos a la vez se pinta al instante.'
+      : 'The control brings the two circles closer and further apart, one of radius 5 cm and one of 3 cm. The region belonging to both at once is painted instantly.')+'</div>'+
+    '<div class="cvwrap"><canvas class="ivcanvas" id="dcCv"></canvas></div>'+
+    '<div class="iw-ctrl"><span class="tl-num">'+(es?'Distancia':'Distance')+'</span><input type="range" min="0" max="130" step="1" value="110" id="dcD" oninput="dcSet(this.value)"></div>'+
+    '<div class="iw-read" id="dcRead"></div>'+
+    '<button class="rverify-btn" onclick="dcCheck()">'+(es?'Verificar':'Check')+'</button>'+
+    '<div class="rfb" id="dcFb"></div>';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function dist(){ return st.d/10; }
+  function kind(d){
+    if (Math.abs(d-SUM) < 0.15) return 'tanE';
+    if (Math.abs(d-DIF) < 0.15) return 'tanI';
+    if (d > SUM) return 'ext';
+    if (d < DIF) return 'in';
+    return 'sec';
+  }
+  function kindName(k){
+    var m = es
+      ? { ext:'separados', tanE:'tangentes por fuera', sec:'secantes, se cruzan en dos puntos', tanI:'tangentes por dentro', in:'uno dentro del otro' }
+      : { ext:'apart', tanE:'tangent from outside', sec:'secant, crossing at two points', tanI:'tangent from inside', in:'one inside the other' };
+    return m[k];
+  }
+  function comun(d){
+    if (d >= SUM) return 0;
+    if (d <= Math.abs(DIF)) return Math.PI*R2*R2;
+    var a1 = R1*R1*Math.acos((d*d + R1*R1 - R2*R2)/(2*d*R1));
+    var a2 = R2*R2*Math.acos((d*d + R2*R2 - R1*R1)/(2*d*R2));
+    var a3 = 0.5*Math.sqrt((-d+R1+R2)*(d+R1-R2)*(d-R1+R2)*(d+R1+R2));
+    return a1 + a2 - a3;
+  }
+
+  function draw(){
+    var cv = document.getElementById('dcCv'); if (!cv) return;
+    var f = fitCanvas(cv, cv.clientHeight || 250), ctx = f.ctx, w = f.w, hh = f.h;
+    ctx.clearRect(0,0,w,hh);
+    var sc = Math.min(16, (w-24)/(13 + R1 + R2));
+    var d = dist(), cy = hh/2;
+    var c1x = w/2 - d*sc/2, c2x = w/2 + d*sc/2;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(c1x, cy, R1*sc, 0, Math.PI*2); ctx.clip();
+    ctx.beginPath(); ctx.arc(c2x, cy, R2*sc, 0, Math.PI*2);
+    ctx.fillStyle = cssVar('--gold-bg'); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = cssVar('--green'); ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(c1x, cy, R1*sc, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = cssVar('--green-dark'); ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(c2x, cy, R2*sc, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = cssVar('--gold'); ctx.lineWidth = 1.6; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(c1x, cy); ctx.lineTo(c2x, cy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = cssVar('--text');
+    ctx.beginPath(); ctx.arc(c1x, cy, 2.6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(c2x, cy, 2.6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = cssVar('--text3'); ctx.font = '600 11px IBM Plex Sans, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(n1(d)+' cm', (c1x+c2x)/2, cy - 8);
+    ctx.fillStyle = cssVar('--gold'); ctx.font = '700 12px IBM Plex Sans, sans-serif';
+    ctx.fillText(kindName(kind(d)), w/2, hh - 10);
+  }
+  WIDGET_REDRAW.push(draw);
+
+  function readout(){
+    var el = document.getElementById('dcRead'); if (!el) return;
+    var d = dist(), com = comun(d), tot = Math.PI*R1*R1 + Math.PI*R2*R2 - com;
+    el.textContent = (es ? 'Región común: ' : 'Common region: ') + n1(com) + ' cm²     ' +
+                     (es ? 'superficie cubierta en total: ' : 'surface covered in total: ') + n1(tot) + ' cm²';
+  }
+  function goalText(){
+    var el = document.getElementById('dcGoal'); if (!el || st.r >= T.length) return;
+    el.textContent = (es ? 'Reto ' + (st.r+1) + ' de 3: consigue ' + T[st.r].es + '.'
+                         : 'Challenge ' + (st.r+1) + ' of 3: get ' + T[st.r].en + '.');
+  }
+  function advance(ms){
+    st.lock = true;
+    setTimeout(function(){
+      st.r++; st.tries = 0;
+      var fb = document.getElementById('dcFb');
+      if (st.r >= T.length){
+        st.done = true;
+        if (fb) fb.innerHTML = '<span style="color:var(--ok);font-weight:700">'+(es
+          ? 'Ya viste el truco: mientras hay región común, la superficie cubierta es menor que la suma de las dos áreas.'
+          : 'You saw the trick: while there is a common region, the covered surface is smaller than the sum of the two areas.')+'</span>';
+        return;
+      }
+      st.lock = false;
+      if (fb) fb.textContent = '';
+      goalText(); draw(); readout();
+    }, ms);
+  }
+
+  window.dcSet = function(v){
+    if (st.lock || st.done) return;
+    st.d = parseInt(v,10) || 0;
+    draw(); readout();
+  };
+  window.dcCheck = function(){
+    if (st.lock || st.done) return;
+    var tg = T[st.r].key, d = dist(), k = kind(d), fb = document.getElementById('dcFb');
+    if (k === tg){
+      fb.innerHTML = '<span style="color:var(--ok);font-weight:700">🎉 '+(es
+        ? 'Logrado: a ' + n1(d) + ' cm de distancia los círculos quedan ' + kindName(k) + '.'
+        : 'Done: at a distance of ' + n1(d) + ' cm the circles are ' + kindName(k) + '.')+'</span>';
+      advance(1900); return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      var canon = { sec:50, ext:100, tanE:80, in:10 };
+      st.d = canon[tg];
+      var sl = document.getElementById('dcD'); if (sl) sl.value = st.d;
+      draw(); readout();
+      fb.textContent = es
+        ? 'Así se ve: con los radios de 5 cm y 3 cm, lo que decide todo es cómo se compara la distancia entre centros con la suma de los radios y con su diferencia.'
+        : 'This is how it looks: with radii of 5 cm and 3 cm, what decides everything is how the distance between centres compares with the sum of the radii and with their difference.';
+      advance(3400); return;
+    }
+    var farther = (tg === 'ext' && d <= SUM) || (tg === 'tanE' && d < SUM) || (tg === 'sec' && d < DIF);
+    fb.textContent = farther
+      ? (es ? 'Sepáralos un poco más y observa cuánto se encoge la región pintada.'
+            : 'Move them a little further apart and watch the painted region shrink.')
+      : (es ? 'Acércalos un poco más y observa cuánto crece la región pintada.'
+            : 'Bring them a little closer and watch the painted region grow.');
+  };
+
+  goalText();
+  setTimeout(function(){ draw(); readout(); }, 70);
+}
+
+/* ── MANIPULATIVE 5: sketch or write your own reasoning ── */
+function buildReflect(rng){
+  var es = (LANG === 'es');
+  var PROMPTS = [
+    { es:'Dibuja un cuadrado con el círculo más grande que quepa dentro. Marca con un color el borde de toda la figura y con otro la parte que sobra alrededor del círculo. Explica por qué son dos preguntas distintas.',
+      en:'Draw a square with the biggest circle that fits inside. Mark the edge of the whole figure in one colour and the leftover part around the circle in another. Explain why these are two different questions.' },
+    { es:'Dibuja una figura hecha con un rectángulo y un semicírculo pegados. Traza su contorno de un solo trazo y señala qué línea del dibujo quedó por dentro y ya no se recorre.',
+      en:'Draw a figure made of a rectangle and a semicircle joined together. Trace its outline in a single stroke and point out which line of the drawing ended up inside and is no longer walked.' },
+    { es:'Dibuja dos círculos que se traslapen y colorea la región común. Explica con tus palabras por qué sumar las dos áreas da un resultado mayor que la superficie realmente cubierta.',
+      en:'Draw two overlapping circles and colour the common region. Explain in your own words why adding the two areas gives a result larger than the surface actually covered.' },
+    { es:'Dibuja una rebanada de círculo y otra rebanada del mismo ángulo pero con el doble de radio. Explica qué le pasa al arco y qué le pasa a la superficie.',
+      en:'Draw a circle slice and another slice with the same angle but twice the radius. Explain what happens to the arc and what happens to the surface.' }
+  ];
+  var p = PROMPTS[Math.floor(rng()*PROMPTS.length)];
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap reflectwrap section';
+  wrap.setAttribute('data-widget', 'reflect');
+  wrap.id = 'reflectW';
+  wrap.innerHTML =
+    '<div class="iw-tag">'+(es?'Tu trazo':'Your sketch')+'</div>'+
+    '<div class="reflect-prompt">'+p[LANG]+'</div>'+
+    '<div class="wtabs">'+
+      '<button class="wtab active" onclick="reflectTab(\'type\',this)">'+(es?'⌨️ Escribir':'⌨️ Write')+'</button>'+
+      '<button class="wtab" onclick="reflectTab(\'draw\',this)">'+(es?'✏️ Dibujar':'✏️ Sketch')+'</button>'+
+    '</div>'+
+    '<div class="wpanel active" id="reflect_type"><textarea class="wtextarea" id="reflectTa" placeholder="'+(es?'Tu respuesta...':'Your answer...')+'"></textarea></div>'+
+    '<div class="wpanel" id="reflect_draw">'+
+      '<div class="cvwrap">'+
+        '<canvas class="dcanvas" id="reflectCv"></canvas>'+
+        '<div class="ctoolbar">'+
+          '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>'+
+          '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>'+
+          '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>'+
+          '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>'+
+          '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>'+
+          '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>'+
+          '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>'+
+          '<button class="clrbtn">'+t('btn-clear')+'</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<button class="rverify-btn" onclick="reflectSave()">'+(es?'Guardar mi trazo':'Save my sketch')+'</button>'+
+    '<div class="rfb" id="reflectFb"></div>';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  window.reflectTab = function(which, btn){
+    ['type','draw'].forEach(function(k){
+      var el = document.getElementById('reflect_'+k);
+      if (el) el.classList.toggle('active', k === which);
+    });
+    var w = document.getElementById('reflectW');
+    if (w) w.querySelectorAll('.wtab').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    if (which === 'draw') setTimeout(function(){ var c = document.getElementById('reflectCv'); if (c && !c.width) initCanvas(c); }, 60);
+  };
+  window.reflectSave = function(){
+    var fb = document.getElementById('reflectFb'); if (!fb) return;
+    fb.innerHTML = '<span style="color:var(--ok);font-weight:700">✓ '+(es
+      ? 'Guardado. Buen razonamiento: aquí hay más de un camino válido.'
+      : 'Saved. Good reasoning: there is more than one valid path here.')+'</span>';
+  };
+}
+
+/* ── graded problem builder: pushes and renders one card inline (Rule 1/5) ── */
+function addProblem(rng, spec){
+  var sh = shuffleOpts(spec.options, spec.correct, rng);
+  problems.push({
+    title: spec.title,
+    questionText: spec.q,
+    fn: '',
+    options: sh.opts,
+    correctIdx: sh.idx,
+    hint: spec.hint,
+    explanation: spec.exp,
+    showWork: !!spec.showWork,
+    studentChoice: null,
+    pendingChoice: null
+  });
+  var idx = problems.length - 1;
+  buildOneCard(problems[idx], idx);
+}
+
+/* ================================================
+   buildLesson: concept, manipulative, graded problem, interleaved
+   ================================================ */
+function buildLesson(rng) {
+  problems = [];
+  WIDGET_REDRAW = [];
+  var lb = document.getElementById('lessonBody');
+  lb.innerHTML = '';
+  var es = (LANG === 'es');
+  var C  = es ? 'Concepto ' : 'Concept ';
+
+  /* ── CONCEPT 1 ───────────────────────────────────────────────── */
+  addSection(C + '1',
+    es ? 'La rebanada se lleva su parte' : 'The slice takes its share',
+    es
+    ? '<p>Cuando dos radios salen del centro, encierran una región con forma de rebanada: el sector circular. Todo lo que puedas decir de esa rebanada depende de una sola cosa, los grados que abre su ángulo central dentro de los 360 de la vuelta completa.</p>'+
+      '<p>Si el ángulo abarca 90 grados, la rebanada se queda con la cuarta parte de la superficie del círculo y con la cuarta parte de la circunferencia. Ese pedazo de circunferencia es su arco. Pero cuidado con el contorno: el borde de una rebanada no es solo el arco, para volver al punto de partida hay que caminar además por los dos radios que la cierran.</p>'+
+      '<div class="callout"><p><strong>Dos preguntas distintas:</strong> el área del sector reparte la superficie del círculo según los grados; el perímetro del sector recorre el arco y suma los dos radios.</p></div>'
+    : '<p>When two radii leave the centre, they enclose a slice-shaped region: the circular sector. Everything you can say about that slice depends on one single thing, the degrees its central angle opens within the 360 of the full turn.</p>'+
+      '<p>If the angle spans 90 degrees, the slice keeps a quarter of the circle surface and a quarter of the circumference. That piece of circumference is its arc. But watch the outline: the edge of a slice is not just the arc, to get back to the starting point you also have to walk along the two radii that close it.</p>'+
+      '<div class="callout"><p><strong>Two different questions:</strong> the area of the sector shares out the circle surface according to the degrees; the perimeter of the sector walks the arc and adds the two radii.</p></div>');
+
+  buildRebanada(rng);
+
+  var P1V = [
+    { opts:['314','628','1256','157'], ans:'314',
+      es:{ t:'El aspersor del jardín', q:'Un aspersor lanza agua hasta 20 m de distancia y gira describiendo un ángulo central de 90 grados. ¿Cuántos metros cuadrados de pasto alcanza a mojar? Usa 3.14 para π.',
+           h:'Consigue primero el área del círculo completo que cubriría el aspersor si diera la vuelta entera, y quédate después con la parte que le tocan sus grados dentro de los 360 de la vuelta.',
+           e:'El círculo completo de 20 m de radio mide 3.14 × 20 × 20 = 1256 m². El aspersor solo barre 90 de los 360 grados, es decir la cuarta parte, así que moja 1256 ÷ 4 = 314.' },
+      en:{ t:'The garden sprinkler', q:'A sprinkler throws water up to 20 m away and turns describing a central angle of 90 degrees. How many square metres of grass does it manage to wet? Use 3.14 for π.',
+           h:'First get the area of the whole circle the sprinkler would cover on a full turn, then keep the share its degrees get within the 360 of the turn.',
+           e:'The whole circle of radius 20 m measures 3.14 × 20 × 20 = 1256 m². The sprinkler only sweeps 90 of the 360 degrees, that is a quarter, so it wets 1256 ÷ 4 = 314.' } },
+    { opts:['942','2826','1413','471'], ans:'942',
+      es:{ t:'El aspersor del jardín', q:'Un aspersor lanza agua hasta 30 m de distancia y gira describiendo un ángulo central de 120 grados. ¿Cuántos metros cuadrados de pasto alcanza a mojar? Usa 3.14 para π.',
+           h:'Consigue primero el área del círculo completo que cubriría el aspersor si diera la vuelta entera, y quédate después con la parte que le tocan sus grados dentro de los 360 de la vuelta.',
+           e:'El círculo completo de 30 m de radio mide 3.14 × 30 × 30 = 2826 m². El aspersor solo barre 120 de los 360 grados, es decir la tercera parte, así que moja 2826 ÷ 3 = 942.' },
+      en:{ t:'The garden sprinkler', q:'A sprinkler throws water up to 30 m away and turns describing a central angle of 120 degrees. How many square metres of grass does it manage to wet? Use 3.14 for π.',
+           h:'First get the area of the whole circle the sprinkler would cover on a full turn, then keep the share its degrees get within the 360 of the turn.',
+           e:'The whole circle of radius 30 m measures 3.14 × 30 × 30 = 2826 m². The sprinkler only sweeps 120 of the 360 degrees, that is a third, so it wets 2826 ÷ 3 = 942.' } },
+    { opts:['628','5024','1256','2512'], ans:'628',
+      es:{ t:'El aspersor del jardín', q:'Un aspersor lanza agua hasta 40 m de distancia y gira describiendo un ángulo central de 45 grados. ¿Cuántos metros cuadrados de pasto alcanza a mojar? Usa 3.14 para π.',
+           h:'Consigue primero el área del círculo completo que cubriría el aspersor si diera la vuelta entera, y quédate después con la parte que le tocan sus grados dentro de los 360 de la vuelta.',
+           e:'El círculo completo de 40 m de radio mide 3.14 × 40 × 40 = 5024 m². El aspersor solo barre 45 de los 360 grados, es decir la octava parte, así que moja 5024 ÷ 8 = 628.' },
+      en:{ t:'The garden sprinkler', q:'A sprinkler throws water up to 40 m away and turns describing a central angle of 45 degrees. How many square metres of grass does it manage to wet? Use 3.14 for π.',
+           h:'First get the area of the whole circle the sprinkler would cover on a full turn, then keep the share its degrees get within the 360 of the turn.',
+           e:'The whole circle of radius 40 m measures 3.14 × 40 × 40 = 5024 m². The sprinkler only sweeps 45 of the 360 degrees, that is an eighth, so it wets 5024 ÷ 8 = 628.' } }
+  ];
+  var p1 = P1V[Math.floor(rng()*P1V.length)];
+  addProblem(rng, { title:p1[LANG].t, q:p1[LANG].q, hint:p1[LANG].h, exp:p1[LANG].e, options:p1.opts, correct:p1.ans, showWork:true });
+
+  var P2V = [
+    { opts:['307','157','232','471'], ans:'307',
+      es:{ t:'La guía de la jardinera', q:'Una jardinera tiene forma de rebanada de círculo: dos lados rectos de 75 cm que salen del centro y un arco que abarca un ángulo central de 120 grados. Se quiere poner una guía metálica en todo su borde. ¿Cuántos centímetros de guía se necesitan? Usa 3.14 para π.',
+           h:'Reparte la circunferencia completa según los grados del arco y no olvides que el borde se cierra caminando también por los dos lados rectos.',
+           e:'La circunferencia completa de 75 cm de radio mide 2 × 3.14 × 75 = 471 cm, y al arco le toca la parte de 120 dentro de 360 grados, la tercera: 471 ÷ 3 = 157 cm. El borde se cierra con los dos lados rectos: 157 + 75 + 75 = 307.' },
+      en:{ t:'The planter rail', q:'A planter is shaped like a circle slice: two straight sides of 75 cm leaving the centre and an arc spanning a central angle of 120 degrees. A metal rail is to be placed all along its edge. How many centimetres of rail are needed? Use 3.14 for π.',
+           h:'Share out the whole circumference according to the degrees of the arc, and do not forget the edge closes by walking along the two straight sides as well.',
+           e:'The whole circumference of radius 75 cm measures 2 × 3.14 × 75 = 471 cm, and the arc gets the share of 120 within 360 degrees, a third: 471 ÷ 3 = 157 cm. The edge closes with the two straight sides: 157 + 75 + 75 = 307.' } },
+    { opts:['357','157','257','628'], ans:'357',
+      es:{ t:'La guía de la jardinera', q:'Una jardinera tiene forma de rebanada de círculo: dos lados rectos de 100 cm que salen del centro y un arco que abarca un ángulo central de 90 grados. Se quiere poner una guía metálica en todo su borde. ¿Cuántos centímetros de guía se necesitan? Usa 3.14 para π.',
+           h:'Reparte la circunferencia completa según los grados del arco y no olvides que el borde se cierra caminando también por los dos lados rectos.',
+           e:'La circunferencia completa de 100 cm de radio mide 2 × 3.14 × 100 = 628 cm, y al arco le toca la parte de 90 dentro de 360 grados, la cuarta: 628 ÷ 4 = 157 cm. El borde se cierra con los dos lados rectos: 157 + 100 + 100 = 357.' },
+      en:{ t:'The planter rail', q:'A planter is shaped like a circle slice: two straight sides of 100 cm leaving the centre and an arc spanning a central angle of 90 degrees. A metal rail is to be placed all along its edge. How many centimetres of rail are needed? Use 3.14 for π.',
+           h:'Share out the whole circumference according to the degrees of the arc, and do not forget the edge closes by walking along the two straight sides as well.',
+           e:'The whole circumference of radius 100 cm measures 2 × 3.14 × 100 = 628 cm, and the arc gets the share of 90 within 360 degrees, a quarter: 628 ÷ 4 = 157 cm. The edge closes with the two straight sides: 157 + 100 + 100 = 357.' } },
+    { opts:['257','157','207','314'], ans:'257',
+      es:{ t:'La guía de la jardinera', q:'Una jardinera tiene forma de rebanada de círculo: dos lados rectos de 50 cm que salen del centro y un arco que abarca un ángulo central de 180 grados. Se quiere poner una guía metálica en todo su borde. ¿Cuántos centímetros de guía se necesitan? Usa 3.14 para π.',
+           h:'Reparte la circunferencia completa según los grados del arco y no olvides que el borde se cierra caminando también por los dos lados rectos.',
+           e:'La circunferencia completa de 50 cm de radio mide 2 × 3.14 × 50 = 314 cm, y al arco le toca la parte de 180 dentro de 360 grados, la mitad: 314 ÷ 2 = 157 cm. El borde se cierra con los dos lados rectos: 157 + 50 + 50 = 257.' },
+      en:{ t:'The planter rail', q:'A planter is shaped like a circle slice: two straight sides of 50 cm leaving the centre and an arc spanning a central angle of 180 degrees. A metal rail is to be placed all along its edge. How many centimetres of rail are needed? Use 3.14 for π.',
+           h:'Share out the whole circumference according to the degrees of the arc, and do not forget the edge closes by walking along the two straight sides as well.',
+           e:'The whole circumference of radius 50 cm measures 2 × 3.14 × 50 = 314 cm, and the arc gets the share of 180 within 360 degrees, half: 314 ÷ 2 = 157 cm. The edge closes with the two straight sides: 157 + 50 + 50 = 257.' } }
+  ];
+  var p2 = P2V[Math.floor(rng()*P2V.length)];
+  addProblem(rng, { title:p2[LANG].t, q:p2[LANG].q, hint:p2[LANG].h, exp:p2[LANG].e, options:p2.opts, correct:p2.ans, showWork:true });
+
+  /* ── CONCEPT 2 ───────────────────────────────────────────────── */
+  addSection(C + '2',
+    es ? 'Un círculo con un agujero en medio' : 'A circle with a hole in the middle',
+    es
+    ? '<p>Cuando dos círculos comparten el mismo centro pero tienen radios distintos, la franja que queda entre ellos se llama corona circular, o anillo. Es el caso más limpio de una figura que aparece por intersección: el círculo chico se mete dentro del grande y le abre un hueco.</p>'+
+      '<p>Para la superficie, el círculo chico ya no cuenta, así que su área se le descuenta a la del grande. Para el contorno hay que fijarse en algo que suele pasar desapercibido: un anillo tiene dos bordes, el de afuera y el del agujero, y los dos son circunferencias completas. Si vas a cercar un anillo, la cerca da dos vueltas, no una.</p>'
+    : '<p>When two circles share the same centre but have different radii, the strip left between them is called a circular ring, or annulus. It is the cleanest case of a figure appearing out of an intersection: the small circle steps inside the big one and opens a hole in it.</p>'+
+      '<p>For the surface, the small circle no longer counts, so its area is discounted from the big one. For the outline there is something usually overlooked: a ring has two edges, the outer one and the one around the hole, and both are whole circumferences. If you fence a ring, the fence goes round twice, not once.</p>');
+
+  var P3V = [
+    { opts:['942','1256','314','1570'], ans:'942',
+      es:{ t:'El andador de la fuente', q:'Una fuente circular de 10 m de radio está rodeada por un andador de piso firme que llega hasta 20 m del mismo centro. ¿Cuántos metros cuadrados ocupa el andador? Usa 3.14 para π.',
+           h:'El andador es lo que le queda al círculo grande cuando se le descuenta el círculo de la fuente; calcula cada área por separado y quítale la menor a la mayor.',
+           e:'El círculo grande mide 3.14 × 20 × 20 = 1256 m² y la fuente mide 3.14 × 10 × 10 = 314 m². Al andador le queda lo que hay entre los dos: 1256 − 314 = 942.' },
+      en:{ t:'The walkway around the fountain', q:'A circular fountain of radius 10 m is surrounded by a paved walkway reaching out to 20 m from the same centre. How many square metres does the walkway take up? Use 3.14 for π.',
+           h:'The walkway is what the big circle has left once the fountain circle is discounted; work out each area separately and take the smaller from the larger.',
+           e:'The big circle measures 3.14 × 20 × 20 = 1256 m² and the fountain measures 3.14 × 10 × 10 = 314 m². The walkway keeps what lies between them: 1256 − 314 = 942.' } },
+    { opts:['1570','2826','1256','4082'], ans:'1570',
+      es:{ t:'El andador de la fuente', q:'Una fuente circular de 20 m de radio está rodeada por un andador de piso firme que llega hasta 30 m del mismo centro. ¿Cuántos metros cuadrados ocupa el andador? Usa 3.14 para π.',
+           h:'El andador es lo que le queda al círculo grande cuando se le descuenta el círculo de la fuente; calcula cada área por separado y quítale la menor a la mayor.',
+           e:'El círculo grande mide 3.14 × 30 × 30 = 2826 m² y la fuente mide 3.14 × 20 × 20 = 1256 m². Al andador le queda lo que hay entre los dos: 2826 − 1256 = 1570.' },
+      en:{ t:'The walkway around the fountain', q:'A circular fountain of radius 20 m is surrounded by a paved walkway reaching out to 30 m from the same centre. How many square metres does the walkway take up? Use 3.14 for π.',
+           h:'The walkway is what the big circle has left once the fountain circle is discounted; work out each area separately and take the smaller from the larger.',
+           e:'The big circle measures 3.14 × 30 × 30 = 2826 m² and the fountain measures 3.14 × 20 × 20 = 1256 m². The walkway keeps what lies between them: 2826 − 1256 = 1570.' } },
+    { opts:['2198','5024','2826','7850'], ans:'2198',
+      es:{ t:'El andador de la fuente', q:'Una fuente circular de 30 m de radio está rodeada por un andador de piso firme que llega hasta 40 m del mismo centro. ¿Cuántos metros cuadrados ocupa el andador? Usa 3.14 para π.',
+           h:'El andador es lo que le queda al círculo grande cuando se le descuenta el círculo de la fuente; calcula cada área por separado y quítale la menor a la mayor.',
+           e:'El círculo grande mide 3.14 × 40 × 40 = 5024 m² y la fuente mide 3.14 × 30 × 30 = 2826 m². Al andador le queda lo que hay entre los dos: 5024 − 2826 = 2198.' },
+      en:{ t:'The walkway around the fountain', q:'A circular fountain of radius 30 m is surrounded by a paved walkway reaching out to 40 m from the same centre. How many square metres does the walkway take up? Use 3.14 for π.',
+           h:'The walkway is what the big circle has left once the fountain circle is discounted; work out each area separately and take the smaller from the larger.',
+           e:'The big circle measures 3.14 × 40 × 40 = 5024 m² and the fountain measures 3.14 × 30 × 30 = 2826 m². The walkway keeps what lies between them: 5024 − 2826 = 2198.' } }
+  ];
+  var p3 = P3V[Math.floor(rng()*P3V.length)];
+  addProblem(rng, { title:p3[LANG].t, q:p3[LANG].q, hint:p3[LANG].h, exp:p3[LANG].e, options:p3.opts, correct:p3.ans, showWork:true });
+
+  var P4V = [
+    { opts:['471','314','157','628'], ans:'471',
+      es:{ t:'La cinta de los dos bordes', q:'Un estanque circular de 25 m de radio está rodeado por una plataforma que llega hasta 50 m del mismo centro. Se va a colocar una cinta de seguridad en la orilla exterior de la plataforma y otra en la orilla del estanque. ¿Cuántos metros de cinta se necesitan en total? Usa 3.14 para π.',
+           h:'Cada orilla es una circunferencia completa, así que calcula por separado la longitud de cada una y júntalas.',
+           e:'La orilla exterior mide 2 × 3.14 × 50 = 314 m y la orilla del estanque mide 2 × 3.14 × 25 = 157 m. La cinta recorre las dos orillas: 314 + 157 = 471.' },
+      en:{ t:'The tape on both edges', q:'A circular pond of radius 25 m is surrounded by a platform reaching out to 50 m from the same centre. Safety tape is to be placed on the outer edge of the platform and more tape on the edge of the pond. How many metres of tape are needed in total? Use 3.14 for π.',
+           h:'Each edge is a whole circumference, so work out the length of each one separately and put them together.',
+           e:'The outer edge measures 2 × 3.14 × 50 = 314 m and the pond edge measures 2 × 3.14 × 25 = 157 m. The tape runs along both edges: 314 + 157 = 471.' } },
+    { opts:['785','471','314','942'], ans:'785',
+      es:{ t:'La cinta de los dos bordes', q:'Un estanque circular de 50 m de radio está rodeado por una plataforma que llega hasta 75 m del mismo centro. Se va a colocar una cinta de seguridad en la orilla exterior de la plataforma y otra en la orilla del estanque. ¿Cuántos metros de cinta se necesitan en total? Usa 3.14 para π.',
+           h:'Cada orilla es una circunferencia completa, así que calcula por separado la longitud de cada una y júntalas.',
+           e:'La orilla exterior mide 2 × 3.14 × 75 = 471 m y la orilla del estanque mide 2 × 3.14 × 50 = 314 m. La cinta recorre las dos orillas: 471 + 314 = 785.' },
+      en:{ t:'The tape on both edges', q:'A circular pond of radius 50 m is surrounded by a platform reaching out to 75 m from the same centre. Safety tape is to be placed on the outer edge of the platform and more tape on the edge of the pond. How many metres of tape are needed in total? Use 3.14 for π.',
+           h:'Each edge is a whole circumference, so work out the length of each one separately and put them together.',
+           e:'The outer edge measures 2 × 3.14 × 75 = 471 m and the pond edge measures 2 × 3.14 × 50 = 314 m. The tape runs along both edges: 471 + 314 = 785.' } },
+    { opts:['628','471','157','942'], ans:'628',
+      es:{ t:'La cinta de los dos bordes', q:'Un estanque circular de 25 m de radio está rodeado por una plataforma que llega hasta 75 m del mismo centro. Se va a colocar una cinta de seguridad en la orilla exterior de la plataforma y otra en la orilla del estanque. ¿Cuántos metros de cinta se necesitan en total? Usa 3.14 para π.',
+           h:'Cada orilla es una circunferencia completa, así que calcula por separado la longitud de cada una y júntalas.',
+           e:'La orilla exterior mide 2 × 3.14 × 75 = 471 m y la orilla del estanque mide 2 × 3.14 × 25 = 157 m. La cinta recorre las dos orillas: 471 + 157 = 628.' },
+      en:{ t:'The tape on both edges', q:'A circular pond of radius 25 m is surrounded by a platform reaching out to 75 m from the same centre. Safety tape is to be placed on the outer edge of the platform and more tape on the edge of the pond. How many metres of tape are needed in total? Use 3.14 for π.',
+           h:'Each edge is a whole circumference, so work out the length of each one separately and put them together.',
+           e:'The outer edge measures 2 × 3.14 × 75 = 471 m and the pond edge measures 2 × 3.14 × 25 = 157 m. The tape runs along both edges: 471 + 157 = 628.' } }
+  ];
+  var p4 = P4V[Math.floor(rng()*P4V.length)];
+  addProblem(rng, { title:p4[LANG].t, q:p4[LANG].q, hint:p4[LANG].h, exp:p4[LANG].e, options:p4.opts, correct:p4.ans, showWork:true });
+
+  /* ── CONCEPT 3 ───────────────────────────────────────────────── */
+  addSection(C + '3',
+    es ? 'Pegar piezas o abrir huecos' : 'Joining pieces or opening holes',
+    es
+    ? '<p>Casi cualquier objeto de la vida diaria se puede leer como piezas simples que se pegan o que se recortan: una ventana es un rectángulo con un semicírculo encima, una placa perforada es un rectángulo al que le quitaron círculos, un jardín cuadrado es un cuadrado con una fuente redonda en medio.</p>'+
+      '<p>Lo primero no es calcular, es decidir. Si la pieza redonda ocupa lugar junto a la figura, su área se junta con la otra; si abre un hueco dentro de ella, su área se descuenta. Y conviene recordar un reparto que aparece a cada rato: cuatro cuartos de círculo del mismo radio, juntos, valen exactamente un círculo completo.</p>'+
+      '<div class="callout"><p><strong>Antes de la calculadora:</strong> nombra las piezas, decide cuáles entran y cuáles salen, y hasta entonces empieza a hacer cuentas.</p></div>'
+    : '<p>Almost any everyday object can be read as simple pieces joined together or cut out: a window is a rectangle with a semicircle on top, a perforated plate is a rectangle with circles taken out of it, a square garden is a square with a round fountain in the middle.</p>'+
+      '<p>The first job is not to calculate, it is to decide. If the round piece takes up room next to the figure, its area joins the other one; if it opens a hole inside it, its area is discounted. And one sharing worth remembering shows up all the time: four quarter circles of the same radius, put together, are worth exactly one whole circle.</p>'+
+      '<div class="callout"><p><strong>Before the calculator:</strong> name the pieces, decide which ones come in and which ones go out, and only then start doing arithmetic.</p></div>');
+
+  buildOperacion(rng);
+
+  var P5V = [
+    { opts:['86','314','400','714'], ans:'86',
+      es:{ t:'Lo que sobra de la lámina', q:'De una lámina cuadrada de 20 cm de lado se recorta el círculo más grande que cabe dentro, el que toca los cuatro lados. ¿Cuántos centímetros cuadrados mide el material que sobra alrededor del círculo? Usa 3.14 para π.',
+           h:'El círculo más grande que cabe en un cuadrado tiene por diámetro el lado del cuadrado; consigue el área del cuadrado, la del círculo, y quédate con la diferencia.',
+           e:'El cuadrado mide 20 × 20 = 400 cm². El círculo toca los cuatro lados, así que su diámetro es 20 cm y su radio 10 cm: 3.14 × 10 × 10 = 314 cm². El material que sobra es lo que le queda al cuadrado sin el círculo: 400 − 314 = 86.' },
+      en:{ t:'What is left of the sheet', q:'Out of a square sheet of side 20 cm the biggest circle that fits inside is cut, the one touching all four sides. How many square centimetres does the material left around the circle measure? Use 3.14 for π.',
+           h:'The biggest circle fitting in a square has the side of the square as its diameter; get the area of the square, the area of the circle, and keep the difference.',
+           e:'The square measures 20 × 20 = 400 cm². The circle touches all four sides, so its diameter is 20 cm and its radius 10 cm: 3.14 × 10 × 10 = 314 cm². The leftover material is what the square has left without the circle: 400 − 314 = 86.' } },
+    { opts:['344','1256','1600','2856'], ans:'344',
+      es:{ t:'Lo que sobra de la lámina', q:'De una lámina cuadrada de 40 cm de lado se recorta el círculo más grande que cabe dentro, el que toca los cuatro lados. ¿Cuántos centímetros cuadrados mide el material que sobra alrededor del círculo? Usa 3.14 para π.',
+           h:'El círculo más grande que cabe en un cuadrado tiene por diámetro el lado del cuadrado; consigue el área del cuadrado, la del círculo, y quédate con la diferencia.',
+           e:'El cuadrado mide 40 × 40 = 1600 cm². El círculo toca los cuatro lados, así que su diámetro es 40 cm y su radio 20 cm: 3.14 × 20 × 20 = 1256 cm². El material que sobra es lo que le queda al cuadrado sin el círculo: 1600 − 1256 = 344.' },
+      en:{ t:'What is left of the sheet', q:'Out of a square sheet of side 40 cm the biggest circle that fits inside is cut, the one touching all four sides. How many square centimetres does the material left around the circle measure? Use 3.14 for π.',
+           h:'The biggest circle fitting in a square has the side of the square as its diameter; get the area of the square, the area of the circle, and keep the difference.',
+           e:'The square measures 40 × 40 = 1600 cm². The circle touches all four sides, so its diameter is 40 cm and its radius 20 cm: 3.14 × 20 × 20 = 1256 cm². The leftover material is what the square has left without the circle: 1600 − 1256 = 344.' } },
+    { opts:['774','2826','3600','6426'], ans:'774',
+      es:{ t:'Lo que sobra de la lámina', q:'De una lámina cuadrada de 60 cm de lado se recorta el círculo más grande que cabe dentro, el que toca los cuatro lados. ¿Cuántos centímetros cuadrados mide el material que sobra alrededor del círculo? Usa 3.14 para π.',
+           h:'El círculo más grande que cabe en un cuadrado tiene por diámetro el lado del cuadrado; consigue el área del cuadrado, la del círculo, y quédate con la diferencia.',
+           e:'El cuadrado mide 60 × 60 = 3600 cm². El círculo toca los cuatro lados, así que su diámetro es 60 cm y su radio 30 cm: 3.14 × 30 × 30 = 2826 cm². El material que sobra es lo que le queda al cuadrado sin el círculo: 3600 − 2826 = 774.' },
+      en:{ t:'What is left of the sheet', q:'Out of a square sheet of side 60 cm the biggest circle that fits inside is cut, the one touching all four sides. How many square centimetres does the material left around the circle measure? Use 3.14 for π.',
+           h:'The biggest circle fitting in a square has the side of the square as its diameter; get the area of the square, the area of the circle, and keep the difference.',
+           e:'The square measures 60 × 60 = 3600 cm². The circle touches all four sides, so its diameter is 60 cm and its radius 30 cm: 3.14 × 30 × 30 = 2826 cm². The leftover material is what the square has left without the circle: 3600 − 2826 = 774.' } }
+  ];
+  var p5 = P5V[Math.floor(rng()*P5V.length)];
+  addProblem(rng, { title:p5[LANG].t, q:p5[LANG].q, hint:p5[LANG].h, exp:p5[LANG].e, options:p5.opts, correct:p5.ans, showWork:true });
+
+  var P6V = [
+    { opts:['5256','4000','4628','6512'], ans:'5256',
+      es:{ t:'La alberca de extremos redondos', q:'Una alberca tiene forma de rectángulo de 100 m de largo por 40 m de ancho, con un semicírculo pegado en cada uno de sus dos lados cortos. Cada semicírculo tiene 20 m de radio. ¿Cuántos metros cuadrados de superficie tiene la alberca completa? Usa 3.14 para π.',
+           h:'Los dos semicírculos del mismo radio, juntos, arman un círculo completo; calcula el rectángulo y ese círculo por separado, y como las piezas se pegan, júntalos.',
+           e:'El rectángulo mide 100 × 40 = 4000 m². Los dos semicírculos de 20 m de radio forman entre los dos un círculo completo: 3.14 × 20 × 20 = 1256 m². Las piezas se pegan por fuera, así que las superficies se juntan: 4000 + 1256 = 5256.' },
+      en:{ t:'The pool with round ends', q:'A pool is shaped like a rectangle 100 m long by 40 m wide, with a semicircle attached at each of its two short sides. Each semicircle has a radius of 20 m. How many square metres of surface does the whole pool have? Use 3.14 for π.',
+           h:'The two semicircles of the same radius, put together, build a whole circle; work out the rectangle and that circle separately, and since the pieces are joined, put them together.',
+           e:'The rectangle measures 100 × 40 = 4000 m². The two semicircles of radius 20 m form one whole circle between them: 3.14 × 20 × 20 = 1256 m². The pieces are joined on the outside, so the surfaces are put together: 4000 + 1256 = 5256.' } },
+    { opts:['1514','1200','1357','1828'], ans:'1514',
+      es:{ t:'La alberca de extremos redondos', q:'Una alberca tiene forma de rectángulo de 60 m de largo por 20 m de ancho, con un semicírculo pegado en cada uno de sus dos lados cortos. Cada semicírculo tiene 10 m de radio. ¿Cuántos metros cuadrados de superficie tiene la alberca completa? Usa 3.14 para π.',
+           h:'Los dos semicírculos del mismo radio, juntos, arman un círculo completo; calcula el rectángulo y ese círculo por separado, y como las piezas se pegan, júntalos.',
+           e:'El rectángulo mide 60 × 20 = 1200 m². Los dos semicírculos de 10 m de radio forman entre los dos un círculo completo: 3.14 × 10 × 10 = 314 m². Las piezas se pegan por fuera, así que las superficies se juntan: 1200 + 314 = 1514.' },
+      en:{ t:'The pool with round ends', q:'A pool is shaped like a rectangle 60 m long by 20 m wide, with a semicircle attached at each of its two short sides. Each semicircle has a radius of 10 m. How many square metres of surface does the whole pool have? Use 3.14 for π.',
+           h:'The two semicircles of the same radius, put together, build a whole circle; work out the rectangle and that circle separately, and since the pieces are joined, put them together.',
+           e:'The rectangle measures 60 × 20 = 1200 m². The two semicircles of radius 10 m form one whole circle between them: 3.14 × 10 × 10 = 314 m². The pieces are joined on the outside, so the surfaces are put together: 1200 + 314 = 1514.' } },
+    { opts:['1914','1600','1757','2228'], ans:'1914',
+      es:{ t:'La alberca de extremos redondos', q:'Una alberca tiene forma de rectángulo de 80 m de largo por 20 m de ancho, con un semicírculo pegado en cada uno de sus dos lados cortos. Cada semicírculo tiene 10 m de radio. ¿Cuántos metros cuadrados de superficie tiene la alberca completa? Usa 3.14 para π.',
+           h:'Los dos semicírculos del mismo radio, juntos, arman un círculo completo; calcula el rectángulo y ese círculo por separado, y como las piezas se pegan, júntalos.',
+           e:'El rectángulo mide 80 × 20 = 1600 m². Los dos semicírculos de 10 m de radio forman entre los dos un círculo completo: 3.14 × 10 × 10 = 314 m². Las piezas se pegan por fuera, así que las superficies se juntan: 1600 + 314 = 1914.' },
+      en:{ t:'The pool with round ends', q:'A pool is shaped like a rectangle 80 m long by 20 m wide, with a semicircle attached at each of its two short sides. Each semicircle has a radius of 10 m. How many square metres of surface does the whole pool have? Use 3.14 for π.',
+           h:'The two semicircles of the same radius, put together, build a whole circle; work out the rectangle and that circle separately, and since the pieces are joined, put them together.',
+           e:'The rectangle measures 80 × 20 = 1600 m². The two semicircles of radius 10 m form one whole circle between them: 3.14 × 10 × 10 = 314 m². The pieces are joined on the outside, so the surfaces are put together: 1600 + 314 = 1914.' } }
+  ];
+  var p6 = P6V[Math.floor(rng()*P6V.length)];
+  addProblem(rng, { title:p6[LANG].t, q:p6[LANG].q, hint:p6[LANG].h, exp:p6[LANG].e, options:p6.opts, correct:p6.ans, showWork:true });
+
+  /* ── CONCEPT 4 ───────────────────────────────────────────────── */
+  addSection(C + '4',
+    es ? 'El contorno solo pasa por afuera' : 'The outline only runs outside',
+    es
+    ? '<p>El perímetro de una figura compuesta se descubre con el dedo: se elige un punto del borde y se recorre la figura sin despegar el dedo hasta volver al mismo punto. Los tramos por los que el dedo no pasa no cuentan, aunque hayan servido para armar la figura.</p>'+
+      '<p>Ahí vive el error más repetido: sumar el diámetro del semicírculo que se pegó, o el lado del rectángulo que quedó tapado. Al pegar dos piezas, la línea donde se unen se queda por dentro y desaparece del borde; en su lugar entra el arco que la sustituye.</p>'
+    : '<p>The perimeter of a composite figure is discovered with your finger: pick a point on the edge and travel around the figure without lifting your finger until you come back to the same point. The stretches your finger never goes through do not count, even if they helped build the figure.</p>'+
+      '<p>That is where the most repeated mistake lives: adding the diameter of the semicircle that was attached, or the side of the rectangle that ended up covered. When two pieces are joined, the line where they meet stays inside and vanishes from the edge; the arc replacing it comes in instead.</p>');
+
+  buildContorno(rng);
+
+  var P7V = [
+    { opts:['497','597','654','340'], ans:'497',
+      es:{ t:'El marco de la ventana', q:'Una ventana está formada por un rectángulo de 100 cm de ancho y 120 cm de alto, rematado arriba por un semicírculo cuyo diámetro es el ancho del rectángulo. Se le va a poner un marco a todo el contorno de la ventana. ¿Cuántos centímetros de marco se necesitan? Usa 3.14 para π.',
+           h:'Recorre el borde con el dedo: cuenta solo los tramos rectos por los que pasa y súmales el arco; el tramo donde el semicírculo se apoya en el rectángulo quedó por dentro.',
+           e:'El semicírculo tiene 50 cm de radio, y media circunferencia mide 3.14 × 50 = 157 cm. Por fuera, el marco recorre los dos lados verticales y la base: 120 + 120 + 100 = 340 cm. El lado de arriba del rectángulo quedó tapado por el semicírculo y no se recorre: 340 + 157 = 497.' },
+      en:{ t:'The window frame', q:'A window is made of a rectangle 100 cm wide and 120 cm tall, topped by a semicircle whose diameter is the width of the rectangle. A frame is to be placed all along the outline of the window. How many centimetres of frame are needed? Use 3.14 for π.',
+           h:'Trace the edge with your finger: count only the straight stretches it goes through and add the arc; the stretch where the semicircle rests on the rectangle stayed inside.',
+           e:'The semicircle has a radius of 50 cm, and half a circumference measures 3.14 × 50 = 157 cm. On the outside, the frame runs along the two vertical sides and the base: 120 + 120 + 100 = 340 cm. The top side of the rectangle is covered by the semicircle and is not travelled: 340 + 157 = 497.' } },
+    { opts:['814','1014','1128','500'], ans:'814',
+      es:{ t:'El marco de la ventana', q:'Una ventana está formada por un rectángulo de 200 cm de ancho y 150 cm de alto, rematado arriba por un semicírculo cuyo diámetro es el ancho del rectángulo. Se le va a poner un marco a todo el contorno de la ventana. ¿Cuántos centímetros de marco se necesitan? Usa 3.14 para π.',
+           h:'Recorre el borde con el dedo: cuenta solo los tramos rectos por los que pasa y súmales el arco; el tramo donde el semicírculo se apoya en el rectángulo quedó por dentro.',
+           e:'El semicírculo tiene 100 cm de radio, y media circunferencia mide 3.14 × 100 = 314 cm. Por fuera, el marco recorre los dos lados verticales y la base: 150 + 150 + 200 = 500 cm. El lado de arriba del rectángulo quedó tapado por el semicírculo y no se recorre: 500 + 314 = 814.' },
+      en:{ t:'The window frame', q:'A window is made of a rectangle 200 cm wide and 150 cm tall, topped by a semicircle whose diameter is the width of the rectangle. A frame is to be placed all along the outline of the window. How many centimetres of frame are needed? Use 3.14 for π.',
+           h:'Trace the edge with your finger: count only the straight stretches it goes through and add the arc; the stretch where the semicircle rests on the rectangle stayed inside.',
+           e:'The semicircle has a radius of 100 cm, and half a circumference measures 3.14 × 100 = 314 cm. On the outside, the frame runs along the two vertical sides and the base: 150 + 150 + 200 = 500 cm. The top side of the rectangle is covered by the semicircle and is not travelled: 500 + 314 = 814.' } },
+    { opts:['417','517','574','260'], ans:'417',
+      es:{ t:'El marco de la ventana', q:'Una ventana está formada por un rectángulo de 100 cm de ancho y 80 cm de alto, rematado arriba por un semicírculo cuyo diámetro es el ancho del rectángulo. Se le va a poner un marco a todo el contorno de la ventana. ¿Cuántos centímetros de marco se necesitan? Usa 3.14 para π.',
+           h:'Recorre el borde con el dedo: cuenta solo los tramos rectos por los que pasa y súmales el arco; el tramo donde el semicírculo se apoya en el rectángulo quedó por dentro.',
+           e:'El semicírculo tiene 50 cm de radio, y media circunferencia mide 3.14 × 50 = 157 cm. Por fuera, el marco recorre los dos lados verticales y la base: 80 + 80 + 100 = 260 cm. El lado de arriba del rectángulo quedó tapado por el semicírculo y no se recorre: 260 + 157 = 417.' },
+      en:{ t:'The window frame', q:'A window is made of a rectangle 100 cm wide and 80 cm tall, topped by a semicircle whose diameter is the width of the rectangle. A frame is to be placed all along the outline of the window. How many centimetres of frame are needed? Use 3.14 for π.',
+           h:'Trace the edge with your finger: count only the straight stretches it goes through and add the arc; the stretch where the semicircle rests on the rectangle stayed inside.',
+           e:'The semicircle has a radius of 50 cm, and half a circumference measures 3.14 × 50 = 157 cm. On the outside, the frame runs along the two vertical sides and the base: 80 + 80 + 100 = 260 cm. The top side of the rectangle is covered by the semicircle and is not travelled: 260 + 157 = 417.' } }
+  ];
+  var p7 = P7V[Math.floor(rng()*P7V.length)];
+  addProblem(rng, { title:p7[LANG].t, q:p7[LANG].q, hint:p7[LANG].h, exp:p7[LANG].e, options:p7.opts, correct:p7.ans, showWork:true });
+
+  /* ── CONCEPT 5 ───────────────────────────────────────────────── */
+  addSection(C + '5',
+    es ? 'Cuando dos círculos se traslapan' : 'When two circles overlap',
+    es
+    ? '<p>Dos círculos que se acercan pasan por tres situaciones distintas: quedan separados, se tocan en un solo punto o se cruzan en dos puntos. En cuanto se cruzan aparece una región común, un pedazo de superficie que pertenece a los dos a la vez.</p>'+
+      '<p>Si lo que se quiere saber es cuánta superficie queda cubierta entre los dos, sumar las dos áreas no alcanza: la región común quedaría contada dos veces, una por cada círculo. Hay que descontarla una sola vez para que cada punto cubierto cuente exactamente una vez.</p>'
+    : '<p>Two circles moving closer go through three different situations: they stay apart, they touch at a single point, or they cross at two points. As soon as they cross, a common region appears, a piece of surface belonging to both at once.</p>'+
+      '<p>If what you want to know is how much surface ends up covered between the two, adding the two areas is not enough: the common region would be counted twice, once for each circle. It has to be discounted exactly once so that every covered point counts exactly once.</p>');
+
+  buildDosCirculos(rng);
+
+  var P8V = [
+    { opts:['460','550','640','370'], ans:'460',
+      es:{ t:'Las manchas del muro', q:'En un muro hay dos manchas de humedad con forma circular que se traslapan. Una mancha cubre 300 cm² y la otra cubre 250 cm², y la parte que pertenece a las dos a la vez mide 90 cm². ¿Cuántos centímetros cuadrados de muro quedan manchados en total?',
+           h:'Junta las dos superficies y date cuenta de que la parte común se contó dos veces, una por cada mancha; quítala una sola vez.',
+           e:'Al juntar las dos manchas, 300 + 250 = 550 cm², la parte común se contó dos veces, una por cada mancha. Se descuenta una sola vez: 550 − 90 = 460.' },
+      en:{ t:'The stains on the wall', q:'On a wall there are two circular damp stains that overlap. One stain covers 300 cm² and the other covers 250 cm², and the part belonging to both at once measures 90 cm². How many square centimetres of wall end up stained in total?',
+           h:'Put the two surfaces together and notice that the common part was counted twice, once for each stain; take it out exactly once.',
+           e:'Putting the two stains together, 300 + 250 = 550 cm², the common part was counted twice, once for each stain. It is discounted only once: 550 − 90 = 460.' } },
+    { opts:['490','600','710','380'], ans:'490',
+      es:{ t:'Las manchas del muro', q:'En un muro hay dos manchas de humedad con forma circular que se traslapan. Una mancha cubre 320 cm² y la otra cubre 280 cm², y la parte que pertenece a las dos a la vez mide 110 cm². ¿Cuántos centímetros cuadrados de muro quedan manchados en total?',
+           h:'Junta las dos superficies y date cuenta de que la parte común se contó dos veces, una por cada mancha; quítala una sola vez.',
+           e:'Al juntar las dos manchas, 320 + 280 = 600 cm², la parte común se contó dos veces, una por cada mancha. Se descuenta una sola vez: 600 − 110 = 490.' },
+      en:{ t:'The stains on the wall', q:'On a wall there are two circular damp stains that overlap. One stain covers 320 cm² and the other covers 280 cm², and the part belonging to both at once measures 110 cm². How many square centimetres of wall end up stained in total?',
+           h:'Put the two surfaces together and notice that the common part was counted twice, once for each stain; take it out exactly once.',
+           e:'Putting the two stains together, 320 + 280 = 600 cm², the common part was counted twice, once for each stain. It is discounted only once: 600 − 110 = 490.' } },
+    { opts:['610','750','890','470'], ans:'610',
+      es:{ t:'Las manchas del muro', q:'En un muro hay dos manchas de humedad con forma circular que se traslapan. Una mancha cubre 400 cm² y la otra cubre 350 cm², y la parte que pertenece a las dos a la vez mide 140 cm². ¿Cuántos centímetros cuadrados de muro quedan manchados en total?',
+           h:'Junta las dos superficies y date cuenta de que la parte común se contó dos veces, una por cada mancha; quítala una sola vez.',
+           e:'Al juntar las dos manchas, 400 + 350 = 750 cm², la parte común se contó dos veces, una por cada mancha. Se descuenta una sola vez: 750 − 140 = 610.' },
+      en:{ t:'The stains on the wall', q:'On a wall there are two circular damp stains that overlap. One stain covers 400 cm² and the other covers 350 cm², and the part belonging to both at once measures 140 cm². How many square centimetres of wall end up stained in total?',
+           h:'Put the two surfaces together and notice that the common part was counted twice, once for each stain; take it out exactly once.',
+           e:'Putting the two stains together, 400 + 350 = 750 cm², the common part was counted twice, once for each stain. It is discounted only once: 750 − 140 = 610.' } }
+  ];
+  var p8 = P8V[Math.floor(rng()*P8V.length)];
+  addProblem(rng, { title:p8[LANG].t, q:p8[LANG].q, hint:p8[LANG].h, exp:p8[LANG].e, options:p8.opts, correct:p8.ans, showWork:true });
+
+  buildReflect(rng);
+
+  /* ── FINAL BLOCK ─────────────────────────────────────────────── */
+  addSection(es ? 'Cierre' : 'Wrap-up',
+    es ? 'Reto final' : 'Final challenge',
+    es ? '<p>Junta en estas dos situaciones todo lo que exploraste sobre rebanadas, anillos, figuras armadas por piezas y regiones que se traslapan.</p>'
+       : '<p>Bring together in these two situations everything you explored about slices, rings, figures built from pieces and regions that overlap.</p>');
+
+  var P9V = [
+    { opts:['1099','2198','2512','1413'], ans:'1099',
+      es:{ t:'Media corona embaldosada', q:'Un andador con forma de anillo rodea una fuente: su orilla exterior está a 40 m del centro y su orilla interior a 30 m del mismo centro. Solo se va a embaldosar la parte del anillo que abarca un ángulo central de 180 grados. ¿Cuántos metros cuadrados se van a embaldosar? Usa 3.14 para π.',
+           h:'Consigue primero la superficie del anillo completo descontando el círculo interior al exterior, y quédate después con la parte que le tocan los grados que se embaldosan.',
+           e:'El círculo exterior mide 3.14 × 40 × 40 = 5024 m² y el interior mide 3.14 × 30 × 30 = 2826 m², así que el anillo completo mide 5024 − 2826 = 2198 m². Se embaldosa la parte de 180 dentro de 360 grados, la mitad: 2198 ÷ 2 = 1099.' },
+      en:{ t:'Half a ring, tiled', q:'A ring-shaped walkway surrounds a fountain: its outer edge is 40 m from the centre and its inner edge 30 m from the same centre. Only the part of the ring spanning a central angle of 180 degrees is going to be tiled. How many square metres will be tiled? Use 3.14 for π.',
+           h:'First get the surface of the whole ring by discounting the inner circle from the outer one, then keep the share the tiled degrees get.',
+           e:'The outer circle measures 3.14 × 40 × 40 = 5024 m² and the inner one measures 3.14 × 30 × 30 = 2826 m², so the whole ring measures 5024 − 2826 = 2198 m². The tiled part is 180 within 360 degrees, half: 2198 ÷ 2 = 1099.' } },
+    { opts:['785','1570','1413','628'], ans:'785',
+      es:{ t:'Media corona embaldosada', q:'Un andador con forma de anillo rodea una fuente: su orilla exterior está a 30 m del centro y su orilla interior a 20 m del mismo centro. Solo se va a embaldosar la parte del anillo que abarca un ángulo central de 180 grados. ¿Cuántos metros cuadrados se van a embaldosar? Usa 3.14 para π.',
+           h:'Consigue primero la superficie del anillo completo descontando el círculo interior al exterior, y quédate después con la parte que le tocan los grados que se embaldosan.',
+           e:'El círculo exterior mide 3.14 × 30 × 30 = 2826 m² y el interior mide 3.14 × 20 × 20 = 1256 m², así que el anillo completo mide 2826 − 1256 = 1570 m². Se embaldosa la parte de 180 dentro de 360 grados, la mitad: 1570 ÷ 2 = 785.' },
+      en:{ t:'Half a ring, tiled', q:'A ring-shaped walkway surrounds a fountain: its outer edge is 30 m from the centre and its inner edge 20 m from the same centre. Only the part of the ring spanning a central angle of 180 degrees is going to be tiled. How many square metres will be tiled? Use 3.14 for π.',
+           h:'First get the surface of the whole ring by discounting the inner circle from the outer one, then keep the share the tiled degrees get.',
+           e:'The outer circle measures 3.14 × 30 × 30 = 2826 m² and the inner one measures 3.14 × 20 × 20 = 1256 m², so the whole ring measures 2826 − 1256 = 1570 m². The tiled part is 180 within 360 degrees, half: 1570 ÷ 2 = 785.' } },
+    { opts:['1413','2826','3925','2512'], ans:'1413',
+      es:{ t:'Media corona embaldosada', q:'Un andador con forma de anillo rodea una fuente: su orilla exterior está a 50 m del centro y su orilla interior a 40 m del mismo centro. Solo se va a embaldosar la parte del anillo que abarca un ángulo central de 180 grados. ¿Cuántos metros cuadrados se van a embaldosar? Usa 3.14 para π.',
+           h:'Consigue primero la superficie del anillo completo descontando el círculo interior al exterior, y quédate después con la parte que le tocan los grados que se embaldosan.',
+           e:'El círculo exterior mide 3.14 × 50 × 50 = 7850 m² y el interior mide 3.14 × 40 × 40 = 5024 m², así que el anillo completo mide 7850 − 5024 = 2826 m². Se embaldosa la parte de 180 dentro de 360 grados, la mitad: 2826 ÷ 2 = 1413.' },
+      en:{ t:'Half a ring, tiled', q:'A ring-shaped walkway surrounds a fountain: its outer edge is 50 m from the centre and its inner edge 40 m from the same centre. Only the part of the ring spanning a central angle of 180 degrees is going to be tiled. How many square metres will be tiled? Use 3.14 for π.',
+           h:'First get the surface of the whole ring by discounting the inner circle from the outer one, then keep the share the tiled degrees get.',
+           e:'The outer circle measures 3.14 × 50 × 50 = 7850 m² and the inner one measures 3.14 × 40 × 40 = 5024 m², so the whole ring measures 7850 − 5024 = 2826 m². The tiled part is 180 within 360 degrees, half: 2826 ÷ 2 = 1413.' } }
+  ];
+  var p9 = P9V[Math.floor(rng()*P9V.length)];
+  addProblem(rng, { title:p9[LANG].t, q:p9[LANG].q, hint:p9[LANG].h, exp:p9[LANG].e, options:p9.opts, correct:p9.ans, showWork:true });
+
+  var P10V = [
+    { es:{ t:'El borde de más', q:'Para medir el borde de una figura formada por un cuadrado con un semicírculo pegado en uno de sus lados, Beto suma los cuatro lados del cuadrado y le agrega el arco del semicírculo. ¿Dónde está el error de Beto?',
+           o:['Contó el lado donde se pega el semicírculo, que quedó por dentro de la figura','Le faltó agregar también el diámetro del semicírculo','Debió usar la circunferencia completa en lugar del arco','Debió restarle al cuadrado el área del semicírculo'], a:'Contó el lado donde se pega el semicírculo, que quedó por dentro de la figura',
+           h:'Recorre la figura con el dedo sin despegarlo y fíjate por cuáles de esos cinco tramos pasa realmente.',
+           e:'Al pegar el semicírculo, el lado del cuadrado que quedó debajo de él dejó de ser borde: el dedo ya no pasa por ahí, pasa por el arco. Ese lado no debe contarse.' },
+      en:{ t:'The extra edge', q:'To measure the edge of a figure made of a square with a semicircle attached on one of its sides, Beto adds the four sides of the square and then adds the arc of the semicircle. Where is Beto wrong?',
+           o:['He counted the side where the semicircle is attached, which ended up inside the figure','He also failed to add the diameter of the semicircle','He should have used the whole circumference instead of the arc','He should have taken the area of the semicircle off the square'], a:'He counted the side where the semicircle is attached, which ended up inside the figure',
+           h:'Trace the figure with your finger without lifting it and see which of those five stretches it really goes through.',
+           e:'Once the semicircle is attached, the side of the square left underneath it stopped being edge: the finger no longer goes there, it goes along the arc. That side must not be counted.' } },
+    { es:{ t:'La suma que sobra', q:'Dos círculos de cartulina se traslapan sobre una mesa. Ana suma el área de los dos círculos para saber cuánta mesa queda tapada. ¿Qué le falta considerar a Ana?',
+           o:['Que la región común quedó contada dos veces y hay que descontarla una vez','Que al traslaparse los círculos pierden parte de su área','Que también hay que sumar la región común una vez más','Que primero debe sumar los perímetros de los dos círculos'], a:'Que la región común quedó contada dos veces y hay que descontarla una vez',
+           h:'Piensa en un punto de la mesa que quede debajo de los dos círculos a la vez y cuenta cuántas veces lo contó Ana.',
+           e:'Un punto tapado por los dos círculos entra una vez en el área de cada uno, así que la suma lo cuenta dos veces. Para que cada punto tapado cuente una sola vez hay que descontar la región común una vez.' },
+      en:{ t:'The sum that overshoots', q:'Two cardboard circles overlap on a table. Ana adds the area of the two circles to find out how much table ends up covered. What is Ana failing to consider?',
+           o:['That the common region was counted twice and has to be discounted once','That by overlapping the circles lose part of their area','That the common region also has to be added one more time','That she must first add the perimeters of the two circles'], a:'That the common region was counted twice and has to be discounted once',
+           h:'Think of a point of the table lying under both circles at once and count how many times Ana counted it.',
+           e:'A point covered by both circles goes once into the area of each one, so the sum counts it twice. For every covered point to count exactly once, the common region has to be discounted once.' } }
+  ];
+  var p10 = P10V[Math.floor(rng()*P10V.length)];
+  addProblem(rng, { title:p10[LANG].t, q:p10[LANG].q, hint:p10[LANG].h, exp:p10[LANG].e, options:p10[LANG].o, correct:p10[LANG].a, showWork:false });
+}
+</script>
+</body>
+</html>
