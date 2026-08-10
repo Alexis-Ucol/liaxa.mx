@@ -1,0 +1,2089 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lenguaje Algebraico</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Lenguaje Algebraico</div>
+    <div class="wcourse" id="wcourse-el">Pensamiento Matemático II · Sem 2</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Lenguaje Algebraico</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        
+/* ── GUIDE WIDGETS (lenguaje algebraico) ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-sub { font-size:.88rem; color:var(--text2); margin-bottom:.7rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; margin-top:.7rem; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.goalbar b { color:var(--green-dark); font-family:'IBM Plex Mono',monospace; }
+.dataline { font-family:'IBM Plex Mono',monospace; font-size:.9rem; color:var(--green-dark); background:var(--surface2); border-radius:8px; padding:.55rem .7rem; margin:.5rem 0; overflow-x:auto; }
+.phrasebox { font-size:.95rem; color:var(--text); background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 8px 8px 0; padding:.6rem .8rem; margin-bottom:.7rem; }
+
+/* traductor de frases */
+.slotrow { display:flex; align-items:stretch; gap:.5rem; flex-wrap:wrap; }
+.slotbtn { min-width:62px; min-height:52px; padding:.4rem .7rem; border:1.5px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--green-dark); font-family:'IBM Plex Mono',monospace; font-size:1.05rem; font-weight:700; cursor:pointer; text-align:center; }
+.slotbtn:hover { border-color:var(--green); }
+.slotcap { display:block; font-family:'IBM Plex Sans',sans-serif; font-size:.58rem; font-weight:500; letter-spacing:.07em; text-transform:uppercase; color:var(--text3); margin-top:.15rem; }
+
+/* agrupador de términos */
+.cls-prog { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.cls-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:.9rem; text-align:center; font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1.15rem; margin:.6rem 0; color:var(--text); }
+.cls-bins { display:flex; gap:.5rem; flex-wrap:wrap; }
+.cls-bin { flex:1; min-width:96px; min-height:44px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:700; cursor:pointer; padding:.5rem; }
+.cls-bin:hover { border-color:var(--green); color:var(--green); }
+.cls-done { font-weight:700; color:var(--ok); text-align:center; padding:.6rem; font-size:.95rem; }
+
+/* deslizador y constructor */
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.5rem; flex-wrap:wrap; }
+.krow input[type=range] { flex:1; min-width:130px; accent-color:var(--green); height:34px; }
+.klbl { font-size:.78rem; color:var(--text3); min-width:56px; }
+.kval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.95rem; color:var(--green); min-width:38px; text-align:right; }
+.figwrap { display:flex; align-items:flex-start; gap:.9rem; margin:.7rem 0; flex-wrap:wrap; }
+.figrect { border:2px solid var(--green); border-radius:6px; background:var(--green-bg); transition:width .18s, height .18s; }
+.figside { font-family:'IBM Plex Mono',monospace; font-size:.8rem; color:var(--green-dark); margin:.25rem 0; }
+
+/* definiciones */
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.reflect-prompt { font-size:.92rem; color:var(--text2); margin:.5rem 0 .8rem; }
+
+@media (max-width:600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .cls-bins { flex-direction:column; }
+  .klbl { min-width:48px; }
+  .slotbtn { min-width:54px; font-size:.95rem; }
+  .dataline { font-size:.82rem; }
+}
+</style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c2454', primaryDark:'#091f4a', primaryBg:'#e6ecf7',
+  accent:'#e46c0c', accentBg:'#fdebdd',
+  darkPrimary:'#3d6dcc', darkPrimaryDark:'#6e98ec', darkPrimaryBg:'#091a3d',
+  darkAccent:'#f89546', darkAccentBg:'#2b1707',
+  pBR:12, pBG:36, pBB:84, pAR:228, pAG:108, pAB:12,
+  logoLeftB64:'data:image/jpeg;base64,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7XZq+CvdGds5HGCYfMbOv/UvJx7IL66/wY/klsORwmfy5Ldcads0jXepbzgkOHfr017dxpNebDYrVFfpb6yiiFxljET59dS0f7j2G/kPZUj+nhBK2SikLM5F7i351wrrf1AZonR1kYfjBtY3/Oliu6mggpqdkFNDHDDG3lZHG0Na0ewA6BfoiL0q82s2+ParczCcboNDklurpifUFkLmj+0P5BSTwWW5lLwShqw0B1fcKiZ5135XeUP0jXoeJ3hhfeJmO2uksFZboKigqnTFlYXNEgcA06e0O5dDZ1o76dQprwmxJuC8O7Pi3ntqH0MGppWN02SRzi55A9uZx18l0HzM7k2MHN1TbE7vJedrKTsjZGNMY1o9gNL6Vc8VMkuxulDiGKSPF3qyJJXsOjFH6df4d62T6AfMKa45QVNts8FJWXGe41LRuWomPV7j30PQew9lxIqtss74mA2bueV+n16rry0higZK8i7thzt1+nTqvRRefkl0jstirLtLE+WOliMjmMOi4D0G14XD3OaPMn1raWhqKX7IGF3mlp5ubm7a/wA1bvqoWTNhc74nbBaMpZnwuma34W7lS1ERWFXREREREREREREREREREREREREREREREREREREREREUH41337lwiojik5amvP2aLXcA9Xn+iCPxCzi6nnbSR1ZjcIJJHRsk9C5oaXD6gPb+asDj7ezc8xZbInc0Ftj8vQ9ZX6Lv05R9QVLMqwo0vBWno2Rbrrc0Vsmh1Ljsyj6AOP8ARC+f6rHJqtVMWfxiGPqN/wC/Je+0uSPS6SESfylPodv681NuGd8/ugwu3173804j8qo9xI3od/XofxX9zzLqLEKGnq66lqahk8pjaIeXYOt9dkeyrDw53wwXStsEr/2dS37RAD2D29HD6luj/sr3PEn/AHt2v+eH+o5dyPVHv0fvLD8bRbxBt67+K4r9LY3V+7PHwON/Ai/pt4LvruL+OwWSmr4oKmaoqC7VIC3njDSRt5BIaDrp3J9lyWnjTYqmsZDX26roYnHXnEiRrfm4DqB9AVHuDHD+13y1S3u+ROqInSmOngDy1vw/vOOjs9egG/Q/LXLxswe245FR3azxOgpp5DBLCXlwa/Rc0jez1Ad0+QXOdXawKUVt28NgbWyR18fkdlfbQ6Oao0dncVzm+Aenh8xur6hljmhZNFI2SORocx7T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7MKvNJfMZoa+jewtdE1r2NP/AHbwAHNPsQV+eZZVacUtzKy6PefMeGRxRAOkefXQJHQDqTv9SAqIkxTiHitdIy3U10bz9PNtznPZIB6nl6/0gF9W/Bs6ym6NlucFdCHdJKq4lwLR8g74j8gBr6K9++1hjELYHdrttj6/mPmqP7HRiUzOnHZb75+n5n5K78IzC3ZdBUz22mrIo6d7WONRG1vMSN9NOPb1+oUjXkYjj1BjNkitdvaeRnxPkd+9I893H5/8l669PSiYQt7c3fzsvM1RhMzuwFmcroiIrCgREREREREREREREREREREREREREREREREREREREREREVNccMvyufObFwswKqZb7xdoXVdZcnt5vslMOYbaPc8juvfoANc2xJFEZHcIWj3hguVcqKh4eGvGHErtQ3bF+JtTk480fb7ffppGwys9eU7fyn06AEdOp1pfXELIs4zjizJwuwi7HHKW2UrKm+3SMc0rHPa1zYmHp6Ob2IJJd1AaQZhTBx+FwI3J6KPtiBluVeyLOGRf9IXAq4Wm/V2bXDMcQqqtlJcobjszU3N2kY5xcfRx7gbABHUETXDr9davxL5pY5brUz2mmtNHNS0rn7ijc5rC5zR6E8347WHUxA4mm4tf1A/tGzXPCRYq2kVO3K+3uPxZUmPMutW2zvxQ1LqISHyjL5sg5+X+VoDr8lCfCnnWW1uWVFqy68Vtypr1Sy1FolqZvM5XU0xZLGPUEhwdr2aCs90dwF99gD5/6TtxxBtlphFmKoz3K7v4pbXT0V6rIcTdd5rTFSxzaiqH00AdMS3sfjkHX6ey7PEpxCzC2Z7T0eE1NUKbFKNl3vscDtNma+aNrYn9OoDTsj+S9zv4em4oXl7WXGRf6fmy1NS0NLrbGy0ii47HcqS82Wiu9BIJaStp2VEDx/Ex7Q4H8iuxUiLbqzuiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIipPjlYMnsnESw8W8QtUl6ntlM6hudtjG5Jac8xDmAAkkc7t6BP7vQjauxFJFKY3XC0kZxiyo6n40Zdk91oLThHC++xzyvH2upvsDqenp2ep5m73+JBOugPpw8QqHLuGnGOq4n4/YanIrJe6aOnvVFRtJmikY1rRI1oBOtMaQe2y8HWwVf6KYVDWn4WC1rEZyozE4jLsrNeZXfJePlXbMPteGXzH8YirI6q8XC7QeS9zG9o2Deiep6Akk8p6AHfRdcjqMA8SOW3yow/KrtQVttpKaCS2W50zeZscZPxHQI6a6E9VoxFsKoD4eH4bWtfrbn4LBgJzxZVE0v3hePFLZMnjsd3pLfV4S089TSOZ5L3SSO8qQ9WtkAI23e1XNlsGVWXgXY8ytFjrW5Ji2R1c8FM+jk82SnqD5cgDAA4g8zD09Gla8RZbWFtgG4x5C/3uhp78/z8CzE3Erlh964JCa2XGc2+O53C8zw0r5PLmljjkfzkDod8zQDrfLpcWD8M+J2bW3I8uflIxQ5dPMK23Vlp8yV8ALmNY8vILW8pLQPYA+2tVIs9/fbAF+u/Mn7n0WO7NJ3x+BVD4WXX63YVX4ZkVFWQVeN3CSjimmhe2OogLiWOjc4ac3fMBr0DVbyIqssnaPL7Wupo2cDQ1ERFGt0RERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERF/9k=', logoRightB64:'', logoAlt:'Anahuac',
+  guideTitle:{ es:'Lenguaje Algebraico', en:'Algebraic Language' },
+  courseName:{ es:'Pensamiento Matemático II · Sem 2', en:'Mathematical Thinking II · Sem 2' }, filePrefix:'pm2_t01_g01'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_pm2_t01_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Lenguaje Algebraico','wcourse':'Pensamiento Matemático II · Sem 2',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Algebraic Language','wcourse':'Mathematical Thinking II · Sem 2',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_pm2_t01_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_pm2_t01_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_pm2_t01_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_pm2_t01_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('pm2_t01_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+
+  /* ---- escritura matemática (Regla 13) ---- */
+  function numTxt(n){ return (n < 0 ? '−' + Math.abs(n) : String(n)); }
+  function mono(c, v){
+    if (!v) return numTxt(c);
+    var a = Math.abs(c);
+    if (a === 0) return '0';
+    return (c < 0 ? '−' : '') + (a === 1 ? '' : String(a)) + v;
+  }
+  function poly(ts){
+    var out = '', i, c, v;
+    for (i=0;i<ts.length;i++){
+      c = ts[i][0]; v = ts[i][1];
+      if (c === 0) continue;
+      if (out === '') out = mono(c, v);
+      else out += (c < 0 ? ' − ' : ' + ') + mono(Math.abs(c), v);
+    }
+    return out === '' ? '0' : out;
+  }
+  function frac(n, d){
+    return '<span class="mf-outer"><span class="mf-num">'+n+'</span><span class="mf-den">'+d+'</span></span>';
+  }
+  function optsTxt(correct, cands){
+    var out = [correct], i, k = 1, f;
+    for (i=0;i<cands.length;i++){
+      if (out.indexOf(cands[i]) < 0){ out.push(cands[i]); if (out.length === 4) break; }
+    }
+    while (out.length < 4 && k < 30){
+      f = String(correct).replace(/\d+/, function(m){ return String(parseInt(m,10) + k); });
+      if (out.indexOf(f) < 0) out.push(f);
+      k++;
+    }
+    while (out.length < 4) out.push(String(correct) + ' + ' + out.length);
+    return out;
+  }
+  function optsNum(correct, cands){
+    var out = [numTxt(correct)], i, k = 1, s;
+    for (i=0;i<cands.length;i++){
+      s = numTxt(cands[i]);
+      if (out.indexOf(s) < 0){ out.push(s); if (out.length === 4) break; }
+    }
+    while (out.length < 4){ s = numTxt(correct + 7*k); if (out.indexOf(s) < 0) out.push(s); k++; }
+    return out;
+  }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = T(spec.correct);
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ============================================================
+     VALORES CON SEMILLA (se extraen una sola vez, en orden fijo)
+     ============================================================ */
+  var VI = Math.floor(rng()*3);
+  var V1 = ['x','n','m'][VI];
+  var V2 = ['y','p','k'][VI];
+  var SQ = V1 + '²';
+  var CU = V1 + '³';
+  var MULTES = { 2:'doble', 3:'triple', 4:'cuádruple', 5:'quíntuple' };
+  var MULTEN = { 2:'twice', 3:'three times', 4:'four times', 5:'five times' };
+
+  var v1 = Math.floor(rng()*2), v2 = Math.floor(rng()*2), v3 = Math.floor(rng()*2);
+  var v4 = Math.floor(rng()*2), v5 = Math.floor(rng()*2), v6 = Math.floor(rng()*2);
+  var v7 = Math.floor(rng()*2), v8 = Math.floor(rng()*2), v9 = Math.floor(rng()*2);
+  var v10 = Math.floor(rng()*2);
+
+  /* manipulativo 1: tres frases */
+  var W1 = [];
+  (function(){
+    var i, a, c, ty;
+    for (i=0;i<3;i++){
+      a = ri(2,5); c = ri(2,9); ty = Math.floor(rng()*4);
+      W1.push({ a:a, c:c, ty:ty, plus:(ty===0 || ty===2),
+                kop: shufA([c, c+1, c+3, (c > 2 ? c-2 : c+6)]) });
+    }
+  })();
+
+  /* manipulativo 2: seis términos por agrupar */
+  var W2 = [
+    { c: ri(3,7),  p:0 }, { c: -ri(2,6), p:1 }, { c: ri(4,9),  p:2 },
+    { c: ri(2,5),  p:0 }, { c: ri(3,8),  p:1 }, { c: -ri(2,7), p:2 }
+  ];
+  if (W2[1].c + W2[4].c === 0) W2[4].c = W2[4].c + 2;
+  if (W2[2].c + W2[5].c === 0) W2[5].c = W2[5].c - 1;
+  W2 = shufA(W2);
+
+  /* manipulativo 3: tres objetivos de evaluación */
+  var W3 = [];
+  (function(){
+    var i, a, b, k;
+    for (i=0;i<3;i++){
+      a = ri(2,5); k = ri(2,8); b = ri(-6,7);
+      if (b === 0) b = 3;
+      W3.push({ a:a, b:b, k:k, t:a*k + b });
+    }
+  })();
+
+  /* manipulativo 4: rectángulo objetivo */
+  var W4A = ri(2,5), W4B = ri(1,7);
+
+  /* manipulativo 5: prompt de reflexión */
+  var W5i = Math.floor(rng()*3);
+  var W5e = ri(2,6);
+
+  /* P1 */
+  var p1a = ri(2,5), p1b = ri(3,9), p1a2 = ri(2,5), p1b2 = ri(2,7);
+  /* P2 */
+  var p2p = ri(2,6), p2q = ri(4,12), p2r = ri(25,45), p2s = ri(8,15);
+  /* P3 */
+  var p3a = ri(3,7), p3b = ri(2,6), p3c = ri(4,9), p3d = ri(2,5), p3e = ri(3,8), p3f = ri(2,7);
+  if (p3e === p3b) p3e = p3b + 2;
+  if (p3c === p3f) p3f = p3f + 1;
+  var p3m = ri(4,8), p3n = ri(3,7), p3p = ri(2,3), p3q = ri(2,6);
+  /* P4 */
+  var p4a = ri(4,8), p4b = ri(3,9), p4c = ri(2,3), p4d = ri(2,6);
+  var p4k = ri(2,4), p4a2 = ri(2,5), p4b2 = ri(3,7), p4m = ri(2,6);
+  /* P5 */
+  var p5w = Math.floor(rng()*3);
+  var p5A = ri(6,9), p5B = ri(2,4), p5C = ri(3,8);
+  var p5x = ri(5,9), p5y = ri(2,4), p5z = ri(4,9);
+  /* P6 */
+  var p6a = ri(2,5), p6b = ri(3,7), p6c = ri(2,9), p6k = ri(2,4);
+  var p6p = ri(2,4), p6q = -ri(2,5), p6c1 = ri(2,4), p6c2 = ri(3,6), p6c3 = ri(2,4);
+  /* P7 */
+  var p7k = ri(3,6), p7T = ri(22,32), p7coef = shufA([2,3,4,5]);
+  var p7a = ri(3,6), p7b = ri(2,9);
+  /* P8 */
+  var p8a1 = ri(2,4), p8b1 = ri(2,7), p8a2 = ri(2,5), p8b2 = ri(2,6), p8b3 = ri(3,8);
+  if (p8b1 - p8b2 + p8b3 === 0) p8b3 = p8b3 + 2;
+  var p8a = ri(2,5), p8b = ri(2,6), p8e = ri(5,15);
+  if (p8e === 4*p8b) p8e = p8e + 3;
+  /* P9 */
+  var p9m = ri(2,5), p9p = ri(18,28), p9d = ri(3,7), p9f = ri(15,30);
+  /* P10 */
+  var q1 = ri(3,8), q2 = ri(2,7), q3 = ri(2,6), q4 = ri(3,9);
+  var q5 = ri(3,9), q6 = ri(2,6), q7 = ri(4,9);
+
+  /* ============================================================
+     CONCEPTO 1
+     ============================================================ */
+  sec(T({es:'Concepto 1', en:'Concept 1'}),
+      T({es:'Del lenguaje común al lenguaje algebraico', en:'From everyday language to algebra'}),
+      '<p>'+T({
+        es:'El lenguaje algebraico representa con letras las cantidades que cambian o que todavía no se conocen. Esa letra se llama variable y permite convertir un enunciado escrito en palabras en una expresión que después puede operarse, compararse con otra o evaluarse para un valor concreto.',
+        en:'Algebraic language uses letters to stand for quantities that change or that are not yet known. Such a letter is called a variable, and it turns a statement written in words into an expression that can later be operated on, compared with another one, or evaluated at a specific value.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Cada sumando de una expresión es un término. Dentro de un término, el número que multiplica a la variable es el coeficiente y el conjunto de letras con sus exponentes es la parte literal. El término que no lleva variable recibe el nombre de término independiente, y el signo que antecede a un término forma parte de ese término.',
+        en:'Each addend of an expression is a term. Inside a term, the number multiplying the variable is the coefficient and the set of letters with their exponents is the literal part. A term carrying no variable is called the independent term, and the sign in front of a term belongs to that term.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Las palabras del enunciado indican la operación. Aumentado en y más señalan una suma; disminuido en, menos y la diferencia señalan una resta; el doble, el triple y veces señalan un producto; la mitad y la razón señalan un cociente que se escribe como fracción, por ejemplo la mitad de '+V1+' es '+frac(V1,2)+'. El orden de las palabras decide si la operación afecta a un solo término o a toda una suma encerrada entre paréntesis.',
+        en:'The words of the statement point to the operation. Increased by and more than signal an addition; decreased by, minus and the difference signal a subtraction; double, triple and times signal a product; half and the ratio signal a quotient written as a fraction, for instance half of '+V1+' is '+frac(V1,2)+'. Word order decides whether the operation affects a single term or a whole sum enclosed in parentheses.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Variable',en:'Variable'})+'</div><div class="deftxt">'+T({es:'Letra que representa una cantidad desconocida o que puede cambiar.',en:'Letter standing for an unknown quantity or one that can change.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Coeficiente',en:'Coefficient'})+'</div><div class="deftxt">'+T({es:'Número que multiplica a la parte literal, con su signo incluido.',en:'Number multiplying the literal part, sign included.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Parte literal',en:'Literal part'})+'</div><div class="deftxt">'+T({es:'Letras del término junto con el exponente de cada una.',en:'The letters of the term together with each of their exponents.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Término independiente',en:'Independent term'})+'</div><div class="deftxt">'+T({es:'Término sin variable; su valor no depende de nada más.',en:'Term with no variable; its value depends on nothing else.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 1: traductor de frases ---- */
+  (function(){
+    var wrap = widget('translate');
+    var COEF = [1,2,3,4,5,6];
+    var OPS = ['+','−'];
+    var st = { r:0, ci:0, oi:0, ki:0, tries:0, msg:'', done:false, lock:false };
+    function d(){ return W1[st.r]; }
+    function phrase(q){
+      if (q.ty === 0) return T({es:'El '+MULTES[q.a]+' de un número, aumentado en '+q.c+'.', en:cap(MULTEN[q.a])+' a number, increased by '+q.c+'.'});
+      if (q.ty === 1) return T({es:'El '+MULTES[q.a]+' de un número, disminuido en '+q.c+'.', en:cap(MULTEN[q.a])+' a number, decreased by '+q.c+'.'});
+      if (q.ty === 2) return T({es:q.c+' más el '+MULTES[q.a]+' de un número.', en:q.c+' more than '+MULTEN[q.a]+' a number.'});
+      return T({es:'El '+MULTES[q.a]+' de un número, menos '+q.c+'.', en:cap(MULTEN[q.a])+' a number, minus '+q.c+'.'});
+    }
+    function target(q){ return mono(q.a, V1) + (q.plus ? ' + ' : ' − ') + q.c; }
+    function render(){
+      var head = '<div class="iw-tag">'+T({es:'Traductor de frases', en:'Phrase translator'})+'</div>';
+      if (st.done){
+        wrap.innerHTML = head + '<div class="iw-box"><div class="cls-done">🎉 '+
+          T({es:'Tres frases llevadas al lenguaje algebraico.', en:'Three phrases carried into algebraic language.'})+'</div></div>';
+        return;
+      }
+      var q = d();
+      var prev = mono(COEF[st.ci], V1) + ' ' + OPS[st.oi] + ' ' + q.kop[st.ki];
+      wrap.innerHTML = head +
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Frase',en:'Phrase'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-sub">'+T({
+            es:'Toca cada botón hasta que la expresión diga exactamente lo mismo que la frase. Puedes cambiarla las veces que quieras antes de comprobar.',
+            en:'Tap each button until the expression says exactly what the phrase says. You can change it as many times as you like before checking.'})+'</div>'+
+          '<div class="phrasebox">'+phrase(q)+'</div>'+
+          '<div class="slotrow">'+
+            '<button class="slotbtn" onclick="w1Cyc(0)">'+mono(COEF[st.ci], V1)+'<span class="slotcap">'+T({es:'término',en:'term'})+'</span></button>'+
+            '<button class="slotbtn" onclick="w1Cyc(1)">'+OPS[st.oi]+'<span class="slotcap">'+T({es:'signo',en:'sign'})+'</span></button>'+
+            '<button class="slotbtn" onclick="w1Cyc(2)">'+q.kop[st.ki]+'<span class="slotcap">'+T({es:'número',en:'number'})+'</span></button>'+
+          '</div>'+
+          '<div class="dataline">'+T({es:'Tu expresión: ',en:'Your expression: '})+prev+'</div>'+
+          '<button class="rverify-btn" onclick="w1Check()">'+T({es:'Comprobar',en:'Check'})+'</button>'+
+          '<div class="rfb">'+st.msg+'</div>'+
+        '</div>';
+    }
+    function advance(ms){
+      st.lock = true; render();
+      setTimeout(function(){
+        st.r++; st.tries = 0; st.ci = 0; st.oi = 0; st.ki = 0; st.msg = ''; st.lock = false;
+        if (st.r >= 3) st.done = true;
+        render();
+      }, ms);
+    }
+    window.w1Cyc = function(which){
+      if (st.lock || st.done) return;
+      var q = d();
+      if (which === 0) st.ci = (st.ci + 1) % COEF.length;
+      else if (which === 1) st.oi = (st.oi + 1) % OPS.length;
+      else st.ki = (st.ki + 1) % q.kop.length;
+      st.msg = '';
+      render();
+    };
+    window.w1Check = function(){
+      if (st.lock || st.done) return;
+      var q = d();
+      var okC = (COEF[st.ci] === q.a), okO = (OPS[st.oi] === (q.plus ? '+' : '−')), okK = (q.kop[st.ki] === q.c);
+      if (okC && okO && okK){
+        st.msg = '<span class="okmsg">🎉 '+T({es:'Exacto: la expresión dice lo mismo que la frase.', en:'Exactly: the expression says the same as the phrase.'})+'</span>';
+        advance(1200); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.msg = T({es:'La frase se escribe como <b>', en:'The phrase is written as <b>'}) + target(q) + '</b>. ' +
+                 T({es:'Compárala con la tuya antes de seguir.', en:'Compare it with yours before moving on.'});
+        advance(2000); return;
+      }
+      if (!okO){
+        st.msg = T({es:'Revisa el signo: busca en la frase la palabra que dice si la cantidad se agrega o se quita.',
+                    en:'Check the sign: look in the phrase for the word telling you whether the amount is added or taken away.'});
+      } else if (!okC){
+        st.msg = T({es:'Prueba con el número 2: el '+MULTES[q.a]+' de 2 es '+(2*q.a)+', y tu término da '+(2*COEF[st.ci])+'.',
+                    en:'Try the number 2: '+MULTEN[q.a]+' 2 is '+(2*q.a)+', while your term gives '+(2*COEF[st.ci])+'.'});
+      } else {
+        st.msg = T({es:'El número suelto todavía no coincide con la cantidad que menciona la frase.',
+                    en:'The standalone number still does not match the amount the phrase mentions.'});
+      }
+      render();
+    };
+    render();
+  })();
+
+  /* ---- P1 ---- */
+  (function(){
+    var A = poly([[p1a+1, V1],[-p1b, '']]);
+    var B = p1a2 + '(' + V1 + ' − ' + p1b2 + ')';
+    var V = [
+      { q:{es:'Traduce al lenguaje algebraico: la suma de un número con su '+MULTES[p1a]+', disminuida en '+p1b+'.',
+           en:'Translate into algebraic language: the sum of a number and '+MULTEN[p1a]+' that number, decreased by '+p1b+'.'},
+        options: optsTxt(A, [ poly([[p1a, V1],[-p1b,'']]), poly([[p1a+1, V1],[p1b,'']]), V1+' + '+p1a+'('+V1+' − '+p1b+')' ]),
+        correct: A,
+        hint:{es:'Llama '+V1+' al número; su '+MULTES[p1a]+' es '+mono(p1a,V1)+'. Primero se reúnen los dos términos con variable y hasta el final se descuenta la cantidad indicada.',
+              en:'Call the number '+V1+'; '+MULTEN[p1a]+' it is '+mono(p1a,V1)+'. The two terms carrying the variable are gathered first, and only at the end is the amount taken away.'},
+        exp:{es:'Con '+V1+' como el número, la suma es '+V1+' + '+mono(p1a,V1)+', que equivale a '+mono(p1a+1,V1)+'. La resta afecta a esa suma completa, de modo que se escribe al final y la expresión queda '+A+'.',
+             en:'Taking '+V1+' as the number, the sum is '+V1+' + '+mono(p1a,V1)+', which amounts to '+mono(p1a+1,V1)+'. The subtraction affects that whole sum, so it is written at the end and the expression comes out as '+A+'.'} },
+      { q:{es:'Traduce al lenguaje algebraico: el '+MULTES[p1a2]+' de la diferencia entre un número y '+p1b2+'.',
+           en:'Translate into algebraic language: '+MULTEN[p1a2]+' the difference between a number and '+p1b2+'.'},
+        options: optsTxt(B, [ poly([[p1a2, V1],[-p1b2,'']]), p1a2+'('+p1b2+' − '+V1+')', poly([[1, V1],[-p1a2*p1b2,'']]) ]),
+        correct: B,
+        hint:{es:'Escribe primero la diferencia completa y solo después aplica la multiplicación; el paréntesis indica que el factor actúa sobre los dos términos.',
+              en:'Write the whole difference first and only then apply the multiplication; the parentheses show that the factor acts on both terms.'},
+        exp:{es:'La diferencia entre el número y '+p1b2+' es ('+V1+' − '+p1b2+'). El '+MULTES[p1a2]+' multiplica a esa diferencia completa, no solo al primer término, y por eso el paréntesis se conserva: '+B+'.',
+             en:'The difference between the number and '+p1b2+' is ('+V1+' − '+p1b2+'). '+cap(MULTEN[p1a2])+' applies to that whole difference, not only to the first term, which is why the parentheses stay: '+B+'.'} }
+    ][v1];
+    addProb({ title:{es:'De la frase a la expresión', en:'From phrase to expression'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:false });
+  })();
+
+  /* ---- P2 ---- */
+  (function(){
+    var E = poly([[p2p, V1],[p2q, '']]);
+    var C = poly([[p2s,'h'],[p2r,'']]);
+    var V = [
+      { q:{es:'La expresión '+E+' modela una situación. Selecciona el enunciado que le corresponde.',
+           en:'The expression '+E+' models a situation. Select the statement that matches it.'},
+        options:{es:[
+          'El producto de un número por '+p2p+', aumentado en '+p2q+'.',
+          p2p+' veces la suma de un número y '+p2q+'.',
+          'Un número aumentado en la suma de '+p2p+' y '+p2q+'.',
+          p2q+' veces un número, disminuido en '+p2p+'.'],
+          en:[
+          'The product of a number and '+p2p+', increased by '+p2q+'.',
+          p2p+' times the sum of a number and '+p2q+'.',
+          'A number increased by the sum of '+p2p+' and '+p2q+'.',
+          p2q+' times a number, decreased by '+p2p+'.']},
+        correct:{es:'El producto de un número por '+p2p+', aumentado en '+p2q+'.',
+                 en:'The product of a number and '+p2p+', increased by '+p2q+'.'},
+        hint:{es:'Traduce cada enunciado por separado y compáralo término a término con la expresión dada, incluido el orden de las operaciones.',
+              en:'Translate each statement on its own and compare it term by term with the given expression, order of operations included.'},
+        exp:{es:'En '+E+' el número aparece multiplicado por '+p2p+' y después se agrega '+p2q+'. El enunciado con paréntesis correspondería a '+p2p+'('+V1+' + '+p2q+'), que al desarrollarse da '+poly([[p2p,V1],[p2p*p2q,'']])+', una expresión distinta de la dada.',
+             en:'In '+E+' the number appears multiplied by '+p2p+' and then '+p2q+' is added. The statement with parentheses would correspond to '+p2p+'('+V1+' + '+p2q+'), which expands to '+poly([[p2p,V1],[p2p*p2q,'']])+', a different expression from the given one.'} },
+      { q:{es:'Un taller cobra una cuota fija de '+p2r+' pesos y además '+p2s+' pesos por cada hora de trabajo. Selecciona la expresión que representa el costo total de un servicio de h horas.',
+           en:'A workshop charges a fixed fee of '+p2r+' pesos plus '+p2s+' pesos for every hour of work. Select the expression representing the total cost of a service lasting h hours.'},
+        options: optsTxt(C, [ poly([[p2r,'h'],[p2s,'']]), poly([[p2r+p2s,'h']]), p2s+'(h + '+p2r+')' ]),
+        correct: C,
+        hint:{es:'Separa lo que no cambia de lo que sí cambia: solo una de las dos cantidades se multiplica por el número de horas.',
+              en:'Separate what does not change from what does: only one of the two amounts gets multiplied by the number of hours.'},
+        exp:{es:'La cuota fija se paga una sola vez y no depende de h, por eso es el término independiente. El cobro por hora sí depende de h y se escribe '+mono(p2s,'h')+'. El costo total es '+C+'.',
+             en:'The fixed fee is paid once and does not depend on h, so it is the independent term. The hourly charge does depend on h and is written '+mono(p2s,'h')+'. The total cost is '+C+'.'} }
+    ][v2];
+    addProb({ title:{es:'Leer una expresión', en:'Reading an expression'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:false });
+  })();
+
+  /* ============================================================
+     CONCEPTO 2
+     ============================================================ */
+  sec(T({es:'Concepto 2', en:'Concept 2'}),
+      T({es:'Términos semejantes, signos y paréntesis', en:'Like terms, signs and parentheses'}),
+      '<p>'+T({
+        es:'Dos términos son semejantes cuando comparten exactamente la misma parte literal, es decir, las mismas letras elevadas a los mismos exponentes. '+mono(5,SQ)+' y '+mono(-2,SQ)+' son semejantes; '+mono(5,SQ)+' y '+mono(5,V1)+' no lo son, porque el exponente cambia la cantidad que cada uno representa.',
+        en:'Two terms are like terms when they share exactly the same literal part, that is, the same letters raised to the same exponents. '+mono(5,SQ)+' and '+mono(-2,SQ)+' are like terms; '+mono(5,SQ)+' and '+mono(5,V1)+' are not, because the exponent changes the quantity each one represents.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Reducir una expresión consiste en operar los coeficientes de los términos semejantes y conservar la parte literal sin modificarla. Los términos que no tienen ningún semejante se escriben tal cual en el resultado, y el número de términos de la expresión reducida indica cuántas partes literales distintas había.',
+        en:'Reducing an expression means operating on the coefficients of the like terms while keeping the literal part untouched. Terms with no partner are written unchanged in the result, and the number of terms in the reduced expression tells you how many different literal parts there were.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'El signo pertenece al término que lo sigue. Cuando un paréntesis va precedido por una resta, al eliminarlo cambia el signo de cada término que estaba dentro; cuando va precedido por un factor, ese factor multiplica a cada término del paréntesis. Casi todos los errores de reducción provienen de estos dos puntos.',
+        en:'The sign belongs to the term that follows it. When parentheses are preceded by a subtraction, removing them flips the sign of every term inside; when they are preceded by a factor, that factor multiplies every term inside. Almost every reduction error comes from these two points.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Términos semejantes',en:'Like terms'})+'</div><div class="deftxt">'+T({es:'Misma letra y mismo exponente; solo cambia el coeficiente.',en:'Same letter and same exponent; only the coefficient differs.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Reducir',en:'Reduce'})+'</div><div class="deftxt">'+T({es:'Operar los coeficientes semejantes y dejar intacta la parte literal.',en:'Operate on like coefficients and leave the literal part intact.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Resta de un paréntesis',en:'Subtracting a parenthesis'})+'</div><div class="deftxt">'+T({es:'Cambia el signo de todos los términos encerrados.',en:'Flips the sign of every enclosed term.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Distribución',en:'Distribution'})+'</div><div class="deftxt">'+T({es:'El factor externo multiplica a cada término del paréntesis.',en:'The outside factor multiplies each term in the parenthesis.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 2: agrupador de términos ---- */
+  (function(){
+    var wrap = widget('classify');
+    var BINS = [SQ, V1, T({es:'número', en:'number'})];
+    var st = { i:0, tries:0, s:[0,0,0], msg:'', done:false, lock:false };
+    function lblOf(o){ return o.p === 0 ? mono(o.c, SQ) : (o.p === 1 ? mono(o.c, V1) : numTxt(o.c)); }
+    function runTxt(){ return poly([[st.s[0], SQ],[st.s[1], V1],[st.s[2], '']]); }
+    function render(){
+      var head = '<div class="iw-tag">'+T({es:'Agrupador de términos', en:'Term collector'})+'</div>';
+      if (st.done){
+        wrap.innerHTML = head + '<div class="iw-box"><div class="cls-done">🎉 '+
+          T({es:'Expresión reducida: ', en:'Reduced expression: '})+runTxt()+'</div></div>';
+        return;
+      }
+      var o = W2[st.i], bi;
+      var bins = '';
+      for (bi=0;bi<BINS.length;bi++) bins += '<button class="cls-bin" onclick="w2Pick('+bi+')">'+BINS[bi]+'</button>';
+      wrap.innerHTML = head +
+        '<div class="iw-box">'+
+          '<div class="cls-prog">'+(st.i+1)+' / '+W2.length+'</div>'+
+          '<div class="iw-sub">'+T({
+            es:'Envía cada término al grupo que comparte su parte literal. La expresión reducida se va armando sola conforme aciertas.',
+            en:'Send each term to the group sharing its literal part. The reduced expression builds itself as you get them right.'})+'</div>'+
+          '<div class="cls-card">'+lblOf(o)+'</div>'+
+          '<div class="cls-bins">'+bins+'</div>'+
+          '<div class="dataline">'+T({es:'Reducido hasta ahora: ', en:'Reduced so far: '})+runTxt()+'</div>'+
+          '<div class="rfb">'+st.msg+'</div>'+
+        '</div>';
+    }
+    window.w2Pick = function(bi){
+      if (st.lock || st.done) return;
+      var o = W2[st.i];
+      if (bi === o.p){
+        st.s[o.p] += o.c; st.tries = 0; st.i++;
+        st.msg = '<span class="okmsg">✓ '+T({es:'La parte literal coincide.', en:'The literal part matches.'})+'</span>';
+        if (st.i >= W2.length) st.done = true;
+        render(); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.s[o.p] += o.c;
+        st.msg = T({es:'Ese término pertenece al grupo <b>', en:'That term belongs to group <b>'})+BINS[o.p]+'</b>. '+
+                 T({es:'Compara la letra y su exponente antes de elegir.', en:'Compare the letter and its exponent before choosing.'});
+        st.tries = 0; st.i++;
+        if (st.i >= W2.length) st.done = true;
+        st.lock = true; render();
+        setTimeout(function(){ st.lock = false; st.msg = ''; render(); }, 1700);
+        return;
+      }
+      st.msg = T({es:'Ese grupo reúne términos con otra parte literal. Revisa letra por letra, incluido el exponente.',
+                  en:'That group holds terms with a different literal part. Check letter by letter, exponent included.'});
+      render();
+    };
+    render();
+  })();
+
+  /* ---- P3 ---- */
+  (function(){
+    var EA = poly([[p3a,SQ],[-p3b,V1],[p3c,''],[p3d,SQ],[p3e,V1],[-p3f,'']]);
+    var AA = p3a + p3d, AE = p3e - p3b, AC = p3c - p3f;
+    var CA = poly([[AA,SQ],[AE,V1],[AC,'']]);
+    var EB = poly([[p3m, V1+V2],[p3n, V1],[-p3p, V1+V2],[p3q, V2]]);
+    var CB = poly([[p3m-p3p, V1+V2],[p3n, V1],[p3q, V2]]);
+    var V = [
+      { q:{es:'Simplifica la expresión: '+EA, en:'Simplify the expression: '+EA},
+        options: optsTxt(CA, [ poly([[AA+AE,SQ],[AC,'']]), poly([[AA,SQ],[p3e+p3b,V1],[AC,'']]), poly([[AA,SQ],[AE,V1],[p3c+p3f,'']]) ]),
+        correct: CA,
+        hint:{es:'Agrupa por parte literal: los términos en '+SQ+' entre sí, los términos en '+V1+' entre sí y los números entre sí; solo se operan los coeficientes.',
+              en:'Group by literal part: the '+SQ+' terms together, the '+V1+' terms together and the numbers together; only the coefficients get operated on.'},
+        exp:{es:'Los términos en '+SQ+' dan '+mono(AA,SQ)+', los términos en '+V1+' dan '+mono(AE,V1)+' y los números dan '+numTxt(AC)+'. Como '+SQ+' y '+V1+' no son la misma parte literal, esos dos grupos no pueden juntarse y el resultado es '+CA+'.',
+             en:'The '+SQ+' terms give '+mono(AA,SQ)+', the '+V1+' terms give '+mono(AE,V1)+' and the numbers give '+numTxt(AC)+'. Since '+SQ+' and '+V1+' are not the same literal part, those two groups cannot merge and the result is '+CA+'.'} },
+      { q:{es:'Simplifica la expresión: '+EB, en:'Simplify the expression: '+EB},
+        options: optsTxt(CB, [ poly([[p3m-p3p+p3n+p3q, V1+V2]]), poly([[p3m-p3p, V1+V2],[p3n+p3q, V1]]), poly([[p3m+p3p, V1+V2],[p3n, V1],[p3q, V2]]) ]),
+        correct: CB,
+        hint:{es:'Un término con dos letras solo es semejante a otro que tenga esas mismas dos letras; una sola letra en común no basta.',
+              en:'A two-letter term is only like another one carrying those same two letters; sharing a single letter is not enough.'},
+        exp:{es:'Solo '+mono(p3m,V1+V2)+' y '+mono(-p3p,V1+V2)+' comparten la parte literal '+V1+V2+', y su reducción da '+mono(p3m-p3p,V1+V2)+'. Los términos '+mono(p3n,V1)+' y '+mono(p3q,V2)+' tienen partes literales distintas entre sí y distintas de '+V1+V2+', de modo que se conservan: '+CB+'.',
+             en:'Only '+mono(p3m,V1+V2)+' and '+mono(-p3p,V1+V2)+' share the literal part '+V1+V2+', and reducing them gives '+mono(p3m-p3p,V1+V2)+'. The terms '+mono(p3n,V1)+' and '+mono(p3q,V2)+' have literal parts different from each other and from '+V1+V2+', so they stay: '+CB+'.'} }
+    ][v3];
+    addProb({ title:{es:'Reducir la expresión', en:'Reducing the expression'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:true });
+  })();
+
+  /* ---- P4 ---- */
+  (function(){
+    var QA = '(' + poly([[p4a,V1],[p4b,'']]) + ') − (' + poly([[p4c,V1],[-p4d,'']]) + ')';
+    var CA = poly([[p4a-p4c, V1],[p4b+p4d, '']]);
+    var QB = p4k + '(' + poly([[p4a2,V1],[-p4b2,'']]) + ') + ' + mono(p4m, V1);
+    var CB = poly([[p4k*p4a2 + p4m, V1],[-p4k*p4b2, '']]);
+    var V = [
+      { q:{es:'Reduce la expresión: '+QA, en:'Reduce the expression: '+QA},
+        options: optsTxt(CA, [ poly([[p4a-p4c,V1],[p4b-p4d,'']]), poly([[p4a+p4c,V1],[p4b-p4d,'']]), poly([[p4c-p4a,V1],[p4b+p4d,'']]) ]),
+        correct: CA,
+        hint:{es:'La resta que antecede al segundo paréntesis afecta a sus dos términos, no solo al primero.',
+              en:'The subtraction in front of the second parenthesis affects both of its terms, not just the first one.'},
+        exp:{es:'Al eliminar el paréntesis precedido por la resta, ambos términos cambian de signo y la expresión se convierte en '+poly([[p4a,V1],[p4b,''],[-p4c,V1],[p4d,'']])+'. Reduciendo los términos semejantes queda '+CA+'.',
+             en:'Removing the parenthesis preceded by the subtraction flips the sign of both terms, and the expression becomes '+poly([[p4a,V1],[p4b,''],[-p4c,V1],[p4d,'']])+'. Reducing the like terms leaves '+CA+'.'} },
+      { q:{es:'Reduce la expresión: '+QB, en:'Reduce the expression: '+QB},
+        options: optsTxt(CB, [ poly([[p4k*p4a2+p4m,V1],[-p4b2,'']]), poly([[p4k*(p4a2+p4m),V1],[-p4k*p4b2,'']]), poly([[p4k*p4a2+p4m,V1],[p4k*p4b2,'']]) ]),
+        correct: CB,
+        hint:{es:'El factor externo multiplica a cada término encerrado, incluido el número. El término que está fuera del paréntesis no se multiplica.',
+              en:'The outside factor multiplies every enclosed term, the number included. The term sitting outside the parenthesis is not multiplied.'},
+        exp:{es:'El factor '+p4k+' multiplica a los dos términos del paréntesis y produce '+poly([[p4k*p4a2,V1],[-p4k*p4b2,'']])+'. Al sumar '+mono(p4m,V1)+' solo se reducen los términos en '+V1+', de modo que el resultado es '+CB+'.',
+             en:'The factor '+p4k+' multiplies both terms inside the parenthesis and produces '+poly([[p4k*p4a2,V1],[-p4k*p4b2,'']])+'. Adding '+mono(p4m,V1)+' only reduces the '+V1+' terms, so the result is '+CB+'.'} }
+    ][v4];
+    addProb({ title:{es:'Signos y paréntesis', en:'Signs and parentheses'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:true });
+  })();
+
+  /* ---- P5 ---- */
+  (function(){
+    var okS1 = mono(p5A,V1) + ' − ' + mono(p5B,V1) + ' + ' + p5C;
+    var badS1 = mono(p5A,V1) + ' − ' + mono(p5B,V1) + ' − ' + p5C;
+    var s1, s2, s3, val;
+    if (p5w === 0){
+      s1 = badS1; s2 = poly([[p5A-p5B,V1],[-p5C,'']]); val = (p5A-p5B)*2 - p5C; s3 = numTxt(val);
+    } else if (p5w === 1){
+      s1 = okS1; s2 = poly([[p5A+p5B,V1],[p5C,'']]); val = (p5A+p5B)*2 + p5C; s3 = numTxt(val);
+    } else {
+      s1 = okS1; s2 = poly([[p5A-p5B,V1],[p5C,'']]); val = (p5A-p5B)*2 + p5C; s3 = numTxt((p5A-p5B) + p5C);
+    }
+    var expW = [
+      {es:'Al eliminar un paréntesis precedido por una resta, el término que dentro valía '+numTxt(-p5C)+' pasa a sumar '+p5C+'. El paso 1 conserva el signo original y ese error se arrastra hasta el final; la reducción correcta es '+poly([[p5A-p5B,V1],[p5C,'']])+'.',
+       en:'When a parenthesis preceded by a subtraction is removed, the term worth '+numTxt(-p5C)+' inside turns into an addition of '+p5C+'. Step 1 keeps the original sign and that error is dragged to the end; the correct reduction is '+poly([[p5A-p5B,V1],[p5C,'']])+'.'},
+      {es:'El paso 1 quita bien el paréntesis. En el paso 2 los coeficientes de '+V1+' se sumaron en lugar de restarse: el coeficiente correcto sale de '+p5A+' − '+p5B+', así que el término debe ser '+mono(p5A-p5B,V1)+' y la reducción correcta es '+poly([[p5A-p5B,V1],[p5C,'']])+'.',
+       en:'Step 1 removes the parenthesis correctly. In step 2 the '+V1+' coefficients were added instead of subtracted: the right coefficient comes from '+p5A+' − '+p5B+', so the term must be '+mono(p5A-p5B,V1)+' and the correct reduction is '+poly([[p5A-p5B,V1],[p5C,'']])+'.'},
+      {es:'Los pasos 1 y 2 son correctos. Al sustituir '+V1+' = 2 el término '+mono(p5A-p5B,V1)+' vale '+((p5A-p5B)*2)+', y al agregar '+p5C+' el valor de la expresión es '+numTxt(val)+', distinto del que aparece en el paso 3.',
+       en:'Steps 1 and 2 are correct. Substituting '+V1+' = 2, the term '+mono(p5A-p5B,V1)+' is worth '+((p5A-p5B)*2)+', and adding '+p5C+' makes the expression equal '+numTxt(val)+', different from the value shown in step 3.'}
+    ][p5w];
+    var V = [
+      { q:{es:'Un estudiante trabajó la expresión '+mono(p5A,V1)+' − ('+poly([[p5B,V1],[-p5C,'']])+') así. <br>Paso 1: '+s1+' <br>Paso 2: '+s2+' <br>Paso 3: al sustituir '+V1+' = 2 obtiene '+s3+'. <br>Indica en qué paso aparece el error.',
+           en:'A student worked on the expression '+mono(p5A,V1)+' − ('+poly([[p5B,V1],[-p5C,'']])+') like this. <br>Step 1: '+s1+' <br>Step 2: '+s2+' <br>Step 3: substituting '+V1+' = 2 gives '+s3+'. <br>State which step contains the error.'},
+        options:{es:['El error está en el paso 1.','El error está en el paso 2.','El error está en el paso 3.','No hay error: los tres pasos son correctos.'],
+                 en:['The error is in step 1.','The error is in step 2.','The error is in step 3.','There is no error: the three steps are correct.']},
+        correct:{es:'El error está en el paso '+(p5w+1)+'.', en:'The error is in step '+(p5w+1)+'.'},
+        hint:{es:'Revisa un paso a la vez: primero el signo de cada término al quitar el paréntesis, después la operación entre coeficientes y al final la sustitución numérica.',
+              en:'Check one step at a time: first the sign of each term when the parenthesis is removed, then the operation between coefficients, and finally the numerical substitution.'},
+        exp: expW },
+      { q:{es:'Un estudiante afirma que '+mono(p5x,V1)+' − ('+poly([[p5y,V1],[p5z,'']])+') se reduce a '+poly([[p5x-p5y,V1],[p5z,'']])+'. Selecciona la descripción del error que cometió.',
+           en:'A student claims that '+mono(p5x,V1)+' − ('+poly([[p5y,V1],[p5z,'']])+') reduces to '+poly([[p5x-p5y,V1],[p5z,'']])+'. Select the description of the error made.'},
+        options:{es:[
+          'No cambió el signo del término numérico al eliminar el paréntesis.',
+          'Sumó los coeficientes de '+V1+' en lugar de restarlos.',
+          'Consideró semejantes al término numérico y al término en '+V1+'.',
+          'Multiplicó los términos del paréntesis en lugar de restarlos.'],
+          en:[
+          'The sign of the numerical term was not flipped when the parenthesis was removed.',
+          'The '+V1+' coefficients were added instead of subtracted.',
+          'The numerical term and the '+V1+' term were treated as like terms.',
+          'The terms in the parenthesis were multiplied instead of subtracted.']},
+        correct:{es:'No cambió el signo del término numérico al eliminar el paréntesis.',
+                 en:'The sign of the numerical term was not flipped when the parenthesis was removed.'},
+        hint:{es:'Compara por separado el coeficiente de la variable y el número: uno de los dos quedó bien y el otro no.',
+              en:'Compare the coefficient of the variable and the number separately: one of the two came out right and the other did not.'},
+        exp:{es:'El coeficiente de '+V1+' está bien, porque '+p5x+' − '+p5y+' da '+(p5x-p5y)+'. Lo que falla es el número: dentro del paréntesis sumaba '+p5z+' y, al estar precedido por la resta, debe aparecer como '+numTxt(-p5z)+'. La reducción correcta es '+poly([[p5x-p5y,V1],[-p5z,'']])+'.',
+             en:'The '+V1+' coefficient is fine, since '+p5x+' − '+p5y+' gives '+(p5x-p5y)+'. What fails is the number: inside the parenthesis it was adding '+p5z+' and, being preceded by the subtraction, it must show up as '+numTxt(-p5z)+'. The correct reduction is '+poly([[p5x-p5y,V1],[-p5z,'']])+'.'} }
+    ][v5];
+    addProb({ title:{es:'Dónde está el error', en:'Where the error is'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:false });
+  })();
+
+  /* ============================================================
+     CONCEPTO 3
+     ============================================================ */
+  sec(T({es:'Concepto 3', en:'Concept 3'}),
+      T({es:'Evaluar una expresión', en:'Evaluating an expression'}),
+      '<p>'+T({
+        es:'Evaluar una expresión significa sustituir cada variable por un valor numérico y efectuar las operaciones indicadas. Una misma expresión produce un valor distinto para cada valor de la variable, y esa es justamente la razón por la que se escribe con letras en lugar de números.',
+        en:'Evaluating an expression means substituting a numerical value for each variable and carrying out the indicated operations. The same expression produces a different value for each value of the variable, and that is precisely why it is written with letters instead of numbers.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La sustitución se hace en todas las apariciones de la variable, y después se respeta la jerarquía de operaciones: primero las potencias, luego los productos y cocientes, y al final las sumas y restas. El exponente afecta únicamente a la variable, no al coeficiente que la multiplica.',
+        en:'The substitution is made at every occurrence of the variable, and then the order of operations is respected: powers first, then products and quotients, and additions and subtractions last. The exponent affects only the variable, not the coefficient multiplying it.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Cuando el valor sustituido es negativo conviene escribirlo entre paréntesis para no perder el signo. Restar una cantidad negativa equivale a sumar su valor absoluto, y el producto de un factor positivo por uno negativo es negativo.',
+        en:'When the substituted value is negative it is worth writing it in parentheses so the sign does not get lost. Subtracting a negative quantity is the same as adding its absolute value, and the product of a positive factor and a negative one is negative.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Evaluar',en:'Evaluate'})+'</div><div class="deftxt">'+T({es:'Obtener el valor numérico de la expresión para un valor dado.',en:'Obtain the numerical value of the expression for a given value.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Sustitución',en:'Substitution'})+'</div><div class="deftxt">'+T({es:'Cambiar la variable por el número en todas sus apariciones.',en:'Replace the variable with the number at every occurrence.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Jerarquía',en:'Order of operations'})+'</div><div class="deftxt">'+T({es:'Potencias, después productos y por último sumas y restas.',en:'Powers, then products, and additions and subtractions last.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Valores negativos',en:'Negative values'})+'</div><div class="deftxt">'+T({es:'Se sustituyen entre paréntesis para conservar el signo.',en:'They are substituted in parentheses so the sign is kept.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 3: deslizador de evaluación ---- */
+  (function(){
+    var wrap = widget('slider');
+    var st = { r:0, x:0, moves:0, lock:false, done:false };
+    function q(){ return W3[st.r]; }
+    function valAt(x){ return q().a*x + q().b; }
+    function subTxt(x){
+      var c = q();
+      return c.a + '(' + numTxt(x) + ')' + (c.b < 0 ? ' − ' : ' + ') + Math.abs(c.b) + ' = ' + numTxt(valAt(x));
+    }
+    function hintFor(x){
+      var c = q(), v = valAt(x), s;
+      if (v < c.t) s = T({es:'El valor actual queda por debajo del objetivo. Aumenta ', en:'The current value is below the target. Increase '}) + V1 + '.';
+      else s = T({es:'El valor actual se pasa del objetivo. Disminuye ', en:'The current value overshoots the target. Decrease '}) + V1 + '.';
+      if (st.moves >= 10) s += ' ' + T({es:'Con ', en:'With '}) + V1 + ' = ' + c.k + T({es:' la expresión alcanza el objetivo.', en:' the expression reaches the target.'});
+      return s;
+    }
+    function render(){
+      var head = '<div class="iw-tag">'+T({es:'Deslizador de valores', en:'Value slider'})+'</div>';
+      if (st.done){
+        wrap.innerHTML = head + '<div class="iw-box"><div class="cls-done">🎉 '+
+          T({es:'Tres objetivos alcanzados.', en:'Three targets reached.'})+'</div></div>';
+        return;
+      }
+      var c = q();
+      wrap.innerHTML = head +
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Objetivo',en:'Target'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="goalbar">'+T({es:'Mueve el deslizador hasta que la expresión valga ', en:'Move the slider until the expression is worth '})+'<b>'+numTxt(c.t)+'</b>.</div>'+
+          '<div class="iw-sub">'+T({es:'Cada movimiento sustituye el valor elegido en la expresión y muestra el resultado al instante.',
+                                    en:'Every move substitutes the chosen value into the expression and shows the result instantly.'})+'</div>'+
+          '<div class="dataline">'+poly([[c.a,V1],[c.b,'']])+'</div>'+
+          '<div class="krow"><span class="klbl">'+V1+'</span>'+
+            '<input type="range" min="-4" max="12" step="1" value="'+st.x+'" oninput="w3Move(this.value)">'+
+            '<span class="kval" id="w3V">'+numTxt(st.x)+'</span></div>'+
+          '<div class="dataline" id="w3Out">'+subTxt(st.x)+'</div>'+
+          '<div class="rfb" id="w3Fb">'+hintFor(st.x)+'</div>'+
+        '</div>';
+    }
+    window.w3Move = function(raw){
+      if (st.done) return;
+      var x = parseInt(raw, 10);
+      st.x = x;
+      var kv = document.getElementById('w3V'), out = document.getElementById('w3Out'), fb = document.getElementById('w3Fb');
+      if (kv) kv.textContent = numTxt(x);
+      if (out) out.textContent = subTxt(x);
+      if (st.lock) return;
+      st.moves++;
+      if (valAt(x) === q().t){
+        st.lock = true;
+        if (fb) fb.innerHTML = '<span class="okmsg">🎉 '+T({es:'Objetivo alcanzado.', en:'Target reached.'})+'</span>';
+        setTimeout(function(){
+          st.r++; st.x = 0; st.moves = 0; st.lock = false;
+          if (st.r >= 3) st.done = true;
+          render();
+        }, 1200);
+        return;
+      }
+      if (fb) fb.textContent = hintFor(x);
+    };
+    render();
+  })();
+
+  /* ---- P6 ---- */
+  (function(){
+    var EA = poly([[p6a,SQ],[-p6b,V1],[p6c,'']]);
+    var CA = p6a*p6k*p6k - p6b*p6k + p6c;
+    var EB = poly([[p6c1, V1+V2],[p6c2, V1],[-p6c3, V2]]);
+    var CB = p6c1*p6p*p6q + p6c2*p6p - p6c3*p6q;
+    var V = [
+      { q:{es:'Si '+V1+' = '+p6k+', calcula el valor de la expresión '+EA+'.',
+           en:'If '+V1+' = '+p6k+', find the value of the expression '+EA+'.'},
+        options: optsNum(CA, [ (p6a*p6k)*(p6a*p6k) - p6b*p6k + p6c, p6a*p6k*p6k + p6b*p6k + p6c, p6a*p6k - p6b*p6k + p6c ]),
+        correct: numTxt(CA),
+        hint:{es:'Sustituye el valor en cada aparición de la variable y resuelve primero la potencia. El exponente afecta solo a la variable, no al coeficiente.',
+              en:'Substitute the value at every occurrence of the variable and solve the power first. The exponent affects only the variable, not the coefficient.'},
+        exp:{es:'Con '+V1+' = '+p6k+' el término cuadrático vale '+p6a+'('+(p6k*p6k)+') = '+(p6a*p6k*p6k)+', porque el exponente eleva únicamente a la variable. El término lineal vale '+p6b+'('+p6k+') = '+(p6b*p6k)+'. Reuniendo todo: '+(p6a*p6k*p6k)+' − '+(p6b*p6k)+' + '+p6c+' = '+numTxt(CA)+'.',
+             en:'With '+V1+' = '+p6k+' the quadratic term is worth '+p6a+'('+(p6k*p6k)+') = '+(p6a*p6k*p6k)+', since the exponent raises only the variable. The linear term is worth '+p6b+'('+p6k+') = '+(p6b*p6k)+'. Putting it together: '+(p6a*p6k*p6k)+' − '+(p6b*p6k)+' + '+p6c+' = '+numTxt(CA)+'.'} },
+      { q:{es:'Si '+V1+' = '+p6p+' y '+V2+' = '+numTxt(p6q)+', calcula el valor de la expresión '+EB+'.',
+           en:'If '+V1+' = '+p6p+' and '+V2+' = '+numTxt(p6q)+', find the value of the expression '+EB+'.'},
+        options: optsNum(CB, [ p6c1*p6p*p6q + p6c2*p6p + p6c3*p6q, p6c1*p6p*Math.abs(p6q) + p6c2*p6p - p6c3*Math.abs(p6q), -p6c1*p6p*p6q + p6c2*p6p - p6c3*p6q ]),
+        correct: numTxt(CB),
+        hint:{es:'Escribe el valor negativo entre paréntesis antes de multiplicar y recuerda que restar una cantidad negativa equivale a sumarla en positivo.',
+              en:'Write the negative value in parentheses before multiplying, and remember that subtracting a negative quantity is the same as adding it as a positive.'},
+        exp:{es:'El producto '+p6c1+'('+p6p+')('+numTxt(p6q)+') vale '+numTxt(p6c1*p6p*p6q)+', porque un factor positivo por uno negativo da negativo. Después '+p6c2+'('+p6p+') vale '+(p6c2*p6p)+', y restar '+p6c3+'('+numTxt(p6q)+') equivale a sumar '+(-p6c3*p6q)+'. El total es '+numTxt(p6c1*p6p*p6q)+' + '+(p6c2*p6p)+' + '+(-p6c3*p6q)+' = '+numTxt(CB)+'.',
+             en:'The product '+p6c1+'('+p6p+')('+numTxt(p6q)+') is worth '+numTxt(p6c1*p6p*p6q)+', since a positive factor times a negative one is negative. Then '+p6c2+'('+p6p+') is worth '+(p6c2*p6p)+', and subtracting '+p6c3+'('+numTxt(p6q)+') amounts to adding '+(-p6c3*p6q)+'. The total is '+numTxt(p6c1*p6p*p6q)+' + '+(p6c2*p6p)+' + '+(-p6c3*p6q)+' = '+numTxt(CB)+'.'} }
+    ][v6];
+    addProb({ title:{es:'Evaluar la expresión', en:'Evaluating the expression'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:true });
+  })();
+
+  /* ---- P7 ---- */
+  (function(){
+    var V, i, exprs, vals, pool, coefs;
+    if (v7 === 0){
+      vals = [p7T, p7T-2, p7T-5, p7T-9];
+      exprs = [];
+      for (i=0;i<4;i++) exprs.push(poly([[p7coef[i], V1],[vals[i] - p7coef[i]*p7k, '']]));
+      V = { q:{es:'Las cuatro expresiones se evalúan en '+V1+' = '+p7k+'. Selecciona la que toma el mayor valor.',
+               en:'The four expressions are evaluated at '+V1+' = '+p7k+'. Select the one taking the largest value.'},
+            options: exprs, correct: exprs[0],
+            hint:{es:'Sustituye el mismo valor en las cuatro y compara los resultados; el coeficiente mayor no siempre gana, porque el término independiente también cuenta.',
+                  en:'Substitute the same value in all four and compare the results; the largest coefficient does not always win, because the independent term counts too.'},
+            exp:{es:'Al sustituir '+V1+' = '+p7k+', la expresión '+exprs[0]+' vale '+vals[0]+', mientras que las otras tres valen '+vals[1]+', '+vals[2]+' y '+vals[3]+'. El mayor de esos valores es '+vals[0]+'.',
+                 en:'Substituting '+V1+' = '+p7k+', the expression '+exprs[0]+' is worth '+vals[0]+', while the other three are worth '+vals[1]+', '+vals[2]+' and '+vals[3]+'. The largest of those values is '+vals[0]+'.'} };
+    } else {
+      var TT = p7a*p7k + p7b;
+      pool = [];
+      var base = [2,3,4,5,7];
+      for (i=0;i<base.length;i++) if (base[i] !== p7a) pool.push(base[i]);
+      coefs = shufA(pool);
+      vals = [TT, TT+3, TT-4, TT+7];
+      exprs = [];
+      for (i=0;i<4;i++) exprs.push(poly([[coefs[i], V1],[vals[i] - coefs[i]*p7k, '']]));
+      V = { q:{es:'Al evaluarse en '+V1+' = '+p7k+', la expresión '+poly([[p7a,V1],[p7b,'']])+' toma cierto valor. Selecciona la expresión que toma exactamente ese mismo valor.',
+               en:'Evaluated at '+V1+' = '+p7k+', the expression '+poly([[p7a,V1],[p7b,'']])+' takes a certain value. Select the expression taking exactly that same value.'},
+            options: exprs, correct: exprs[0],
+            hint:{es:'Calcula primero el valor de la expresión de referencia y usa ese número como criterio para revisar las cuatro opciones.',
+                  en:'Work out the value of the reference expression first and use that number as the criterion for checking the four options.'},
+            exp:{es:'La expresión de referencia vale '+TT+' cuando '+V1+' = '+p7k+'. Solo '+exprs[0]+' alcanza ese mismo valor; las otras tres dan '+vals[1]+', '+vals[2]+' y '+vals[3]+'. Dos expresiones distintas pueden coincidir en un valor sin ser equivalentes.',
+                 en:'The reference expression is worth '+TT+' when '+V1+' = '+p7k+'. Only '+exprs[0]+' reaches that same value; the other three give '+vals[1]+', '+vals[2]+' and '+vals[3]+'. Two different expressions can agree at one value without being equivalent.'} };
+    }
+    addProb({ title:{es:'Comparar valores', en:'Comparing values'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:true });
+  })();
+
+  /* ============================================================
+     CONCEPTO 4
+     ============================================================ */
+  sec(T({es:'Concepto 4', en:'Concept 4'}),
+      T({es:'Modelar situaciones y figuras', en:'Modelling situations and figures'}),
+      '<p>'+T({
+        es:'Muchas situaciones se describen con dos partes: una cantidad fija, que no depende de nada, y una cantidad variable, que se obtiene multiplicando un valor por unidad por el número de unidades. La cantidad fija se convierte en el término independiente del modelo y la variable en el término con letra.',
+        en:'Many situations are described by two parts: a fixed amount, depending on nothing, and a variable amount, obtained by multiplying a per-unit value by the number of units. The fixed amount becomes the independent term of the model and the variable one becomes the term carrying the letter.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'En geometría ocurre lo mismo. Si los lados de una figura se expresan con letras, su perímetro se obtiene sumando esas expresiones y reduciendo términos semejantes. El resultado es una sola expresión que sirve para cualquier valor de la variable, de manera que no hay que rehacer la suma cada vez que cambian las medidas.',
+        en:'The same thing happens in geometry. If the sides of a figure are written with letters, its perimeter comes from adding those expressions and reducing like terms. The result is a single expression valid for any value of the variable, so the sum does not have to be redone every time the measurements change.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Cuando un lado se repite, en lugar de escribirlo varias veces se multiplica por el número de repeticiones, y ese factor debe distribuirse sobre todos los términos del lado. Reducir el modelo antes de usarlo evita arrastrar errores en los cálculos posteriores.',
+        en:'When a side repeats, instead of writing it several times it is multiplied by the number of repetitions, and that factor must be distributed over every term of the side. Reducing the model before using it avoids dragging errors into later calculations.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Cantidad fija',en:'Fixed amount'})+'</div><div class="deftxt">'+T({es:'Se paga o se mide una sola vez; es el término independiente.',en:'Paid or measured once; it is the independent term.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Cantidad variable',en:'Variable amount'})+'</div><div class="deftxt">'+T({es:'Depende del número de unidades y lleva la letra.',en:'Depends on the number of units and carries the letter.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Perímetro',en:'Perimeter'})+'</div><div class="deftxt">'+T({es:'Suma de todos los lados, ya reducida a términos semejantes.',en:'Sum of every side, already reduced to like terms.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Lado repetido',en:'Repeated side'})+'</div><div class="deftxt">'+T({es:'Se multiplica por el número de veces y se distribuye el factor.',en:'Multiplied by how many times it occurs, distributing the factor.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 4: constructor de perímetro ---- */
+  (function(){
+    var wrap = widget('build');
+    var K = 2*(W4A + 1), M = 4 + 2*W4B;
+    var st = { a:1, b:0, moves:0, done:false, msg:'' };
+    function baseTxt(a){ return poly([[a, V1],[2, '']]); }
+    function altTxt(b){ return poly([[1, V1],[b, '']]); }
+    function perK(a){ return 2*(a + 1); }
+    function perM(b){ return 4 + 2*b; }
+    function paint(){
+      var eb = document.getElementById('w4Base'), ea = document.getElementById('w4Alt'),
+          er = document.getElementById('w4Rect'), ep = document.getElementById('w4P'),
+          ka = document.getElementById('w4KA'), kb = document.getElementById('w4KB'),
+          fb = document.getElementById('w4Fb');
+      if (eb) eb.textContent = T({es:'base: ', en:'base: '}) + baseTxt(st.a);
+      if (ea) ea.textContent = T({es:'altura: ', en:'height: '}) + altTxt(st.b);
+      if (er){ er.style.width = (66 + st.a*20) + 'px'; er.style.height = (42 + st.b*8) + 'px'; }
+      if (ka) ka.textContent = String(st.a);
+      if (kb) kb.textContent = String(st.b);
+      if (ep) ep.textContent = 'P = 2(' + baseTxt(st.a) + ') + 2(' + altTxt(st.b) + ') = ' + poly([[perK(st.a), V1],[perM(st.b), '']]);
+      if (fb){ if (st.msg.indexOf('<') >= 0) fb.innerHTML = st.msg; else fb.textContent = st.msg; }
+    }
+    function judge(){
+      var k = perK(st.a), m = perM(st.b), parts = [];
+      if (k === K && m === M){
+        st.done = true;
+        st.msg = '<span class="okmsg">🎉 '+T({es:'Perímetro conseguido: ', en:'Perimeter matched: '})+poly([[K,V1],[M,'']])+'</span>';
+        return;
+      }
+      if (k < K) parts.push(T({es:'El coeficiente de '+V1+' se queda corto: alarga la base.', en:'The '+V1+' coefficient falls short: make the base longer.'}));
+      else if (k > K) parts.push(T({es:'El coeficiente de '+V1+' se pasa: acorta la base.', en:'The '+V1+' coefficient overshoots: make the base shorter.'}));
+      else parts.push(T({es:'El coeficiente de '+V1+' ya coincide.', en:'The '+V1+' coefficient already matches.'}));
+      if (m < M) parts.push(T({es:'El término independiente se queda corto: aumenta la altura.', en:'The independent term falls short: increase the height.'}));
+      else if (m > M) parts.push(T({es:'El término independiente se pasa: reduce la altura.', en:'The independent term overshoots: reduce the height.'}));
+      else parts.push(T({es:'El término independiente ya coincide.', en:'The independent term already matches.'}));
+      if (st.moves >= 8) parts.push(T({es:'Con base '+baseTxt(W4A)+' y altura '+altTxt(W4B)+' se obtiene el perímetro buscado.',
+                                       en:'A base of '+baseTxt(W4A)+' and a height of '+altTxt(W4B)+' give the perimeter you want.'}));
+      st.msg = parts.join(' ');
+    }
+    function render(){
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Constructor de perímetro', en:'Perimeter builder'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="goalbar">'+T({es:'Ajusta el rectángulo hasta que su perímetro reducido sea ', en:'Adjust the rectangle until its reduced perimeter is '})+'<b>'+poly([[K,V1],[M,'']])+'</b>.</div>'+
+          '<div class="figwrap">'+
+            '<div><div class="figside" id="w4Base"></div>'+
+            '<div class="figrect" id="w4Rect"></div>'+
+            '<div class="figside" id="w4Alt"></div></div>'+
+          '</div>'+
+          '<div class="krow"><span class="klbl">'+T({es:'base',en:'base'})+'</span>'+
+            '<input type="range" min="1" max="6" step="1" value="'+st.a+'" oninput="w4Set(0,this.value)">'+
+            '<span class="kval" id="w4KA"></span></div>'+
+          '<div class="krow"><span class="klbl">'+T({es:'altura',en:'height'})+'</span>'+
+            '<input type="range" min="0" max="8" step="1" value="'+st.b+'" oninput="w4Set(1,this.value)">'+
+            '<span class="kval" id="w4KB"></span></div>'+
+          '<div class="dataline" id="w4P"></div>'+
+          '<div class="rfb" id="w4Fb"></div>'+
+        '</div>';
+      paint();
+    }
+    window.w4Set = function(which, raw){
+      if (st.done) return;
+      var val = parseInt(raw, 10);
+      if (which === 0) st.a = val; else st.b = val;
+      st.moves++;
+      judge();
+      paint();
+    };
+    judge();
+    render();
+  })();
+
+  /* ---- P8 ---- */
+  (function(){
+    var s1 = poly([[p8a1,V1],[p8b1,'']]), s2 = poly([[p8a2,V1],[-p8b2,'']]), s3 = poly([[1,V1],[p8b3,'']]);
+    var SC = p8b1 - p8b2 + p8b3, SS = p8a1 + p8a2 + 1;
+    var CA = poly([[SS,V1],[SC,'']]);
+    var CB = poly([[4*p8a,V1],[p8e - 4*p8b,'']]);
+    var V = [
+      { q:{es:'Los lados de un triángulo miden '+s1+', '+s2+' y '+s3+' centímetros. Escribe su perímetro reducido.',
+           en:'The sides of a triangle measure '+s1+', '+s2+' and '+s3+' centimetres. Write its reduced perimeter.'},
+        options: optsTxt(CA, [ poly([[SS,V1],[p8b1+p8b2+p8b3,'']]), poly([[p8a1+p8a2,V1],[SC,'']]), poly([[SS,V1],[p8b1-p8b2-p8b3,'']]) ]),
+        correct: CA,
+        hint:{es:'Suma los tres lados en una sola expresión y agrupa después: los términos con variable por un lado y los números por otro, respetando el signo del lado que resta.',
+              en:'Add the three sides into a single expression and group afterwards: the terms with the variable on one side and the numbers on the other, respecting the sign of the side that subtracts.'},
+        exp:{es:'La suma de los tres lados es '+poly([[p8a1,V1],[p8b1,''],[p8a2,V1],[-p8b2,''],[1,V1],[p8b3,'']])+'. Los términos en '+V1+' dan '+mono(SS,V1)+', donde el tercer lado aporta un coeficiente 1, y los números dan '+numTxt(SC)+'. El perímetro es '+CA+' centímetros.',
+             en:'The sum of the three sides is '+poly([[p8a1,V1],[p8b1,''],[p8a2,V1],[-p8b2,''],[1,V1],[p8b3,'']])+'. The '+V1+' terms give '+mono(SS,V1)+', where the third side contributes a coefficient of 1, and the numbers give '+numTxt(SC)+'. The perimeter is '+CA+' centimetres.'} },
+      { q:{es:'Un cuadrado tiene lados de '+poly([[p8a,V1],[-p8b,'']])+' centímetros y se le añade un listón recto de '+p8e+' centímetros. Escribe la longitud total reducida del contorno junto con el listón.',
+           en:'A square has sides of '+poly([[p8a,V1],[-p8b,'']])+' centimetres and a straight ribbon of '+p8e+' centimetres is added to it. Write the reduced total length of the outline together with the ribbon.'},
+        options: optsTxt(CB, [ poly([[4*p8a,V1],[p8e-p8b,'']]), poly([[4*p8a,V1],[-(4*p8b+p8e),'']]), poly([[p8a,V1],[p8e-4*p8b,'']]) ]),
+        correct: CB,
+        hint:{es:'El contorno del cuadrado repite cuatro veces el mismo lado, y ese factor afecta a los dos términos del lado. El listón se agrega al final.',
+              en:'The outline of the square repeats the same side four times, and that factor affects both terms of the side. The ribbon is added at the end.'},
+        exp:{es:'El contorno vale 4('+poly([[p8a,V1],[-p8b,'']])+'), es decir '+poly([[4*p8a,V1],[-4*p8b,'']])+', porque el factor 4 multiplica también al número. Al agregar el listón los términos independientes se reducen y la longitud total es '+CB+' centímetros.',
+             en:'The outline is worth 4('+poly([[p8a,V1],[-p8b,'']])+'), that is '+poly([[4*p8a,V1],[-4*p8b,'']])+', because the factor 4 multiplies the number as well. Adding the ribbon reduces the independent terms and the total length is '+CB+' centimetres.'} }
+    ][v8];
+    addProb({ title:{es:'Perímetro en lenguaje algebraico', en:'Perimeter in algebraic language'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:true });
+  })();
+
+  /* ---- MANIPULATIVO 5: reflexión ---- */
+  (function(){
+    var wrap = widget('reflect');
+    var PROMPTS = [
+      {es:'Escribe una situación de la vida diaria que se modele con la expresión '+poly([[W5e,V1],[2*W5e,'']])+'. Explica qué representa la variable y qué representa cada término.',
+       en:'Write an everyday situation modelled by the expression '+poly([[W5e,V1],[2*W5e,'']])+'. Explain what the variable represents and what each term represents.'},
+      {es:'Con tus palabras, explica por qué '+mono(W5e,SQ)+' y '+mono(W5e,V1)+' no pueden reducirse a un solo término. Puedes apoyarte en un dibujo.',
+       en:'In your own words, explain why '+mono(W5e,SQ)+' and '+mono(W5e,V1)+' cannot be reduced to a single term. You may support your answer with a sketch.'},
+      {es:'Dibuja una figura cuyo perímetro se exprese como '+poly([[2*W5e,V1],[2*W5e+4,'']])+' y anota la medida de cada uno de sus lados.',
+       en:'Sketch a figure whose perimeter is expressed as '+poly([[2*W5e,V1],[2*W5e+4,'']])+' and write down the measurement of each of its sides.'}
+    ];
+    wrap.innerHTML =
+      '<div class="iw-tag">'+T({es:'Reflexiona', en:'Reflect'})+'</div>'+
+      '<div class="iw-box">'+
+        '<div class="reflect-prompt">'+T(PROMPTS[W5i])+'</div>'+
+        '<div class="wtabs">'+
+          '<button class="wtab active" onclick="reflectTab(\'type\',this)">'+t('tab-type')+'</button>'+
+          '<button class="wtab" onclick="reflectTab(\'draw\',this)">'+t('tab-draw')+'</button>'+
+        '</div>'+
+        '<div class="wpanel active" id="reflect_type"><textarea class="wtextarea" id="reflectTa" placeholder="'+t('ph-work')+'"></textarea></div>'+
+        '<div class="wpanel" id="reflect_draw">'+
+          '<div class="cvwrap"><canvas class="dcanvas" id="reflectCv"></canvas>'+
+            '<div class="ctoolbar">'+
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>'+
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>'+
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>'+
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>'+
+              '<div class="cdot" data-color="#1a1a16" style="background:#1a1a16"></div>'+
+              '<div class="cdot" data-color="#8b2500" style="background:#8b2500"></div>'+
+              '<button class="clrbtn">'+t('btn-clear')+'</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<button class="rverify-btn" onclick="reflectSave()">'+T({es:'Guardar', en:'Save'})+'</button>'+
+        '<div class="rfb" id="reflectFb"></div>'+
+      '</div>';
+    window.reflectTab = function(which, btn){
+      var names = ['type','draw'], i, el;
+      for (i=0;i<names.length;i++){
+        el = document.getElementById('reflect_' + names[i]);
+        if (el) el.classList.toggle('active', names[i] === which);
+      }
+      var tabs = wrap.querySelectorAll('.wtab'), j;
+      for (j=0;j<tabs.length;j++) tabs[j].classList.remove('active');
+      btn.classList.add('active');
+      if (which === 'draw') setTimeout(function(){ var c = document.getElementById('reflectCv'); if (c) initCanvas(c); }, 60);
+    };
+    window.reflectSave = function(){
+      var fb = document.getElementById('reflectFb');
+      if (fb) fb.innerHTML = '<span class="okmsg">✓ '+T({
+        es:'Guardado. Aquí no hay una sola respuesta posible: lo valioso es que la variable y los términos queden bien explicados.',
+        en:'Saved. There is no single possible answer here: what matters is that the variable and the terms end up clearly explained.'})+'</span>';
+    };
+  })();
+
+  /* ---- P9 ---- */
+  (function(){
+    var CA = poly([[p9m+3, V1],[3, '']]);
+    var CB = poly([[p9p-p9d, 'n'],[p9f, '']]);
+    var V = [
+      { q:{es:'Tres números enteros consecutivos se representan a partir del menor, al que se llama '+V1+'. Escribe la expresión reducida de la suma de los tres, aumentada en el '+MULTES[p9m]+' del menor.',
+           en:'Three consecutive integers are represented starting from the smallest one, which is called '+V1+'. Write the reduced expression for the sum of the three, increased by '+MULTEN[p9m]+' the smallest one.'},
+        options: optsTxt(CA, [ poly([[p9m+3,V1],[1,'']]), poly([[3,V1],[3+p9m,'']]), poly([[p9m+3,V1]]) ]),
+        correct: CA,
+        hint:{es:'Si el menor es '+V1+', los que siguen son '+V1+' + 1 y '+V1+' + 2. Escribe la suma completa y agrupa por separado los términos con variable y los números.',
+              en:'If the smallest is '+V1+', the next ones are '+V1+' + 1 and '+V1+' + 2. Write the full sum and group the terms with the variable separately from the numbers.'},
+        exp:{es:'La suma de los tres consecutivos es '+V1+' + ('+V1+' + 1) + ('+V1+' + 2), que se reduce a '+poly([[3,V1],[3,'']])+'. El '+MULTES[p9m]+' del menor es '+mono(p9m,V1)+', y al agregarlo solo cambian los términos con variable: '+CA+'.',
+             en:'The sum of the three consecutive integers is '+V1+' + ('+V1+' + 1) + ('+V1+' + 2), which reduces to '+poly([[3,V1],[3,'']])+'. '+cap(MULTEN[p9m])+' the smallest one is '+mono(p9m,V1)+', and adding it only changes the terms with the variable: '+CA+'.'} },
+      { q:{es:'Una papelería vende cuadernos en '+p9p+' pesos cada uno y aplica un descuento de '+p9d+' pesos por cuaderno. Cada compra lleva además un cargo fijo de '+p9f+' pesos. Escribe la expresión reducida del costo de n cuadernos.',
+           en:'A stationery shop sells notebooks at '+p9p+' pesos each and applies a discount of '+p9d+' pesos per notebook. Every purchase also carries a fixed charge of '+p9f+' pesos. Write the reduced expression for the cost of n notebooks.'},
+        options: optsTxt(CB, [ poly([[p9p,'n'],[p9f-p9d,'']]), poly([[p9p-p9d+p9f,'n']]), poly([[p9p+p9d,'n'],[p9f,'']]) ]),
+        correct: CB,
+        hint:{es:'El descuento se aplica a cada cuaderno, así que afecta al precio unitario. El cargo fijo se cobra una sola vez por compra.',
+              en:'The discount applies to each notebook, so it affects the unit price. The fixed charge is billed once per purchase.'},
+        exp:{es:'Cada cuaderno cuesta '+p9p+' − '+p9d+', es decir '+(p9p-p9d)+' pesos, de modo que n cuadernos cuestan '+mono(p9p-p9d,'n')+'. El cargo fijo no depende de la cantidad y se suma como término independiente, así que el costo es '+CB+'.',
+             en:'Each notebook costs '+p9p+' − '+p9d+', that is '+(p9p-p9d)+' pesos, so n notebooks cost '+mono(p9p-p9d,'n')+'. The fixed charge does not depend on the quantity and is added as an independent term, so the cost is '+CB+'.'} }
+    ][v9];
+    addProb({ title:{es:'Modelar y reducir', en:'Modelling and reducing'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:true });
+  })();
+
+  /* ---- P10 ---- */
+  (function(){
+    var LP = V1 + '²' + V2;
+    var okPair = mono(q1, LP) + ', ' + mono(-q2, LP);
+    var E10 = poly([[-q5, CU],[q6, V1],[q7, '']]);
+    var V = [
+      { q:{es:'Selecciona la pareja formada por términos semejantes.',
+           en:'Select the pair made up of like terms.'},
+        options: optsTxt(okPair, [
+          mono(q3, SQ) + ', ' + mono(q4, CU),
+          mono(q3, V1+V2) + ', ' + mono(q4, V1),
+          mono(q1, SQ) + ', ' + mono(q2, V2+'²') ]),
+        correct: okPair,
+        hint:{es:'La comparación se hace letra por letra y exponente por exponente; el coeficiente no interviene en ella.',
+              en:'The comparison is made letter by letter and exponent by exponent; the coefficient plays no part in it.'},
+        exp:{es:'Los términos '+mono(q1,LP)+' y '+mono(-q2,LP)+' tienen la misma parte literal '+LP+', por eso pueden reducirse a un solo término. En las otras parejas cambia algún exponente o alguna letra, y eso basta para que no sean semejantes aunque se parezcan a simple vista.',
+             en:'The terms '+mono(q1,LP)+' and '+mono(-q2,LP)+' share the literal part '+LP+', which is why they can be reduced to a single term. In the other pairs some exponent or some letter changes, and that is enough to keep them from being like terms even though they look similar at a glance.'} },
+      { q:{es:'Selecciona la afirmación correcta sobre la expresión '+E10+'.',
+           en:'Select the correct statement about the expression '+E10+'.'},
+        options:{es:[
+          'El coeficiente del primer término es '+numTxt(-q5)+' y su parte literal es '+CU+'.',
+          'El coeficiente del primer término es '+q5+', porque el signo pertenece a la operación que lo antecede.',
+          'El término independiente es '+numTxt(-q5)+', por ser el que tiene el mayor exponente.',
+          'Los tres términos son semejantes, porque todos comparten la misma letra.'],
+          en:[
+          'The coefficient of the first term is '+numTxt(-q5)+' and its literal part is '+CU+'.',
+          'The coefficient of the first term is '+q5+', because the sign belongs to the operation in front of it.',
+          'The independent term is '+numTxt(-q5)+', being the one with the largest exponent.',
+          'The three terms are like terms, because they all share the same letter.']},
+        correct:{es:'El coeficiente del primer término es '+numTxt(-q5)+' y su parte literal es '+CU+'.',
+                 en:'The coefficient of the first term is '+numTxt(-q5)+' and its literal part is '+CU+'.'},
+        hint:{es:'Revisa tres cosas por separado: a quién pertenece el signo, cuál término carece de variable y qué se necesita para que dos términos sean semejantes.',
+              en:'Check three things separately: who owns the sign, which term has no variable, and what is needed for two terms to be like terms.'},
+        exp:{es:'El signo forma parte del coeficiente, de modo que el primer término tiene coeficiente '+numTxt(-q5)+' y parte literal '+CU+'. El término independiente es '+q7+', que es el único sin variable, y '+mono(-q5,CU)+' junto con '+mono(q6,V1)+' no son semejantes porque sus exponentes difieren.',
+             en:'The sign is part of the coefficient, so the first term has coefficient '+numTxt(-q5)+' and literal part '+CU+'. The independent term is '+q7+', the only one without a variable, and '+mono(-q5,CU)+' together with '+mono(q6,V1)+' are not like terms because their exponents differ.'} }
+    ][v10];
+    addProb({ title:{es:'Términos y partes literales', en:'Terms and literal parts'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:false });
+  })();
+}
+</script>
+</body>
+</html>
