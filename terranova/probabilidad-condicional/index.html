@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Probabilidad Condicional</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Probabilidad Condicional</div>
+    <div class="wcourse" id="wcourse-el">Pensamiento Matemático I · Sem 1</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Probabilidad Condicional</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c3c6c', primaryDark:'#072a4c', primaryBg:'#e6eef7',
+  accent:'#ccb49c', accentBg:'#f3ede7',
+  darkPrimary:'#3885d1', darkPrimaryDark:'#6aadf0', darkPrimaryBg:'#08233e',
+  darkAccent:'#bf9f80', darkAccentBg:'#201912',
+  pBR:12, pBG:60, pBB:108, pAR:204, pAG:180, pAB:156,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'Terranova',
+  guideTitle:{ es:'Probabilidad Condicional', en:'Conditional Probability' },
+  courseName:{ es:'Pensamiento Matemático I · Sem 1', en:'Mathematical Thinking I · Sem 1' }, filePrefix:'pm1_t04_g01'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_pm1_t04_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Probabilidad Condicional','wcourse':'Pensamiento Matemático I · Sem 1',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Conditional Probability','wcourse':'Mathematical Thinking I · Sem 1',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_pm1_t04_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_pm1_t04_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_pm1_t04_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_pm1_t04_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('pm1_t04_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     ESTILOS PROPIOS DE LA GUIA
+     ============================================================ */
+  (function(){
+    if (document.getElementById('guideCss')) return;
+    var st = document.createElement('style');
+    st.id = 'guideCss';
+    st.textContent =
+      '.iw-tag{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.4rem}' +
+      '.iw-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem}' +
+      '.iw-sub{font-size:.85rem;color:var(--text3);margin-bottom:.7rem}' +
+      '.rondas{font-family:\'IBM Plex Mono\',monospace;font-size:.68rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.35rem}' +
+      '.goalbar{background:var(--gold-bg);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:.5rem .7rem;font-size:.86rem;margin-bottom:.7rem}' +
+      '.gcanvas{display:block;width:100%;height:215px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}' +
+      '.krow{display:flex;align-items:center;gap:.6rem;margin-top:.6rem}' +
+      '.krow input[type=range]{flex:1;accent-color:var(--green);height:26px}' +
+      '.klbl{font-size:.76rem;color:var(--text3);min-width:118px}' +
+      '.kval{font-family:\'IBM Plex Mono\',monospace;font-weight:600;color:var(--green);min-width:38px;text-align:right}' +
+      '.readgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.75rem}' +
+      '.readcell{background:var(--surface2);border-radius:8px;padding:.5rem .35rem;text-align:center}' +
+      '.readcell.hi{background:var(--green-bg)}' +
+      '.readlbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text3)}' +
+      '.readval{font-family:\'IBM Plex Mono\',monospace;font-size:.95rem;font-weight:600;color:var(--text)}' +
+      '.rverify-btn{margin-top:.85rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.6rem 1.1rem;font-size:.85rem;font-weight:600;cursor:pointer;min-height:44px}' +
+      '.rverify-btn:hover{background:var(--green-dark)}' +
+      '.rghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border);margin-left:.5rem}' +
+      '.rghost:hover{background:var(--surface2)}' +
+      '.rfb{margin-top:.6rem;font-size:.85rem;color:var(--text2);min-height:1.25rem}' +
+      '.okmsg{color:var(--ok);font-weight:700}' +
+      '.iw-done{font-weight:700;color:var(--ok);text-align:center;padding:.5rem}' +
+      '.ctab{width:100%;border-collapse:collapse;font-size:.8rem;margin:.5rem 0}' +
+      '.ctab th,.ctab td{border:1px solid var(--border);padding:.5rem .25rem;text-align:center}' +
+      '.ctab th{background:var(--surface2);font-weight:600;color:var(--text2);font-size:.72rem}' +
+      '.ccell{cursor:pointer;user-select:none;font-family:\'IBM Plex Mono\',monospace;font-weight:600}' +
+      '.ccell.on{background:var(--gold-bg);border-color:var(--gold);color:var(--gold)}' +
+      '.ctot{background:var(--surface2);color:var(--text3);font-size:.74rem}' +
+      '.barrow{margin-top:.8rem}' +
+      '.barlbl{display:flex;justify-content:space-between;font-size:.78rem;color:var(--text3);margin-bottom:.22rem}' +
+      '.bartrack{height:17px;background:var(--surface2);border-radius:9px;overflow:hidden}' +
+      '.barfill{height:100%;transition:width .18s}' +
+      '.barfill.pa{background:var(--green)}' +
+      '.barfill.pb{background:var(--gold)}' +
+      '.urnwrap{display:flex;flex-wrap:wrap;gap:.4rem;margin:.65rem 0}' +
+      '.ball{width:42px;height:42px;border-radius:50%;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;transition:opacity .15s}' +
+      '.ball.rd{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}' +
+      '.ball.bl{background:var(--green-bg);color:var(--green-dark);border-color:var(--green)}' +
+      '.ball.out{opacity:.2}' +
+      '.dataline{font-family:\'IBM Plex Mono\',monospace;font-size:.86rem;color:var(--green-dark);background:var(--surface2);border-radius:8px;padding:.55rem .7rem;margin:.65rem 0;text-align:center}' +
+      '.defgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;margin:1rem 0}' +
+      '.defcell{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:8px;padding:.6rem .7rem}' +
+      '.defname{font-size:.71rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:.2rem}' +
+      '.deftxt{font-size:.8rem;color:var(--text2)}' +
+      '@media(max-width:600px){.defgrid{grid-template-columns:1fr}.readgrid{grid-template-columns:1fr}.klbl{min-width:78px;font-size:.7rem}.ctab{font-size:.7rem}.ctab th,.ctab td{padding:.4rem .15rem}.ball{width:38px;height:38px}}';
+    document.head.appendChild(st);
+  })();
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function pk(a){ return a[Math.floor(rng()*a.length)]; }
+  function shufA(arr){ var a=arr.slice(),i,j,t; for(i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function r2(x){ return Math.round(x*100)/100; }
+  function fx(v,d){ return Number(v).toFixed(d); }
+  function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ var t=a%b; a=b; b=t; } return a||1; }
+  function mf(n,d){ return '<span class="mf-outer"><span class="mf-num">'+n+'</span><span class="mf-den">'+d+'</span></span>'; }
+  function frH(n,d){ var g=gcd(n,d); n=n/g; d=d/g; return d===1 ? String(n) : mf(n,d); }
+  function frK(n,d){ var g=gcd(n,d); return (n/g)+':'+(d/g); }
+  function frOpts(cn,cd,cands){
+    var keys=[frK(cn,cd)], out=[frH(cn,cd)], i, n, d, k;
+    for(i=0;i<cands.length && out.length<4;i++){
+      n=cands[i][0]; d=cands[i][1];
+      if(!(d>0) || n<=0 || n>=d) continue;
+      k=frK(n,d); if(keys.indexOf(k)<0){ keys.push(k); out.push(frH(n,d)); }
+    }
+    var extra=[[1,4],[1,3],[3,8],[2,5],[3,5],[1,5],[7,20],[9,20],[1,2],[5,12],[7,12],[2,9]];
+    for(i=0;i<extra.length && out.length<4;i++){
+      k=frK(extra[i][0],extra[i][1]);
+      if(keys.indexOf(k)<0){ keys.push(k); out.push(frH(extra[i][0],extra[i][1])); }
+    }
+    return out;
+  }
+  function decOpts(corr, cands, d){
+    var out=[fx(corr,d)], i, s, v;
+    for(i=0;i<cands.length && out.length<4;i++){
+      v=cands[i];
+      if(v===null || v===undefined || !(v>0) || v>=1) continue;
+      s=fx(v,d); if(out.indexOf(s)<0) out.push(s);
+    }
+    var k=1;
+    while(out.length<4 && k<30){
+      var alts=[corr+0.05*k, corr-0.05*k], j;
+      for(j=0;j<2;j++){
+        v=r2(alts[j]);
+        if(v>0 && v<1){ s=fx(v,d); if(out.indexOf(s)<0) out.push(s); }
+        if(out.length>=4) break;
+      }
+      k++;
+    }
+    return out;
+  }
+  function unitOpts(corr, cands, unit){
+    var out=[String(corr)+unit], i, s, v;
+    for(i=0;i<cands.length && out.length<4;i++){
+      v=Math.round(cands[i]);
+      if(!(v>0)) continue;
+      s=String(v)+unit; if(out.indexOf(s)<0) out.push(s);
+    }
+    var k=1;
+    while(out.length<4 && k<40){
+      var alts=[corr+5*k, corr-5*k], j;
+      for(j=0;j<2;j++){
+        v=alts[j];
+        if(v>0){ s=String(v)+unit; if(out.indexOf(s)<0) out.push(s); }
+        if(out.length>=4) break;
+      }
+      k++;
+    }
+    return out;
+  }
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 215;
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  function addProb(spec){
+    var optArr = T(spec.options);
+    var cor = optArr[0];
+    var so  = shufA(optArr);
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: T(spec.fn) || '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice:null,
+      pendingChoice:null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ============================================================
+     VALORES CON SEMILLA (extraidos una sola vez, en orden fijo)
+     ============================================================ */
+  var v1 = Math.floor(rng()*2), v2 = Math.floor(rng()*2), v3 = Math.floor(rng()*2);
+  var v4 = Math.floor(rng()*2), v6 = Math.floor(rng()*2), v7 = Math.floor(rng()*2);
+  var v8 = Math.floor(rng()*2), v9 = Math.floor(rng()*2), v10 = Math.floor(rng()*2);
+
+  /* manipulativo 1: tres metas de probabilidad condicional */
+  var w1T = shufA([[1,4],[1,2],[3,4],[2,5],[3,5]]).slice(0,3);
+
+  /* manipulativo 2: tabla 2x3 y tres condiciones */
+  var w2M = [[ri(10,22), ri(8,18), ri(11,20)], [ri(12,26), ri(9,19), ri(14,26)]];
+  var w2C = shufA([{k:'row',i:0},{k:'row',i:1},{k:'col',i:0},{k:'col',i:2}]).slice(0,3);
+
+  /* manipulativo 3: tres escenarios de independencia */
+  var w3R = shufA([{b:40,m:18},{b:50,m:15},{b:25,m:21},{b:60,m:8}]).slice(0,3);
+
+  /* manipulativo 4: tres urnas con meta */
+  var w4R = shufA([{r:5,a:3,tn:1,td:2},{r:4,a:6,tn:2,td:3},{r:6,a:3,tn:1,td:3},{r:3,a:5,tn:1,td:2}]).slice(0,3);
+
+  /* P1: dado equilibrado con informacion parcial */
+  var p1m = pk([2,3]);
+  var p1ev = [2,4,6];
+  var p1gt = [1,2,3,4,5,6].filter(function(x){ return x > p1m; });
+  var p1red = (v1===0) ? p1gt.length : p1ev.length;
+  var p1fav = (v1===0)
+    ? p1gt.filter(function(x){ return x%2===0; }).length
+    : p1ev.filter(function(x){ return x > p1m; }).length;
+  var p1all = (v1===0) ? 3 : p1gt.length;
+  var p1Opts = frOpts(p1fav, p1red, [[p1fav,6],[p1red,6],[p1all,p1red]]);
+
+  /* P2: definicion de probabilidad condicional con valores dados */
+  var p2p = pk([[0.40,0.25],[0.60,0.75],[0.80,0.40],[0.45,0.40],[0.50,0.30]]);
+  var p2B = p2p[0], p2q = p2p[1], p2J = r2(p2B*p2q);
+  var p2Opts = (v2===0)
+    ? decOpts(p2q, [p2J, p2B, r2(p2B-p2J)], 2)
+    : decOpts(p2B, [p2J, r2(p2q-p2J), r2(1-p2q)], 2);
+
+  /* P3: tabla de frecuencias en prosa */
+  var p3 = pk([{a:12,c:28,b:18,d:42},{a:15,c:25,b:20,d:40},{a:18,c:12,b:22,d:48},{a:20,c:30,b:10,d:40}]);
+  var p3N = p3.a+p3.b+p3.c+p3.d, p3B = p3.a+p3.c, p3A = p3.a+p3.b;
+  var p3Opts = (v3===0)
+    ? frOpts(p3.a, p3B, [[p3.a,p3N],[p3.a,p3A],[p3B,p3N]])
+    : frOpts(p3.a, p3A, [[p3.a,p3N],[p3.a,p3B],[p3A,p3N]]);
+
+  /* P5: decision de independencia */
+  var p5 = pk([{a:0.30,b:0.50},{a:0.40,b:0.50},{a:0.25,b:0.60},{a:0.50,b:0.40}]);
+  var p5mode = pk([0,1,2]);
+  var p5prod = r2(p5.a*p5.b);
+  var p5J = (p5mode===0) ? p5prod : (p5mode===1 ? r2(p5prod+0.06) : r2(p5prod-0.06));
+  var p5cond = r2(p5J/p5.b);
+
+  /* P6: independencia y producto */
+  var p6p = pk([[0.40,0.65],[0.30,0.80],[0.25,0.60],[0.50,0.36]]);
+  var p6A = p6p[0], p6B = p6p[1], p6J = r2(p6A*p6B);
+  var p6Opts = (v6===0)
+    ? decOpts(p6J, [r2(p6A+p6B-p6J), p6A, r2(p6B-p6A)], 2)
+    : decOpts(p6B, [p6J, r2(p6A-p6J), r2(p6A+p6J)], 2);
+
+  /* P7: extracciones sucesivas sin devolver la ficha */
+  var p7r = pk([4,5,6]), p7a = pk([3,4,5]), p7n = p7r + p7a;
+  var p7Opts = (v7===0)
+    ? frOpts(p7r*(p7r-1), p7n*(p7n-1), [[p7r*p7r, p7n*p7n],[p7r-1, p7n-1],[p7r*p7r, p7n*(p7n-1)]])
+    : frOpts(p7a, p7n-1, [[p7a,p7n],[p7a-1,p7n-1],[p7r,p7n-1]]);
+
+  /* P9: regla del producto expresada en porcentajes */
+  var p9p = pk([[60,25],[40,25],[50,30],[80,15],[60,35]]);
+  var p9b = p9p[0], p9q = p9p[1], p9j = p9b*p9q/100;
+  var p9Opts = (v9===0)
+    ? unitOpts(p9j, [p9q, p9b, p9b-p9j], ' %')
+    : unitOpts(p9q, [p9j, p9b, p9b-p9j], ' %');
+
+  /* P10: valor que vuelve independientes a dos eventos */
+  var p10 = pk([{N:200,nA:80,nB:50},{N:240,nA:60,nB:80},{N:300,nA:120,nB:75},{N:200,nA:90,nB:60}]);
+  var p10c = p10.nA*p10.nB/p10.N;
+  var p10u = T({es:' personas', en:' people'});
+  var p10Opts = (v10===0)
+    ? unitOpts(p10c, [2*p10c, p10.nA+p10.nB-p10.N/2, Math.round((p10.nA+p10.nB)/2)], p10u)
+    : unitOpts(p10.nA, [p10.nB+p10c, 2*p10c, p10.N/2], p10u);
+
+  /* ============================================================
+     IDEA 1 - EL ESPACIO MUESTRAL SE REDUCE
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'Cuando llega información parcial', en:'When partial information arrives'}),
+      '<p>'+T({
+        es:'En un experimento aleatorio, el espacio muestral reúne todos los resultados posibles. Si antes de conocer el resultado exacto se recibe una información parcial, por ejemplo que ocurrió cierto evento B, los resultados que contradicen esa información dejan de ser posibles y salen del conteo. Lo que queda es un espacio muestral reducido: el propio evento B.',
+        en:'In a random experiment, the sample space collects every possible outcome. If partial information arrives before the exact outcome is known, for example that a certain event B occurred, the outcomes that contradict that information stop being possible and leave the count. What remains is a reduced sample space: the event B itself.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La probabilidad condicional de A dado B mide qué tan probable es A dentro de ese espacio reducido. Se escribe P(A | B) y se define como el cociente entre la probabilidad de que ocurran los dos eventos y la probabilidad del evento que ya se sabe que ocurrió. La definición exige P(B) mayor que cero, porque no tiene sentido condicionar sobre algo imposible.',
+        en:'The conditional probability of A given B measures how likely A is inside that reduced space. It is written P(A | B) and is defined as the ratio between the probability that both events occur and the probability of the event already known to have occurred. The definition requires P(B) greater than zero, because conditioning on something impossible makes no sense.'
+      })+'</p>'+
+      '<div class="dataline">P(A | B) = P(A ∩ B) ÷ P(B),  con P(B) &gt; 0</div>'+
+      '<div class="callout"><p><strong>'+T({es:'Con resultados equiprobables: ', en:'With equally likely outcomes: '})+'</strong>'+T({
+        es:'cuando todos los resultados tienen la misma probabilidad, el cociente anterior se vuelve un conteo. Basta contar cuántos resultados quedan dentro del espacio reducido y cuántos de ellos cumplen además el evento de interés.',
+        en:'when all outcomes are equally likely, the ratio above becomes a count. It is enough to count how many outcomes remain inside the reduced space and how many of those also satisfy the event of interest.'
+      })+'</p></div>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Espacio reducido',en:'Reduced space'})+'</div><div class="deftxt">'+T({es:'El conjunto de resultados que siguen siendo posibles después del dato recibido.',en:'The set of outcomes that remain possible after the information received.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Evento condicionante',en:'Conditioning event'})+'</div><div class="deftxt">'+T({es:'El evento que se sabe que ocurrió; aparece después de la barra vertical.',en:'The event known to have occurred; it appears after the vertical bar.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Probabilidad conjunta',en:'Joint probability'})+'</div><div class="deftxt">'+T({es:'La probabilidad de que los dos eventos ocurran en el mismo resultado.',en:'The probability that both events occur in the same outcome.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Restricción',en:'Restriction'})+'</div><div class="deftxt">'+T({es:'La condición P(B) mayor que cero garantiza que el cociente exista.',en:'The condition P(B) greater than zero guarantees the ratio exists.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 1: rejilla de 100 casos ---- */
+  (function(){
+    var wrap = widget('rejilla');
+    var st = { r:0, nB:40, nAB:10, tries:0, done:false, lock:false };
+    function tg(){ return w1T[st.r]; }
+    function solve(){
+      var t=tg(), nb;
+      for(nb=20; nb<=90; nb+=5){ if((nb*t[0])%t[1]===0) return [nb, nb*t[0]/t[1]]; }
+      return [20,10];
+    }
+    function draw(){
+      var cv=document.getElementById('rejCv'); if(!cv) return;
+      var g=fitCv(cv), ctx=g.ctx, W=g.w, H=g.h;
+      var cA=cssv('--gold'), cB=cssv('--green'), cBg=cssv('--green-bg'), cS=cssv('--surface'), cL=cssv('--border');
+      var pad=8, cell=Math.min((W-2*pad)/10,(H-2*pad)/10);
+      var ox=(W-cell*10)/2, oy=(H-cell*10)/2, i, r, c, x, y;
+      ctx.lineWidth=1;
+      for(i=0;i<100;i++){
+        r=Math.floor(i/10); c=i%10; x=ox+c*cell; y=oy+r*cell;
+        if(i<st.nAB){ ctx.fillStyle=cA; ctx.strokeStyle=cB; }
+        else if(i<st.nB){ ctx.fillStyle=cBg; ctx.strokeStyle=cB; }
+        else { ctx.fillStyle=cS; ctx.strokeStyle=cL; }
+        ctx.beginPath(); ctx.rect(x+1,y+1,Math.max(2,cell-2),Math.max(2,cell-2)); ctx.fill(); ctx.stroke();
+      }
+    }
+    function condTxt(){ return fx(st.nAB/st.nB, 3); }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Rejilla de 100 casos', en:'Grid of 100 cases'})+'</div>'+
+          '<div class="iw-box"><div class="iw-done">'+T({es:'Exploración terminada', en:'Exploration finished'})+'</div>'+
+          '<div class="rfb">'+T({
+            es:'Muchas combinaciones distintas de casos producen la misma probabilidad condicional: lo que la fija es la proporción de A dentro de B, no el tamaño de B.',
+            en:'Many different combinations of cases produce the same conditional probability: what fixes it is the proportion of A inside B, not the size of B.'
+          })+'</div></div>';
+        return;
+      }
+      var t=tg();
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Rejilla de 100 casos', en:'Grid of 100 cases'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'Cada cuadro es uno de 100 resultados igualmente probables. La primera barra fija cuántos cumplen B (borde verde); la segunda, cuántos de esos cumplen además A (relleno dorado). Los indicadores se recalculan al instante.',
+            en:'Each square is one of 100 equally likely outcomes. The first slider sets how many satisfy B (green border); the second, how many of those also satisfy A (gold fill). The readouts recompute instantly.'
+          })+'</div>'+
+          '<div class="rondas">'+T({es:'Ronda ',en:'Round '})+(st.r+1)+' / 3</div>'+
+          '<div class="goalbar">'+T({es:'Meta: lograr que la probabilidad de A dado B valga exactamente ',en:'Goal: make the probability of A given B equal exactly '})+'<b>'+frH(t[0],t[1])+'</b>.</div>'+
+          '<canvas class="gcanvas" id="rejCv"></canvas>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Casos con B',en:'Cases with B'})+'</span><input type="range" min="10" max="90" step="5" value="'+st.nB+'" oninput="rejSet(1,this.value)"><span class="kval" id="rejBv">'+st.nB+'</span></div>'+
+          '<div class="krow"><span class="klbl">'+T({es:'De esos, con A',en:'Of those, with A'})+'</span><input type="range" min="0" max="'+st.nB+'" step="1" value="'+st.nAB+'" oninput="rejSet(2,this.value)"><span class="kval" id="rejAv">'+st.nAB+'</span></div>'+
+          '<div class="readgrid">'+
+            '<div class="readcell"><div class="readlbl">P(B)</div><div class="readval" id="rejPB">'+fx(st.nB/100,2)+'</div></div>'+
+            '<div class="readcell"><div class="readlbl">P(A ∩ B)</div><div class="readval" id="rejPJ">'+fx(st.nAB/100,2)+'</div></div>'+
+            '<div class="readcell hi"><div class="readlbl">P(A | B)</div><div class="readval" id="rejPC">'+condTxt()+'</div></div>'+
+          '</div>'+
+          '<button class="rverify-btn" onclick="rejChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="rejFb"></div>'+
+        '</div>';
+      draw();
+    }
+    function live(){
+      var t=tg(), cur=st.nAB/st.nB, goal=t[0]/t[1], fb=document.getElementById('rejFb');
+      if(!fb) return;
+      if (Math.abs(cur-goal) < 1e-9){
+        fb.textContent = T({es:'El indicador coincide con la meta. Confírmalo con Verificar.', en:'The readout matches the goal. Confirm it with Check.'});
+      } else if (cur > goal){
+        fb.textContent = T({es:'La proporción de A dentro de B va por encima de la meta: quita casos de A o amplía B.', en:'The proportion of A inside B is above the goal: remove A cases or widen B.'});
+      } else {
+        fb.textContent = T({es:'La proporción de A dentro de B va por debajo de la meta: agrega casos de A o reduce B.', en:'The proportion of A inside B is below the goal: add A cases or shrink B.'});
+      }
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.lock=false; st.r++;
+        if(st.r >= w1T.length){ st.done=true; render(); return; }
+        st.nB=40; st.nAB=10; st.tries=0; render();
+      }, ms);
+    }
+    window.rejSet = function(which, v){
+      if(st.done || st.lock) return;
+      v = parseInt(v,10)||0;
+      if(which===1){ st.nB=v; if(st.nAB>st.nB) st.nAB=st.nB; render(); }
+      else { st.nAB=v; }
+      var eb=document.getElementById('rejBv'); if(eb) eb.textContent=st.nB;
+      var ea=document.getElementById('rejAv'); if(ea) ea.textContent=st.nAB;
+      var pb=document.getElementById('rejPB'); if(pb) pb.textContent=fx(st.nB/100,2);
+      var pj=document.getElementById('rejPJ'); if(pj) pj.textContent=fx(st.nAB/100,2);
+      var pc=document.getElementById('rejPC'); if(pc) pc.textContent=condTxt();
+      draw(); live();
+    };
+    window.rejChk = function(){
+      if(st.done || st.lock) return;
+      var t=tg(), fb=document.getElementById('rejFb'); if(!fb) return;
+      if(st.nAB*t[1] === st.nB*t[0]){
+        fb.innerHTML = '<span class="okmsg">'+T({es:'Correcto. ',en:'Correct. '})+'</span>'+T({
+          es:'De los '+st.nB+' casos que forman el espacio reducido, '+st.nAB+' cumplen A, y esa razón es justo la meta.',
+          en:'Of the '+st.nB+' cases that form the reduced space, '+st.nAB+' satisfy A, and that ratio is exactly the goal.'
+        });
+        adv(1500); return;
+      }
+      st.tries++;
+      if(st.tries>=3){
+        var s=solve(); st.nB=s[0]; st.nAB=s[1]; render();
+        document.getElementById('rejFb').innerHTML = T({
+          es:'Una solución posible es esta: '+s[0]+' casos en B y '+s[1]+' de ellos con A. Lo que importa es la razón entre ambos conteos, no su tamaño.',
+          en:'One possible solution is this: '+s[0]+' cases in B and '+s[1]+' of them with A. What matters is the ratio between the two counts, not their size.'
+        });
+        adv(2600); return;
+      }
+      live();
+    };
+    render();
+  })();
+
+  /* ---- P1 ---- */
+  addProb({
+    title:{es:'Espacio reducido', en:'Reduced space'},
+    q: (v1===0)
+      ? {es:'Se lanza una vez un dado equilibrado de seis caras. Antes de ver el resultado, un observador informa únicamente que el número obtenido fue mayor que '+p1m+'. Con esa información, determina la probabilidad de que el resultado haya sido par.',
+         en:'A fair six-sided die is rolled once. Before the result is seen, an observer reports only that the number obtained was greater than '+p1m+'. With that information, determine the probability that the result was even.'}
+      : {es:'Se lanza una vez un dado equilibrado de seis caras. Antes de ver el resultado, un observador informa únicamente que el número obtenido fue par. Con esa información, determina la probabilidad de que el resultado haya sido mayor que '+p1m+'.',
+         en:'A fair six-sided die is rolled once. Before the result is seen, an observer reports only that the number obtained was even. With that information, determine the probability that the result was greater than '+p1m+'.'},
+    hint:{es:'El dato recibido descarta parte de los resultados. Cuenta cuántos resultados siguen siendo posibles y, entre ellos, cuántos cumplen lo que se pregunta; el cociente de esos dos conteos es la probabilidad buscada.',
+          en:'The information received rules out part of the outcomes. Count how many results are still possible and, among them, how many satisfy what is asked; the ratio of those two counts is the probability sought.'},
+    exp: (v1===0)
+      ? {es:'El espacio reducido es {'+p1gt.join(', ')+'}, con '+p1red+' resultados. De ellos, '+p1fav+' son pares, así que la probabilidad es '+frH(p1fav,p1red)+'. Dividir entre 6 sería ignorar que el dato ya eliminó resultados.',
+         en:'The reduced space is {'+p1gt.join(', ')+'}, with '+p1red+' outcomes. Of those, '+p1fav+' are even, so the probability is '+frH(p1fav,p1red)+'. Dividing by 6 would ignore that the information already removed outcomes.'}
+      : {es:'El espacio reducido es {'+p1ev.join(', ')+'}, con '+p1red+' resultados. De ellos, '+p1fav+' son mayores que '+p1m+', así que la probabilidad es '+frH(p1fav,p1red)+'. Dividir entre 6 sería ignorar que el dato ya eliminó resultados.',
+         en:'The reduced space is {'+p1ev.join(', ')+'}, with '+p1red+' outcomes. Of those, '+p1fav+' are greater than '+p1m+', so the probability is '+frH(p1fav,p1red)+'. Dividing by 6 would ignore that the information already removed outcomes.'},
+    options: p1Opts,
+    showWork: true
+  });
+
+  /* ---- P2 ---- */
+  addProb({
+    title:{es:'De los datos al valor', en:'From the data to a value'},
+    q: (v2===0)
+      ? {es:'Un proceso industrial registra dos eventos, A y B. El historial de la planta indica los valores que aparecen abajo. Determina la probabilidad de A cuando ya se sabe que B ocurrió.',
+         en:'An industrial process records two events, A and B. The plant history gives the values shown below. Determine the probability of A once B is known to have occurred.'}
+      : {es:'Un proceso industrial registra dos eventos, A y B. El historial de la planta indica los valores que aparecen abajo. Determina la probabilidad del evento B.',
+         en:'An industrial process records two events, A and B. The plant history gives the values shown below. Determine the probability of event B.'},
+    fn: (v2===0)
+      ? 'P(A ∩ B) = '+fx(p2J,2)+'   ·   P(B) = '+fx(p2B,2)
+      : 'P(A ∩ B) = '+fx(p2J,2)+'   ·   P(A | B) = '+fx(p2q,2),
+    hint: (v2===0)
+      ? {es:'La probabilidad condicional es el cociente de la probabilidad conjunta entre la probabilidad del evento que ya ocurrió. Divide, no restes.',
+         en:'The conditional probability is the joint probability divided by the probability of the event that already occurred. Divide, do not subtract.'}
+      : {es:'En la definición de probabilidad condicional, la probabilidad del evento condicionante es el divisor. Despeja ese divisor a partir de los otros dos valores.',
+         en:'In the definition of conditional probability, the probability of the conditioning event is the divisor. Solve for that divisor from the other two values.'},
+    exp: (v2===0)
+      ? {es:'P(A | B) = P(A ∩ B) ÷ P(B) = '+fx(p2J,2)+' ÷ '+fx(p2B,2)+' = '+fx(p2q,2)+'. El valor '+fx(p2J,2)+' corresponde a la probabilidad conjunta, no a la condicional.',
+         en:'P(A | B) = P(A ∩ B) ÷ P(B) = '+fx(p2J,2)+' ÷ '+fx(p2B,2)+' = '+fx(p2q,2)+'. The value '+fx(p2J,2)+' is the joint probability, not the conditional one.'}
+      : {es:'De P(A | B) = P(A ∩ B) ÷ P(B) se obtiene P(B) = P(A ∩ B) ÷ P(A | B) = '+fx(p2J,2)+' ÷ '+fx(p2q,2)+' = '+fx(p2B,2)+'. El evento condicionante siempre es al menos tan probable como la intersección.',
+         en:'From P(A | B) = P(A ∩ B) ÷ P(B) we get P(B) = P(A ∩ B) ÷ P(A | B) = '+fx(p2J,2)+' ÷ '+fx(p2q,2)+' = '+fx(p2B,2)+'. The conditioning event is always at least as likely as the intersection.'},
+    options: p2Opts,
+    showWork: true
+  });
+
+  /* ============================================================
+     IDEA 2 - TABLAS DE DOBLE ENTRADA
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'Condicionar es quedarse con una franja de la tabla', en:'Conditioning means keeping one strip of the table'}),
+      '<p>'+T({
+        es:'Cuando dos características se registran a la vez sobre un mismo conjunto de personas u objetos, la información se organiza en una tabla de doble entrada. Cada casilla interior guarda la frecuencia conjunta de una fila y una columna; los márgenes guardan los totales de cada categoría, y la esquina inferior derecha guarda el tamaño total del conjunto.',
+        en:'When two characteristics are recorded at once over the same set of people or objects, the information is organized in a two-way table. Each inner cell holds the joint frequency of a row and a column; the margins hold the totals of each category, and the bottom right corner holds the size of the whole set.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Condicionar sobre una categoría equivale a borrar todo lo que está fuera de su franja. El nuevo denominador ya no es el total general sino el total marginal de esa fila o de esa columna. Por eso una misma casilla interior produce dos probabilidades condicionales distintas según qué franja se conserve.',
+        en:'Conditioning on a category amounts to erasing everything outside its strip. The new denominator is no longer the grand total but the marginal total of that row or column. That is why the same inner cell produces two different conditional probabilities depending on which strip is kept.'
+      })+'</p>'+
+      '<div class="dataline">P(columna | fila) = frecuencia conjunta ÷ total de la fila</div>'+
+      '<div class="callout"><p><strong>'+T({es:'Marginal contra condicional: ', en:'Marginal versus conditional: '})+'</strong>'+T({
+        es:'la probabilidad marginal usa el total general como denominador y describe al conjunto completo. La condicional usa un total de franja y describe solo a un subgrupo. Confundir los denominadores es el error más frecuente al leer una tabla.',
+        en:'a marginal probability uses the grand total as denominator and describes the whole set. A conditional one uses a strip total and describes only a subgroup. Mixing up the denominators is the most common mistake when reading a table.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 2: franjas de una tabla de doble entrada ---- */
+  (function(){
+    var wrap = widget('tabla');
+    var RL = [{es:'Con beca',en:'With grant'},{es:'Sin beca',en:'Without grant'}];
+    var CL = [{es:'Deporte',en:'Sport'},{es:'Arte',en:'Arts'},{es:'Ninguna',en:'None'}];
+    var CD = {
+      'row0':{es:'el estudiante cuenta con beca', en:'the student has a grant'},
+      'row1':{es:'el estudiante no cuenta con beca', en:'the student does not have a grant'},
+      'col0':{es:'el estudiante practica un deporte', en:'the student plays a sport'},
+      'col2':{es:'el estudiante no participa en ninguna actividad', en:'the student takes part in no activity'}
+    };
+    var st = { r:0, sel:{}, tries:0, done:false, lock:false };
+    function rowT(i){ return w2M[i][0]+w2M[i][1]+w2M[i][2]; }
+    function colT(j){ return w2M[0][j]+w2M[1][j]; }
+    function grand(){ return rowT(0)+rowT(1); }
+    function cond(){ return w2C[st.r]; }
+    function target(){
+      var c=cond(), out=[], i, j;
+      if(c.k==='row'){ for(j=0;j<3;j++) out.push(c.i+'_'+j); }
+      else { for(i=0;i<2;i++) out.push(i+'_'+c.i); }
+      return out;
+    }
+    function selList(){ var out=[], k; for(k in st.sel){ if(st.sel[k]) out.push(k); } return out; }
+    function render(){
+      if(st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Franjas de la tabla', en:'Strips of the table'})+'</div>'+
+          '<div class="iw-box"><div class="iw-done">'+T({es:'Exploración terminada', en:'Exploration finished'})+'</div>'+
+          '<div class="rfb">'+T({
+            es:'Cada dato recibido elige una franja distinta, y con ella un denominador distinto. La casilla interior puede ser la misma y aun así la probabilidad condicional cambia.',
+            en:'Each piece of information selects a different strip, and with it a different denominator. The inner cell may be the same and the conditional probability still changes.'
+          })+'</div></div>';
+        return;
+      }
+      var c=cond(), i, j, body='';
+      for(i=0;i<2;i++){
+        body += '<tr><th>'+T(RL[i])+'</th>';
+        for(j=0;j<3;j++){
+          body += '<td class="ccell'+(st.sel[i+'_'+j]?' on':'')+'" onclick="tbTap('+i+','+j+')">'+w2M[i][j]+'</td>';
+        }
+        body += '<td class="ctot">'+rowT(i)+'</td></tr>';
+      }
+      body += '<tr><th>'+T({es:'Total',en:'Total'})+'</th><td class="ctot">'+colT(0)+'</td><td class="ctot">'+colT(1)+'</td><td class="ctot">'+colT(2)+'</td><td class="ctot">'+grand()+'</td></tr>';
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Franjas de la tabla', en:'Strips of the table'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'La tabla registra a '+grand()+' estudiantes según su beca y la actividad que realizan. Toca las casillas interiores para encenderlas o apagarlas; el contador de casos se actualiza al momento.',
+            en:'The table records '+grand()+' students by their grant and the activity they take part in. Tap the inner cells to switch them on or off; the case counter updates immediately.'
+          })+'</div>'+
+          '<div class="rondas">'+T({es:'Ronda ',en:'Round '})+(st.r+1)+' / 3</div>'+
+          '<div class="goalbar">'+T({es:'Se elige a un estudiante al azar y se sabe que ',en:'A student is chosen at random and it is known that '})+'<b>'+T(CD[c.k+c.i])+'</b>. '+T({es:'Enciende exactamente las casillas que forman el espacio reducido.',en:'Switch on exactly the cells that form the reduced space.'})+'</div>'+
+          '<table class="ctab"><tr><th></th><th>'+T(CL[0])+'</th><th>'+T(CL[1])+'</th><th>'+T(CL[2])+'</th><th class="ctot">'+T({es:'Total',en:'Total'})+'</th></tr>'+body+'</table>'+
+          '<div class="metaline">'+T({es:'Casos encendidos: ',en:'Cases switched on: '})+'<b id="tbCnt">'+selList().length+'</b></div>'+
+          '<button class="rverify-btn" onclick="tbChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="tbFb"></div>'+
+        '</div>';
+    }
+    function adv(ms){
+      st.lock=true;
+      setTimeout(function(){
+        st.lock=false; st.r++;
+        if(st.r>=w2C.length){ st.done=true; render(); return; }
+        st.sel={}; st.tries=0; render();
+      }, ms);
+    }
+    window.tbTap = function(i,j){
+      if(st.done || st.lock) return;
+      var k=i+'_'+j;
+      st.sel[k] = !st.sel[k];
+      render();
+      var t=target(), s=selList();
+      var extra=s.filter(function(x){ return t.indexOf(x)<0; }).length;
+      var miss=t.filter(function(x){ return s.indexOf(x)<0; }).length;
+      var fb=document.getElementById('tbFb');
+      if(fb){
+        if(extra===0 && miss===0) fb.textContent=T({es:'La franja encendida ya corresponde al dato. Confírmalo con Verificar.',en:'The strip switched on already matches the information. Confirm it with Check.'});
+        else if(extra>0) fb.textContent=T({es:'Hay '+extra+' casilla(s) encendidas que contradicen el dato recibido.',en:'There are '+extra+' cell(s) switched on that contradict the information received.'});
+        else fb.textContent=T({es:'Falta(n) '+miss+' casilla(s) compatibles con el dato.',en:miss+' cell(s) compatible with the information are still missing.'});
+      }
+    };
+    window.tbChk = function(){
+      if(st.done || st.lock) return;
+      var c=cond(), t=target(), s=selList(), fb=document.getElementById('tbFb');
+      if(!fb) return;
+      var ok = (s.length===t.length) && t.every(function(x){ return s.indexOf(x)>=0; });
+      if(ok){
+        var den = (c.k==='row') ? rowT(c.i) : colT(c.i);
+        var num = (c.k==='row') ? w2M[c.i][0] : w2M[0][c.i];
+        var lab = (c.k==='row') ? T(CL[0]) : T(RL[0]);
+        fb.innerHTML = '<span class="okmsg">'+T({es:'Correcto. ',en:'Correct. '})+'</span>'+T({
+          es:'El espacio reducido tiene '+den+' casos. Dentro de él, la categoría '+lab+' aparece '+num+' veces, así que su probabilidad condicional vale '+frH(num,den)+'.',
+          en:'The reduced space has '+den+' cases. Inside it, the category '+lab+' appears '+num+' times, so its conditional probability equals '+frH(num,den)+'.'
+        });
+        adv(2200); return;
+      }
+      st.tries++;
+      if(st.tries>=3){
+        st.sel={}; t.forEach(function(k){ st.sel[k]=true; }); render();
+        document.getElementById('tbFb').innerHTML = T({
+          es:'Esta es la franja correcta. El dato recibido conserva una fila completa o una columna completa, nunca casillas sueltas.',
+          en:'This is the correct strip. The information received keeps one full row or one full column, never scattered cells.'
+        });
+        adv(2600); return;
+      }
+      fb.textContent = T({es:'Todavía no. Pregúntate qué casillas serían imposibles si el dato recibido es cierto.',en:'Not yet. Ask yourself which cells would be impossible if the information received is true.'});
+    };
+    render();
+  })();
+
+  /* ---- P3 ---- */
+  addProb({
+    title:{es:'Lectura de un registro', en:'Reading a record'},
+    q: (v3===0)
+      ? {es:'Una encuesta escolar registró a '+p3N+' estudiantes. De ellos, '+p3B+' usan transporte público y, dentro de ese grupo, '+p3.a+' llegaron tarde al menos una vez durante la semana. Entre quienes no usan transporte público, '+p3.b+' llegaron tarde al menos una vez. Se elige un estudiante al azar y resulta que usa transporte público. Determina la probabilidad de que haya llegado tarde al menos una vez.',
+         en:'A school survey recorded '+p3N+' students. Of these, '+p3B+' use public transport and, within that group, '+p3.a+' were late at least once during the week. Among those who do not use public transport, '+p3.b+' were late at least once. A student is chosen at random and turns out to use public transport. Determine the probability that this student was late at least once.'}
+      : {es:'Una encuesta escolar registró a '+p3N+' estudiantes. De ellos, '+p3B+' usan transporte público y, dentro de ese grupo, '+p3.a+' llegaron tarde al menos una vez durante la semana. Entre quienes no usan transporte público, '+p3.b+' llegaron tarde al menos una vez. Se elige un estudiante al azar y resulta que llegó tarde al menos una vez. Determina la probabilidad de que use transporte público.',
+         en:'A school survey recorded '+p3N+' students. Of these, '+p3B+' use public transport and, within that group, '+p3.a+' were late at least once during the week. Among those who do not use public transport, '+p3.b+' were late at least once. A student is chosen at random and turns out to have been late at least once. Determine the probability that this student uses public transport.'},
+    hint:{es:'Identifica primero qué grupo queda como espacio reducido según el dato que se recibió y calcula su tamaño. El numerador es la cantidad de estudiantes de ese grupo que cumplen además la otra característica.',
+          en:'First identify which group remains as the reduced space according to the information received and compute its size. The numerator is the number of students in that group who also satisfy the other characteristic.'},
+    exp: (v3===0)
+      ? {es:'El espacio reducido son los '+p3B+' usuarios de transporte público, de los cuales '+p3.a+' llegaron tarde, así que la probabilidad es '+frH(p3.a,p3B)+'. Usar '+p3N+' como denominador daría la probabilidad conjunta, no la condicional.',
+         en:'The reduced space is the '+p3B+' public transport users, of whom '+p3.a+' were late, so the probability is '+frH(p3.a,p3B)+'. Using '+p3N+' as the denominator would give the joint probability, not the conditional one.'}
+      : {es:'Llegaron tarde '+p3.a+' usuarios de transporte público más '+p3.b+' que no lo usan, es decir '+p3A+' estudiantes. De ellos, '+p3.a+' usan transporte público, así que la probabilidad es '+frH(p3.a,p3A)+'. El denominador ahora es el total de quienes llegaron tarde.',
+         en:'Late arrivals were '+p3.a+' public transport users plus '+p3.b+' who do not use it, that is '+p3A+' students. Of those, '+p3.a+' use public transport, so the probability is '+frH(p3.a,p3A)+'. The denominator is now the total number of late students.'},
+    options: p3Opts,
+    showWork: true
+  });
+
+  /* ---- P4 ---- */
+  addProb({
+    title:{es:'Qué quedó calculado', en:'What was computed'},
+    q: (v4===0)
+      ? {es:'Un informe de movilidad reporta la proporción de estudiantes que llegaron tarde, considerando en el cálculo únicamente a quienes usan transporte público. Elige la descripción que corresponde a la cantidad reportada.',
+         en:'A mobility report gives the proportion of students who arrived late, taking into account in the calculation only those who use public transport. Choose the description that matches the reported quantity.'}
+      : {es:'Un informe de movilidad reporta la proporción de estudiantes que usan transporte público, considerando en el cálculo únicamente a quienes llegaron tarde. Elige la descripción que corresponde a la cantidad reportada.',
+         en:'A mobility report gives the proportion of students who use public transport, taking into account in the calculation only those who arrived late. Choose the description that matches the reported quantity.'},
+    hint:{es:'Fíjate en qué grupo se usó como denominador. Ese grupo es el evento condicionante y aparece siempre después de la barra vertical.',
+          en:'Look at which group was used as the denominator. That group is the conditioning event and always appears after the vertical bar.'},
+    exp: (v4===0)
+      ? {es:'El denominador fue el conjunto de usuarios de transporte público, de modo que ese es el evento condicionante y lo reportado es P(llegar tarde | usar transporte público). Cambiar el denominador produciría una cantidad distinta.',
+         en:'The denominator was the set of public transport users, so that is the conditioning event and the reported figure is P(late | uses public transport). Changing the denominator would produce a different quantity.'}
+      : {es:'El denominador fue el conjunto de estudiantes que llegaron tarde, de modo que ese es el evento condicionante y lo reportado es P(usar transporte público | llegar tarde). Cambiar el denominador produciría una cantidad distinta.',
+         en:'The denominator was the set of students who arrived late, so that is the conditioning event and the reported figure is P(uses public transport | late). Changing the denominator would produce a different quantity.'},
+    options: (v4===0)
+      ? {es:['La probabilidad de llegar tarde cuando se sabe que la persona usa transporte público',
+             'La probabilidad de usar transporte público cuando se sabe que la persona llegó tarde',
+             'La probabilidad de que la persona use transporte público y además llegue tarde',
+             'La probabilidad de que la persona use transporte público o bien llegue tarde'],
+         en:['The probability of arriving late when the person is known to use public transport',
+             'The probability of using public transport when the person is known to have arrived late',
+             'The probability that the person uses public transport and also arrives late',
+             'The probability that the person uses public transport or else arrives late']}
+      : {es:['La probabilidad de usar transporte público cuando se sabe que la persona llegó tarde',
+             'La probabilidad de llegar tarde cuando se sabe que la persona usa transporte público',
+             'La probabilidad de que la persona llegue tarde y además use transporte público',
+             'La probabilidad de que la persona llegue tarde o bien use transporte público'],
+         en:['The probability of using public transport when the person is known to have arrived late',
+             'The probability of arriving late when the person is known to use public transport',
+             'The probability that the person arrives late and also uses public transport',
+             'The probability that the person arrives late or else uses public transport']},
+    showWork: false
+  });
+
+  /* ============================================================
+     IDEA 3 - INDEPENDENCIA
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'Cuando el dato no aporta nada', en:'When the information adds nothing'}),
+      '<p>'+T({
+        es:'A veces conocer que B ocurrió deja la probabilidad de A exactamente igual que antes. En ese caso se dice que A y B son independientes: el dato recibido no aporta información sobre A. La condición se escribe como la igualdad entre la probabilidad condicional y la probabilidad original.',
+        en:'Sometimes knowing that B occurred leaves the probability of A exactly as it was before. In that case A and B are said to be independent: the information received carries no information about A. The condition is written as the equality between the conditional probability and the original probability.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Al sustituir la definición de probabilidad condicional en esa igualdad se obtiene un criterio simétrico y más cómodo de verificar, porque no exige dividir ni distinguir cuál evento condiciona a cuál: la probabilidad conjunta debe coincidir con el producto de las dos probabilidades individuales.',
+        en:'Substituting the definition of conditional probability into that equality yields a symmetric criterion that is easier to check, because it requires no division and no decision about which event conditions which: the joint probability must equal the product of the two individual probabilities.'
+      })+'</p>'+
+      '<div class="dataline">A y B independientes  ⟺  P(A | B) = P(A)  ⟺  P(A ∩ B) = P(A) · P(B)</div>'+
+      '<div class="callout"><p><strong>'+T({es:'No confundir con excluyentes: ', en:'Do not confuse with mutually exclusive: '})+'</strong>'+T({
+        es:'dos eventos excluyentes no pueden ocurrir juntos, así que su probabilidad conjunta es cero. Si ambos tienen probabilidad positiva, saber que uno ocurrió vuelve imposible al otro, y eso es la dependencia más extrema que existe.',
+        en:'two mutually exclusive events cannot occur together, so their joint probability is zero. If both have positive probability, knowing that one occurred makes the other impossible, and that is the most extreme dependence there is.'
+      })+'</p></div>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Independencia',en:'Independence'})+'</div><div class="deftxt">'+T({es:'La probabilidad de A es la misma con o sin el dato sobre B.',en:'The probability of A is the same with or without the information about B.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Dependencia positiva',en:'Positive dependence'})+'</div><div class="deftxt">'+T({es:'Saber que B ocurrió eleva la probabilidad de A por encima de su valor original.',en:'Knowing that B occurred raises the probability of A above its original value.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Dependencia negativa',en:'Negative dependence'})+'</div><div class="deftxt">'+T({es:'Saber que B ocurrió reduce la probabilidad de A por debajo de su valor original.',en:'Knowing that B occurred lowers the probability of A below its original value.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Simetría',en:'Symmetry'})+'</div><div class="deftxt">'+T({es:'Si A es independiente de B, entonces B es independiente de A.',en:'If A is independent of B, then B is independent of A.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 3: comparador de independencia ---- */
+  (function(){
+    var wrap = widget('barras');
+    var st = { r:0, k:0, tries:0, done:false, lock:false };
+    function rd(){ return w3R[st.r]; }
+    function sol(){ var d=rd(); return d.b*d.m/(100-d.b); }
+    function pA(){ var d=rd(); return (st.k+d.m)/100; }
+    function pAB(){ var d=rd(); return st.k/d.b; }
+    function render(){
+      if(st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Comparador de independencia', en:'Independence comparator'})+'</div>'+
+          '<div class="iw-box"><div class="iw-done">'+T({es:'Exploración terminada', en:'Exploration finished'})+'</div>'+
+          '<div class="rfb">'+T({
+            es:'Cuando las dos barras se alinean, el dato sobre B deja de mover la probabilidad de A. Ese equilibrio es exactamente la independencia.',
+            en:'When the two bars line up, the information about B stops moving the probability of A. That balance is exactly independence.'
+          })+'</div></div>';
+        return;
+      }
+      var d=rd(), wa=(pA()*100).toFixed(1), wb=(pAB()*100).toFixed(1);
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Comparador de independencia', en:'Independence comparator'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'Una población de 100 personas se reparte así: '+d.b+' pertenecen a B y '+(100-d.b)+' no. Fuera de B, exactamente '+d.m+' cumplen A. La barra mueve cuántas personas de B cumplen A y las dos probabilidades se redibujan al instante.',
+            en:'A population of 100 people splits like this: '+d.b+' belong to B and '+(100-d.b)+' do not. Outside B, exactly '+d.m+' satisfy A. The slider moves how many people in B satisfy A and both probabilities are redrawn instantly.'
+          })+'</div>'+
+          '<div class="rondas">'+T({es:'Ronda ',en:'Round '})+(st.r+1)+' / 3</div>'+
+          '<div class="goalbar">'+T({es:'Meta: dejar A y B independientes, es decir, que las dos barras midan lo mismo.',en:'Goal: leave A and B independent, that is, make both bars the same length.'})+'</div>'+
+          '<div class="barrow"><div class="barlbl"><span>P(A)</span><span class="kval" id="brA">'+fx(pA(),3)+'</span></div>'+
+            '<div class="bartrack"><div class="barfill pa" id="brAf" style="width:'+wa+'%"></div></div></div>'+
+          '<div class="barrow"><div class="barlbl"><span>P(A | B)</span><span class="kval" id="brB">'+fx(pAB(),3)+'</span></div>'+
+            '<div class="bartrack"><div class="barfill pb" id="brBf" style="width:'+wb+'%"></div></div></div>'+
+          '<div class="krow"><span class="klbl">'+T({es:'De B, con A',en:'In B, with A'})+'</span><input type="range" min="0" max="'+d.b+'" step="1" value="'+st.k+'" oninput="brSet(this.value)"><span class="kval" id="brK">'+st.k+'</span></div>'+
+          '<button class="rverify-btn" onclick="brChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="brFb"></div>'+
+        '</div>';
+    }
+    function live(){
+      var fb=document.getElementById('brFb'); if(!fb) return;
+      var a=pA(), b=pAB();
+      if(Math.abs(a-b) < 1e-9) fb.textContent=T({es:'Las dos barras coinciden. Confírmalo con Verificar.',en:'The two bars coincide. Confirm it with Check.'});
+      else if(b>a) fb.textContent=T({es:'La barra de P(A | B) sobresale: dentro de B el evento A es más frecuente que en la población, así que B lo favorece.',en:'The P(A | B) bar sticks out: inside B the event A is more frequent than in the population, so B favours it.'});
+      else fb.textContent=T({es:'La barra de P(A | B) se queda corta: dentro de B el evento A es menos frecuente que en la población, así que B lo desalienta.',en:'The P(A | B) bar falls short: inside B the event A is less frequent than in the population, so B discourages it.'});
+    }
+    function adv(ms){
+      st.lock=true;
+      setTimeout(function(){
+        st.lock=false; st.r++;
+        if(st.r>=w3R.length){ st.done=true; render(); return; }
+        st.k=0; st.tries=0; render();
+      }, ms);
+    }
+    window.brSet = function(v){
+      if(st.done || st.lock) return;
+      st.k = parseInt(v,10)||0;
+      var ek=document.getElementById('brK'); if(ek) ek.textContent=st.k;
+      var ea=document.getElementById('brA'); if(ea) ea.textContent=fx(pA(),3);
+      var eb=document.getElementById('brB'); if(eb) eb.textContent=fx(pAB(),3);
+      var fa=document.getElementById('brAf'); if(fa) fa.style.width=(pA()*100).toFixed(1)+'%';
+      var fbr=document.getElementById('brBf'); if(fbr) fbr.style.width=(pAB()*100).toFixed(1)+'%';
+      live();
+    };
+    window.brChk = function(){
+      if(st.done || st.lock) return;
+      var d=rd(), fb=document.getElementById('brFb'); if(!fb) return;
+      if(st.k*100 === d.b*(st.k+d.m)){
+        fb.innerHTML = '<span class="okmsg">'+T({es:'Correcto. ',en:'Correct. '})+'</span>'+T({
+          es:'Con '+st.k+' personas de B que cumplen A, la proporción dentro de B iguala a la proporción de toda la población: el dato sobre B deja de cambiar la probabilidad de A.',
+          en:'With '+st.k+' people in B satisfying A, the proportion inside B equals the proportion in the whole population: the information about B stops changing the probability of A.'
+        });
+        adv(2200); return;
+      }
+      st.tries++;
+      if(st.tries>=3){
+        st.k = sol(); render();
+        document.getElementById('brFb').innerHTML = T({
+          es:'El equilibrio se alcanza con '+sol()+' personas de B que cumplen A. Ahí la proporción interna y la global coinciden.',
+          en:'Balance is reached with '+sol()+' people in B satisfying A. There the inner proportion and the overall one coincide.'
+        });
+        adv(2600); return;
+      }
+      live();
+    };
+    render();
+  })();
+
+  /* ---- P5 ---- */
+  (function(){
+    var K = {
+      ind:{es:'Sí, porque la probabilidad de A no cambia al saber que B ocurrió.', en:'Yes, because the probability of A does not change once B is known to have occurred.'},
+      up:{es:'No, porque saber que B ocurrió eleva la probabilidad de A.', en:'No, because knowing that B occurred raises the probability of A.'},
+      dn:{es:'No, porque saber que B ocurrió reduce la probabilidad de A.', en:'No, because knowing that B occurred lowers the probability of A.'},
+      ex:{es:'Sí, porque los dos eventos no pueden presentarse en el mismo resultado.', en:'Yes, because the two events cannot appear in the same outcome.'}
+    };
+    var order = (p5mode===0) ? ['ind','up','dn','ex'] : (p5mode===1 ? ['up','ind','dn','ex'] : ['dn','ind','up','ex']);
+    var oEs = order.map(function(k){ return K[k].es; });
+    var oEn = order.map(function(k){ return K[k].en; });
+    var verd = (p5mode===0)
+      ? {es:'coincide con P(A), de modo que los eventos son independientes', en:'matches P(A), so the events are independent'}
+      : (p5mode===1
+        ? {es:'supera a P(A), de modo que los eventos no son independientes', en:'exceeds P(A), so the events are not independent'}
+        : {es:'queda por debajo de P(A), de modo que los eventos no son independientes', en:'falls below P(A), so the events are not independent'});
+    addProb({
+      title:{es:'La prueba del criterio', en:'Applying the criterion'},
+      q:{es:'Un control de calidad registra dos eventos, A y B, con los valores que aparecen abajo. Decide si A y B son independientes y elige la justificación que corresponde.',
+         en:'A quality control process records two events, A and B, with the values shown below. Decide whether A and B are independent and choose the matching justification.'},
+      fn:'P(A) = '+fx(p5.a,2)+'   ·   P(B) = '+fx(p5.b,2)+'   ·   P(A ∩ B) = '+fx(p5J,2),
+      hint:{es:'Calcula la probabilidad de A dentro del espacio reducido por B y compárala con la probabilidad original de A. También puedes comparar la probabilidad conjunta con el producto de las dos individuales.',
+            en:'Compute the probability of A inside the space reduced by B and compare it with the original probability of A. You can also compare the joint probability with the product of the two individual ones.'},
+      exp:{es:'P(A | B) = '+fx(p5J,2)+' ÷ '+fx(p5.b,2)+' = '+fx(p5cond,2)+', que '+T(verd)+'. El producto P(A) · P(B) vale '+fx(p5prod,2)+' y sirve como comprobación del mismo criterio. Que la probabilidad conjunta sea positiva descarta que los eventos sean excluyentes.',
+           en:'P(A | B) = '+fx(p5J,2)+' ÷ '+fx(p5.b,2)+' = '+fx(p5cond,2)+', which '+T(verd)+'. The product P(A) · P(B) equals '+fx(p5prod,2)+' and serves as a check of the same criterion. A positive joint probability rules out the events being mutually exclusive.'},
+      options:{es:oEs, en:oEn},
+      showWork: true
+    });
+  })();
+
+  /* ---- P6 ---- */
+  addProb({
+    title:{es:'Criterio del producto', en:'The product criterion'},
+    q: (v6===0)
+      ? {es:'Dos sensores de una línea de producción funcionan de manera independiente. El evento A es que el primero emita una alerta y el evento B es que la emita el segundo, con los valores que aparecen abajo. Determina la probabilidad de que los dos sensores emitan alerta en la misma revisión.',
+         en:'Two sensors on a production line work independently. Event A is that the first one raises an alert and event B is that the second one does, with the values shown below. Determine the probability that both sensors raise an alert in the same inspection.'}
+      : {es:'Dos sensores de una línea de producción funcionan de manera independiente. El evento A es que el primero emita una alerta y el evento B es que la emita el segundo, con los valores que aparecen abajo. Determina la probabilidad del evento B.',
+         en:'Two sensors on a production line work independently. Event A is that the first one raises an alert and event B is that the second one does, with the values shown below. Determine the probability of event B.'},
+    fn: (v6===0)
+      ? 'P(A) = '+fx(p6A,2)+'   ·   P(B) = '+fx(p6B,2)
+      : 'P(A) = '+fx(p6A,2)+'   ·   P(A ∩ B) = '+fx(p6J,2),
+    hint: (v6===0)
+      ? {es:'Bajo independencia, la probabilidad conjunta se obtiene multiplicando las dos probabilidades individuales. Sumar daría la probabilidad de que ocurra al menos uno, que es otra cosa.',
+         en:'Under independence, the joint probability is obtained by multiplying the two individual probabilities. Adding would give the probability that at least one occurs, which is something else.'}
+      : {es:'Bajo independencia la probabilidad conjunta es el producto de las individuales, así que el valor buscado es el cociente de la conjunta entre la probabilidad conocida.',
+         en:'Under independence the joint probability is the product of the individual ones, so the value sought is the joint divided by the known probability.'},
+    exp: (v6===0)
+      ? {es:'P(A ∩ B) = P(A) · P(B) = '+fx(p6A,2)+' · '+fx(p6B,2)+' = '+fx(p6J,2)+'. El valor '+fx(r2(p6A+p6B-p6J),2)+' corresponde a la probabilidad de que al menos un sensor emita alerta.',
+         en:'P(A ∩ B) = P(A) · P(B) = '+fx(p6A,2)+' · '+fx(p6B,2)+' = '+fx(p6J,2)+'. The value '+fx(r2(p6A+p6B-p6J),2)+' is the probability that at least one sensor raises an alert.'}
+      : {es:'De P(A ∩ B) = P(A) · P(B) se despeja P(B) = '+fx(p6J,2)+' ÷ '+fx(p6A,2)+' = '+fx(p6B,2)+'. Restar las probabilidades no corresponde a ninguna regla del cálculo de probabilidades.',
+         en:'From P(A ∩ B) = P(A) · P(B) we solve P(B) = '+fx(p6J,2)+' ÷ '+fx(p6A,2)+' = '+fx(p6B,2)+'. Subtracting the probabilities matches no rule of probability.'},
+    options: p6Opts,
+    showWork: true
+  });
+
+  /* ============================================================
+     IDEA 4 - REGLA DEL PRODUCTO Y EXTRACCIONES SUCESIVAS
+     ============================================================ */
+  sec(T({es:'Idea 4', en:'Idea 4'}),
+      T({es:'Encadenar dos etapas', en:'Chaining two stages'}),
+      '<p>'+T({
+        es:'Despejar la intersección en la definición de probabilidad condicional produce la regla del producto: la probabilidad de que ocurran dos eventos se obtiene multiplicando la probabilidad del primero por la probabilidad del segundo calculada bajo el supuesto de que el primero ya ocurrió. Esta forma es la que se usa cuando un experimento avanza por etapas.',
+        en:'Solving for the intersection in the definition of conditional probability produces the product rule: the probability that two events occur is obtained by multiplying the probability of the first by the probability of the second computed under the assumption that the first already occurred. This form is the one used when an experiment advances in stages.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Las extracciones sucesivas ilustran el contraste. Si cada objeto se devuelve antes de la siguiente extracción, la composición se restaura y las etapas resultan independientes. Si no se devuelve, cada extracción modifica la composición y por lo tanto la probabilidad de la siguiente etapa, de modo que los eventos quedan ligados.',
+        en:'Successive draws illustrate the contrast. If each object is returned before the next draw, the composition is restored and the stages turn out independent. If it is not returned, each draw modifies the composition and therefore the probability of the next stage, so the events end up linked.'
+      })+'</p>'+
+      '<div class="dataline">P(A ∩ B) = P(B) · P(A | B)</div>'+
+      '<div class="callout"><p><strong>'+T({es:'Lectura del segundo factor: ', en:'Reading the second factor: '})+'</strong>'+T({
+        es:'el segundo factor siempre se calcula sobre el estado del experimento después de la primera etapa. Reutilizar el estado inicial equivale a suponer independencia, y esa suposición cambia el resultado.',
+        en:'the second factor is always computed on the state of the experiment after the first stage. Reusing the initial state amounts to assuming independence, and that assumption changes the result.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 4: urna que cambia con cada extracción ---- */
+  (function(){
+    var wrap = widget('urna');
+    var st = { r:0, out:[], tries:0, done:false, lock:false };
+    function rd(){ return w4R[st.r]; }
+    function reset(){ var d=rd(), i; st.out=[]; for(i=0;i<d.r+d.a;i++) st.out.push(false); }
+    function keptRed(){ var d=rd(), c=0, i; for(i=0;i<d.r;i++) if(!st.out[i]) c++; return c; }
+    function keptAll(){ var d=rd(), c=0, i; for(i=0;i<d.r+d.a;i++) if(!st.out[i]) c++; return c; }
+    function sol(){
+      var d=rd(), k, m;
+      for(k=0;k<=d.r;k++) for(m=0;m<=d.a;m++){ if(k+m>0 && k*d.td === d.tn*(k+m)) return [k,m]; }
+      return [d.r,d.a];
+    }
+    function pTxt(){ var n=keptAll(); return n>0 ? fx(keptRed()/n,3) : T({es:'sin fichas',en:'no chips'}); }
+    function render(){
+      if(st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Urna que cambia', en:'A changing urn'})+'</div>'+
+          '<div class="iw-box"><div class="iw-done">'+T({es:'Exploración terminada', en:'Exploration finished'})+'</div>'+
+          '<div class="rfb">'+T({
+            es:'Cada ficha retirada reescribe la probabilidad de la siguiente extracción. Por eso, al extraer sin devolver, la segunda etapa depende de lo que pasó en la primera.',
+            en:'Every chip removed rewrites the probability of the next draw. That is why, when drawing without returning, the second stage depends on what happened in the first.'
+          })+'</div></div>';
+        return;
+      }
+      var d=rd(), i, balls='';
+      for(i=0;i<d.r+d.a;i++){
+        balls += '<div class="ball '+(i<d.r?'rd':'bl')+(st.out[i]?' out':'')+'" onclick="urTap('+i+')">'+(i<d.r?T({es:'R',en:'R'}):T({es:'A',en:'B'}))+'</div>';
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Urna que cambia', en:'A changing urn'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'La urna empieza con '+d.r+' fichas rojas y '+d.a+' fichas azules. Toca una ficha para sacarla de la urna y tócala otra vez para devolverla. El indicador muestra la probabilidad de que la siguiente extracción sea roja.',
+            en:'The urn starts with '+d.r+' red chips and '+d.a+' blue chips. Tap a chip to take it out of the urn and tap it again to put it back. The readout shows the probability that the next draw is red.'
+          })+'</div>'+
+          '<div class="rondas">'+T({es:'Ronda ',en:'Round '})+(st.r+1)+' / 3</div>'+
+          '<div class="goalbar">'+T({es:'Meta: dejar la urna en un estado donde la probabilidad de extraer roja valga exactamente ',en:'Goal: leave the urn in a state where the probability of drawing red equals exactly '})+'<b>'+frH(d.tn,d.td)+'</b>.</div>'+
+          '<div class="urnwrap">'+balls+'</div>'+
+          '<div class="readgrid">'+
+            '<div class="readcell"><div class="readlbl">'+T({es:'Rojas en la urna',en:'Red in the urn'})+'</div><div class="readval" id="urR">'+keptRed()+'</div></div>'+
+            '<div class="readcell"><div class="readlbl">'+T({es:'Fichas en la urna',en:'Chips in the urn'})+'</div><div class="readval" id="urN">'+keptAll()+'</div></div>'+
+            '<div class="readcell hi"><div class="readlbl">'+T({es:'P(roja)',en:'P(red)'})+'</div><div class="readval" id="urP">'+pTxt()+'</div></div>'+
+          '</div>'+
+          '<button class="rverify-btn" onclick="urChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<button class="rverify-btn rghost" onclick="urReset()">'+T({es:'Devolver todas',en:'Return all'})+'</button>'+
+          '<div class="rfb" id="urFb"></div>'+
+        '</div>';
+    }
+    function live(){
+      var fb=document.getElementById('urFb'); if(!fb) return;
+      var d=rd(), n=keptAll(), k=keptRed();
+      if(n===0){ fb.textContent=T({es:'La urna quedó vacía: sin fichas no hay extracción posible. Devuelve alguna.',en:'The urn is empty: with no chips there is no possible draw. Put some back.'}); return; }
+      var cur=k/n, goal=d.tn/d.td;
+      if(Math.abs(cur-goal)<1e-9) fb.textContent=T({es:'El indicador coincide con la meta. Confírmalo con Verificar.',en:'The readout matches the goal. Confirm it with Check.'});
+      else if(cur>goal) fb.textContent=T({es:'La probabilidad de roja va por encima de la meta: saca una ficha roja o devuelve una azul.',en:'The probability of red is above the goal: take out a red chip or put a blue one back.'});
+      else fb.textContent=T({es:'La probabilidad de roja va por debajo de la meta: saca una ficha azul o devuelve una roja.',en:'The probability of red is below the goal: take out a blue chip or put a red one back.'});
+    }
+    function adv(ms){
+      st.lock=true;
+      setTimeout(function(){
+        st.lock=false; st.r++;
+        if(st.r>=w4R.length){ st.done=true; render(); return; }
+        reset(); st.tries=0; render();
+      }, ms);
+    }
+    window.urTap = function(i){
+      if(st.done || st.lock) return;
+      st.out[i] = !st.out[i];
+      render(); live();
+    };
+    window.urReset = function(){
+      if(st.done || st.lock) return;
+      reset(); render();
+      var fb=document.getElementById('urFb');
+      if(fb) fb.textContent=T({es:'La urna volvió a su composición inicial.',en:'The urn is back to its initial composition.'});
+    };
+    window.urChk = function(){
+      if(st.done || st.lock) return;
+      var d=rd(), fb=document.getElementById('urFb'); if(!fb) return;
+      var n=keptAll(), k=keptRed();
+      if(n>0 && k*d.td === d.tn*n){
+        fb.innerHTML = '<span class="okmsg">'+T({es:'Correcto. ',en:'Correct. '})+'</span>'+T({
+          es:'Con '+k+' rojas entre '+n+' fichas, la probabilidad de la siguiente extracción es justo la meta. Observa que la urna inicial daba otro valor.',
+          en:'With '+k+' red among '+n+' chips, the probability of the next draw is exactly the goal. Notice that the initial urn gave a different value.'
+        });
+        adv(2200); return;
+      }
+      st.tries++;
+      if(st.tries>=3){
+        var s=sol(), i;
+        for(i=0;i<d.r;i++) st.out[i] = (i>=s[0]);
+        for(i=0;i<d.a;i++) st.out[d.r+i] = (i>=s[1]);
+        render();
+        document.getElementById('urFb').innerHTML = T({
+          es:'Una urna que cumple la meta tiene '+s[0]+' rojas y '+s[1]+' azules. Cada retiro reescribió la probabilidad de la siguiente extracción.',
+          en:'An urn that meets the goal has '+s[0]+' red and '+s[1]+' blue. Each removal rewrote the probability of the next draw.'
+        });
+        adv(2800); return;
+      }
+      live();
+    };
+    reset(); render();
+  })();
+
+  /* ---- P7 ---- */
+  addProb({
+    title:{es:'Dos extracciones seguidas', en:'Two draws in a row'},
+    q: (v7===0)
+      ? {es:'Una caja contiene '+p7r+' fichas rojas y '+p7a+' fichas azules, idénticas al tacto. Se extraen dos fichas al azar, una después de la otra, y la primera no se devuelve a la caja antes de sacar la segunda. Determina la probabilidad de que las dos fichas extraídas sean rojas.',
+         en:'A box contains '+p7r+' red chips and '+p7a+' blue chips, identical to the touch. Two chips are drawn at random, one after the other, and the first is not returned to the box before the second is drawn. Determine the probability that both chips drawn are red.'}
+      : {es:'Una caja contiene '+p7r+' fichas rojas y '+p7a+' fichas azules, idénticas al tacto. Se extraen dos fichas al azar, una después de la otra, y la primera no se devuelve a la caja antes de sacar la segunda. Se sabe que la primera ficha extraída fue roja. Determina la probabilidad de que la segunda sea azul.',
+         en:'A box contains '+p7r+' red chips and '+p7a+' blue chips, identical to the touch. Two chips are drawn at random, one after the other, and the first is not returned to the box before the second is drawn. It is known that the first chip drawn was red. Determine the probability that the second one is blue.'},
+    hint: (v7===0)
+      ? {es:'Encadena las dos etapas con la regla del producto y calcula el segundo factor sobre la caja ya modificada: después de sacar una roja quedan una roja menos y una ficha menos en total.',
+         en:'Chain the two stages with the product rule and compute the second factor on the already modified box: after a red one is drawn there is one red fewer and one chip fewer in total.'}
+      : {es:'El dato recibido cambia la composición de la caja. Cuenta cuántas fichas azules quedan y cuántas fichas hay en total justo antes de la segunda extracción.',
+         en:'The information received changes the composition of the box. Count how many blue chips remain and how many chips there are in total just before the second draw.'},
+    exp: (v7===0)
+      ? {es:'La primera ficha es roja con probabilidad '+frH(p7r,p7n)+' y, retirada esa ficha, la segunda es roja con probabilidad '+frH(p7r-1,p7n-1)+'. El producto de ambos factores es '+frH(p7r*(p7r-1),p7n*(p7n-1))+'. Elevar al cuadrado la primera fracción corresponde al caso en que la ficha se devuelve.',
+         en:'The first chip is red with probability '+frH(p7r,p7n)+' and, once that chip is removed, the second is red with probability '+frH(p7r-1,p7n-1)+'. The product of both factors is '+frH(p7r*(p7r-1),p7n*(p7n-1))+'. Squaring the first fraction corresponds to the case where the chip is returned.'}
+      : {es:'Después de retirar una ficha roja quedan '+p7a+' azules entre '+(p7n-1)+' fichas, así que la probabilidad condicional es '+frH(p7a,p7n-1)+'. El denominador '+p7n+' correspondería a la caja original, que ya no existe.',
+         en:'After a red chip is removed there are '+p7a+' blue among '+(p7n-1)+' chips, so the conditional probability is '+frH(p7a,p7n-1)+'. The denominator '+p7n+' would correspond to the original box, which no longer exists.'},
+    options: p7Opts,
+    showWork: true
+  });
+
+  /* ============================================================
+     IDEA 5 - EL ORDEN DEL CONDICIONAMIENTO
+     ============================================================ */
+  sec(T({es:'Idea 5', en:'Idea 5'}),
+      T({es:'Invertir la barra cambia la pregunta', en:'Flipping the bar changes the question'}),
+      '<p>'+T({
+        es:'P(A | B) y P(B | A) comparten el mismo numerador, la probabilidad conjunta, pero se apoyan en denominadores distintos. Por eso son cantidades diferentes salvo en el caso particular en que los dos eventos condicionantes tengan la misma probabilidad. Tratarlas como intercambiables produce conclusiones equivocadas incluso con datos correctos.',
+        en:'P(A | B) and P(B | A) share the same numerator, the joint probability, but rest on different denominators. That is why they are different quantities except in the particular case where the two conditioning events have the same probability. Treating them as interchangeable produces wrong conclusions even with correct data.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'El contraste es más visible cuando un evento es raro y el otro es común. Un evento poco frecuente puede estar casi siempre acompañado de otro muy frecuente sin que ocurra lo recíproco, porque el grupo grande diluye la proporción. Antes de interpretar una probabilidad condicional conviene identificar cuál es el grupo que se tomó como denominador.',
+        en:'The contrast is clearest when one event is rare and the other is common. An infrequent event may almost always come together with a very frequent one without the converse holding, because the large group dilutes the proportion. Before interpreting a conditional probability it helps to identify which group was taken as the denominator.'
+      })+'</p>');
+
+  /* ---- P8 ---- */
+  addProb({
+    title:{es:'Dos condicionales distintas', en:'Two different conditionals'},
+    q: (v8===0)
+      ? {es:'En una región, casi todas las personas que padecen cierta alergia dan positivo en una prueba de tamizaje, mientras que solo una fracción muy pequeña de quienes dan positivo padece esa alergia. Elige la afirmación que describe correctamente esa situación.',
+         en:'In one region, almost everyone who has a certain allergy tests positive in a screening test, while only a very small fraction of those who test positive has that allergy. Choose the statement that correctly describes this situation.'}
+      : {es:'En una ciudad, casi todos los futbolistas profesionales entrenan a diario, mientras que solo una fracción muy pequeña de quienes entrenan a diario son futbolistas profesionales. Elige la afirmación que describe correctamente esa situación.',
+         en:'In one city, almost all professional footballers train daily, while only a very small fraction of those who train daily are professional footballers. Choose the statement that correctly describes this situation.'},
+    hint:{es:'Escribe las dos probabilidades condicionales que están en juego y observa cuál grupo funciona como denominador en cada una. El grupo más numeroso reparte la misma cantidad de casos entre muchos más individuos.',
+          en:'Write the two conditional probabilities at play and look at which group acts as the denominator in each. The larger group spreads the same number of cases over many more individuals.'},
+    exp: (v8===0)
+      ? {es:'Las dos condicionales comparten el numerador, que es la cantidad de personas con alergia y prueba positiva. Al condicionar sobre la alergia el denominador es pequeño y el cociente resulta alto; al condicionar sobre el resultado positivo el denominador es mucho mayor y el cociente resulta bajo.',
+         en:'Both conditionals share the numerator, which is the number of people with the allergy and a positive test. Conditioning on the allergy makes the denominator small and the ratio high; conditioning on the positive result makes the denominator much larger and the ratio low.'}
+      : {es:'Las dos condicionales comparten el numerador, que es la cantidad de futbolistas profesionales que entrenan a diario. Al condicionar sobre ser profesional el denominador es pequeño y el cociente resulta alto; al condicionar sobre entrenar a diario el denominador es mucho mayor y el cociente resulta bajo.',
+         en:'Both conditionals share the numerator, which is the number of professional footballers who train daily. Conditioning on being professional makes the denominator small and the ratio high; conditioning on training daily makes the denominator much larger and the ratio low.'},
+    options: (v8===0)
+      ? {es:['La probabilidad de dar positivo dado que hay alergia es alta, y la probabilidad de tener alergia dado que la prueba salió positiva es baja',
+             'La probabilidad de tener alergia dado que la prueba salió positiva es alta, y la probabilidad de dar positivo dado que hay alergia es baja',
+             'Las dos probabilidades condicionales coinciden porque involucran a los mismos dos eventos',
+             'La probabilidad conjunta de alergia y prueba positiva es igual al producto de las dos condicionales'],
+         en:['The probability of testing positive given the allergy is high, and the probability of having the allergy given a positive test is low',
+             'The probability of having the allergy given a positive test is high, and the probability of testing positive given the allergy is low',
+             'The two conditional probabilities coincide because they involve the same two events',
+             'The joint probability of allergy and positive test equals the product of the two conditionals']}
+      : {es:['La probabilidad de entrenar a diario dado que se es profesional es alta, y la probabilidad de ser profesional dado que se entrena a diario es baja',
+             'La probabilidad de ser profesional dado que se entrena a diario es alta, y la probabilidad de entrenar a diario dado que se es profesional es baja',
+             'Las dos probabilidades condicionales coinciden porque involucran a los mismos dos eventos',
+             'La probabilidad conjunta de entrenar a diario y ser profesional es igual al producto de las dos condicionales'],
+         en:['The probability of training daily given that one is professional is high, and the probability of being professional given daily training is low',
+             'The probability of being professional given daily training is high, and the probability of training daily given that one is professional is low',
+             'The two conditional probabilities coincide because they involve the same two events',
+             'The joint probability of training daily and being professional equals the product of the two conditionals']},
+    showWork: false
+  });
+
+  /* ============================================================
+     CIERRE
+     ============================================================ */
+  sec(T({es:'Cierre', en:'Closing'}), T({es:'Dos situaciones para resolver', en:'Two situations to solve'}), '');
+
+  /* ---- P9 ---- */
+  addProb({
+    title:{es:'Del porcentaje al caso conjunto', en:'From percentage to the joint case'},
+    q: (v9===0)
+      ? {es:'En un plantel, el '+p9b+' % de los estudiantes usa transporte público y, dentro de ese grupo, el '+p9q+' % llegó tarde al menos una vez durante la semana. Determina qué porcentaje del total de estudiantes usa transporte público y además llegó tarde al menos una vez.',
+         en:'At one campus, '+p9b+' % of the students use public transport and, within that group, '+p9q+' % arrived late at least once during the week. Determine what percentage of all students use public transport and also arrived late at least once.'}
+      : {es:'En un plantel, el '+p9b+' % de los estudiantes usa transporte público y el '+p9j+' % del total usa transporte público y además llegó tarde al menos una vez durante la semana. Determina qué porcentaje de los usuarios de transporte público llegó tarde al menos una vez.',
+         en:'At one campus, '+p9b+' % of the students use public transport and '+p9j+' % of all students use public transport and also arrived late at least once during the week. Determine what percentage of the public transport users arrived late at least once.'},
+    hint: (v9===0)
+      ? {es:'El segundo porcentaje está calculado sobre un subgrupo, no sobre el plantel completo. Para llevarlo al total hay que multiplicarlo por la proporción que representa ese subgrupo.',
+         en:'The second percentage is computed on a subgroup, not on the whole campus. To bring it back to the total it has to be multiplied by the share that subgroup represents.'}
+      : {es:'Los dos porcentajes dados están calculados sobre el plantel completo. Para pasar al subgrupo hay que dividir la proporción conjunta entre la proporción del subgrupo.',
+         en:'Both given percentages are computed on the whole campus. To move to the subgroup, divide the joint share by the share of the subgroup.'},
+    exp: (v9===0)
+      ? {es:'La regla del producto da P(tarde ∩ transporte) = '+fx(p9b/100,2)+' · '+fx(p9q/100,2)+' = '+fx(p9j/100,4)+', es decir '+p9j+' %. El valor '+p9q+' % describe solo al subgrupo de usuarios y no al plantel completo.',
+         en:'The product rule gives P(late ∩ transport) = '+fx(p9b/100,2)+' · '+fx(p9q/100,2)+' = '+fx(p9j/100,4)+', that is '+p9j+' %. The value '+p9q+' % describes only the subgroup of users and not the whole campus.'}
+      : {es:'La proporción condicional es '+fx(p9j/100,4)+' ÷ '+fx(p9b/100,2)+' = '+fx(p9q/100,2)+', es decir '+p9q+' %. Al cambiar de denominador el mismo grupo de estudiantes representa una fracción mayor.',
+         en:'The conditional share is '+fx(p9j/100,4)+' ÷ '+fx(p9b/100,2)+' = '+fx(p9q/100,2)+', that is '+p9q+' %. Changing the denominator makes the same group of students represent a larger fraction.'},
+    options: p9Opts,
+    showWork: true
+  });
+
+  /* ---- P10 ---- */
+  addProb({
+    title:{es:'El valor que da independencia', en:'The value that yields independence'},
+    q: (v10===0)
+      ? {es:'Una encuesta cubre a '+p10.N+' personas. De ellas, '+p10.nA+' pertenecen al club A y '+p10.nB+' pertenecen al club B. Se elige a una persona al azar. Determina cuántas personas tendrían que pertenecer a los dos clubes a la vez para que pertenecer a A y pertenecer a B resultaran eventos independientes.',
+         en:'A survey covers '+p10.N+' people. Of these, '+p10.nA+' belong to club A and '+p10.nB+' belong to club B. One person is chosen at random. Determine how many people would have to belong to both clubs at once for belonging to A and belonging to B to be independent events.'}
+      : {es:'Una encuesta cubre a '+p10.N+' personas. De ellas, '+p10.nB+' pertenecen al club B y '+p10c+' pertenecen a los dos clubes a la vez. Se elige a una persona al azar. Determina cuántas personas tendrían que pertenecer al club A en total para que pertenecer a A y pertenecer a B resultaran eventos independientes.',
+         en:'A survey covers '+p10.N+' people. Of these, '+p10.nB+' belong to club B and '+p10c+' belong to both clubs at once. One person is chosen at random. Determine how many people would have to belong to club A in total for belonging to A and belonging to B to be independent events.'},
+    hint:{es:'Traduce cada cantidad a una probabilidad dividiendo entre el total de personas y aplica el criterio del producto. Después regresa el resultado a número de personas multiplicando por el total.',
+          en:'Turn each quantity into a probability by dividing by the total number of people and apply the product criterion. Then bring the result back to a number of people by multiplying by the total.'},
+    exp: (v10===0)
+      ? {es:'P(A) vale '+fx(p10.nA/p10.N,3)+' y P(B) vale '+fx(p10.nB/p10.N,3)+'. La independencia exige que la probabilidad conjunta sea el producto, es decir '+fx(p10c/p10.N,3)+', que sobre '+p10.N+' personas corresponde a '+p10c+'. Promediar los dos grupos no responde a ningún criterio de probabilidad.',
+         en:'P(A) equals '+fx(p10.nA/p10.N,3)+' and P(B) equals '+fx(p10.nB/p10.N,3)+'. Independence requires the joint probability to be the product, that is '+fx(p10c/p10.N,3)+', which over '+p10.N+' people corresponds to '+p10c+'. Averaging the two groups answers no probability criterion.'}
+      : {es:'P(B) vale '+fx(p10.nB/p10.N,3)+' y la probabilidad conjunta vale '+fx(p10c/p10.N,3)+'. Bajo independencia, P(A) es el cociente de ambas, es decir '+fx(p10.nA/p10.N,3)+', que sobre '+p10.N+' personas corresponde a '+p10.nA+'. Sumar los dos conteos no responde a ningún criterio de probabilidad.',
+         en:'P(B) equals '+fx(p10.nB/p10.N,3)+' and the joint probability equals '+fx(p10c/p10.N,3)+'. Under independence, P(A) is the ratio of the two, that is '+fx(p10.nA/p10.N,3)+', which over '+p10.N+' people corresponds to '+p10.nA+'. Adding the two counts answers no probability criterion.'},
+    options: p10Opts,
+    showWork: true
+  });
+}
+
+</script>
+</body>
+</html>
