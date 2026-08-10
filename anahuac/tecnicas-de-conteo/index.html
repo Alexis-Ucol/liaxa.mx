@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Técnicas de Conteo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── WIDGETS DE ESTA GUIA (tecnicas de conteo) ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-sub { font-size:.88rem; color:var(--text2); margin-bottom:.7rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; margin-top:.7rem; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.goalbar b { color:var(--green-dark); font-family:'IBM Plex Mono',monospace; }
+.gcanvas { display:block; width:100%; height:250px; border:1px solid var(--border); border-radius:8px; background:var(--surface); touch-action:manipulation; }
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.5rem; flex-wrap:wrap; }
+.krow input[type=range] { flex:1; min-width:130px; accent-color:var(--green); height:34px; }
+.klbl { font-size:.78rem; color:var(--text3); min-width:64px; }
+.kval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.92rem; color:var(--green); min-width:34px; text-align:right; }
+.metaline { display:flex; align-items:center; justify-content:center; gap:.6rem; flex-wrap:wrap; font-size:.88rem; color:var(--text2); margin-top:.6rem; }
+.metaline b { color:var(--green-dark); font-family:'IBM Plex Mono',monospace; font-size:1.05rem; }
+.chainbox { font-family:'IBM Plex Mono',monospace; font-size:.95rem; color:var(--green-dark); background:var(--surface2); border-radius:8px; padding:.55rem .7rem; margin:.55rem 0; text-align:center; }
+.chainsub { font-family:'IBM Plex Mono',monospace; font-size:.88rem; color:var(--text3); background:var(--surface2); border-radius:8px; padding:.45rem .7rem; margin:.35rem 0; text-align:center; }
+.slotrow { display:flex; gap:.5rem; flex-wrap:wrap; justify-content:center; margin:.7rem 0 .2rem; }
+.slot { background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:.5rem .55rem; text-align:center; min-width:96px; }
+.slotlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.3rem; }
+.slotctl { display:flex; align-items:center; justify-content:center; gap:.35rem; }
+.slotbtn { width:34px; height:34px; min-width:34px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text2); font-size:1rem; font-weight:700; cursor:pointer; font-family:inherit; padding:0; }
+.slotbtn:hover { border-color:var(--green); color:var(--green); }
+.slotval { font-family:'IBM Plex Mono',monospace; font-size:1.05rem; font-weight:700; color:var(--green); min-width:26px; }
+.simbtns { display:flex; gap:.45rem; flex-wrap:wrap; margin-top:.7rem; }
+.simbtn { min-height:44px; padding:.5rem .85rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.83rem; font-weight:600; font-family:inherit; cursor:pointer; }
+.simbtn:hover { border-color:var(--green); color:var(--green); }
+.simbtn.on { background:var(--green); border-color:var(--green); color:#fff; }
+.cls-prog { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.cls-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:.85rem; text-align:center; font-weight:600; font-size:.9rem; margin:.6rem 0; color:var(--text); }
+.cls-bins { display:flex; gap:.5rem; flex-wrap:wrap; }
+.cls-bin { flex:1; min-width:120px; min-height:44px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.85rem; font-weight:600; cursor:pointer; font-family:inherit; padding:.5rem; }
+.cls-bin:hover { border-color:var(--green); color:var(--green); }
+.cls-done { font-weight:700; color:var(--ok); text-align:center; padding:.6rem; }
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.dataline { font-family:'IBM Plex Mono',monospace; font-size:.88rem; color:var(--green-dark); background:var(--surface2); border-radius:8px; padding:.5rem .7rem; margin:.6rem 0; text-align:center; }
+@media (max-width:600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .cls-bins { flex-direction:column; }
+  .gcanvas { height:230px; }
+  .klbl { min-width:52px; }
+  .slot { min-width:88px; }
+  .chainbox { font-size:.85rem; }
+}
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Técnicas de Conteo</div>
+    <div class="wcourse" id="wcourse-el">Pensamiento Matemático I · Sem 1</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Técnicas de Conteo</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c3c6c', primaryDark:'#072a4c', primaryBg:'#e6eef7',
+  accent:'#e46c0c', accentBg:'#fdebdd',
+  darkPrimary:'#3885d1', darkPrimaryDark:'#6aadf0', darkPrimaryBg:'#08233e',
+  darkAccent:'#f89546', darkAccentBg:'#2b1707',
+  pBR:12, pBG:60, pBB:108, pAR:228, pAG:108, pAB:12,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'Anahuac',
+  guideTitle:{ es:'Técnicas de Conteo', en:'Counting Techniques' },
+  courseName:{ es:'Pensamiento Matemático I · Sem 1', en:'Mathematical Thinking I · Sem 1' }, filePrefix:'pm1_t03_g01'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_pm1_t03_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Técnicas de Conteo','wcourse':'Pensamiento Matemático I · Sem 1',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Counting Techniques','wcourse':'Mathematical Thinking I · Sem 1',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_pm1_t03_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_pm1_t03_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_pm1_t03_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_pm1_t03_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('pm1_t03_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function pk(a){ return a[Math.floor(rng()*a.length)]; }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 240;
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  function fact(n){ var r=1,i; for(i=2;i<=n;i++) r*=i; return r; }
+  function perm(n,r){ var v=1,i; for(i=0;i<r;i++) v*=(n-i); return v; }
+  function comb(n,r){ return Math.round(perm(n,r)/fact(r)); }
+  function mf(n,d){ return '<span class="mf-outer"><span class="mf-num">'+n+'</span><span class="mf-den">'+d+'</span></span>'; }
+  function chainTxt(n,r){ var s='',i; for(i=0;i<r;i++){ s += (i?' · ':'') + (n-i); } return s; }
+  function mkOpts(correct, cands){
+    var out = [String(correct)], i, s;
+    for (i=0;i<cands.length && out.length<4;i++){
+      s = String(cands[i]);
+      if (cands[i] > 0 && out.indexOf(s) < 0) out.push(s);
+    }
+    var k = 1;
+    while (out.length < 4 && k < 90){ s = String(correct+k); if (out.indexOf(s) < 0) out.push(s); k++; }
+    return out;
+  }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = String(T(spec.correct));
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ============================================================
+     VALORES CON SEMILLA (se extraen una sola vez, en orden fijo)
+     ============================================================ */
+  var vA = Math.floor(rng()*2);   /* variante estructural P1 */
+  var vD = Math.floor(rng()*2);   /* variante estructural P4 */
+  var vH = Math.floor(rng()*2);   /* variante estructural P8 */
+  var e2 = Math.floor(rng()*2), e3 = Math.floor(rng()*2), e5 = Math.floor(rng()*2);
+  var e6 = Math.floor(rng()*2), e7 = Math.floor(rng()*2), e9 = Math.floor(rng()*2), e10 = Math.floor(rng()*2);
+
+  /* manipulativo 1: tres metas para el arbol */
+  var w1T = shufA([12,15,18,20,24]).slice(0,3);
+
+  /* manipulativo 2: tres rondas de cadena de factores */
+  var w2R = shufA([
+    { n: ri(4,6), r: 3, rep: true  },
+    { n: ri(5,7), r: 3, rep: false },
+    { n: ri(4,6), r: 2, rep: (rng() < 0.5) }
+  ]);
+
+  /* manipulativo 3: tres metas de podio */
+  var w3A = { n: ri(5,8), k: 3, mode: 0 };
+  var w3B = { n: ri(6,9), k: pk([2,3]), mode: 1 };
+  var w3C = { n: ri(4,7), k: pk([2,3]), mode: pk([0,1]) };
+  var w3R = [w3A, w3B, w3C];
+  (function(){
+    var i, R;
+    for (i=0;i<w3R.length;i++){
+      R = w3R[i];
+      R.target = R.mode ? comb(R.n, R.k) : perm(R.n, R.k);
+    }
+  })();
+
+  /* P1: paquetes por etapas */
+  var p1a = pk([3,4]), p1b = pk([5,6]), p1c = pk([2,3]), p1T = p1a*p1b*p1c;
+
+  /* P2: rutas que se combinan y se suman */
+  var p2m = pk([3,4]), p2n = pk([4,5]), p2k = pk([2,3]), p2ans = p2m*p2n + p2k;
+
+  /* P3: candado con repeticion */
+  var p3n = pk([5,6]), p3r = pk([3,4]), p3ans = Math.pow(p3n, p3r);
+
+  /* P5: todos en fila */
+  var p5n = pk([5,6,7]), p5ans = fact(p5n);
+
+  /* P6: cargos distintos */
+  var p6n = ri(7,9), p6ans = perm(p6n, 3);
+
+  /* P7: seleccion sin cargos */
+  var p7n = ri(8,10), p7ans = comb(p7n, 3);
+
+  /* P9: comite en dos bloques */
+  var p9a = ri(5,7), p9b = ri(5,6), p9ans = comb(p9a,2)*comb(p9b,3);
+
+  /* P10: cifras con condicion */
+  var p10k = pk([6,7,8]), p10p = Math.floor(p10k/2), p10ans = p10p*(p10k-1)*(p10k-2);
+
+  /* SECCIONES, MANIPULATIVOS Y PROBLEMAS */
+  /* ============================================================
+     IDEA 1 · PRINCIPIO MULTIPLICATIVO
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'Contar por etapas', en:'Counting by stages'}),
+      '<p>'+T({
+        es:'Contar no siempre significa enumerar. Cuando un procedimiento se realiza por etapas sucesivas y cada etapa admite un número fijo de opciones que no depende de lo elegido en las anteriores, el total de resultados distintos se obtiene multiplicando esos números. A esta regla se le llama principio multiplicativo, y es la base de todas las técnicas de conteo que siguen.',
+        en:'Counting does not always mean listing. When a procedure is carried out in successive stages and each stage admits a fixed number of options that does not depend on what was chosen before, the total number of distinct outcomes is obtained by multiplying those numbers. This rule is called the multiplication principle, and it is the basis of every counting technique that follows.'
+      })+'</p>'+
+      '<div class="dataline">N = n1 · n2 · … · nk</div>'+
+      '<p>'+T({
+        es:'El diagrama de árbol muestra por qué funciona: cada opción de la primera etapa abre tantas ramas como opciones tenga la segunda, y así sucesivamente, de modo que el número de caminos completos crece como un producto y no como una suma. La independencia entre etapas es la condición que hay que verificar antes de multiplicar.',
+        en:'A tree diagram shows why it works: each option in the first stage opens as many branches as the second stage has options, and so on, so the number of complete paths grows like a product and not like a sum. Independence between stages is the condition to verify before multiplying.'
+      })+'</p>'+
+      '<div class="callout"><p><strong>'+T({es:'Suma o producto: ', en:'Sum or product: '})+'</strong>'+T({
+        es:'si los resultados se reparten en casos que se excluyen entre sí, de manera que ninguno puede ocurrir junto con otro, el total se obtiene sumando los conteos de cada caso. Ese es el principio aditivo. Etapas que se combinan piden multiplicar; casos alternativos piden sumar.',
+        en:'if the outcomes split into cases that exclude one another, so that none can happen together with another, the total comes from adding the counts of each case. That is the addition principle. Stages that combine call for multiplying; alternative cases call for adding.'
+      })+'</p></div>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Etapa',en:'Stage'})+'</div><div class="deftxt">'+T({es:'Cada decisión parcial que se toma dentro del procedimiento.',en:'Each partial decision taken within the procedure.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Independencia',en:'Independence'})+'</div><div class="deftxt">'+T({es:'El número de opciones de una etapa no cambia con lo elegido antes.',en:'The number of options at a stage does not change with earlier choices.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Diagrama de árbol',en:'Tree diagram'})+'</div><div class="deftxt">'+T({es:'Representación en la que cada camino completo es un resultado.',en:'A representation in which each complete path is one outcome.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Casos excluyentes',en:'Exclusive cases'})+'</div><div class="deftxt">'+T({es:'Alternativas que no pueden presentarse al mismo tiempo.',en:'Alternatives that cannot occur at the same time.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 1: arbol de decisiones ---- */
+  (function(){
+    var wrap = widget('arbol');
+    var st = { r:0, a:2, b:2, tries:0, done:false, lock:false };
+    function goal(){ return w1T[st.r]; }
+    function solve(v){
+      var a;
+      for (a=6;a>=1;a--){ if (v % a === 0 && v/a <= 6) return [a, v/a]; }
+      return [1, v];
+    }
+    function draw(){
+      var cv = document.getElementById('arbCv');
+      if (!cv) return;
+      var g = fitCv(cv), ctx = g.ctx, W = g.w, H = g.h;
+      var cA = cssv('--green'), cB = cssv('--gold'), cL = cssv('--border');
+      var x0 = 20, x1 = Math.round(W*0.40), x2 = W - 24, i, j, ya, yb, n = st.a*st.b;
+      ctx.lineWidth = 1.1;
+      for (i=0;i<st.a;i++){
+        ya = H*(i+1)/(st.a+1);
+        ctx.strokeStyle = cL;
+        ctx.beginPath(); ctx.moveTo(x0, H/2); ctx.lineTo(x1, ya); ctx.stroke();
+        for (j=0;j<st.b;j++){
+          yb = H*(i*st.b+j+1)/(n+1);
+          ctx.beginPath(); ctx.moveTo(x1, ya); ctx.lineTo(x2, yb); ctx.stroke();
+          ctx.fillStyle = cB; ctx.beginPath(); ctx.arc(x2, yb, 3.2, 0, 6.2832); ctx.fill();
+        }
+        ctx.fillStyle = cA; ctx.beginPath(); ctx.arc(x1, ya, 5, 0, 6.2832); ctx.fill();
+      }
+      ctx.fillStyle = cA; ctx.beginPath(); ctx.arc(x0, H/2, 6.5, 0, 6.2832); ctx.fill();
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Árbol de decisiones', en:'Decision tree'})+'</div>'+
+          '<div class="iw-box"><div class="cls-done">'+T({es:'Actividad completa', en:'Activity complete'})+'</div>'+
+          '<div class="rfb">'+T({
+            es:'Una misma meta admite árboles de formas muy distintas: lo que fija el número de caminos es el producto de las opciones de cada etapa, no el dibujo.',
+            en:'The same goal admits trees of very different shapes: what fixes the number of paths is the product of the options at each stage, not the drawing.'
+          })+'</div></div>';
+        return;
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Árbol de decisiones', en:'Decision tree'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'Mueve las barras para cambiar cuántas opciones ofrece cada etapa. El árbol se redibuja y sus caminos se cuentan al instante.',
+            en:'Move the sliders to change how many options each stage offers. The tree is redrawn and its paths are counted instantly.'
+          })+'</div>'+
+          '<div class="rondas">'+T({es:'Ronda ',en:'Round '})+(st.r+1)+' / 3</div>'+
+          '<div class="goalbar">'+T({es:'Meta: construir exactamente ',en:'Goal: build exactly '})+'<b>'+goal()+'</b>'+T({es:' caminos distintos.',en:' distinct paths.'})+'</div>'+
+          '<canvas class="gcanvas" id="arbCv"></canvas>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Etapa 1',en:'Stage 1'})+'</span><input type="range" min="1" max="6" value="'+st.a+'" oninput="arbSet(1,this.value)"><span class="kval" id="arbAv">'+st.a+'</span></div>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Etapa 2',en:'Stage 2'})+'</span><input type="range" min="1" max="6" value="'+st.b+'" oninput="arbSet(2,this.value)"><span class="kval" id="arbBv">'+st.b+'</span></div>'+
+          '<div class="metaline">'+T({es:'Caminos del árbol: ',en:'Paths in the tree: '})+'<b id="arbTot">'+(st.a*st.b)+'</b></div>'+
+          '<button class="rverify-btn" onclick="arbChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="arbFb"></div>'+
+        '</div>';
+      draw();
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.lock = false; st.r++;
+        if (st.r >= w1T.length){ st.done = true; render(); return; }
+        st.a = 2; st.b = 2; st.tries = 0; render();
+      }, ms);
+    }
+    window.arbSet = function(which, v){
+      if (st.done || st.lock) return;
+      v = parseInt(v,10) || 1;
+      if (which === 1) st.a = v; else st.b = v;
+      var e = document.getElementById(which === 1 ? 'arbAv' : 'arbBv'); if (e) e.textContent = v;
+      var tt = document.getElementById('arbTot'); if (tt) tt.textContent = (st.a*st.b);
+      var fb = document.getElementById('arbFb');
+      if (fb){
+        var d = st.a*st.b - goal();
+        fb.textContent = (d === 0)
+          ? T({es:'El conteo coincide con la meta. Confirma con Verificar.', en:'The count matches the goal. Confirm with Check.'})
+          : (d < 0 ? T({es:'Te faltan '+(-d)+' caminos para llegar a la meta.', en:'You are '+(-d)+' paths short of the goal.'})
+                   : T({es:'Te pasaste de la meta por '+d+' caminos.', en:'You are over the goal by '+d+' paths.'}));
+      }
+      draw();
+    };
+    window.arbChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('arbFb'); if (!fb) return;
+      if (st.a*st.b === goal()){
+        fb.innerHTML = '<span class="okmsg">'+T({es:'Correcto. ',en:'Correct. '})+'</span>'+T({
+          es:'Con '+st.a+' opciones en la primera etapa y '+st.b+' en la segunda, el árbol tiene '+(st.a*st.b)+' caminos completos.',
+          en:'With '+st.a+' options in the first stage and '+st.b+' in the second, the tree has '+(st.a*st.b)+' complete paths.'
+        });
+        adv(1700); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        var f = solve(goal());
+        st.a = f[0]; st.b = f[1]; render();
+        var fb2 = document.getElementById('arbFb');
+        if (fb2) fb2.innerHTML = T({
+          es:'Una construcción que sí alcanza la meta usa '+f[0]+' opciones en la primera etapa y '+f[1]+' en la segunda, porque su producto da '+goal()+'.',
+          en:'One construction that does reach the goal uses '+f[0]+' options in the first stage and '+f[1]+' in the second, because their product gives '+goal()+'.'
+        });
+        adv(2800); return;
+      }
+      var d2 = st.a*st.b - goal();
+      fb.textContent = (d2 < 0)
+        ? T({es:'Aún no. Con este árbol salen '+(st.a*st.b)+' caminos: sube las opciones de alguna etapa.', en:'Not yet. This tree gives '+(st.a*st.b)+' paths: raise the options of one stage.'})
+        : T({es:'Aún no. Con este árbol salen '+(st.a*st.b)+' caminos: baja las opciones de alguna etapa.', en:'Not yet. This tree gives '+(st.a*st.b)+' paths: lower the options of one stage.'});
+    };
+    render();
+  })();
+
+  /* ---- P1 ---- */
+  var p1Var = [
+    {
+      title:{es:'Paquetes por etapas', en:'Stagewise packages'},
+      q:{es:'Una cafetería escolar arma paquetes de almuerzo: el estudiante elige una bebida entre '+p1a+' disponibles, un plato fuerte entre '+p1b+' y un postre entre '+p1c+'. Cualquier bebida puede acompañar a cualquier plato y a cualquier postre. ¿Cuántos paquetes distintos se pueden armar?',
+         en:'A school cafeteria puts together lunch packages: the student picks one drink out of '+p1a+' available, one main dish out of '+p1b+' and one dessert out of '+p1c+'. Any drink can go with any dish and any dessert. How many distinct packages can be put together?'},
+      options:mkOpts(p1T, [p1a+p1b+p1c, p1a*p1b, p1a*p1b+p1c]),
+      correct:p1T,
+      hint:{es:'Si un procedimiento tiene etapas independientes con n1, n2 y n3 opciones, el total de resultados es el producto n1 · n2 · n3.',
+            en:'If a procedure has independent stages with n1, n2 and n3 options, the total number of outcomes is the product n1 · n2 · n3.'},
+      exp:{es:'Las tres etapas se combinan libremente, así que el conteo es un producto: '+p1a+' · '+p1b+' · '+p1c+' = '+p1T+'.',
+           en:'The three stages combine freely, so the count is a product: '+p1a+' · '+p1b+' · '+p1c+' = '+p1T+'.'},
+      showWork:true
+    },
+    {
+      title:{es:'La etapa que falta', en:'The missing stage'},
+      q:{es:'Un servicio de comidas arma paquetes eligiendo una bebida entre '+p1a+' disponibles, un plato fuerte entre '+p1b+' y un postre de su carta. Con esas opciones se pueden armar '+p1T+' paquetes distintos. ¿Cuántos postres tiene la carta?',
+         en:'A catering service puts together packages by choosing one drink out of '+p1a+' available, one main dish out of '+p1b+' and one dessert from its menu. With those options, '+p1T+' distinct packages can be assembled. How many desserts does the menu have?'},
+      options:mkOpts(p1c, [p1T-p1a-p1b, Math.round(p1T/p1a), Math.round(p1T/p1b)]),
+      correct:p1c,
+      hint:{es:'El total es el producto de las tres etapas, así que la etapa desconocida sale de dividir el total entre el producto de las otras dos.',
+            en:'The total is the product of the three stages, so the unknown stage comes from dividing the total by the product of the other two.'},
+      exp:{es:'Las dos etapas conocidas aportan '+p1a+' · '+p1b+' = '+(p1a*p1b)+' combinaciones, y el total es ese número multiplicado por los postres: '+p1T+' ÷ '+(p1a*p1b)+' = '+p1c+'.',
+           en:'The two known stages give '+p1a+' · '+p1b+' = '+(p1a*p1b)+' combinations, and the total is that number multiplied by the desserts: '+p1T+' ÷ '+(p1a*p1b)+' = '+p1c+'.'},
+      showWork:true
+    }
+  ][vA];
+  addProb(p1Var);
+
+  /* ---- P2 ---- */
+  addProb({
+    title:{es:'Rutas que se suman', en:'Routes that add up'},
+    q: (e2 === 0
+      ? {es:'De la escuela al parque hay '+p2m+' rutas y del parque al centro deportivo hay '+p2n+' caminos. Además existen '+p2k+' avenidas que van de la escuela al centro deportivo sin pasar por el parque. ¿De cuántas maneras distintas se puede ir de la escuela al centro deportivo?',
+          en:'From the school to the park there are '+p2m+' routes, and from the park to the sports centre there are '+p2n+' paths. There are also '+p2k+' avenues going from the school to the sports centre without passing through the park. In how many distinct ways can someone go from the school to the sports centre?'}
+      : {es:'Una empresa de mensajería llega de la bodega a la terminal por '+p2m+' carreteras y de la terminal a la sucursal por '+p2n+' vialidades. También cuenta con '+p2k+' rutas que van de la bodega a la sucursal sin escala en la terminal. ¿De cuántas maneras distintas puede completar el trayecto?',
+          en:'A courier company reaches the terminal from the warehouse along '+p2m+' highways and the branch from the terminal along '+p2n+' roads. It also has '+p2k+' routes going from the warehouse to the branch with no stop at the terminal. In how many distinct ways can it complete the trip?'}),
+    options:mkOpts(p2ans, [p2m*p2n, p2m+p2n+p2k, p2m*p2n*p2k]),
+    correct:p2ans,
+    hint:{es:'Los tramos que se recorren uno tras otro se multiplican entre sí; los itinerarios que no pueden usarse al mismo tiempo se suman.',
+          en:'Legs travelled one after another are multiplied together; itineraries that cannot be used at the same time are added.'},
+    exp:{es:'El itinerario con escala son dos etapas encadenadas, '+p2m+' · '+p2n+' = '+(p2m*p2n)+', y el itinerario directo es un caso aparte que se suma: '+(p2m*p2n)+' + '+p2k+' = '+p2ans+'.',
+         en:'The itinerary with a stop is two chained stages, '+p2m+' · '+p2n+' = '+(p2m*p2n)+', and the direct itinerary is a separate case that is added: '+(p2m*p2n)+' + '+p2k+' = '+p2ans+'.'},
+    showWork:true
+  });
+
+  /* ============================================================
+     IDEA 2 · CON REPETICION Y SIN REPETICION
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'Cuando el elemento vuelve a estar disponible', en:'When the element becomes available again'}),
+      '<p>'+T({
+        es:'Al llenar varias posiciones con elementos de un mismo conjunto hay que decidir algo antes de multiplicar: si el elemento usado en una posición sigue disponible para las siguientes, o si queda descartado. Esa decisión cambia por completo la cadena de factores, aunque el escenario parezca el mismo.',
+        en:'When filling several positions with elements from the same set, one thing must be decided before multiplying: whether the element used in one position remains available for the next ones, or whether it is discarded. That decision completely changes the chain of factors, even if the scenario looks the same.'
+      })+'</p>'+
+      '<div class="dataline">'+T({es:'con repetición: n · n · … · n = n^r', en:'with repetition: n · n · … · n = n^r'})+'</div>'+
+      '<div class="dataline">'+T({es:'sin repetición: n · (n − 1) · … · (n − r + 1)', en:'without repetition: n · (n − 1) · … · (n − r + 1)'})+'</div>'+
+      '<p>'+T({
+        es:'En el primer caso cada posición vuelve a disponer de las n opciones completas, porque nada se agota: los dígitos de una clave o las caras de un dado se pueden repetir cuantas veces se quiera. En el segundo, cada elemento colocado desaparece del conjunto y el número de opciones baja de uno en uno, como ocurre al repartir asientos, cargos o lugares de una carrera entre personas distintas.',
+        en:'In the first case each position again has the full n options, because nothing runs out: the digits of a passcode or the faces of a die may repeat as often as desired. In the second, each element placed disappears from the set and the number of options drops one at a time, as happens when handing out seats, offices or race positions among distinct people.'
+      })+'</p>'+
+      '<div class="callout"><p><strong>'+T({es:'Antes de multiplicar: ', en:'Before multiplying: '})+'</strong>'+T({
+        es:'pregunta cuántas opciones quedan realmente disponibles en la segunda posición. Si son las mismas que en la primera, hay repetición; si son una menos, no la hay.',
+        en:'ask how many options are really left for the second position. If they are the same as for the first, repetition is allowed; if there is one fewer, it is not.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 2: cadena de factores ---- */
+  (function(){
+    var wrap = widget('cadena');
+    var st = { r:0, vals:[1,1,1], tries:0, done:false, lock:false };
+    function R(){ return w2R[st.r]; }
+    function target(){
+      var R0 = R(), out = [], i;
+      for (i=0;i<R0.r;i++) out.push(R0.rep ? R0.n : R0.n - i);
+      return out;
+    }
+    function prodOf(a){ var v=1,i,R0=R(); for(i=0;i<R0.r;i++) v*=a[i]; return v; }
+    function scenario(){
+      var R0 = R();
+      if (R0.rep) return T({
+        es:'Un candado electrónico tiene '+R0.r+' ruedas y cada rueda muestra los mismos '+R0.n+' símbolos. Dos ruedas pueden mostrar el mismo símbolo.',
+        en:'An electronic lock has '+R0.r+' wheels and each wheel shows the same '+R0.n+' symbols. Two wheels may show the same symbol.'
+      });
+      return T({
+        es:'Un equipo de '+R0.n+' personas ocupa '+R0.r+' lugares numerados de una mesa y nadie puede ocupar dos lugares.',
+        en:'A team of '+R0.n+' people occupies '+R0.r+' numbered seats at a table and nobody can occupy two seats.'
+      });
+    }
+    function chainOf(a){
+      var R0 = R(), s = '', i;
+      for (i=0;i<R0.r;i++) s += (i ? ' · ' : '') + a[i];
+      return s + ' = ' + prodOf(a);
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Cadena de factores', en:'Chain of factors'})+'</div>'+
+          '<div class="iw-box"><div class="cls-done">'+T({es:'Actividad completa', en:'Activity complete'})+'</div>'+
+          '<div class="rfb">'+T({
+            es:'El escenario no basta para decidir la cadena: lo que la fija es si el elemento usado sigue disponible en la posición siguiente.',
+            en:'The scenario alone does not decide the chain: what fixes it is whether the element already used is still available for the next position.'
+          })+'</div></div>';
+        return;
+      }
+      var R0 = R(), i, slots = '';
+      for (i=0;i<R0.r;i++){
+        slots +=
+          '<div class="slot"><div class="slotlbl">'+T({es:'Posición ',en:'Position '})+(i+1)+'</div>'+
+          '<div class="slotctl"><button class="slotbtn" onclick="cadSet('+i+',-1)">−</button>'+
+          '<span class="slotval" id="cadV'+i+'">'+st.vals[i]+'</span>'+
+          '<button class="slotbtn" onclick="cadSet('+i+',1)">+</button></div></div>';
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Cadena de factores', en:'Chain of factors'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'Ajusta cada posición hasta que la cadena diga cuántas opciones quedan disponibles ahí. El producto se recalcula en cada toque.',
+            en:'Adjust each position until the chain states how many options remain available there. The product is recalculated at every tap.'
+          })+'</div>'+
+          '<div class="rondas">'+T({es:'Ronda ',en:'Round '})+(st.r+1)+' / 3</div>'+
+          '<div class="goalbar">'+scenario()+'</div>'+
+          '<div class="slotrow">'+slots+'</div>'+
+          '<div class="chainbox" id="cadChain">'+chainOf(st.vals)+'</div>'+
+          '<button class="rverify-btn" onclick="cadChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="cadFb"></div>'+
+        '</div>';
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.lock = false; st.r++;
+        if (st.r >= w2R.length){ st.done = true; render(); return; }
+        st.vals = [1,1,1]; st.tries = 0; render();
+      }, ms);
+    }
+    window.cadSet = function(i, d){
+      if (st.done || st.lock) return;
+      var v = st.vals[i] + d;
+      if (v < 1) v = 1; if (v > 9) v = 9;
+      st.vals[i] = v;
+      var e = document.getElementById('cadV'+i); if (e) e.textContent = v;
+      var c = document.getElementById('cadChain'); if (c) c.textContent = chainOf(st.vals);
+      var fb = document.getElementById('cadFb');
+      if (fb){
+        var tg = target(), R0 = R();
+        fb.textContent = (prodOf(st.vals) === prodOf(tg))
+          ? T({es:'Tu producto ya coincide con el conteo de este escenario. Confirma con Verificar.', en:'Your product already matches the count for this scenario. Confirm with Check.'})
+          : (R0.rep ? T({es:'Recuerda: aquí ninguna opción se agota al usarse.', en:'Remember: here no option runs out once it is used.'})
+                    : T({es:'Recuerda: aquí cada elemento colocado deja de estar disponible.', en:'Remember: here each element placed stops being available.'}));
+      }
+    };
+    window.cadChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('cadFb'); if (!fb) return;
+      var tg = target(), i, bad = -1;
+      for (i=0;i<tg.length;i++){ if (st.vals[i] !== tg[i]){ bad = i; break; } }
+      if (bad < 0){
+        fb.innerHTML = '<span class="okmsg">'+T({es:'Correcto. ',en:'Correct. '})+'</span>'+T({
+          es:'La cadena de este escenario es '+chainOf(tg)+'.',
+          en:'The chain for this scenario is '+chainOf(tg)+'.'
+        });
+        adv(1900); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.vals = tg.slice();
+        while (st.vals.length < 3) st.vals.push(1);
+        render();
+        var fb2 = document.getElementById('cadFb');
+        if (fb2) fb2.innerHTML = T({
+          es:'La cadena correcta es '+chainOf(tg)+', porque '+(R().rep ? 'cada posición vuelve a disponer de los mismos '+R().n+' símbolos.' : 'cada elemento ya colocado deja de estar disponible para la posición siguiente.'),
+          en:'The correct chain is '+chainOf(tg)+', because '+(R().rep ? 'each position again has the same '+R().n+' symbols available.' : 'each element already placed stops being available for the next position.')
+        });
+        adv(3000); return;
+      }
+      fb.textContent = (st.vals[bad] > tg[bad])
+        ? T({es:'En la posición '+(bad+1)+' estás contando de más: revisa cuántas opciones siguen disponibles ahí.', en:'At position '+(bad+1)+' you are counting too many: check how many options are still available there.'})
+        : T({es:'En la posición '+(bad+1)+' estás contando de menos: revisa cuántas opciones siguen disponibles ahí.', en:'At position '+(bad+1)+' you are counting too few: check how many options are still available there.'});
+    };
+    render();
+  })();
+
+  /* ---- P3 ---- */
+  addProb({
+    title:{es:'Un candado que admite repetición', en:'A lock that allows repeats'},
+    q: (e3 === 0
+      ? {es:'Un candado electrónico tiene '+p3r+' ruedas y cada rueda puede mostrar cualquiera de los mismos '+p3n+' símbolos. Dos ruedas pueden mostrar el mismo símbolo. ¿Cuántas claves distintas admite el candado?',
+          en:'An electronic lock has '+p3r+' wheels and each wheel can show any of the same '+p3n+' symbols. Two wheels may show the same symbol. How many distinct codes does the lock admit?'}
+      : {es:'Una aplicación pide un patrón de '+p3r+' toques y en cada toque se elige uno de los mismos '+p3n+' iconos del tablero, que permanece completo durante todo el patrón. ¿Cuántos patrones distintos se pueden registrar?',
+          en:'An app asks for a pattern of '+p3r+' taps, and at each tap one of the same '+p3n+' icons on the board is chosen, the board staying complete throughout the pattern. How many distinct patterns can be registered?'}),
+    options:mkOpts(p3ans, [perm(p3n,p3r), p3n*p3r, Math.pow(p3r,p3n)]),
+    correct:p3ans,
+    hint:{es:'Cuando cada posición vuelve a disponer de las mismas n opciones, r posiciones dan n^r, es decir n multiplicado por sí mismo r veces.',
+          en:'When each position again has the same n options, r positions give n^r, that is, n multiplied by itself r times.'},
+    exp:{es:'Ninguna opción se agota, así que cada una de las '+p3r+' posiciones aporta el factor '+p3n+': el conteo es '+p3n+'^'+p3r+' = '+p3ans+'.',
+         en:'No option runs out, so each of the '+p3r+' positions contributes the factor '+p3n+': the count is '+p3n+'^'+p3r+' = '+p3ans+'.'},
+    showWork:true
+  });
+
+  /* ---- P4 ---- */
+  var p4Var = [
+    {
+      title:{es:'¿Se puede repetir?', en:'Can it repeat?'},
+      q:{es:'En una de las siguientes situaciones un mismo elemento puede aparecer más de una vez dentro del resultado. ¿Cuál es?',
+         en:'In one of the following situations a single element can appear more than once within the result. Which one?'},
+      options:{es:[
+        'Formar una clave de cuatro símbolos tomando cada símbolo de un teclado que permanece completo en cada pulsación.',
+        'Repartir tres cargos distintos entre los integrantes de un equipo sin que nadie ocupe dos cargos.',
+        'Acomodar en fila las cinco fotografías distintas que integran una exposición escolar.',
+        'Elegir tres sabores distintos de una carta de diez para armar una degustación.'
+      ], en:[
+        'Building a four symbol passcode by taking each symbol from a keypad that stays complete at every press.',
+        'Handing out three distinct offices among the members of a team without anyone holding two offices.',
+        'Arranging in a row the five distinct photographs that make up a school exhibition.',
+        'Choosing three distinct flavours from a list of ten to put together a tasting.'
+      ]},
+      correct:{es:'Formar una clave de cuatro símbolos tomando cada símbolo de un teclado que permanece completo en cada pulsación.',
+               en:'Building a four symbol passcode by taking each symbol from a keypad that stays complete at every press.'},
+      hint:{es:'Fíjate en si el elemento usado en una posición sigue disponible para la siguiente o si queda descartado.',
+            en:'Look at whether the element used in one position is still available for the next one or is discarded.'},
+      exp:{es:'El teclado no pierde teclas al usarse, de modo que la misma tecla puede volver a elegirse en otra posición. En los otros tres casos cada elemento colocado sale del conjunto y no puede volver a aparecer.',
+           en:'The keypad does not lose keys as it is used, so the same key can be chosen again in another position. In the other three cases each element placed leaves the set and cannot appear again.'},
+      showWork:false
+    },
+    {
+      title:{es:'Sin repetir ningún elemento', en:'With no element repeated'},
+      q:{es:'En una de las siguientes situaciones ningún elemento puede aparecer dos veces dentro del resultado. ¿Cuál es?',
+         en:'In one of the following situations no element can appear twice within the result. Which one?'},
+      options:{es:[
+        'Asignar el primero, el segundo y el tercer lugar de una carrera entre los corredores que la terminaron.',
+        'Registrar la cara obtenida en cada uno de los cuatro lanzamientos consecutivos de un mismo dado.',
+        'Formar una contraseña de tres cifras eligiendo en cada posición un dígito del cero al nueve.',
+        'Elegir el color de cada una de las cuatro franjas de una bandera con una paleta fija de seis colores.'
+      ], en:[
+        'Assigning first, second and third place in a race among the runners who finished it.',
+        'Recording the face obtained on each of four consecutive rolls of the same die.',
+        'Building a three digit password by choosing at each position a digit from zero to nine.',
+        'Choosing the colour of each of the four stripes of a flag from a fixed palette of six colours.'
+      ]},
+      correct:{es:'Asignar el primero, el segundo y el tercer lugar de una carrera entre los corredores que la terminaron.',
+               en:'Assigning first, second and third place in a race among the runners who finished it.'},
+      hint:{es:'Fíjate en si el elemento usado en una posición sigue disponible para la siguiente o si queda descartado.',
+            en:'Look at whether the element used in one position is still available for the next one or is discarded.'},
+      exp:{es:'Un mismo corredor no puede ocupar dos lugares del podio, así que cada asignación reduce en uno el número de opciones. En los otros tres casos el conjunto de opciones se conserva completo en cada posición.',
+           en:'The same runner cannot occupy two podium places, so each assignment reduces the number of options by one. In the other three cases the set of options stays complete at every position.'},
+      showWork:false
+    }
+  ][vD];
+  addProb(p4Var);
+
+  /* ============================================================
+     IDEA 3 · PERMUTACIONES
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'Permutaciones: cuando el orden distingue', en:'Permutations: when order tells results apart'}),
+      '<p>'+T({
+        es:'Una permutación es una disposición ordenada de elementos distintos. Ordenar los n elementos de un conjunto en una fila equivale a llenar n posiciones sin repetir, de modo que el conteo es el producto de n hasta 1. Ese producto se llama factorial de n y se escribe n!, con la convención de que 0! vale 1.',
+        en:'A permutation is an ordered arrangement of distinct elements. Arranging the n elements of a set in a row amounts to filling n positions without repeating, so the count is the product from n down to 1. That product is called the factorial of n and is written n!, with the convention that 0! equals 1.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Cuando solo se ocupan r de las n posiciones, el producto se detiene después de r factores. La forma compacta de escribirlo usa el cociente de dos factoriales, y se lee como el número de permutaciones de n elementos tomados de r en r.',
+        en:'When only r of the n positions are filled, the product stops after r factors. The compact way of writing it uses a quotient of two factorials, and it is read as the number of permutations of n elements taken r at a time.'
+      })+'</p>'+
+      '<div class="rules-grid">'+
+        '<div class="rcard"><div class="rname">'+T({es:'Factorial',en:'Factorial'})+'</div><div class="rform">n! = n · (n − 1) · … · 2 · 1</div><div class="rnote">'+T({es:'Ordena los n elementos en fila.',en:'Arranges all n elements in a row.'})+'</div></div>'+
+        '<div class="rcard"><div class="rname">'+T({es:'Permutación de r en r',en:'Permutation r at a time'})+'</div><div class="rform">P(n, r) = '+mf('n!','(n − r)!')+'</div><div class="rnote">'+T({es:'Llena r posiciones ordenadas sin repetir.',en:'Fills r ordered positions without repeating.'})+'</div></div>'+
+        '<div class="rcard"><div class="rname">'+T({es:'Cadena equivalente',en:'Equivalent chain'})+'</div><div class="rform">n · (n − 1) · … · (n − r + 1)</div><div class="rnote">'+T({es:'El mismo valor, contado factor por factor.',en:'The same value, counted factor by factor.'})+'</div></div>'+
+      '</div>'+
+      '<p>'+T({
+        es:'La palabra clave para reconocer una permutación es distinguir: si intercambiar dos elementos de lugar produce un resultado que se considera diferente, el orden importa y el conteo es una permutación. Cargos con funciones propias, lugares de un podio y posiciones de una clave cumplen esa condición.',
+        en:'The key word for recognising a permutation is distinguish: if swapping two elements produces a result that counts as different, order matters and the count is a permutation. Offices with their own duties, podium places and positions in a passcode all meet that condition.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 3: podio ---- */
+  (function(){
+    var wrap = widget('podio');
+    var st = { r:0, n:4, k:2, mode:0, tries:0, done:false, lock:false };
+    function R(){ return w3R[st.r]; }
+    function val(){ return st.mode ? comb(st.n, st.k) : perm(st.n, st.k); }
+    function modeName(m){ return m ? T({es:'no importa', en:'does not matter'}) : T({es:'importa', en:'matters'}); }
+    function chainHTML(){
+      var pv = perm(st.n, st.k), out = '<div class="chainbox">' + chainTxt(st.n, st.k) + ' = ' + pv + '</div>';
+      if (st.mode) out += '<div class="chainsub">' + pv + ' ÷ ' + fact(st.k) + ' = ' + comb(st.n, st.k) + '</div>';
+      return out;
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Podio ajustable', en:'Adjustable podium'})+'</div>'+
+          '<div class="iw-box"><div class="cls-done">'+T({es:'Actividad completa', en:'Activity complete'})+'</div>'+
+          '<div class="rfb">'+T({
+            es:'Con los mismos valores de n y r, quitar el orden siempre reduce el conteo, y lo reduce exactamente en el número de maneras de ordenar los r elegidos.',
+            en:'With the same values of n and r, removing order always reduces the count, and it reduces it by exactly the number of ways of ordering the r chosen elements.'
+          })+'</div></div>';
+        return;
+      }
+      var R0 = R();
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Podio ajustable', en:'Adjustable podium'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'Cambia cuántas personas participan y cuántos lugares se ocupan, y decide si dos listas con las mismas personas en distinto orden cuentan como resultados diferentes.',
+            en:'Change how many people take part and how many places are filled, and decide whether two lists with the same people in a different order count as different results.'
+          })+'</div>'+
+          '<div class="rondas">'+T({es:'Ronda ',en:'Round '})+(st.r+1)+' / 3</div>'+
+          '<div class="goalbar">'+T({es:'Meta: llegar a ',en:'Goal: reach '})+'<b>'+R0.target+'</b>'+T({es:' resultados con un conteo en el que el orden ',en:' results with a count in which order '})+'<b>'+modeName(R0.mode)+'</b>.</div>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Personas',en:'People'})+'</span><input type="range" id="podN" min="2" max="10" value="'+st.n+'" oninput="podSet(1,this.value)"><span class="kval" id="podNv">'+st.n+'</span></div>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Lugares',en:'Places'})+'</span><input type="range" id="podK" min="1" max="'+st.n+'" value="'+st.k+'" oninput="podSet(2,this.value)"><span class="kval" id="podKv">'+st.k+'</span></div>'+
+          '<div class="simbtns">'+
+            '<button class="simbtn'+(st.mode===0?' on':'')+'" onclick="podMode(0)">'+T({es:'El orden importa',en:'Order matters'})+'</button>'+
+            '<button class="simbtn'+(st.mode===1?' on':'')+'" onclick="podMode(1)">'+T({es:'El orden no importa',en:'Order does not matter'})+'</button>'+
+          '</div>'+
+          '<div id="podChain">'+chainHTML()+'</div>'+
+          '<div class="metaline">'+T({es:'Tu conteo: ',en:'Your count: '})+'<b id="podVal">'+val()+'</b></div>'+
+          '<button class="rverify-btn" onclick="podChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="podFb"></div>'+
+        '</div>';
+    }
+    function refresh(){
+      var c = document.getElementById('podChain'); if (c) c.innerHTML = chainHTML();
+      var v = document.getElementById('podVal'); if (v) v.textContent = val();
+      var nv = document.getElementById('podNv'); if (nv) nv.textContent = st.n;
+      var kv = document.getElementById('podKv'); if (kv) kv.textContent = st.k;
+      var fb = document.getElementById('podFb');
+      if (fb){
+        var R0 = R(), d = val() - R0.target;
+        if (st.mode !== R0.mode) fb.textContent = T({es:'Este conteo no es el que pide la meta: revisa si el orden debe distinguir las listas o no.', en:'This count is not the one the goal asks for: check whether order should tell the lists apart or not.'});
+        else fb.textContent = (d === 0)
+          ? T({es:'Llegaste al valor de la meta. Confirma con Verificar.', en:'You reached the goal value. Confirm with Check.'})
+          : (d < 0 ? T({es:'Tu conteo va por debajo de la meta.', en:'Your count is below the goal.'})
+                   : T({es:'Tu conteo va por encima de la meta.', en:'Your count is above the goal.'}));
+      }
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.lock = false; st.r++;
+        if (st.r >= w3R.length){ st.done = true; render(); return; }
+        st.n = 4; st.k = 2; st.mode = 0; st.tries = 0; render();
+      }, ms);
+    }
+    window.podSet = function(which, v){
+      if (st.done || st.lock) return;
+      v = parseInt(v,10) || 1;
+      if (which === 1){
+        st.n = v;
+        if (st.k > st.n) st.k = st.n;
+        var ke = document.getElementById('podK');
+        if (ke){ ke.max = st.n; ke.value = st.k; }
+      } else {
+        st.k = Math.min(v, st.n);
+      }
+      refresh();
+    };
+    window.podMode = function(m){
+      if (st.done || st.lock) return;
+      st.mode = m; render(); refresh();
+    };
+    window.podChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('podFb'); if (!fb) return;
+      var R0 = R();
+      if (st.mode === R0.mode && val() === R0.target){
+        fb.innerHTML = '<span class="okmsg">'+T({es:'Correcto. ',en:'Correct. '})+'</span>'+T({
+          es:'Con '+st.n+' personas y '+st.k+' lugares, y con el orden que '+modeName(st.mode)+', el conteo da '+val()+'.',
+          en:'With '+st.n+' people and '+st.k+' places, and with order that '+modeName(st.mode)+', the count gives '+val()+'.'
+        });
+        adv(1900); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.n = R0.n; st.k = R0.k; st.mode = R0.mode; render();
+        var fb2 = document.getElementById('podFb');
+        if (fb2) fb2.innerHTML = T({
+          es:'Una solución es '+R0.n+' personas en '+R0.k+' lugares con el orden que '+modeName(R0.mode)+', porque ese conteo da '+R0.target+'.',
+          en:'One solution is '+R0.n+' people in '+R0.k+' places with order that '+modeName(R0.mode)+', because that count gives '+R0.target+'.'
+        });
+        adv(3000); return;
+      }
+      if (st.mode !== R0.mode){
+        fb.textContent = T({es:'Aún no. El valor puede acercarse, pero la meta pide un conteo en el que el orden '+modeName(R0.mode)+'.', en:'Not yet. The value may come close, but the goal asks for a count in which order '+modeName(R0.mode)+'.'});
+        return;
+      }
+      fb.textContent = (val() < R0.target)
+        ? T({es:'Aún no. Tu conteo da '+val()+', todavía por debajo de la meta.', en:'Not yet. Your count gives '+val()+', still below the goal.'})
+        : T({es:'Aún no. Tu conteo da '+val()+', ya por encima de la meta.', en:'Not yet. Your count gives '+val()+', already above the goal.'});
+    };
+    render();
+  })();
+
+  /* ---- P5 ---- */
+  addProb({
+    title:{es:'Todos en fila', en:'All in a row'},
+    q: (e5 === 0
+      ? {es:'Una estudiante coloca en un estante '+p5n+' libros distintos, uno junto a otro, y va a usarlos todos. ¿De cuántas maneras distintas puede quedar acomodada la fila?',
+          en:'A student places '+p5n+' distinct books on a shelf, one next to another, and is going to use all of them. In how many distinct ways can the row end up arranged?'}
+      : {es:'En una sesión de trabajo van a exponer '+p5n+' equipos distintos, uno después de otro, hasta completar la lista. ¿De cuántas maneras distintas puede quedar el orden de las exposiciones?',
+          en:'In a working session '+p5n+' distinct teams will present, one after another, until the list is complete. In how many distinct ways can the order of the presentations end up?'}),
+    options:mkOpts(p5ans, [fact(p5n-1), p5n*p5n, Math.pow(2,p5n)]),
+    correct:p5ans,
+    hint:{es:'Ordenar n objetos distintos en fila es llenar n posiciones sin repetir, y eso da n! = n · (n − 1) · … · 2 · 1.',
+          en:'Arranging n distinct objects in a row means filling n positions without repeating, and that gives n! = n · (n − 1) · … · 2 · 1.'},
+    exp:{es:'La primera posición admite '+p5n+' opciones, la segunda '+(p5n-1)+' y así hasta agotar la fila, de modo que el conteo es '+p5n+'! = '+p5ans+'.',
+         en:'The first position admits '+p5n+' options, the second '+(p5n-1)+' and so on until the row runs out, so the count is '+p5n+'! = '+p5ans+'.'},
+    showWork:true
+  });
+
+  /* ---- P6 ---- */
+  addProb({
+    title:{es:'Tres cargos distintos', en:'Three distinct offices'},
+    q: (e6 === 0
+      ? {es:'Un club estudiantil tiene '+p6n+' integrantes y debe nombrar presidencia, secretaría y tesorería. Cada cargo tiene funciones propias y nadie puede ocupar dos cargos. ¿De cuántas maneras distintas se pueden asignar los tres cargos?',
+          en:'A student club has '+p6n+' members and must appoint a president, a secretary and a treasurer. Each office has its own duties and nobody can hold two offices. In how many distinct ways can the three offices be assigned?'}
+      : {es:'En un torneo escolar quedan '+p6n+' equipos finalistas y se entregarán el primero, el segundo y el tercer lugar. Cada lugar es distinto y ningún equipo puede ocupar dos. ¿De cuántas maneras distintas puede quedar el podio?',
+          en:'In a school tournament '+p6n+' teams remain as finalists and first, second and third place will be awarded. Each place is distinct and no team can take two. In how many distinct ways can the podium end up?'}),
+    options:mkOpts(p6ans, [comb(p6n,3), Math.pow(p6n,3), perm(p6n-1,3)]),
+    correct:p6ans,
+    hint:{es:'Cuando el orden distingue los resultados y no hay repetición, el conteo es P(n, r) = '+mf('n!','(n − r)!')+', con n = '+p6n+' y r = 3.',
+          en:'When order tells the results apart and there is no repetition, the count is P(n, r) = '+mf('n!','(n − r)!')+', with n = '+p6n+' and r = 3.'},
+    exp:{es:'Los tres lugares son distintos, así que cada orden produce un resultado diferente: '+p6n+' · '+(p6n-1)+' · '+(p6n-2)+' = '+p6ans+'.',
+         en:'The three places are distinct, so each order produces a different result: '+p6n+' · '+(p6n-1)+' · '+(p6n-2)+' = '+p6ans+'.'},
+    showWork:true
+  });
+
+  /* ============================================================
+     IDEA 4 · COMBINACIONES
+     ============================================================ */
+  sec(T({es:'Idea 4', en:'Idea 4'}),
+      T({es:'Combinaciones: cuando el orden no aporta nada', en:'Combinations: when order adds nothing'}),
+      '<p>'+T({
+        es:'En muchos problemas los elementos elegidos forman un grupo sin funciones ni posiciones propias: una brigada, una mano de cartas, un conjunto de preguntas por responder. Ahí dos selecciones con los mismos elementos son el mismo resultado, aunque se hayan nombrado en distinto orden. Ese conteo es una combinación.',
+        en:'In many problems the chosen elements form a group with no duties or positions of their own: a brigade, a hand of cards, a set of questions to answer. There, two selections with the same elements are the same result, even if they were named in a different order. That count is a combination.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La relación con las permutaciones es directa. Al contar con orden, cada grupo de r elementos aparece tantas veces como maneras hay de ordenarlo, es decir r! veces. Dividir entre r! elimina esa repetición y deja cada grupo contado una sola vez.',
+        en:'The relation with permutations is direct. When counting with order, each group of r elements appears as many times as there are ways of ordering it, that is r! times. Dividing by r! removes that repetition and leaves each group counted only once.'
+      })+'</p>'+
+      '<div class="rules-grid">'+
+        '<div class="rcard"><div class="rname">'+T({es:'Combinación',en:'Combination'})+'</div><div class="rform">C(n, r) = '+mf('P(n, r)','r!')+'</div><div class="rnote">'+T({es:'Selecciones de r elementos sin orden.',en:'Selections of r elements with no order.'})+'</div></div>'+
+        '<div class="rcard"><div class="rname">'+T({es:'Forma factorial',en:'Factorial form'})+'</div><div class="rform">C(n, r) = '+mf('n!','r! (n − r)!')+'</div><div class="rnote">'+T({es:'El mismo valor con factoriales.',en:'The same value using factorials.'})+'</div></div>'+
+        '<div class="rcard"><div class="rname">'+T({es:'Simetría',en:'Symmetry'})+'</div><div class="rform">C(n, r) = C(n, n − r)</div><div class="rnote">'+T({es:'Elegir quién entra o quién queda fuera.',en:'Choosing who goes in or who stays out.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p><strong>'+T({es:'La pregunta decisiva: ', en:'The decisive question: '})+'</strong>'+T({
+        es:'si intercambias de lugar a dos de los elementos elegidos, ¿cambia el resultado? Si cambia, el conteo es una permutación; si no cambia, es una combinación.',
+        en:'if you swap two of the chosen elements, does the result change? If it changes, the count is a permutation; if it does not, it is a combination.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 4: clasificador de situaciones ---- */
+  (function(){
+    var BINS = [ T({es:'El orden importa', en:'Order matters'}), T({es:'El orden no importa', en:'Order does not matter'}) ];
+    var ITEMS = [
+      { es:'Entregar el primero, el segundo y el tercer lugar de un concurso de oratoria.', en:'Awarding first, second and third place in a public speaking contest.', bin:0 },
+      { es:'Elegir a tres estudiantes del grupo para integrar una brigada en la que todos hacen lo mismo.', en:'Choosing three students from the class for a brigade in which everyone does the same work.', bin:1 },
+      { es:'Formar una clave de cuatro letras distintas para un candado alfabético.', en:'Building a four letter passcode with distinct letters for an alphabetic lock.', bin:0 },
+      { es:'Escoger cinco preguntas de un banco de veinte para responder en el examen.', en:'Choosing five questions from a bank of twenty to answer on the exam.', bin:1 },
+      { es:'Definir el turno de exposición de los equipos en una sesión de trabajo.', en:'Setting the presentation turn of the teams in a working session.', bin:0 },
+      { es:'Seleccionar dos ingredientes de una lista para preparar una receta.', en:'Selecting two ingredients from a list to prepare a recipe.', bin:1 }
+    ];
+    var wrap = widget('clasifica');
+    var st = { i:0, seq:shufA([0,1,2,3,4,5]), tries:0, correct:0, done:false, lock:false };
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Clasifica la situación', en:'Classify the situation'})+'</div>'+
+          '<div class="iw-box"><div class="cls-done">'+T({es:'Actividad completa: ', en:'Activity complete: '})+st.correct+' / '+ITEMS.length+'</div>'+
+          '<div class="rfb">'+T({
+            es:'La misma pregunta resuelve todos los casos: si intercambiar dos elementos elegidos produce otro resultado, el orden importa.',
+            en:'The same question settles every case: if swapping two chosen elements produces another result, order matters.'
+          })+'</div></div>';
+        return;
+      }
+      var it = ITEMS[st.seq[st.i]];
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Clasifica la situación', en:'Classify the situation'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'Lee la situación y decide si intercambiar de lugar a dos elementos elegidos produce un resultado distinto.',
+            en:'Read the situation and decide whether swapping two chosen elements produces a different result.'
+          })+'</div>'+
+          '<div class="cls-prog">'+(st.i+1)+' / '+ITEMS.length+'</div>'+
+          '<div class="cls-card">'+it[LANG]+'</div>'+
+          '<div class="cls-bins">'+
+            '<button class="cls-bin" onclick="clsPick(0)">'+BINS[0]+'</button>'+
+            '<button class="cls-bin" onclick="clsPick(1)">'+BINS[1]+'</button>'+
+          '</div>'+
+          '<div class="rfb" id="clsFb"></div>'+
+        '</div>';
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.lock = false; st.tries = 0; st.i++;
+        if (st.i >= ITEMS.length) st.done = true;
+        render();
+      }, ms);
+    }
+    window.clsPick = function(bi){
+      if (st.done || st.lock) return;
+      var it = ITEMS[st.seq[st.i]], fb = document.getElementById('clsFb');
+      if (!fb) return;
+      if (bi === it.bin){
+        st.correct++;
+        fb.innerHTML = '<span class="okmsg">'+T({es:'Correcto. ',en:'Correct. '})+'</span>'+
+          (it.bin === 0 ? T({es:'Cada posición cumple una función propia, así que el orden distingue los resultados.', en:'Each position has its own role, so order tells the results apart.'})
+                        : T({es:'Los elementos elegidos forman un grupo sin posiciones propias.', en:'The chosen elements form a group with no positions of their own.'}));
+        adv(1500); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        fb.innerHTML = T({es:'Aquí ', en:'Here '}) + '<b>' + BINS[it.bin] + '</b>. ' +
+          (it.bin === 0 ? T({es:'Intercambiar dos elementos cambia el resultado, porque cada lugar es distinto.', en:'Swapping two elements changes the result, because each place is distinct.'})
+                        : T({es:'Intercambiar dos elementos deja el mismo grupo, así que el resultado no cambia.', en:'Swapping two elements leaves the same group, so the result does not change.'}));
+        adv(2600); return;
+      }
+      fb.textContent = T({
+        es:'Vuelve a intentarlo: pregúntate si dos personas o dos elementos intercambiados darían un resultado que se considera diferente.',
+        en:'Try again: ask yourself whether two swapped people or elements would give a result that counts as different.'
+      });
+    };
+    render();
+  })();
+
+  /* ---- P7 ---- */
+  addProb({
+    title:{es:'Una selección sin cargos', en:'A selection with no offices'},
+    q: (e7 === 0
+      ? {es:'De un grupo de '+p7n+' estudiantes se van a elegir 3 para integrar una brigada de protección civil. Los tres integrantes realizan la misma labor y no se les asigna ningún cargo. ¿Cuántas brigadas distintas se pueden formar?',
+          en:'From a group of '+p7n+' students, 3 will be chosen to form a civil protection brigade. The three members do the same work and are given no office. How many distinct brigades can be formed?'}
+      : {es:'Una biblioteca ofrece '+p7n+' títulos nuevos y cada usuario puede llevarse 3 en el mismo préstamo. El préstamo se registra como un conjunto de títulos, sin importar en qué orden se anotaron. ¿Cuántos préstamos distintos son posibles?',
+          en:'A library offers '+p7n+' new titles and each user may borrow 3 in the same loan. The loan is recorded as a set of titles, no matter in which order they were written down. How many distinct loans are possible?'}),
+    options:mkOpts(p7ans, [perm(p7n,3), Math.round(perm(p7n,3)/3), comb(p7n,2)]),
+    correct:p7ans,
+    hint:{es:'Cuando el orden no distingue una selección de otra, el conteo es C(n, r) = '+mf('P(n, r)','r!')+', con n = '+p7n+' y r = 3.',
+          en:'When order does not tell one selection from another, the count is C(n, r) = '+mf('P(n, r)','r!')+', with n = '+p7n+' and r = 3.'},
+    exp:{es:'Contando con orden habría '+perm(p7n,3)+' resultados, pero cada grupo de 3 aparece 3! = 6 veces, así que '+perm(p7n,3)+' ÷ 6 = '+p7ans+'.',
+         en:'Counting with order there would be '+perm(p7n,3)+' results, but each group of 3 appears 3! = 6 times, so '+perm(p7n,3)+' ÷ 6 = '+p7ans+'.'},
+    showWork:true
+  });
+
+  /* ---- P8 ---- */
+  var p8Var = [
+    {
+      title:{es:'Orden que cuenta', en:'Order that counts'},
+      q:{es:'Con el mismo grupo de candidatos y el mismo número de lugares por ocupar, se comparan dos conteos: uno en el que el orden de los elegidos distingue los resultados y otro en el que no. ¿Qué relación hay entre ambos conteos?',
+         en:'With the same group of candidates and the same number of places to fill, two counts are compared: one in which the order of those chosen tells the results apart and one in which it does not. What is the relation between the two counts?'},
+      options:{es:[
+        'El conteo con orden es mayor, porque cada selección sin orden corresponde a varias listas ordenadas distintas.',
+        'Los dos conteos coinciden, porque en ambos casos se eligen los mismos elementos del mismo grupo.',
+        'El conteo con orden es menor, porque exigir un orden descarta parte de las selecciones posibles.',
+        'La relación depende del tamaño del grupo: coinciden en grupos pequeños y solo difieren en grupos grandes.'
+      ], en:[
+        'The count with order is larger, because each unordered selection corresponds to several distinct ordered lists.',
+        'The two counts agree, because in both cases the same elements are chosen from the same group.',
+        'The count with order is smaller, because requiring an order discards part of the possible selections.',
+        'The relation depends on the size of the group: they agree for small groups and differ only for large ones.'
+      ]},
+      correct:{es:'El conteo con orden es mayor, porque cada selección sin orden corresponde a varias listas ordenadas distintas.',
+               en:'The count with order is larger, because each unordered selection corresponds to several distinct ordered lists.'},
+      hint:{es:'Compara cuántas listas ordenadas distintas produce una misma selección de r elementos: son r! listas.',
+            en:'Compare how many distinct ordered lists a single selection of r elements produces: there are r! of them.'},
+      exp:{es:'Una selección de r elementos se puede escribir en r! órdenes distintos, y todos ellos se cuentan por separado cuando el orden importa. Por eso el conteo con orden es exactamente r! veces el conteo sin orden.',
+           en:'A selection of r elements can be written in r! distinct orders, and all of them are counted separately when order matters. That is why the count with order is exactly r! times the count without order.'},
+      showWork:false
+    },
+    {
+      title:{es:'Sin tomar en cuenta el orden', en:'With no regard for order'},
+      q:{es:'Una de las siguientes situaciones se cuenta sin tomar en cuenta el orden de los elementos elegidos. ¿Cuál es?',
+         en:'One of the following situations is counted without regard for the order of the chosen elements. Which one?'},
+      options:{es:[
+        'Elegir a cuatro integrantes de un grupo para una brigada en la que todos tienen la misma función.',
+        'Asignar los turnos de exposición de cuatro equipos dentro de una sesión de trabajo.',
+        'Escribir una clave de cuatro letras distintas para abrir un candado alfabético.',
+        'Repartir cuatro medallas de distinto valor entre los finalistas de un torneo escolar.'
+      ], en:[
+        'Choosing four members of a group for a brigade in which everyone has the same role.',
+        'Assigning the presentation turns of four teams within a working session.',
+        'Writing a four letter passcode with distinct letters to open an alphabetic lock.',
+        'Handing out four medals of different value among the finalists of a school tournament.'
+      ]},
+      correct:{es:'Elegir a cuatro integrantes de un grupo para una brigada en la que todos tienen la misma función.',
+               en:'Choosing four members of a group for a brigade in which everyone has the same role.'},
+      hint:{es:'Pregúntate si intercambiar de lugar a dos elementos elegidos produce un resultado distinto; si no lo produce, el conteo es C(n, r).',
+            en:'Ask yourself whether swapping two chosen elements produces a different result; if it does not, the count is C(n, r).'},
+      exp:{es:'En la brigada todos cumplen la misma función, así que intercambiar a dos integrantes deja exactamente el mismo grupo. En los otros tres casos cada lugar, turno o medalla es distinto y el intercambio produce otro resultado.',
+           en:'In the brigade everyone has the same role, so swapping two members leaves exactly the same group. In the other three cases each place, turn or medal is distinct and the swap produces another result.'},
+      showWork:false
+    }
+  ][vH];
+  addProb(p8Var);
+
+  /* ---- P9 ---- */
+  addProb({
+    title:{es:'Comité en dos bloques', en:'Committee in two blocks'},
+    q: (e9 === 0
+      ? {es:'Un consejo escolar se forma con 2 representantes elegidos entre los '+p9a+' estudiantes del taller de deportes y 3 representantes elegidos entre los '+p9b+' del taller de arte. Dentro del consejo nadie tiene un cargo distinto de los demás. ¿Cuántos consejos distintos se pueden formar?',
+          en:'A school council is formed with 2 representatives chosen from the '+p9a+' students of the sports workshop and 3 representatives chosen from the '+p9b+' of the art workshop. Within the council nobody holds an office different from the others. How many distinct councils can be formed?'}
+      : {es:'Una revista escolar publicará 2 fotografías elegidas entre las '+p9a+' del archivo deportivo y 3 elegidas entre las '+p9b+' del archivo cultural. Las fotografías aparecen juntas en una misma página, sin un orden establecido. ¿Cuántas selecciones distintas se pueden publicar?',
+          en:'A school magazine will publish 2 photographs chosen from the '+p9a+' in the sports archive and 3 chosen from the '+p9b+' in the cultural archive. The photographs appear together on the same page, with no established order. How many distinct selections can be published?'}),
+    options:mkOpts(p9ans, [comb(p9a+p9b,5), comb(p9a,2)+comb(p9b,3), perm(p9a,2)*perm(p9b,3)]),
+    correct:p9ans,
+    hint:{es:'Cada bloque se cuenta por separado con combinaciones, y después los dos conteos se enlazan con el principio multiplicativo.',
+          en:'Each block is counted separately with combinations, and then the two counts are linked with the multiplication principle.'},
+    exp:{es:'El primer bloque aporta C('+p9a+', 2) = '+comb(p9a,2)+' selecciones y el segundo C('+p9b+', 3) = '+comb(p9b,3)+'. Como cada selección de un bloque se combina con cada una del otro, el total es '+comb(p9a,2)+' · '+comb(p9b,3)+' = '+p9ans+'.',
+         en:'The first block gives C('+p9a+', 2) = '+comb(p9a,2)+' selections and the second C('+p9b+', 3) = '+comb(p9b,3)+'. Since each selection from one block combines with each from the other, the total is '+comb(p9a,2)+' · '+comb(p9b,3)+' = '+p9ans+'.'},
+    showWork:true
+  });
+
+  /* ---- P10 ---- */
+  addProb({
+    title:{es:'Cifras con condición', en:'Digits with a condition'},
+    q: (e10 === 0
+      ? {es:'Con los dígitos del 1 al '+p10k+' se van a formar números de tres cifras en los que ninguna cifra se repite y la última cifra es par. ¿Cuántos números distintos cumplen esas dos condiciones?',
+          en:'Using the digits from 1 to '+p10k+', three digit numbers will be formed in which no digit repeats and the last digit is even. How many distinct numbers meet both conditions?'}
+      : {es:'Una ficha de registro usa códigos de tres cifras tomadas de los dígitos del 1 al '+p10k+', sin repetir ninguna cifra y con la condición de que la cifra final sea par. ¿Cuántos códigos distintos cumplen esas dos condiciones?',
+          en:'A registration form uses three digit codes taken from the digits 1 to '+p10k+', with no digit repeated and with the condition that the final digit be even. How many distinct codes meet both conditions?'}),
+    options:mkOpts(p10ans, [perm(p10k,3), p10p*p10k*(p10k-1), comb(p10k,3)]),
+    correct:p10ans,
+    hint:{es:'Conviene empezar por la posición que tiene la condición y seguir con las demás descontando las cifras ya usadas.',
+          en:'It helps to start with the position that carries the condition and continue with the others, discounting the digits already used.'},
+    exp:{es:'La cifra final debe ser par y hay '+p10p+' opciones para ella. Una vez usada, la primera posición admite '+(p10k-1)+' cifras y la segunda '+(p10k-2)+', así que '+p10p+' · '+(p10k-1)+' · '+(p10k-2)+' = '+p10ans+'.',
+         en:'The final digit must be even and there are '+p10p+' options for it. Once it is used, the first position admits '+(p10k-1)+' digits and the second '+(p10k-2)+', so '+p10p+' · '+(p10k-1)+' · '+(p10k-2)+' = '+p10ans+'.'},
+    showWork:true
+  });
+}
+</script>
+</body>
+</html>

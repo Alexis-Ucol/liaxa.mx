@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Variabilidad e Incertidumbre</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── GUIDE WIDGETS (variabilidad e incertidumbre) ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-sub { font-size:.88rem; color:var(--text2); margin-bottom:.7rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; margin-top:.7rem; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.gcanvas { display:block; width:100%; height:250px; border:1px solid var(--border); border-radius:8px; background:var(--surface); touch-action:manipulation; }
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.5rem; flex-wrap:wrap; }
+.krow input[type=range] { flex:1; min-width:130px; accent-color:var(--green); height:34px; }
+.klbl { font-size:.78rem; color:var(--text3); min-width:52px; }
+.kval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.92rem; color:var(--green); min-width:38px; text-align:right; }
+.readrow { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; margin-top:.8rem; }
+.readcell { background:var(--surface2); border-radius:8px; padding:.55rem; text-align:center; }
+.readlbl { font-size:.64rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.readnum { font-family:'IBM Plex Mono',monospace; font-size:1rem; font-weight:700; color:var(--green-dark); }
+.statline { margin-top:.5rem; font-size:.84rem; color:var(--text3); }
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.cls-prog { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.cls-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:.85rem; text-align:center; font-weight:600; font-size:.9rem; margin:.6rem 0; color:var(--text); }
+.cls-bins { display:flex; gap:.5rem; flex-wrap:wrap; }
+.cls-bin { flex:1; min-width:104px; min-height:44px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.85rem; font-weight:600; cursor:pointer; font-family:inherit; padding:.5rem; }
+.cls-bin:hover { border-color:var(--green); color:var(--green); }
+.cls-done { font-weight:700; color:var(--ok); text-align:center; padding:.6rem; }
+.simbtns { display:flex; gap:.45rem; flex-wrap:wrap; margin-top:.7rem; }
+.simbtn { min-height:44px; padding:.5rem .85rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.83rem; font-weight:600; font-family:inherit; cursor:pointer; }
+.simbtn:hover { border-color:var(--green); color:var(--green); }
+.simbtn.rst { color:var(--bad); }
+.dataline { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); background:var(--surface2); border-radius:8px; padding:.5rem .7rem; margin:.5rem 0; }
+.reflect-prompt { font-size:.92rem; color:var(--text2); margin:.5rem 0 .8rem; }
+@media (max-width:600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .cls-bins { flex-direction:column; }
+  .gcanvas { height:230px; }
+  .readrow { grid-template-columns:1fr 1fr; }
+  .klbl { min-width:44px; }
+}
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Variabilidad e Incertidumbre</div>
+    <div class="wcourse" id="wcourse-el">Pensamiento Matemático I · Sem 1</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Variabilidad e Incertidumbre</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c3c6c', primaryDark:'#072a4c', primaryBg:'#e6eef7',
+  accent:'#e46c0c', accentBg:'#fdebdd',
+  darkPrimary:'#3885d1', darkPrimaryDark:'#6aadf0', darkPrimaryBg:'#08233e',
+  darkAccent:'#f89546', darkAccentBg:'#2b1707',
+  pBR:12, pBG:60, pBB:108, pAR:228, pAG:108, pAB:12,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'Anahuac',
+  guideTitle:{ es:'Variabilidad e Incertidumbre', en:'Variability and Uncertainty' },
+  courseName:{ es:'Pensamiento Matemático I · Sem 1', en:'Mathematical Thinking I · Sem 1' }, filePrefix:'pm1_t01_g01'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_pm1_t01_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Variabilidad e Incertidumbre','wcourse':'Pensamiento Matemático I · Sem 1',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Variability and Uncertainty','wcourse':'Mathematical Thinking I · Sem 1',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_pm1_t01_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_pm1_t01_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_pm1_t01_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_pm1_t01_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('pm1_t01_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+/* ================================================
+   buildLesson: Variabilidad e incertidumbre (Pensamiento Matematico I, Sem 1)
+   Interleaved: idea -> manipulativo -> problema(s). Cards built inline.
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 240;
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  function fmt1(x){ return (Math.round(x*10)/10).toFixed(1); }
+  function fmt2(x){ return (Math.round(x*100)/100).toFixed(2); }
+  function fmt3(x){ return (Math.round(x*1000)/1000).toFixed(3); }
+  function mean(a){ var s=0,i; for(i=0;i<a.length;i++) s+=a[i]; return s/a.length; }
+  function rangeOf(a){ return Math.max.apply(null,a) - Math.min.apply(null,a); }
+  function madOf(a){ var m=mean(a), s=0, i; for(i=0;i<a.length;i++) s += Math.abs(a[i]-m); return s/a.length; }
+  function lst(a){ return a.join(', '); }
+  function opts4(correct, cands){
+    var out = [String(correct)], i, s;
+    for (i=0;i<cands.length && out.length<4;i++){
+      s = String(cands[i]);
+      if (out.indexOf(s) < 0) out.push(s);
+    }
+    return out;
+  }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = T(spec.correct);
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ============================================================
+     VALORES CON SEMILLA (se extraen una sola vez, en orden fijo)
+     ============================================================ */
+  var vP1 = Math.floor(rng()*2), vP2 = Math.floor(rng()*2), vP4 = Math.floor(rng()*2);
+  var vP6 = Math.floor(rng()*2), vP8 = Math.floor(rng()*2), vP3 = Math.floor(rng()*2);
+
+  /* manipulativo 2: rondas */
+  var mR1 = 2*ri(3,5);                       /* rango objetivo, ronda 1 */
+  var mM2 = ri(8,12);                        /* media objetivo, ronda 2 */
+  var mM3 = ri(9,12), mR3 = 2*ri(3,4);       /* media y rango objetivo, ronda 3 */
+  var mStart = [
+    [ri(4,6), ri(6,8), ri(8,10), ri(9,11), ri(11,13)],
+    [ri(3,5), ri(5,7), ri(7,9),  ri(9,11), ri(12,15)],
+    [ri(5,7), ri(7,9), ri(9,11), ri(10,12), ri(13,16)]
+  ];
+
+  /* manipulativo 3: simulador */
+  var simIdx = Math.floor(rng()*3);
+  var simSeed = Math.floor(rng()*1000000);
+
+  /* P3: rango de un conjunto de tiempos */
+  var p3lo = ri(6,11), p3R = ri(7,13), p3hi = p3lo + p3R;
+  var p3data = shufA([p3lo, p3hi, p3lo+ri(1,3), p3hi-ri(1,3), p3lo+Math.floor(p3R/2)]);
+  var p3wrong = p3R + ri(2,4);
+
+  /* P4: dos conjuntos con la misma media */
+  var p4M = ri(14,20), p4s = ri(2,3), p4t = ri(5,7);
+  var p4A = [p4M-p4s, p4M, p4M, p4M, p4M+p4s];
+  var p4B = [p4M-p4t, p4M-1, p4M, p4M+1, p4M+p4t];
+
+  /* P5: desviación media de cuatro mediciones */
+  var p5m = ri(2,4), p5M = ri(20,30);
+  var p5a = ri(1, 2*p5m-1); if (p5a === p5m) p5a = p5m + 1;
+  var p5b = 2*p5m - p5a;
+  var p5c = ri(1, 2*p5m-1); if (p5c === p5m) p5c = p5m - 1;
+  var p5d = 2*p5m - p5c;
+  var p5data = shufA([p5M-p5a, p5M-p5b, p5M+p5c, p5M+p5d]);
+  var p5rango = Math.max(p5a,p5b) + Math.max(p5c,p5d);
+
+  /* P7: frecuencia relativa observada */
+  var p7pct = ri(15,45), p7n = 100*ri(2,4);
+  if (p7pct*(p7n+100) === 10000) p7pct = p7pct + 1;
+  var p7k = p7pct*p7n/100;
+
+  /* P9: cuanto debe subir el maximo */
+  var p9lo = ri(5,9), p9R = ri(6,10), p9hi = p9lo + p9R;
+  var p9data = shufA([p9lo, p9hi, p9lo+ri(1,3), p9hi-ri(1,3), p9lo+Math.floor(p9R/2)]);
+  var p9T = p9R + 2*ri(2,4);
+  var p9ans = p9T - p9R;
+
+  /* P10: proyeccion con la misma frecuencia relativa */
+  var p10n = 100*ri(3,5), p10pct = 5*ri(5,13), p10n2 = 100*ri(9,14);
+  if (p10pct === 50) p10pct = 55;
+  if (p10n2 === 2*p10n) p10n2 = p10n2 + 100;
+  var p10ans = p10pct*p10n2/100;
+  var p10obs = p10pct*p10n/100;
+  var p10comp = p10n2 - p10ans;
+  var p10extra = p10pct*(p10n2-p10n)/100;
+
+  /* ============================================================
+     IDEA 1
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'Lo que se repite igual y lo que no', en:'What repeats identically and what does not'}),
+      '<p>'+T({
+        es:'Un fenómeno es determinista cuando sus condiciones iniciales fijan por completo el resultado: si la situación se repite con exactamente las mismas condiciones, el valor obtenido vuelve a ser el mismo. Por eso un modelo determinista se escribe como una función, en la que a cada entrada le corresponde una sola salida.',
+        en:'A phenomenon is deterministic when its initial conditions completely fix the outcome: if the situation is repeated under exactly the same conditions, the value obtained comes out the same again. That is why a deterministic model is written as a function, where each input corresponds to a single output.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Un fenómeno es aleatorio cuando, aun controlando las condiciones, el resultado individual cambia de una repetición a otra. Esto no significa que no haya estructura: el conjunto de resultados posibles suele conocerse con precisión. Lo que no se conoce es cuál de ellos ocurrirá, y a ese desconocimiento del resultado individual se le llama incertidumbre.',
+        en:'A phenomenon is random when, even with the conditions under control, the individual outcome changes from one repetition to the next. This does not mean there is no structure: the set of possible outcomes is usually known precisely. What is not known is which one will occur, and that lack of knowledge about the individual outcome is called uncertainty.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Distinguir los dos casos es la primera decisión de cualquier análisis. Si el fenómeno es determinista basta con calcular; si es aleatorio hay que registrar muchas repeticiones y describir cómo se comportan en conjunto.',
+        en:'Telling the two cases apart is the first decisión in any analysis. If the phenomenon is deterministic it is enough to compute; if it is random you have to record many repetitions and describe how they behave as a whole.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Fenómeno determinista',en:'Deterministic phenomenon'})+'</div><div class="deftxt">'+T({es:'Mismas condiciones iniciales, mismo resultado en cada repetición.',en:'Same initial conditions, same outcome in every repetition.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Fenómeno aleatorio',en:'Random phenomenon'})+'</div><div class="deftxt">'+T({es:'Mismas condiciones iniciales, resultados que cambian entre repeticiones.',en:'Same initial conditions, outcomes that change between repetitions.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Espacio de resultados',en:'Outcome space'})+'</div><div class="deftxt">'+T({es:'Conjunto de todos los resultados que el fenómeno puede arrojar.',en:'The set of all outcomes the phenomenon can produce.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Incertidumbre',en:'Uncertainty'})+'</div><div class="deftxt">'+T({es:'Desconocimiento del resultado individual, aun conociendo los posibles.',en:'Not knowing the individual outcome, even when the possible ones are known.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 1: clasificador determinista / aleatorio ---- */
+  (function(){
+    var wrap = widget('classify');
+    var BINS = {es:['Determinista','Aleatorio'], en:['Deterministic','Random']};
+    var ITEMS = [
+      { es:'Soltar un objeto desde una altura fija en el vacío y medir su tiempo de caída',
+        en:'Dropping an object from a fixed height in a vacuum and measuring its fall time', bin:0,
+        wes:'La altura y la gravedad determinan el tiempo; repetir el experimento devuelve el mismo valor.',
+        wen:'Height and gravity determine the time; repeating the experiment returns the same value.' },
+      { es:'Registrar cuántos mensajes llegarán a un teléfono durante la próxima hora',
+        en:'Recording how many messages will arrive on a phone during the next hour', bin:1,
+        wes:'El conteo cambia de una hora a otra aunque las condiciones sean parecidas.',
+        wen:'The count changes from one hour to the next even when conditions are similar.' },
+      { es:'Calcular el total a pagar cuando los precios y las cantidades ya están definidos',
+        en:'Computing the total to pay when prices and quantities are already fixed', bin:0,
+        wes:'Con los mismos precios y cantidades el total siempre resulta idéntico.',
+        wen:'With the same prices and quantities the total always comes out identical.' },
+      { es:'Girar una ruleta de sectores iguales y anotar el color que sale',
+        en:'Spinning a wheel with equal sectors and writing down the colour that comes up', bin:1,
+        wes:'Se conocen los colores posibles, pero no cuál saldrá en cada giro.',
+        wen:'The possible colours are known, but not which one each spin will give.' },
+      { es:'Determinar el voltaje en una resistencia conocida cuando se fija la corriente',
+        en:'Determining the voltage across a known resistor when the current is fixed', bin:0,
+        wes:'La relación entre corriente y voltaje asigna un único valor a cada entrada.',
+        wen:'The relation between current and voltage assigns a single value to each input.' },
+      { es:'Anotar la cara que queda arriba al lanzar una moneda equilibrada',
+        en:'Writing down which face lands up when a fair coin is tossed', bin:1,
+        wes:'El lanzamiento se repite igual y aun así la cara cambia.',
+        wen:'The toss is repeated the same way and the face still changes.' },
+      { es:'Medir el volumen final de un tanque después de verter una cantidad medida de agua',
+        en:'Measuring the final volume of a tank after pouring in a measured amount of water', bin:0,
+        wes:'El volumen inicial y el vertido fijan el resultado sin margen de variación.',
+        wen:'The initial volume and the poured amount fix the result with no room for variation.' },
+      { es:'Contar cuántos clientes entrarán a una tienda en la siguiente media hora',
+        en:'Counting how many customers will walk into a shop in the next half hour', bin:1,
+        wes:'El conteo varía entre periodos aunque el horario y el lugar sean los mismos.',
+        wen:'The count varies between periods even when the time slot and place are the same.' }
+    ];
+    var seq = shufA([0,1,2,3,4,5,6,7]);
+    var st = { i:0, tries:0, hits:0, done:false, lock:false };
+
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Clasifica el fenómeno', en:'Classify the phenomenon'})+'</div>'+
+          '<div class="iw-box"><div class="cls-done">'+T({es:'Actividad completa: ',en:'Activity complete: '})+st.hits+' / '+ITEMS.length+'</div>'+
+          '<div class="rfb">'+T({
+            es:'La pregunta que resuelve cada caso es siempre la misma: si repites la situación con las mismas condiciones, el resultado se repite igual o cambia.',
+            en:'The question that settles every case is always the same: if you repeat the situation under the same conditions, does the outcome repeat or change.'
+          })+'</div></div>';
+        return;
+      }
+      var it = ITEMS[seq[st.i]];
+      var bins = T(BINS).map(function(b, bi){
+        return '<button class="cls-bin" onclick="clsPick('+bi+')">'+b+'</button>';
+      }).join('');
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Clasifica el fenómeno', en:'Classify the phenomenon'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'Lee cada situación y decide si el resultado queda fijado por las condiciones iniciales o si cambia entre repeticiones.',
+            en:'Read each situation and decide whether the outcome is fixed by the initial conditions or changes between repetitions.'
+          })+'</div>'+
+          '<div class="cls-prog">'+(st.i+1)+' / '+ITEMS.length+'</div>'+
+          '<div class="cls-card">'+T(it)+'</div>'+
+          '<div class="cls-bins">'+bins+'</div>'+
+          '<div class="rfb" id="clsFb"></div>'+
+        '</div>';
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.lock = false; st.tries = 0; st.i++;
+        if (st.i >= ITEMS.length) st.done = true;
+        render();
+      }, ms);
+    }
+    window.clsPick = function(bi){
+      if (st.done || st.lock) return;
+      var it = ITEMS[seq[st.i]];
+      var fb = document.getElementById('clsFb'); if (!fb) return;
+      if (bi === it.bin){
+        st.hits++;
+        fb.innerHTML = '<span class="okmsg">'+T({es:'Correcto. ',en:'Correct. '})+'</span>'+T({es:it.wes,en:it.wen});
+        adv(1500); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        fb.innerHTML = T({es:'Era <b>',en:'It was <b>'})+T(BINS)[it.bin]+'</b>. '+T({es:it.wes,en:it.wen});
+        adv(2200); return;
+      }
+      fb.textContent = T({
+        es:'Todavía no. Imagina que repites la situación tres veces con las mismas condiciones: el resultado se repite igual o cambia.',
+        en:'Not yet. Imagine repeating the situation three times under the same conditions: does the outcome repeat or change.'
+      });
+    };
+    render();
+  })();
+
+  /* ---- P1 ---- */
+  (function(){
+    var V = [
+      { q:{es:'En un laboratorio se repite una misma medición manteniendo controladas las condiciones iniciales, y el valor obtenido cambia en cada repetición, aunque siempre cae dentro de un conjunto de resultados conocido de antemano. Clasifica el fenómeno y justifica la clasificación.',
+           en:'In a laboratory the same measurement is repeated with the initial conditions kept under control, and the value obtained changes in every repetition, although it always falls inside a set of outcomes known in advance. Classify the phenomenon and justify the classification.'},
+        options:{es:[
+          'Aleatorio, porque el resultado individual no queda fijado por las condiciones iniciales.',
+          'Determinista, porque el conjunto de resultados posibles se conoce de antemano.',
+          'Determinista, porque las condiciones iniciales se mantuvieron controladas en cada repetición.',
+          'Aleatorio, porque los valores obtenidos no guardan ninguna regularidad entre si.'],
+          en:[
+          'Random, because the individual outcome is not fixed by the initial conditions.',
+          'Deterministic, because the set of possible outcomes is known in advance.',
+          'Deterministic, because the initial conditions were kept under control in every repetition.',
+          'Random, because the values obtained show no regularity of any kind among them.']},
+        correct:{es:'Aleatorio, porque el resultado individual no queda fijado por las condiciones iniciales.',
+                 en:'Random, because the individual outcome is not fixed by the initial conditions.'},
+        hint:{es:'El criterio no es si conoces los resultados posibles, sino si repetir con las mismas condiciones devuelve siempre el mismo valor.',
+              en:'The criterion is not whether you know the possible outcomes, but whether repeating under the same conditions always returns the same value.'},
+        exp:{es:'Conocer el conjunto de resultados posibles no vuelve determinista a un fenómeno. Lo determinante es que, con condiciones idénticas, el valor cambie de una repetición a otra: eso es exactamente un fenómeno aleatorio, y sus resultados sí presentan regularidades cuando se acumulan muchas repeticiones.',
+             en:'Knowing the set of possible outcomes does not make a phenomenon deterministic. What settles it is that, under identical conditions, the value changes from one repetition to the next: that is exactly a random phenomenon, and its outcomes do show regularities once many repetitions pile up.'} },
+      { q:{es:'Una situación se modela con una función que asigna a cada valor de entrada una sola salida, y al repetir la misma entrada la salida vuelve a ser la misma. Indica qué tipo de fenómeno describe ese modelo y por qué.',
+           en:'A situation is modelled with a function that assigns a single output to each input value, and when the same input is repeated the output comes out the same again. State what kind of phenomenon that model describes and why.'},
+        options:{es:[
+          'Determinista, porque las condiciones iniciales determinan por completo el resultado.',
+          'Aleatorio, porque toda medición real presenta alguna variación.',
+          'Aleatorio, porque la salida toma distintos valores segun la entrada elegida.',
+          'Determinista, porque los resultados posibles forman un conjunto finito.'],
+          en:[
+          'Deterministic, because the initial conditions completely determine the outcome.',
+          'Random, because every real measurement shows some variation.',
+          'Random, because the output takes different values depending on the input chosen.',
+          'Deterministic, because the possible outcomes form a finite set.']},
+        correct:{es:'Determinista, porque las condiciones iniciales determinan por completo el resultado.',
+                 en:'Deterministic, because the initial conditions completely determine the outcome.'},
+        hint:{es:'Fíjate en el comportamiento ante una misma entrada repetida, no en la cantidad de entradas distintas ni en el tamaño del conjunto de salidas.',
+              en:'Look at the behaviour under the same repeated input, not at how many different inputs there are or at the size of the output set.'},
+        exp:{es:'Que la salida cambie al cambiar la entrada es lo normal en cualquier función y no tiene que ver con la aleatoriedad. El rasgo decisivo es que una misma entrada devuelve siempre la misma salida, y eso describe un fenómeno determinista.',
+             en:'The output changing when the input changes is normal in any function and has nothing to do with randomness. The decisive feature is that the same input always returns the same output, and that describes a deterministic phenomenon.'} }
+    ][vP1];
+    addProb({
+      title:{es:'Determinista o aleatorio', en:'Deterministic or random'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:false
+    });
+  })();
+
+  /* ---- P2 ---- */
+  (function(){
+    var V = [
+      { q:{es:'Una persona sostiene que, por ser aleatorio, un fenómeno no admite ninguna descripción matemática útil. Selecciona la respuesta que corrige esa afirmación.',
+           en:'Somebody claims that, being random, a phenomenon admits no useful mathematical description at all. Choose the answer that corrects that claim.'},
+        options:{es:[
+          'Es incorrecta: el resultado individual es impredecible, pero el conjunto de muchas repeticiones presenta regularidades que sí se describen.',
+          'Es correcta: en un fenómeno aleatorio cualquier resultado puede ocurrir sin restricción alguna.',
+          'Es incorrecta: al acumular repeticiones el fenómeno deja de ser aleatorio y se vuelve determinista.',
+          'Es correcta: la incertidumbre impide incluso conocer cuales son los resultados posibles.'],
+          en:[
+          'It is wrong: the individual outcome is unpredictable, but the set of many repetitions shows regularities that can indeed be described.',
+          'It is right: in a random phenomenon any outcome whatsoever can occur with no restriction.',
+          'It is wrong: as repetitions pile up the phenomenon stops being random and becomes deterministic.',
+          'It is right: uncertainty prevents you from even knowing what the possible outcomes are.']},
+        correct:{es:'Es incorrecta: el resultado individual es impredecible, pero el conjunto de muchas repeticiones presenta regularidades que sí se describen.',
+                 en:'It is wrong: the individual outcome is unpredictable, but the set of many repetitions shows regularities that can indeed be described.'},
+        hint:{es:'Separa dos niveles: lo que ocurre en una repetición y lo que ocurre en el conjunto de muchas repeticiones.',
+              en:'Separate two levels: what happens in one repetition and what happens across many repetitions.'},
+        exp:{es:'La incertidumbre afecta al resultado individual, no al espacio de resultados, que suele conocerse. Acumular repeticiones no elimina la aleatoriedad de cada intento; lo que aparece es una regularidad en el conjunto, y describir esa regularidad es justamente el trabajo estadístico.',
+             en:'Uncertainty affects the individual outcome, not the outcome space, which is usually known. Piling up repetitions does not remove the randomness of each attempt; what appears is a regularity across the set, and describing that regularity is precisely the statistical job.'} },
+      { q:{es:'En dos situaciones distintas se conoce el conjunto de resultados posibles, pero solo en una de ellas el resultado queda fijado por las condiciones iniciales. Señala qué rasgo identifica a la situación que tiene incertidumbre.',
+           en:'In two different situations the set of possible outcomes is known, but only in one of them is the outcome fixed by the initial conditions. Point out the feature that identifies the situation carrying uncertainty.'},
+        options:{es:[
+          'Que repetirla con las mismas condiciones puede arrojar resultados distintos.',
+          'Que su conjunto de resultados posibles es más grande que el de la otra situación.',
+          'Que sus resultados no se pueden registrar ni organizar en una tabla de datos.',
+          'Que sus condiciones iniciales fueron medidas con menos cifras decimales.'],
+          en:[
+          'That repeating it under the same conditions can produce different outcomes.',
+          'That its set of possible outcomes is larger than the one in the other situation.',
+          'That its outcomes cannot be recorded or organised in a data table.',
+          'That its initial conditions were measured with fewer decimal places.']},
+        correct:{es:'Que repetirla con las mismas condiciones puede arrojar resultados distintos.',
+                 en:'That repeating it under the same conditions can produce different outcomes.'},
+        hint:{es:'El rasgo buscado tiene que aparecer al repetir la situación, no al describirla ni al medirla con más precisión.',
+              en:'The feature you want has to show up when the situation is repeated, not when it is described or measured more precisely.'},
+        exp:{es:'El tamaño del espacio de resultados no decide nada: un fenómeno con dos resultados posibles puede tener incertidumbre y uno con muchos valores puede ser determinista. Tampoco la precisión de la medición. Lo que identifica la incertidumbre es que la repetición bajo las mismas condiciones entregue resultados distintos.',
+             en:'The size of the outcome space settles nothing: a phenomenon with two possible outcomes can carry uncertainty and one with many values can be deterministic. Neither does measurement precisión. What identifies uncertainty is that repeating under the same conditions delivers different outcomes.'} }
+    ][vP2];
+    addProb({
+      title:{es:'El alcance de la incertidumbre', en:'What uncertainty covers'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:false
+    });
+  })();
+
+  /* ============================================================
+     IDEA 2
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'Qué tan dispersos están los datos', en:'How spread out the data are'}),
+      '<p>'+T({
+        es:'Al registrar muchas repeticiones de un fenómeno aleatorio se obtiene un conjunto de datos. La media, que resulta de sumar todos los valores y dividir entre el número de datos, indica dónde está el centro del conjunto. El centro, sin embargo, no describe al conjunto completo: dos conjuntos con la misma media pueden estar formados por datos muy parecidos entre sí o por datos muy separados.',
+        en:'Recording many repetitions of a random phenomenon produces a data set. The mean, obtained by adding every value and dividing by the number of data points, tells you where the centre of the set is. The centre, however, does not describe the whole set: two sets with the same mean can be made of values very close to one another or of values far apart.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La variabilidad es precisamente eso: qué tanto se apartan los datos unos de otros. El rango se obtiene restando el valor menor al valor mayor y es rápido de calcular, aunque solo utiliza dos datos del conjunto. La desviación media promedia las distancias de cada dato a la media y por eso toma en cuenta todos los valores registrados.',
+        en:'Variability is exactly that: how far the data lie from one another. The range comes from subtracting the smallest value from the largest and is quick to compute, although it only uses two data points. The mean deviation averages the distances from each value to the mean and therefore takes every recorded value into account.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Reportar solo la media deja fuera información necesaria para decidir: dos procesos con el mismo promedio pueden ser muy distintos en qué tan predecibles resultan.',
+        en:'Reporting only the mean leaves out information you need in order to decide: two processes with the same average can be very different in how predictable they turn out to be.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Media',en:'Mean'})+'</div><div class="deftxt">'+T({es:'Valor que ubica el centro del conjunto de datos.',en:'The value that locates the centre of the data set.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Rango',en:'Range'})+'</div><div class="deftxt">'+T({es:'Diferencia entre el valor mayor y el valor menor.',en:'Difference between the largest and the smallest value.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Desviación media',en:'Mean deviation'})+'</div><div class="deftxt">'+T({es:'Promedio de las distancias de cada dato a la media.',en:'Average of the distances from each value to the mean.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Dispersión',en:'Dispersion'})+'</div><div class="deftxt">'+T({es:'Nombre general de la separación entre los datos de un conjunto.',en:'General name for the separation among the values of a set.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 2: laboratorio de dispersión ---- */
+  (function(){
+    var wrap = widget('spread');
+    var MAXV = 20;
+    var GOALS = [
+      { kind:'rango', r:mR1 },
+      { kind:'media', m:mM2 },
+      { kind:'ambos', m:mM3, r:mR3 }
+    ];
+    var st = { r:0, v:mStart[0].slice(), tries:0, done:false, lock:false };
+
+    function goal(){ return GOALS[st.r]; }
+    function solution(){
+      var g = goal();
+      if (g.kind === 'rango') return [4, 5, 6, 6, 4+g.r];
+      if (g.kind === 'media') return [g.m-2, g.m-1, g.m, g.m+1, g.m+2];
+      return [g.m - g.r/2, g.m, g.m, g.m, g.m + g.r/2];
+    }
+    function goalTxt(){
+      var g = goal();
+      if (g.kind === 'rango') return T({es:'Ajusta los cinco valores para que el rango del conjunto sea exactamente ', en:'Adjust the five values so that the range of the set is exactly '})+g.r+'.';
+      if (g.kind === 'media') return T({es:'Ajusta los cinco valores para que la media del conjunto sea exactamente ', en:'Adjust the five values so that the mean of the set is exactly '})+g.m+'.';
+      return T({es:'Ajusta los cinco valores para que la media sea ', en:'Adjust the five values so that the mean is '})+g.m+
+             T({es:' y el rango sea ', en:' and the range is '})+g.r+T({es:' al mismo tiempo.',en:' at the same time.'});
+    }
+    function spDraw(){
+      var cv = document.getElementById('spCv'); if (!cv) return;
+      var g2 = fitCv(cv), ctx = g2.ctx, w = g2.w, h = g2.h;
+      var x0 = 22, x1 = w - 22, yl = h - 44;
+      var col = cssv('--green'), acc = cssv('--gold'), bd = cssv('--border'), sub = cssv('--text3'), dk = cssv('--green-dark');
+      function px(v){ return x0 + (x1-x0)*v/MAXV; }
+      var i, v;
+      ctx.strokeStyle = bd; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x0,yl); ctx.lineTo(x1,yl); ctx.stroke();
+      ctx.fillStyle = sub; ctx.font = '500 10px "IBM Plex Mono", monospace'; ctx.textAlign = 'center';
+      for (v=0; v<=MAXV; v+=4){
+        ctx.beginPath(); ctx.moveTo(px(v), yl-4); ctx.lineTo(px(v), yl+4); ctx.stroke();
+        ctx.fillText(String(v), px(v), yl+17);
+      }
+      var m = mean(st.v), mn = Math.min.apply(null, st.v), mx = Math.max.apply(null, st.v);
+      ctx.strokeStyle = dk; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(px(mn), yl+28); ctx.lineTo(px(mx), yl+28); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px(mn), yl+24); ctx.lineTo(px(mn), yl+32); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px(mx), yl+24); ctx.lineTo(px(mx), yl+32); ctx.stroke();
+      ctx.fillStyle = dk; ctx.font = '600 10px "IBM Plex Sans", sans-serif';
+      ctx.fillText(T({es:'rango ',en:'range '})+(mx-mn), (px(mn)+px(mx))/2, yl+42);
+      ctx.strokeStyle = acc; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(px(m), 16); ctx.lineTo(px(m), yl); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = acc; ctx.font = '600 11px "IBM Plex Sans", sans-serif';
+      ctx.fillText(T({es:'media ',en:'mean '})+fmt1(m), Math.max(38, Math.min(w-38, px(m))), 12);
+      var counts = {};
+      for (i=0;i<st.v.length;i++){
+        v = st.v[i]; counts[v] = (counts[v]||0)+1;
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(px(v), yl-11-(counts[v]-1)*15, 6.5, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    function spRead(){
+      var m = mean(st.v), rg = rangeOf(st.v), md = madOf(st.v), e;
+      e = document.getElementById('spMed'); if (e) e.textContent = fmt1(m);
+      e = document.getElementById('spRan'); if (e) e.textContent = String(rg);
+      e = document.getElementById('spMad'); if (e) e.textContent = fmt1(md);
+      var i;
+      for (i=0;i<5;i++){ e = document.getElementById('spV'+i); if (e) e.textContent = String(st.v[i]); }
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Laboratorio de dispersión', en:'Spread lab'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Actividad terminada. Moviste el centro y la dispersión por separado: la media dice dónde está el conjunto y el rango dice qué tan abierto está.',
+            en:'Activity finished. You moved the centre and the spread separately: the mean says where the set sits and the range says how wide it is.'
+          })+'</span></div></div>';
+        return;
+      }
+      var sliders = '', i;
+      for (i=0;i<5;i++){
+        sliders += '<div class="krow"><span class="klbl">'+T({es:'dato ',en:'value '})+(i+1)+'</span>'+
+          '<input type="range" min="0" max="'+MAXV+'" value="'+st.v[i]+'" oninput="spSet('+i+',this.value)">'+
+          '<span class="kval" id="spV'+i+'">'+st.v[i]+'</span></div>';
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Laboratorio de dispersión', en:'Spread lab'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'Mueve cada valor sobre la recta y observa cómo responden la media, el rango y la desviación media.',
+            en:'Move each value along the line and watch how the mean, the range and the mean deviation respond.'
+          })+'</div>'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="goalbar">'+goalTxt()+'</div>'+
+          '<canvas class="gcanvas" id="spCv"></canvas>'+
+          sliders+
+          '<div class="readrow">'+
+            '<div class="readcell"><div class="readlbl">'+T({es:'Media',en:'Mean'})+'</div><div class="readnum" id="spMed">'+fmt1(mean(st.v))+'</div></div>'+
+            '<div class="readcell"><div class="readlbl">'+T({es:'Rango',en:'Range'})+'</div><div class="readnum" id="spRan">'+rangeOf(st.v)+'</div></div>'+
+            '<div class="readcell"><div class="readlbl">'+T({es:'Desv. media',en:'Mean dev.'})+'</div><div class="readnum" id="spMad">'+fmt1(madOf(st.v))+'</div></div>'+
+          '</div>'+
+          '<button class="rverify-btn" onclick="spChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="spFb"></div>'+
+        '</div>';
+      spDraw();
+      setTimeout(spDraw, 160);
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.lock = false; st.r++; st.tries = 0;
+        if (st.r >= 3) { st.done = true; }
+        else { st.v = mStart[st.r].slice(); }
+        render();
+      }, ms);
+    }
+    window.spSet = function(i, val){
+      if (st.done || st.lock) return;
+      st.v[i] = parseInt(val,10) || 0;
+      spDraw(); spRead();
+    };
+    window.spChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('spFb'); if (!fb) return;
+      var g = goal(), m = mean(st.v), rg = rangeOf(st.v);
+      var okM = (g.m === undefined) || (Math.abs(m - g.m) < 0.001);
+      var okR = (g.r === undefined) || (rg === g.r);
+      if (okM && okR){
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Correcto. Fíjate en la desviación media: cambia junto con el rango porque las dos miden dispersión, aunque la desviación media usa los cinco datos.',
+          en:'Correct. Look at the mean deviation: it moves together with the range because both measure spread, although the mean deviation uses all five values.'
+        })+'</span>';
+        adv(2100); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.v = solution().slice();
+        spDraw(); spRead();
+        fb.innerHTML = T({
+          es:'Esta configuración cumple la meta. Observa que los valores centrales controlan la media, mientras que el menor y el mayor controlan el rango.',
+          en:'This configuration meets the goal. Notice that the middle values control the mean, while the smallest and the largest control the range.'
+        });
+        adv(3000); return;
+      }
+      var msg = [];
+      if (!okR) msg.push(T({es:'El rango es ',en:'The range is '})+rg+
+        (rg < g.r ? T({es:', menor que el objetivo: separa más el valor mayor del menor.',en:', below the target: pull the largest and smallest values further apart.'})
+                  : T({es:', mayor que el objetivo: acerca el valor mayor al menor.',en:', above the target: bring the largest and smallest values closer.'})));
+      if (!okM) msg.push(T({es:'La media es ',en:'The mean is '})+fmt1(m)+
+        (m < g.m ? T({es:', por debajo del objetivo: sube alguno de los valores centrales.',en:', below the target: raise one of the middle values.'})
+                 : T({es:', por encima del objetivo: baja alguno de los valores centrales.',en:', above the target: lower one of the middle values.'})));
+      fb.textContent = msg.join(' ');
+    };
+    render();
+  })();
+
+  /* ---- P3 ---- */
+  (function(){
+    var qA = {es:'Un servicio de urgencias registró los tiempos de espera, en minutos, de cinco pacientes atendidos esta mañana: '+lst(p3data)+'. Determina el rango del conjunto de datos.',
+              en:'An emergency service recorded the waiting times, in minutes, of five patients seen this morning: '+lst(p3data)+'. Determine the range of the data set.'};
+    var qB = {es:'Un supervisor afirma que el rango de los tiempos de espera registrados esta mañana fue de '+p3wrong+' minutos. Los tiempos, en minutos, fueron: '+lst(p3data)+'. Determina el valor correcto del rango.',
+              en:'A supervisor claims that the range of the waiting times recorded this morning was '+p3wrong+' minutes. The times, in minutes, were: '+lst(p3data)+'. Determine the correct value of the range.'};
+    var cands = [p3hi, p3lo+p3hi, Math.round(mean(p3data)), p3R+2, p3R+5];
+    var oo = opts4(p3R, cands);
+    addProb({
+      title:{es:'Rango de un registro', en:'Range of a record'},
+      q: (vP3 ? qB : qA),
+      options:{es:oo, en:oo}, correct:String(p3R),
+      hint:{es:'El rango se obtiene restando el valor menor al valor mayor del conjunto, sin importar el orden en que se registraron.',
+            en:'The range comes from subtracting the smallest value from the largest one in the set, regardless of the order in which they were recorded.'},
+      exp:{es:'El valor mayor del registro es '+p3hi+' y el menor es '+p3lo+'. La diferencia entre ambos es el rango: '+p3hi+' − '+p3lo+' = '+p3R+'.',
+           en:'The largest value in the record is '+p3hi+' and the smallest is '+p3lo+'. The difference between them is the range: '+p3hi+' − '+p3lo+' = '+p3R+'.'},
+      showWork:true
+    });
+  })();
+
+  /* ---- P4 ---- */
+  (function(){
+    var V = [
+      { q:{es:'Dos máquinas llenan botellas y ambas tienen la misma media de llenado. La máquina A registró, en mililitros por encima del nivel nominal: '+lst(p4A)+'. La máquina B registró: '+lst(p4B)+'. Indica cuál conjunto presenta mayor variabilidad y por qué.',
+           en:'Two machines fill bottles and both have the same mean fill. Machine A recorded, in millilitres above the nominal level: '+lst(p4A)+'. Machine B recorded: '+lst(p4B)+'. State which set shows greater variability and why.'},
+        options:{es:[
+          'El conjunto B, porque sus valores se alejan más de la media aunque el centro sea el mismo.',
+          'El conjunto A, porque repite varias veces el mismo valor y esa repetición aumenta la dispersión.',
+          'Los dos presentan la misma variabilidad, porque comparten la misma media.',
+          'No es posible compararlos, porque ambos conjuntos tienen el mismo número de datos.'],
+          en:[
+          'Set B, because its values sit further from the mean even though the centre is the same.',
+          'Set A, because it repeats the same value several times and that repetition increases the spread.',
+          'Both show the same variability, because they share the same mean.',
+          'They cannot be compared, because both sets have the same number of data points.']},
+        correct:{es:'El conjunto B, porque sus valores se alejan más de la media aunque el centro sea el mismo.',
+                 en:'Set B, because its values sit further from the mean even though the centre is the same.'},
+        hint:{es:'Compara la distancia de cada dato a la media en cada conjunto, o bien la diferencia entre su valor mayor y su valor menor.',
+              en:'Compare the distance from each value to the mean in each set, or the difference between its largest and smallest value.'},
+        exp:{es:'La media coincide en los dos conjuntos, así que no sirve para distinguirlos. El conjunto A se extiende '+(2*p4s)+' unidades entre su valor menor y su mayor, mientras que el conjunto B se extiende '+(2*p4t)+'. Los datos de B se apartan más de la media, de modo que B tiene mayor variabilidad.',
+             en:'The mean is the same in both sets, so it is useless for telling them apart. Set A spans '+(2*p4s)+' units between its smallest and largest value, while set B spans '+(2*p4t)+'. The values in B sit further from the mean, so B has greater variability.'} },
+      { q:{es:'Un técnico concluye que dos procesos se comportan igual porque sus registros tienen la misma media. Los registros son '+lst(p4A)+' y '+lst(p4B)+'. Selecciona la respuesta que muestra que la conclusión es insuficiente.',
+           en:'A technician concludes that two processes behave the same because their records share the same mean. The records are '+lst(p4A)+' and '+lst(p4B)+'. Choose the answer that shows the conclusión is not enough.'},
+        options:{es:[
+          'Falta reportar una medida de dispersión, porque los datos del segundo registro se separan mucho más entre sí.',
+          'Falta reportar la media con más cifras decimales, porque así se notaria la diferencia entre los procesos.',
+          'La conclusión es correcta, porque la media resume por completo un conjunto de datos.',
+          'Falta reportar cuántos datos tiene cada registro, porque ese número decide el comportamiento del proceso.'],
+          en:[
+          'A measure of spread is missing, because the values in the second record lie much further apart.',
+          'The mean needs to be reported with more decimal places, because that would reveal the difference between the processes.',
+          'The conclusión is correct, because the mean fully summarises a data set.',
+          'The number of data points in each record is missing, because that number decides how the process behaves.']},
+        correct:{es:'Falta reportar una medida de dispersión, porque los datos del segundo registro se separan mucho más entre sí.',
+                 en:'A measure of spread is missing, because the values in the second record lie much further apart.'},
+        hint:{es:'Pregunta qué información del conjunto queda fuera cuando solo se comunica el centro.',
+              en:'Ask what information about the set is left out when only the centre is reported.'},
+        exp:{es:'Los dos registros tienen el mismo centro, pero uno se extiende '+(2*p4s)+' unidades y el otro '+(2*p4t)+'. Añadir decimales a la media no cambia eso y el número de datos es el mismo en ambos. Lo que falta es una medida de dispersión, como el rango o la desviación media.',
+             en:'Both records share the same centre, but one spans '+(2*p4s)+' units and the other '+(2*p4t)+'. Adding decimals to the mean does not change that, and the number of data points is the same in both. What is missing is a measure of spread, such as the range or the mean deviation.'} }
+    ][vP4];
+    addProb({
+      title:{es:'Mismo centro, distinto comportamiento', en:'Same centre, different behaviour'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:false
+    });
+  })();
+
+  /* ---- P5 ---- */
+  (function(){
+    var oo = opts4(p5m, [0, p5rango, 4*p5m, p5m+2, p5m+3]);
+    addProb({
+      title:{es:'Desviación media de un lote', en:'Mean deviation of a batch'},
+      q:{es:'Un laboratorio pesó cuatro muestras de un mismo lote y obtuvo, en gramos: '+lst(p5data)+'. La media del conjunto es '+p5M+' gramos. Determina la desviación media de las cuatro mediciones.',
+         en:'A laboratory weighed four samples from the same batch and obtained, in grams: '+lst(p5data)+'. The mean of the set is '+p5M+' grams. Determine the mean deviation of the four measurements.'},
+      options:{es:oo, en:oo}, correct:String(p5m),
+      hint:{es:'Calcula la distancia de cada dato a la media tomando siempre el valor absoluto, suma esas cuatro distancias y divide entre el número de datos.',
+            en:'Compute the distance from each value to the mean always taking the absolute value, add those four distances and divide by the number of data points.'},
+      exp:{es:'Las distancias de cada muestra a la media son '+p5a+', '+p5b+', '+p5c+' y '+p5d+' gramos. Su suma es '+(4*p5m)+' y hay cuatro datos, de modo que la desviación media vale '+(4*p5m)+' ÷ 4 = '+p5m+'.',
+           en:'The distances from each sample to the mean are '+p5a+', '+p5b+', '+p5c+' and '+p5d+' grams. Their sum is '+(4*p5m)+' and there are four data points, so the mean deviation is '+(4*p5m)+' ÷ 4 = '+p5m+'.'},
+      showWork:true
+    });
+  })();
+
+  /* ============================================================
+     IDEA 3
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'La regularidad que aparece al repetir', en:'The pattern that shows up when you repeat'}),
+      '<p>'+T({
+        es:'Un solo resultado de un fenómeno aleatorio dice muy poco. Cuando el experimento se repite y se lleva la cuenta de cuántas veces ocurre cierto resultado, se obtiene la frecuencia relativa:',
+        en:'A single outcome of a random phenomenon says very little. When the experiment is repeated and you keep count of how many times a given outcome occurs, you get the relative frequency:'
+      })+'</p>'+
+      '<div class="callout"><p><strong>'+T({es:'Frecuencia relativa',en:'Relative frequency'})+'</strong> = '+
+        '<span class="mf-outer"><span class="mf-num">'+T({es:'veces que ocurre el resultado',en:'times the outcome occurs'})+'</span>'+
+        '<span class="mf-den">'+T({es:'número total de repeticiones',en:'total number of repetitions'})+'</span></span></p></div>'+
+      '<p>'+T({
+        es:'Con pocas repeticiones esa proporción salta de un valor a otro, es decir, tiene mucha variabilidad. Conforme el número de repeticiones crece, la frecuencia relativa deja de saltar y se estabiliza alrededor de un valor fijo. La incertidumbre sobre cada resultado individual sigue intacta; lo que se vuelve predecible es el comportamiento del conjunto.',
+        en:'With few repetitions that proportion jumps from one value to another, that is, it has a lot of variability. As the number of repetitions grows, the relative frequency stops jumping and settles around a fixed value. The uncertainty about each individual outcome stays intact; what becomes predictable is the behaviour of the set as a whole.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Ese valor alrededor del cual se estabiliza la frecuencia relativa sostiene la idea de probabilidad y permite estimar lo que ocurriría en un número mayor de repeticiones.',
+        en:'That value the relative frequency settles around supports the idea of probability and lets you estimate what would happen over a larger number of repetitions.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 3: simulador de repeticiones ---- */
+  (function(){
+    var wrap = widget('frecuencia');
+    var EVENTS = [
+      { es:'lanzar un dado equilibrado y obtener un número mayor que cuatro', en:'rolling a fair die and getting a number greater than four', p:1/3 },
+      { es:'lanzar una moneda equilibrada y obtener águila', en:'tossing a fair coin and getting heads', p:1/2 },
+      { es:'girar una ruleta de cuatro sectores iguales y caer en el sector azul', en:'spinning a wheel with four equal sectors and landing on the blue one', p:1/4 }
+    ];
+    var EV = EVENTS[simIdx];
+    var resets = 0;
+    var srng = seededRng('sim' + simSeed + resets);
+    var st = { n:0, k:0, hist:[], tries:0, done:false };
+
+    function run(batch){
+      var i;
+      for (i=0;i<batch;i++){
+        st.n++;
+        if (srng() < EV.p) st.k++;
+        if (st.n <= 60 || st.n % 5 === 0) st.hist.push([st.n, st.k/st.n]);
+      }
+    }
+    function frDraw(){
+      var cv = document.getElementById('frCv'); if (!cv) return;
+      var g = fitCv(cv), ctx = g.ctx, w = g.w, h = g.h;
+      var x0 = 38, x1 = w - 12, yt = 14, yb = h - 22;
+      var col = cssv('--green'), acc = cssv('--gold'), bd = cssv('--border'), sub = cssv('--text3');
+      var i, yy, xx;
+      ctx.strokeStyle = bd; ctx.lineWidth = 1;
+      ctx.fillStyle = sub; ctx.font = '500 10px "IBM Plex Mono", monospace'; ctx.textAlign = 'right';
+      for (i=0;i<=4;i++){
+        yy = yb - (yb-yt)*i/4;
+        ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x1, yy); ctx.stroke();
+        ctx.fillText((i/4).toFixed(2), x0-6, yy+3);
+      }
+      ctx.beginPath(); ctx.moveTo(x0, yt); ctx.lineTo(x0, yb); ctx.stroke();
+      var nmax = Math.max(20, st.n);
+      ctx.strokeStyle = acc; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+      var yp = yb - (yb-yt)*EV.p;
+      ctx.beginPath(); ctx.moveTo(x0, yp); ctx.lineTo(x1, yp); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = acc; ctx.textAlign = 'left'; ctx.font = '600 10px "IBM Plex Sans", sans-serif';
+      ctx.fillText(T({es:'valor teórico ',en:'theoretical value '})+fmt2(EV.p), x0+8, yp-5);
+      if (st.hist.length > 1){
+        ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+        for (i=0;i<st.hist.length;i++){
+          xx = x0 + (x1-x0)*st.hist[i][0]/nmax;
+          yy = yb - (yb-yt)*st.hist[i][1];
+          if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+      }
+      ctx.fillStyle = sub; ctx.textAlign = 'right'; ctx.font = '500 10px "IBM Plex Mono", monospace';
+      ctx.fillText('n = '+st.n, x1, yb+16);
+    }
+    function frRead(){
+      var fr = st.n ? st.k/st.n : 0, e;
+      e = document.getElementById('frN'); if (e) e.textContent = String(st.n);
+      e = document.getElementById('frK'); if (e) e.textContent = String(st.k);
+      e = document.getElementById('frF'); if (e) e.textContent = st.n ? fmt3(fr) : '-';
+      e = document.getElementById('frStat');
+      if (e) e.textContent = st.n === 0
+        ? T({es:'Todavía no hay repeticiones registradas.', en:'No repetitions recorded yet.'})
+        : T({es:'Distancia de la frecuencia relativa al valor teórico: ', en:'Distance from the relative frequency to the theoretical value: '})+fmt3(Math.abs(fr-EV.p));
+    }
+    function render(){
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Simulador de repeticiones', en:'Repetition simulator'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-sub">'+T({
+            es:'Repite el experimento por tandas y observa la trayectoria de la frecuencia relativa frente al valor teórico.',
+            en:'Repeat the experiment in batches and watch the path of the relative frequency against the theoretical value.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'Experimento: ',en:'Experiment: '})+T(EV)+'. '+
+            T({es:'Meta: dejar la frecuencia relativa a menos de 0.03 del valor teórico con al menos 200 repeticiones.',
+               en:'Goal: leave the relative frequency within 0.03 of the theoretical value using at least 200 repetitions.'})+'</div>'+
+          '<canvas class="gcanvas" id="frCv"></canvas>'+
+          '<div class="simbtns">'+
+            '<button class="simbtn" onclick="frRun(10)">+10</button>'+
+            '<button class="simbtn" onclick="frRun(50)">+50</button>'+
+            '<button class="simbtn" onclick="frRun(200)">+200</button>'+
+            '<button class="simbtn rst" onclick="frReset()">'+T({es:'Reiniciar',en:'Reset'})+'</button>'+
+          '</div>'+
+          '<div class="readrow">'+
+            '<div class="readcell"><div class="readlbl">'+T({es:'Repeticiones',en:'Repetitions'})+'</div><div class="readnum" id="frN">'+st.n+'</div></div>'+
+            '<div class="readcell"><div class="readlbl">'+T({es:'Ocurrencias',en:'Occurrences'})+'</div><div class="readnum" id="frK">'+st.k+'</div></div>'+
+            '<div class="readcell"><div class="readlbl">'+T({es:'Frec. relativa',en:'Rel. frequency'})+'</div><div class="readnum" id="frF">-</div></div>'+
+          '</div>'+
+          '<div class="statline" id="frStat"></div>'+
+          '<button class="rverify-btn" onclick="frChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="frFb"></div>'+
+        '</div>';
+      frDraw(); frRead();
+      setTimeout(frDraw, 160);
+    }
+    window.frRun = function(b){
+      if (st.done) return;
+      run(b); frDraw(); frRead();
+    };
+    window.frReset = function(){
+      if (st.done) return;
+      resets++;
+      srng = seededRng('sim' + simSeed + resets);
+      st.n = 0; st.k = 0; st.hist = []; st.tries = 0;
+      frDraw(); frRead();
+      var fb = document.getElementById('frFb');
+      if (fb) fb.textContent = T({es:'Serie reiniciada. Empieza otra vez con tandas pequeñas y compara la trayectoria.',
+                                  en:'Series restarted. Begin again with small batches and compare the path.'});
+    };
+    window.frChk = function(){
+      if (st.done) return;
+      var fb = document.getElementById('frFb'); if (!fb) return;
+      var fr = st.n ? st.k/st.n : 0, d = Math.abs(fr - EV.p);
+      if (st.n >= 200 && d <= 0.03){
+        st.done = true;
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Lograste la meta. Cada repetición sigue siendo impredecible, pero la proporción acumulada ya se movió muy poco en las últimas tandas.',
+          en:'Goal reached. Each repetition is still unpredictable, yet the accumulated proportion has barely moved over the last batches.'
+        })+'</span>';
+        return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        run(1200); frDraw(); frRead();
+        st.done = true;
+        fb.innerHTML = T({
+          es:'Se agregaron muchas repeticiones de golpe. Con n = '+st.n+' la frecuencia relativa quedó en '+fmt3(st.k/st.n)+', frente al valor teórico '+fmt2(EV.p)+'. Al principio la proporción saltaba entre valores muy distintos: lo que disminuye al crecer n es la variabilidad de la proporción, no la incertidumbre de cada repetición.',
+          en:'A large block of repetitions was added at once. With n = '+st.n+' the relative frequency ended at '+fmt3(st.k/st.n)+', against the theoretical value '+fmt2(EV.p)+'. At the start the proportion jumped between very different values: what shrinks as n grows is the variability of the proportion, not the uncertainty of each repetition.'
+        });
+        return;
+      }
+      if (st.n < 200){
+        fb.textContent = T({es:'Con n = ',en:'With n = '})+st.n+T({
+          es:' la proporción todavía salta bastante. Agrega más repeticiones antes de juzgar.',
+          en:' the proportion still jumps quite a bit. Add more repetitions before judging.'});
+        return;
+      }
+      fb.textContent = T({es:'Vas bien: con n = ',en:'Getting there: with n = '})+st.n+
+        T({es:' la distancia al valor teórico es ',en:' the distance to the theoretical value is '})+fmt3(d)+
+        T({es:'. Sigue agregando tandas para reducirla.', en:'. Keep adding batches to bring it down.'});
+    };
+    render();
+  })();
+
+  /* ---- P6 ---- */
+  (function(){
+    var V = [
+      { q:{es:'Dos equipos repiten el mismo experimento aleatorio. El primero se detiene después de veinte repeticiones y el segundo después de mil, y cada uno reporta la frecuencia relativa del mismo resultado. Selecciona la descripción correcta de lo que se espera observar.',
+           en:'Two teams repeat the same random experiment. The first stops after twenty repetitions and the second after a thousand, and each reports the relative frequency of the same outcome. Choose the correct description of what is expected.'},
+        options:{es:[
+          'La frecuencia relativa del segundo equipo es más estable, porque al crecer las repeticiones esa proporción varía menos.',
+          'Las dos frecuencias relativas son necesariamente iguales, porque el experimento es el mismo.',
+          'La frecuencia relativa del primer equipo es más confiable, porque acumula menos errores de registro.',
+          'El segundo equipo puede predecir el resultado de la siguiente repetición, porque ya reunió muchos datos.'],
+          en:[
+          'The second team relative frequency is more stable, because as repetitions grow that proportion varies less.',
+          'The two relative frequencies are necessarily equal, because the experiment is the same.',
+          'The first team relative frequency is more reliable, because it accumulates fewer recording errors.',
+          'The second team can predict the outcome of the next repetition, because it has already gathered a lot of data.']},
+        correct:{es:'La frecuencia relativa del segundo equipo es más estable, porque al crecer las repeticiones esa proporción varía menos.',
+                 en:'The second team relative frequency is more stable, because as repetitions grow that proportion varies less.'},
+        hint:{es:'Distingue la variabilidad de la proporción acumulada de la incertidumbre que pesa sobre cada repetición aislada.',
+              en:'Tell apart the variability of the accumulated proportion from the uncertainty hanging over each isolated repetition.'},
+        exp:{es:'Con pocas repeticiones la proporción acumulada cambia mucho al agregar un resultado más, así que dos equipos pueden reportar valores distintos sin que ninguno se equivoque. Al crecer el número de repeticiones esa proporción se mueve cada vez menos. Aun así, el siguiente resultado individual sigue siendo impredecible.',
+             en:'With few repetitions the accumulated proportion changes a lot when one more outcome is added, so two teams can report different values without either being wrong. As the number of repetitions grows that proportion moves less and less. Even so, the next individual outcome remains unpredictable.'} },
+      { q:{es:'Durante una simulación se observa que la trayectoria de la frecuencia relativa oscila con fuerza al principio y después se aplana alrededor de un valor. Selecciona la interpretación correcta de esa trayectoria.',
+           en:'During a simulation the path of the relative frequency is seen to swing strongly at first and then flatten out around a value. Choose the correct reading of that path.'},
+        options:{es:[
+          'La proporción acumulada pierde variabilidad al aumentar las repeticiones, mientras cada resultado individual sigue siendo incierto.',
+          'El fenómeno deja de ser aleatorio en cuanto la trayectoria se aplana.',
+          'La trayectoria se aplana porque los resultados empiezan a alternarse de manera regular.',
+          'Las oscilaciones iniciales indican que el experimento se realizo con errores de medición.'],
+          en:[
+          'The accumulated proportion loses variability as repetitions increase, while each individual outcome stays uncertain.',
+          'The phenomenon stops being random as soon as the path flattens out.',
+          'The path flattens because the outcomes begin to alternate in a regular way.',
+          'The initial swings indicate that the experiment was carried out with measurement errors.']},
+        correct:{es:'La proporción acumulada pierde variabilidad al aumentar las repeticiones, mientras cada resultado individual sigue siendo incierto.',
+                 en:'The accumulated proportion loses variability as repetitions increase, while each individual outcome stays uncertain.'},
+        hint:{es:'Piensa en cuánto puede mover la proporción un solo resultado cuando ya hay muchas repeticiones acumuladas.',
+              en:'Think about how much a single outcome can move the proportion once many repetitions have accumulated.'},
+        exp:{es:'Cada nuevo resultado modifica la proporción en una cantidad cada vez menor, porque se reparte entre más repeticiones. Por eso la trayectoria se aplana. Los resultados no se alternan de forma regular ni el fenómeno deja de ser aleatorio: lo que cambia es la variabilidad de la proporción, no la incertidumbre de cada intento.',
+             en:'Each new outcome changes the proportion by a smaller and smaller amount, because it is shared among more repetitions. That is why the path flattens. Outcomes do not start alternating regularly and the phenomenon does not stop being random: what changes is the variability of the proportion, not the uncertainty of each attempt.'} }
+    ][vP6];
+    addProb({
+      title:{es:'Leer la trayectoria', en:'Reading the path'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:false
+    });
+  })();
+
+  /* ---- P7 ---- */
+  (function(){
+    var fr = p7pct/100;
+    var oo = opts4(fmt2(fr), [fmt2(p7k/100), fmt2((p7n-p7k)/p7n), fmt2(p7n/p7k), fmt2(fr/2), fmt2(fr+0.5)]);
+    addProb({
+      title:{es:'De un conteo a una proporción', en:'From a count to a proportion'},
+      q:{es:'Un control de calidad repitió una prueba '+p7n+' veces bajo las mismas condiciones y registró el resultado de interés en '+p7k+' ocasiones. Determina la frecuencia relativa de ese resultado.',
+         en:'A quality check repeated a test '+p7n+' times under the same conditions and recorded the outcome of interest on '+p7k+' occasions. Determine the relative frequency of that outcome.'},
+      options:{es:oo, en:oo}, correct:fmt2(fr),
+      hint:{es:'La frecuencia relativa compara las veces que ocurre el resultado con el total de repeticiones realizadas, no con una cantidad fija.',
+            en:'The relative frequency compares the times the outcome occurs with the total number of repetitions carried out, not with a fixed amount.'},
+      exp:{es:'Hay que dividir las ocurrencias entre el total de repeticiones: '+p7k+' ÷ '+p7n+' = '+fmt2(fr)+'. Dividir entre cien daría '+fmt2(p7k/100)+', invertir la razón daría '+fmt2(p7n/p7k)+' y usar las repeticiones sin el resultado daría la proporción del caso contrario.',
+           en:'You divide the occurrences by the total number of repetitions: '+p7k+' ÷ '+p7n+' = '+fmt2(fr)+'. Dividing by one hundred would give '+fmt2(p7k/100)+', inverting the ratio would give '+fmt2(p7n/p7k)+' and using the repetitions without the outcome would give the proportion of the opposite case.'},
+      showWork:true
+    });
+  })();
+
+  /* ---- REFLEXION ---- */
+  (function(){
+    var wrap = widget('reflect');
+    var PROMPTS = [
+      { es:'Describe un fenómeno de tu entorno que consideres determinista y otro que consideres aleatorio, y explica qué dato te haría cambiar de opinión en cada caso.',
+        en:'Describe a phenomenon around you that you consider deterministic and another you consider random, and explain what evidence would make you change your mind in each case.' },
+      { es:'Dibuja dos conjuntos de datos que compartan la misma media pero tengan dispersión muy distinta, y explica en cuál de los dos confiarías más para hacer una predicción.',
+        en:'Sketch two data sets that share the same mean but have very different spread, and explain which of the two you would trust more for making a prediction.' },
+      { es:'Explica con tus palabras por qué la frecuencia relativa se estabiliza al aumentar las repeticiones aunque cada resultado individual siga siendo impredecible.',
+        en:'Explain in your own words why the relative frequency settles down as repetitions increase even though each individual outcome remains unpredictable.' }
+    ];
+    var pick = PROMPTS[Math.floor(rng()*PROMPTS.length)];
+    wrap.innerHTML =
+      '<div class="iw-tag">'+T({es:'Reflexiona', en:'Reflect'})+'</div>'+
+      '<div class="iw-box">'+
+        '<div class="iw-sub">'+T({es:'Responde escribiendo o con un esquema. Aquí no hay una única respuesta.',
+                                  en:'Answer in writing or with a sketch. There is no single answer here.'})+'</div>'+
+        '<div class="reflect-prompt">'+T(pick)+'</div>'+
+        '<div class="wtabs">'+
+          '<button class="wtab active" onclick="reflectTab(\'type\',this)">'+t('tab-type')+'</button>'+
+          '<button class="wtab" onclick="reflectTab(\'draw\',this)">'+t('tab-draw')+'</button>'+
+        '</div>'+
+        '<div class="wpanel active" id="reflect_type"><textarea class="wtextarea" id="reflectTa" placeholder="'+t('ph-work')+'"></textarea></div>'+
+        '<div class="wpanel" id="reflect_draw">'+
+          '<div class="cvwrap">'+
+            '<canvas class="dcanvas" id="reflectCv"></canvas>'+
+            '<div class="ctoolbar">'+
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>'+
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>'+
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>'+
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>'+
+              '<div class="cdot" data-color="#1a1a16" style="background:#1a1a16"></div>'+
+              '<div class="cdot" data-color="#8b2500" style="background:#8b2500"></div>'+
+              '<div class="cdot" data-color="#1d4e89" style="background:#1d4e89"></div>'+
+              '<button class="clrbtn">'+t('btn-clear')+'</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<button class="rverify-btn" onclick="reflectSave()">'+T({es:'Guardar respuesta',en:'Save answer'})+'</button>'+
+        '<div class="rfb" id="reflectFb"></div>'+
+      '</div>';
+    window.reflectTab = function(which, btn){
+      ['type','draw'].forEach(function(k){
+        var p = document.getElementById('reflect_'+k);
+        if (p) p.classList.toggle('active', k === which);
+      });
+      wrap.querySelectorAll('.wtab').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      if (which === 'draw') setTimeout(function(){
+        var c = document.getElementById('reflectCv');
+        if (c && !c.width) initCanvas(c);
+      }, 60);
+    };
+    window.reflectSave = function(){
+      var fb = document.getElementById('reflectFb'); if (!fb) return;
+      fb.innerHTML = '<span class="okmsg">'+T({
+        es:'Respuesta guardada. Vuelve a esta idea cuando termines el resto de la guía y comprueba si la mantendrías igual.',
+        en:'Answer saved. Come back to this idea when you finish the rest of the guide and check whether you would keep it as it is.'
+      })+'</span>';
+    };
+  })();
+
+  /* ============================================================
+     CIERRE
+     ============================================================ */
+  sec(T({es:'Cierre', en:'Wrap-up'}),
+      T({es:'Pon las ideas a trabajar', en:'Put the ideas to work'}),
+      '<p>'+T({
+        es:'Las siguientes situaciones combinan lo que registraste en las tres actividades anteriores.',
+        en:'The following situations combine what you recorded in the three previous activities.'
+      })+'</p>');
+
+  /* ---- P8 ---- */
+  (function(){
+    var V = [
+      { q:{es:'Dos proveedores entregan pedidos con la misma media de tiempo de entrega. El primero acumula un rango de dos días en sus registros y el segundo un rango de catorce días. Una empresa necesita programar su producción con la mayor precisión posible. Selecciona la decisión correcta y su justificación.',
+           en:'Two suppliers deliver orders with the same mean delivery time. The first shows a range of two days across its records and the second a range of fourteen days. A company needs to schedule production as precisely as possible. Choose the correct decisión and its justification.'},
+        options:{es:[
+          'Elegir al primero, porque su menor dispersión hace que los tiempos de entrega sean más predecibles.',
+          'Elegir al segundo, porque su mayor rango le permite entregar en una variedad mayor de plazos.',
+          'Elegir cualquiera de los dos, porque la media de entrega es la misma en ambos casos.',
+          'Elegir al segundo, porque un rango amplio indica que atiende un volumen mayor de pedidos.'],
+          en:[
+          'Choose the first one, because its smaller spread makes delivery times more predictable.',
+          'Choose the second one, because its larger range lets it deliver across a wider variety of deadlines.',
+          'Choose either one, because the mean delivery time is the same in both cases.',
+          'Choose the second one, because a wide range indicates it handles a larger volume of orders.']},
+        correct:{es:'Elegir al primero, porque su menor dispersión hace que los tiempos de entrega sean más predecibles.',
+                 en:'Choose the first one, because its smaller spread makes delivery times more predictable.'},
+        hint:{es:'Cuando la media coincide, la decisión se apoya en la medida de dispersión y en lo que significa para la planeación.',
+              en:'When the mean is the same, the decisión rests on the measure of spread and on what it means for planning.'},
+        exp:{es:'Con medias iguales, el rango es lo que separa a los proveedores. Un rango de dos días significa que casi todas las entregas caen cerca del mismo plazo, mientras que uno de catorce obliga a considerar plazos muy distintos. Un rango amplio no informa nada sobre el volumen de pedidos.',
+             en:'With equal means, the range is what separates the suppliers. A range of two days means almost every delivery falls near the same deadline, while a range of fourteen forces you to plan for very different deadlines. A wide range says nothing about the volume of orders.'} },
+      { q:{es:'Un reporte informa únicamente que el tiempo medio de atención en dos sucursales es idéntico, sin ninguna otra medida. Selecciona la conclusión que sí se sostiene con esa información.',
+           en:'A report states only that the mean service time in two branches is identical, with no other measure. Choose the conclusión that does hold with that information.'},
+        options:{es:[
+          'Los centros de los dos conjuntos coinciden, pero la dispersión de cada sucursal queda sin determinar.',
+          'Las dos sucursales atienden con tiempos prácticamente iguales en cada servicio individual.',
+          'La sucursal con más servicios registrados tiene necesariamente menor variabilidad.',
+          'Ninguna de las dos sucursales presenta datos alejados del promedio reportado.'],
+          en:[
+          'The centres of the two sets coincide, but the spread of each branch is left undetermined.',
+          'The two branches serve customers in practically equal times on every individual service.',
+          'The branch with more recorded services necessarily has lower variability.',
+          'Neither branch has values far from the reported average.']},
+        correct:{es:'Los centros de los dos conjuntos coinciden, pero la dispersión de cada sucursal queda sin determinar.',
+                 en:'The centres of the two sets coincide, but the spread of each branch is left undetermined.'},
+        hint:{es:'Pregunta qué puede afirmarse con una medida de centro y qué exigiría además una medida de dispersión.',
+              en:'Ask what can be claimed with a measure of centre and what would additionally require a measure of spread.'},
+        exp:{es:'La media ubica el centro y nada más. Conjuntos con la misma media pueden tener datos muy juntos o muy separados, así que no puede afirmarse que los servicios individuales sean parecidos ni que no existan valores alejados. El número de datos tampoco decide la dispersión.',
+             en:'The mean locates the centre and nothing else. Sets with the same mean can have values tightly packed or widely separated, so you cannot claim the individual services are similar or that there are no distant values. The number of data points does not decide the spread either.'} }
+    ][vP8];
+    addProb({
+      title:{es:'Decidir con dispersión', en:'Deciding with spread'},
+      q:V.q, options:V.options, correct:V.correct, hint:V.hint, exp:V.exp, showWork:false
+    });
+  })();
+
+  /* ---- P9 ---- */
+  (function(){
+    var oo = opts4(p9ans, [p9lo+p9T, p9T, p9R, p9hi, p9ans+2]);
+    addProb({
+      title:{es:'Ajustar el rango', en:'Adjusting the range'},
+      q:{es:'Un taller registró el consumo diario de energía, en kilowatt hora, durante cinco días: '+lst(p9data)+'. Para una prueba de resistencia se necesita que el rango del registro llegue a '+p9T+', modificando únicamente el valor más alto y dejando los demás sin cambio. Determina en cuántas unidades debe aumentar ese valor más alto.',
+         en:'A workshop recorded daily energy consumption, in kilowatt hours, over five days: '+lst(p9data)+'. For a stress test the range of the record must reach '+p9T+', changing only the highest value and leaving the rest untouched. Determine by how many units that highest value must increase.'},
+      options:{es:oo, en:oo}, correct:String(p9ans),
+      hint:{es:'Calcula primero el rango actual del registro, luego observa que al no mover el valor menor todo el aumento del rango recae sobre el valor mayor.',
+            en:'First compute the current range of the record, then notice that since the smallest value does not move, the whole increase in the range falls on the largest value.'},
+      exp:{es:'El rango actual es '+p9hi+' − '+p9lo+', es decir '+p9R+'. Como el valor menor se queda en '+p9lo+', el valor mayor debe llegar a '+(p9lo+p9T)+' para que el rango sea '+p9T+'. El aumento necesario es '+p9T+' − '+p9R+' = '+p9ans+'.',
+           en:'The current range is '+p9hi+' − '+p9lo+', that is '+p9R+'. Since the smallest value stays at '+p9lo+', the largest value has to reach '+(p9lo+p9T)+' for the range to be '+p9T+'. The required increase is '+p9T+' − '+p9R+' = '+p9ans+'.'},
+      showWork:true
+    });
+  })();
+
+  /* ---- P10 ---- */
+  (function(){
+    var frTxt = fmt2(p10pct/100);
+    var oo = opts4(p10ans, [p10obs, p10comp, p10extra, p10n2-p10n, p10ans+p10n]);
+    addProb({
+      title:{es:'Estimar en una escala mayor', en:'Estimating on a larger scale'},
+      q:{es:'En '+p10n+' repeticiones de un proceso aleatorio, cierto resultado se presentó con una frecuencia relativa de '+frTxt+'. Se planean '+p10n2+' repeticiones adicionales bajo las mismas condiciones. Estima cuántas veces se presentaría ese resultado en esas '+p10n2+' repeticiones.',
+         en:'In '+p10n+' repetitions of a random process, a given outcome appeared with a relative frequency of '+frTxt+'. A further '+p10n2+' repetitions are planned under the same conditions. Estimate how many times that outcome would appear in those '+p10n2+' repetitions.'},
+      options:{es:oo, en:oo}, correct:String(p10ans),
+      hint:{es:'Si la frecuencia relativa se mantiene, el número esperado de ocurrencias se obtiene multiplicando esa proporción por el nuevo total de repeticiones.',
+            en:'If the relative frequency holds, the expected number of occurrences comes from multiplying that proportion by the new total of repetitions.'},
+      exp:{es:'La frecuencia relativa observada sirve como estimación de la proporción a largo plazo. Aplicada al nuevo total: '+frTxt+' × '+p10n2+' = '+p10ans+' ocurrencias esperadas. La estimación es aproximada, porque el conteo real variará alrededor de ese valor.',
+           en:'The observed relative frequency serves as an estimate of the long run proportion. Applied to the new total: '+frTxt+' × '+p10n2+' = '+p10ans+' expected occurrences. The estimate is approximate, because the actual count will vary around that value.'},
+      showWork:true
+    });
+  })();
+}
+
+</script>
+</body>
+</html>
