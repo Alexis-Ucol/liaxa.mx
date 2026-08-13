@@ -1173,29 +1173,62 @@ function setFb(id, txt, kind){
 }
 
 /* ═════════ WIDGET 1: recta de saltos con signo ═════════ */
-var M1 = { round:0, tries:0, start:0, goal:0, jump:0, done:false, rng:null };
+var M1 = { round:0, tries:0, start:0, goal:0, jump:0, done:false, checked:false, rng:null };
 function m1NewRound(){
   var r = M1.rng;
   M1.start = -9 + Math.floor(r()*19);
   do { M1.goal = -9 + Math.floor(r()*19); } while (M1.goal === M1.start);
-  M1.jump = 0; M1.tries = 0;
+  M1.jump = 0; M1.tries = 0; M1.checked = false;
   var s = document.getElementById('m1slider'); if(s) s.value = 0;
+  // Show Comprobar, hide Siguiente ronda
+  var btn = document.getElementById('m1btn'); if(btn){ btn.style.display=''; btn.classList.remove('done'); }
+  var nxt = document.getElementById('m1next'); if(nxt) nxt.style.display='none';
   m1Render();
   setFb('m1fb', L({
-    es:'Estás en <b>'+numStr(M1.start)+'</b> y quieres caer justo en <b>'+numStr(M1.goal)+'</b>. Mueve el deslizador y observa dónde aterrizas.',
-    en:'You are at <b>'+numStr(M1.start)+'</b> and you want to land exactly on <b>'+numStr(M1.goal)+'</b>. Move the slider and watch where you land.'}));
+    es:'Estás en <b>'+numStr(M1.start)+'</b> y quieres caer en <b>'+numStr(M1.goal)+'</b>. Elige el tamaño de tu salto con el deslizador y pulsa <b>Comprobar</b> para ver dónde aterrizas.',
+    en:'You are at <b>'+numStr(M1.start)+'</b> and you want to land on <b>'+numStr(M1.goal)+'</b>. Choose your jump size with the slider and press <b>Check</b> to see where you land.'}));
 }
 function m1Render(){
-  var g=document.getElementById('m1goal'), j=document.getElementById('m1jump'), l=document.getElementById('m1land');
-  if(g) g.textContent = numStr(M1.goal);
-  if(j) j.textContent = numStr(M1.jump);
-  if(l) l.textContent = numStr(M1.start + M1.jump);
-  var p=document.getElementById('m1prompt');
-  if(p) p.innerHTML = L({ es:'Salida: <b>'+numStr(M1.start)+'</b> · Meta: <b>'+numStr(M1.goal)+'</b> · Ronda '+(M1.round+1)+' de 3',
-                          en:'Start: <b>'+numStr(M1.start)+'</b> · Goal: <b>'+numStr(M1.goal)+'</b> · Round '+(M1.round+1)+' of 3' });
-  m1Draw();
+  // Update start/goal display boxes
+  var sb=document.getElementById('m1start-box'); if(sb) sb.textContent = numStr(M1.start);
+  var gb=document.getElementById('m1goal-box');  if(gb) gb.textContent = numStr(M1.goal);
+  // Update metrics
+  var gm=document.getElementById('m1goal'), j=document.getElementById('m1jump'), l=document.getElementById('m1land');
+  if(gm) gm.textContent = numStr(M1.goal);
+  if(j)  j.textContent  = numStr(M1.jump);
+  if(l)  l.textContent  = M1.checked ? numStr(M1.start + M1.jump) : '?';
+  // Round tracker
+  var rd=document.getElementById('m1round');
+  if(rd) rd.textContent = L({es:'Ronda '+(M1.round+1)+' de 3', en:'Round '+(M1.round+1)+' of 3'});
+  m1DrawBase();
+}
+function m1DrawBase(){
+  // Draws the number line with start dot and goal marker only — no arc, no landing dot
+  var c=document.getElementById('m1canvas'); if(!c) return;
+  var rect=c.getBoundingClientRect(); if(!rect.width) return;
+  var dpr=window.devicePixelRatio||1;
+  c.width=Math.round(rect.width*dpr); c.height=Math.round(rect.height*dpr);
+  var g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+  var W=rect.width, H=rect.height, lo=-12, hi=12, pad=16;
+  function X(v){ return pad + (v-lo)*(W-2*pad)/(hi-lo); }
+  var y = H*0.66;
+  g.clearRect(0,0,W,H);
+  g.strokeStyle=cssVar('--border'); g.lineWidth=2;
+  g.beginPath(); g.moveTo(pad,y); g.lineTo(W-pad,y); g.stroke();
+  g.font='10px "IBM Plex Mono", monospace'; g.textAlign='center';
+  for(var v=lo; v<=hi; v++){
+    var xx=X(v);
+    g.strokeStyle=cssVar('--border'); g.beginPath(); g.moveTo(xx,y-4); g.lineTo(xx,y+4); g.stroke();
+    if(v%3===0){ g.fillStyle=cssVar('--text3'); g.fillText(numStr(v), xx, y+18); }
+  }
+  // goal marker
+  g.strokeStyle=cssVar('--gold'); g.lineWidth=3;
+  g.beginPath(); g.moveTo(X(M1.goal), y-22); g.lineTo(X(M1.goal), y+9); g.stroke();
+  // start dot
+  g.fillStyle=cssVar('--text2'); g.beginPath(); g.arc(X(M1.start), y, 5, 0, 6.2832); g.fill();
 }
 function m1Draw(){
+  // Full draw including arc and landing dot — called only after Comprobar
   var c=document.getElementById('m1canvas'); if(!c) return;
   var rect=c.getBoundingClientRect(); if(!rect.width) return;
   var dpr=window.devicePixelRatio||1;
@@ -1228,47 +1261,146 @@ function m1Draw(){
   g.fillStyle=cssVar('--green-dark');
   g.beginPath(); g.arc(X(Math.max(lo,Math.min(hi,land))), y, 4, 0, 6.2832); g.fill();
 }
+function m1DrawAnimated(onDone){
+  // Animated version: arc grows from start to landing over ~450ms
+  var c=document.getElementById('m1canvas'); if(!c){ if(onDone) onDone(); return; }
+  var rect=c.getBoundingClientRect(); if(!rect.width){ if(onDone) onDone(); return; }
+  var dpr=window.devicePixelRatio||1;
+  var W=rect.width, H=rect.height, lo=-12, hi=12, pad=16;
+  function X(v){ return pad + (v-lo)*(W-2*pad)/(hi-lo); }
+  var y = H*0.66;
+  var land = M1.start + M1.jump;
+  var x0=X(M1.start), x1=X(Math.max(lo,Math.min(hi,land)));
+  var cx=(x0+x1)/2, cy=y-40;  // control point of the quadratic
+  var dir = land>=M1.start ? 1 : -1;
+  var duration = 450, start = null;
+
+  function drawFrame(t){
+    if(!start) start = t;
+    var prog = Math.min((t - start) / duration, 1);
+    // ease out
+    var ease = 1 - Math.pow(1 - prog, 2);
+
+    c.width=Math.round(rect.width*dpr); c.height=Math.round(rect.height*dpr);
+    var g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+    g.clearRect(0,0,W,H);
+
+    // base line + ticks + labels
+    g.strokeStyle=cssVar('--border'); g.lineWidth=2;
+    g.beginPath(); g.moveTo(pad,y); g.lineTo(W-pad,y); g.stroke();
+    g.font='10px "IBM Plex Mono", monospace'; g.textAlign='center';
+    for(var v=lo; v<=hi; v++){
+      var xx=X(v);
+      g.strokeStyle=cssVar('--border'); g.beginPath(); g.moveTo(xx,y-4); g.lineTo(xx,y+4); g.stroke();
+      if(v%3===0){ g.fillStyle=cssVar('--text3'); g.fillText(numStr(v), xx, y+18); }
+    }
+    // goal marker
+    g.strokeStyle=cssVar('--gold'); g.lineWidth=3;
+    g.beginPath(); g.moveTo(X(M1.goal), y-22); g.lineTo(X(M1.goal), y+9); g.stroke();
+    // start dot
+    g.fillStyle=cssVar('--text2'); g.beginPath(); g.arc(x0, y, 5, 0, 6.2832); g.fill();
+
+    if(M1.jump !== 0){
+      // Draw partial arc up to ease progress using quadratic interpolation
+      // Current tip position along the quadratic curve
+      var tipX = (1-ease)*(1-ease)*x0 + 2*(1-ease)*ease*cx + ease*ease*x1;
+      var tipY = (1-ease)*(1-ease)*(y-6) + 2*(1-ease)*ease*cy + ease*ease*(y-6);
+
+      g.strokeStyle=cssVar('--green'); g.lineWidth=2.5;
+      g.beginPath();
+      // Draw arc from x0 up to tipX by sampling the curve
+      var steps = Math.max(12, Math.round(ease * 30));
+      g.moveTo(x0, y-6);
+      for(var s=1; s<=steps; s++){
+        var p = (ease * s) / steps;
+        var px=(1-p)*(1-p)*x0 + 2*(1-p)*p*cx + p*p*x1;
+        var py=(1-p)*(1-p)*(y-6) + 2*(1-p)*p*cy + p*p*(y-6);
+        g.lineTo(px, py);
+      }
+      g.stroke();
+
+      // Arrowhead tip moves with the arc
+      if(ease > 0.85){
+        var arrowEase = (ease - 0.85) / 0.15; // fade in arrow in last 15%
+        g.globalAlpha = arrowEase;
+        g.fillStyle=cssVar('--green');
+        g.beginPath(); g.moveTo(x1,y-1); g.lineTo(x1-6*dir,y-12); g.lineTo(x1+6*dir,y-12); g.closePath(); g.fill();
+        g.globalAlpha = 1;
+      }
+
+      // Landing dot appears at end
+      if(ease === 1){
+        g.fillStyle=cssVar('--green-dark');
+        g.beginPath(); g.arc(x1, y, 4, 0, 6.2832); g.fill();
+      }
+    }
+
+    if(prog < 1){
+      requestAnimationFrame(drawFrame);
+    } else {
+      // Final frame: draw complete
+      m1Draw();
+      if(onDone) onDone();
+    }
+  }
+  requestAnimationFrame(drawFrame);
+}
 function m1Slide(){
   var s=document.getElementById('m1slider'); if(!s) return;
   M1.jump = parseInt(s.value,10)||0;
-  m1Render();
+  M1.checked = false;  // student is adjusting — arc goes away until next Comprobar
+  var j=document.getElementById('m1jump'); if(j) j.textContent = numStr(M1.jump);
+  var l=document.getElementById('m1land'); if(l) l.textContent = '?';
+  m1DrawBase();
   if(M1.done) return;
-  var land = M1.start + M1.jump, d = M1.goal - land;
-  if(d===0) setFb('m1fb', L({ es:'Caes exactamente en <b>'+numStr(M1.goal)+'</b>. Confirma tu salto.',
-                              en:'You land exactly on <b>'+numStr(M1.goal)+'</b>. Confirm your jump.'}), 'good');
-  else setFb('m1fb', L({ es:'Caes en <b>'+numStr(land)+'</b>: te falta moverte '+Math.abs(d)+' '+(d>0?'a la derecha':'a la izquierda')+'.',
-                         en:'You land on <b>'+numStr(land)+'</b>: you still need to move '+Math.abs(d)+' to the '+(d>0?'right':'left')+'.'}));
+  setFb('m1fb', '');
+  // Hide siguiente ronda, re-show comprobar when slider moves
+  var nxt=document.getElementById('m1next'); if(nxt) nxt.style.display='none';
+  var btn=document.getElementById('m1btn'); if(btn) btn.style.display='';
 }
 function m1Check(){
-  if(M1.done) return;
+  if(M1.done || M1.checked) return;
+  M1.checked = true;
   var land = M1.start + M1.jump, need = M1.goal - M1.start;
-  if(land === M1.goal){
-    M1.round++;
-    if(M1.round >= 3){
-      M1.done = true;
-      setFb('m1fb', L({ es:'Tres saltos exactos. El salto siempre sale de restar la salida a la meta.',
-                        en:'Three exact jumps. The jump always comes from subtracting the start from the goal.'}), 'good');
-      var b=document.getElementById('m1btn'); if(b) b.classList.add('done');
-      return;
+  // Reveal landing in metric
+  var l=document.getElementById('m1land'); if(l) l.textContent = numStr(land);
+  // Animate the arc, then show feedback and next-round button
+  m1DrawAnimated(function(){
+    if(land === M1.goal){
+      M1.round++;
+      if(M1.round >= 3){
+        M1.done = true;
+        setFb('m1fb', L({ es:'¡Caes exactamente en <b>'+numStr(land)+'</b>! Tres saltos perfectos. El salto siempre es la meta menos la salida.',
+                          en:'You land exactly on <b>'+numStr(land)+'</b>! Three perfect jumps. The jump is always the goal minus the start.'}), 'good');
+        var btn=document.getElementById('m1btn'); if(btn) btn.classList.add('done');
+        var nxt=document.getElementById('m1next'); if(nxt) nxt.style.display='none';
+        return;
+      }
+      setFb('m1fb', L({ es:'¡Caes exactamente en <b>'+numStr(land)+'</b>! Pulsa <b>Siguiente ronda</b> cuando estés listo.',
+                         en:'You land exactly on <b>'+numStr(land)+'</b>! Press <b>Next round</b> when you are ready.'}), 'good');
+    } else {
+      M1.tries++;
+      var d = M1.goal - land;
+      if(M1.tries >= 3){
+        setFb('m1fb', L({ es:'Caes en <b>'+numStr(land)+'</b>. El salto correcto era <b>'+numStr(need)+'</b>, porque '+numStr(M1.goal)+' − '+par(M1.start)+' = '+numStr(need)+'. Pulsa <b>Siguiente ronda</b> para continuar.',
+                          en:'You land on <b>'+numStr(land)+'</b>. The correct jump was <b>'+numStr(need)+'</b>, because '+numStr(M1.goal)+' − '+par(M1.start)+' = '+numStr(need)+'. Press <b>Next round</b> to continue.'}), 'warn');
+        M1.round++;
+        if(M1.round >= 3){ M1.done = true; var nxt2=document.getElementById('m1next'); if(nxt2) nxt2.style.display='none'; return; }
+      } else {
+        setFb('m1fb', L({ es:'Caes en <b>'+numStr(land)+'</b>: '+(d>0?'no alcanzaste a llegar a la meta':'te pasaste de la meta')+'. Mueve el deslizador '+(d>0?'hacia la derecha':'hacia la izquierda')+' y vuelve a comprobar.',
+                          en:'You land on <b>'+numStr(land)+'</b>: '+(d>0?'you did not reach the goal':'you went past the goal')+'. Move the slider '+(d>0?'right':'left')+' and check again.'}), 'warn');
+        // On wrong (non-3rd) try: arc stays visible but student can move slider to try again
+        return;  // don't show siguiente ronda yet
+      }
     }
-    setFb('m1fb', L({ es:'¡Exacto! Nueva salida y nueva meta.', en:'Exactly! New start and new goal.'}), 'good');
-    setTimeout(m1NewRound, 700);
-    return;
-  }
-  M1.tries++;
-  if(M1.tries >= 3){
-    setFb('m1fb', L({ es:'El salto que une '+numStr(M1.start)+' con '+numStr(M1.goal)+' es '+numStr(need)+', porque '+numStr(M1.goal)+' − '+par(M1.start)+' = '+numStr(need)+'. Pasamos a la siguiente ronda.',
-                      en:'The jump from '+numStr(M1.start)+' to '+numStr(M1.goal)+' is '+numStr(need)+', because '+numStr(M1.goal)+' − '+par(M1.start)+' = '+numStr(need)+'. On to the next round.'}), 'warn');
-    M1.round++;
-    if(M1.round >= 3){ M1.done = true; return; }
-    setTimeout(m1NewRound, 1400);
-    return;
-  }
-  var d = M1.goal - land;
-  setFb('m1fb', L({ es:'Todavía no. Con ese salto caes en '+numStr(land)+', '+(d>0?'antes':'después')+' de la meta. Ajusta el deslizador '+(d>0?'hacia arriba':'hacia abajo')+'.',
-                    en:'Not yet. That jump lands on '+numStr(land)+', '+(d>0?'before':'past')+' the goal. Move the slider '+(d>0?'up':'down')+'.'}), 'warn');
-  var s=document.getElementById('m1slider'); if(s){ s.value = 0; M1.jump = 0; }
-  m1Render();
+    // Show siguiente ronda button, hide comprobar
+    var btn=document.getElementById('m1btn'); if(btn) btn.style.display='none';
+    var nxt=document.getElementById('m1next'); if(nxt) nxt.style.display='';
+  });
+}
+function m1Next(){
+  if(M1.done) return;
+  m1NewRound();
 }
 
 /* ═════════ WIDGET 2a: explorador de signos ═════════ */
@@ -1321,8 +1453,9 @@ function m2NewRound(){
   ];
   M2.keys = shuffle(keys, r);
   m2Render();
-  setFb('m2fb', L({ es:'La máquina ya transformó el número. Elige la tecla que lo regresa a '+numStr(M2.a)+'.',
-                    en:'The machine already transformed the number. Choose the key that brings it back to '+numStr(M2.a)+'.'}));
+  var sym = M2.kind==='mul' ? '× '+M2.n : '+ '+M2.n;
+  setFb('m2fb', L({ es:'La máquina aplicó [ '+sym+' ] al número de entrada. Elige qué operación deshace eso y regresa el número de salida <b>'+numStr(M2.out)+'</b> a la entrada <b>'+numStr(M2.a)+'</b>.',
+                    en:'The machine applied [ '+sym+' ] to the input. Choose the operation that undoes that and brings the output <b>'+numStr(M2.out)+'</b> back to the input <b>'+numStr(M2.a)+'</b>.'}));
 }
 function m2Apply(kind, v){
   if(kind==='div') return v/M2.n;
@@ -1333,11 +1466,18 @@ function m2Apply(kind, v){
 function m2Render(){
   var sym = M2.kind==='mul' ? '× '+M2.n : '+ '+M2.n;
   var e=document.getElementById('m2expr');
-  if(e) e.innerHTML = L({es:'entra',en:'in'})+' '+par(M2.a)+' → [ '+sym+' ] → '+L({es:'sale',en:'out'})+' <span style="color:var(--gold)">'+numStr(M2.out)+'</span>';
+  if(e) e.innerHTML =
+    L({es:'entrada',en:'input'})+' <span style="color:var(--green-dark);font-weight:700">'+numStr(M2.a)+'</span>' +
+    ' → [ '+sym+' ] → ' +
+    L({es:'salida',en:'output'})+' <span style="color:var(--gold);font-weight:700">'+numStr(M2.out)+'</span>' +
+    '<span style="display:block;font-size:.75rem;color:var(--text3);margin-top:.3rem">'+
+    L({es:'Aplica tu operación al número de salida ('+numStr(M2.out)+') y comprueba si obtienes la entrada ('+numStr(M2.a)+')',
+       en:'Apply your operation to the output ('+numStr(M2.out)+') and check if you get back the input ('+numStr(M2.a)+')'})+
+    '</span>';
   var box=document.getElementById('m2keys');
   if(box){
     var h='';
-    for(var i=0;i<M2.keys.length;i++) h += '<button class="mbtn mono" onclick="m2Try('+i+')">'+M2.keys[i].lbl+'</button>';
+    for(var i=0;i<M2.keys.length;i++) h += '<button class="mbtn mono" onclick="m2Try('+i+')">'+M2.out+' '+M2.keys[i].lbl+'</button>';
     box.innerHTML = h;
   }
   var rd=document.getElementById('m2round');
@@ -1371,8 +1511,8 @@ function m2Try(i){
     return;
   }
   var far = Math.abs(res - M2.a), near = Math.abs(M2.out - M2.a);
-  setFb('m2fb', L({ es:'Con esa tecla llegas a '+numStr(res)+', no a '+numStr(M2.a)+'. '+(far>near?'Te alejaste todavía más: prueba la operación contraria a la que hizo la máquina.':'Vas en buena dirección, pero no es la operación contraria exacta.'),
-                    en:'That key takes you to '+numStr(res)+', not '+numStr(M2.a)+'. '+(far>near?'You moved even further away: try the opposite operation to the one the machine used.':'You are heading the right way, but it is not the exact opposite operation.')}), 'warn');
+  setFb('m2fb', L({ es:'Con esa operación obtienes '+numStr(M2.out)+' '+k.lbl+' = '+numStr(res)+', no '+numStr(M2.a)+'. '+(far>near?'Prueba la operación contraria a la que usó la máquina.':'Vas en la dirección correcta, pero no es exactamente la operación inversa.'),
+                    en:'With that operation you get '+numStr(M2.out)+' '+k.lbl+' = '+numStr(res)+', not '+numStr(M2.a)+'. '+(far>near?'Try the operation opposite to what the machine used.':'You are heading the right way, but it is not exactly the inverse operation.')}), 'warn');
 }
 
 /* ═════════ WIDGET 3: comparador de propiedades ═════════ */
@@ -1414,10 +1554,10 @@ function m3Update(){
   e=document.getElementById('m3cv'); if(e) e.textContent = numStr(M3.c);
   if(lv===rv){
     M3.hit[M3.mode] = true;
-    var extra = (M3.mode==='res') ? L({es:' Los dos lados solo coinciden cuando los números son iguales, así que la resta no se puede reordenar libremente.', en:' Both sides only agree when the numbers are equal, so subtraction cannot be freely reordered.'}) : ' '+note;
-    setFb('m3fb', L({es:'Los dos lados valen '+numStr(lv)+'.', en:'Both sides equal '+numStr(lv)+'.'}) + extra, 'good');
+    var extra = (M3.mode==='res') ? L({es:' Los dos lados solo coinciden cuando a = b. Cambia los valores para ver que en general la resta no se puede reordenar.', en:' Both sides only agree when a = b. Change the values to see that in general subtraction cannot be freely reordered.'}) : ' '+note;
+    setFb('m3fb', L({es:'✓ Los dos lados valen '+numStr(lv)+'. Sigue probando con otros valores para confirmar.', en:'✓ Both sides equal '+numStr(lv)+'. Keep testing with other values to confirm.'}) + extra, 'good');
   } else {
-    setFb('m3fb', L({es:'El lado izquierdo vale '+numStr(lv)+' y el derecho '+numStr(rv)+': se diferencian en '+Math.abs(lv-rv)+'. ', en:'The left side is '+numStr(lv)+' and the right side is '+numStr(rv)+': they differ by '+Math.abs(lv-rv)+'. '}) + note, 'warn');
+    setFb('m3fb', L({es:'✗ El lado izquierdo vale '+numStr(lv)+' y el derecho vale '+numStr(rv)+' — son distintos. Esto ya demuestra que la propiedad no vale aquí. ', en:'✗ The left side is '+numStr(lv)+' and the right side is '+numStr(rv)+' — they differ. This already shows the property does not hold here. '}) + note, 'warn');
   }
 }
 
@@ -1477,7 +1617,7 @@ function m4NewRound(){
   }
   M4.step = 0; M4.tries = 0;
   m4Render();
-  setFb('m4fb', L({ es:'Toca la operación que se debe resolver primero.', en:'Tap the operation that must be solved first.'}));
+  setFb('m4fb', L({ es:'Empieza: elige cuál operación se resuelve primero.', en:'Start: choose which operation is resolved first.'}));
 }
 function m4Render(){
   var st = M4.steps[M4.step];
@@ -1501,17 +1641,18 @@ function m4Advance(){
       M4.done = true;
       var e=document.getElementById('m4expr'); if(e) e.textContent = numStr(v);
       var box=document.getElementById('m4chips'); if(box) box.innerHTML='';
-      setFb('m4fb', L({ es:'Resultado '+numStr(v)+'. Tres expresiones ordenadas: paréntesis, luego productos y cocientes, y al final sumas y restas.',
-                        en:'Result '+numStr(v)+'. Three expressions in order: parentheses, then products and quotients, and finally sums and differences.'}), 'good');
+      var instr=document.getElementById('m4instr'); if(instr) instr.style.display='none';
+      setFb('m4fb', L({ es:'Resultado: '+numStr(v)+'. Tres expresiones ordenadas: paréntesis primero, luego productos y cocientes, y al final sumas y restas.',
+                        en:'Result: '+numStr(v)+'. Three expressions ordered: parentheses first, then products and quotients, and finally additions and subtractions.'}), 'good');
       var rd=document.getElementById('m4round'); if(rd) rd.textContent='';
       return;
     }
-    setFb('m4fb', L({ es:'Resultado '+numStr(v)+'. Llega otra expresión.', en:'Result '+numStr(v)+'. Another expression is coming.'}), 'good');
+    setFb('m4fb', L({ es:'Resultado: '+numStr(v)+'. Llega otra expresión.', en:'Result: '+numStr(v)+'. Another expression is coming.'}), 'good');
     setTimeout(m4NewRound, 900);
     return;
   }
   m4Render();
-  setFb('m4fb', L({ es:'Bien. Ahora la expresión es más corta: ¿qué sigue?', en:'Good. The expression is shorter now: what comes next?'}), 'good');
+  setFb('m4fb', L({ es:'Correcto. La expresión se acortó. ¿Cuál es el siguiente paso?', en:'Correct. The expression got shorter. What comes next?'}), 'good');
 }
 function m4Tap(i){
   if(M4.done) return;
@@ -1571,20 +1712,37 @@ function buildLesson(rng){
   addSection(
     '<div class="gcrd">'+
       '<div class="mstage">'+L({es:'Recta de saltos',en:'Jump line'})+'</div>'+
-      '<div style="font-size:.84rem;color:var(--text2);margin-bottom:.5rem" id="m1prompt"></div>'+
+      '<div class="mtrack" id="m1round" style="margin-bottom:.6rem"></div>'+
+      '<div style="font-size:.9rem;font-weight:600;color:var(--text);margin-bottom:.7rem">'+
+        L({es:'Determina el tamaño y dirección del salto para llegar exactamente a la meta.',
+           en:'Determine the size and direction of the jump to land exactly on the goal.'})+'</div>'+
+      '<div style="display:flex;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap">'+
+        '<div style="flex:1;min-width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.35rem .6rem;text-align:center">'+
+          '<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:.15rem">'+L({es:'Salida',en:'Start'})+'</div>'+
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:1.05rem;font-weight:700;color:var(--text)" id="m1start-box">0</div>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;font-size:1.1rem;color:var(--text3)">→</div>'+
+        '<div style="flex:1;min-width:80px;background:var(--gold-bg);border:1px solid var(--gold);border-radius:8px;padding:.35rem .6rem;text-align:center">'+
+          '<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-bottom:.15rem">'+L({es:'Meta',en:'Goal'})+'</div>'+
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:1.05rem;font-weight:700;color:var(--green-dark)" id="m1goal-box">0</div>'+
+        '</div>'+
+      '</div>'+
       '<canvas class="mcanvas" id="m1canvas"></canvas>'+
-      '<div class="cg" style="margin-top:.7rem"><label>'+L({es:'Tamaño y dirección del salto',en:'Size and direction of the jump'})+'</label>'+
+      '<div class="cg" style="margin-top:.8rem"><label style="font-size:.8rem;color:var(--text3);margin-bottom:.3rem;display:block">'+L({es:'Mueve el deslizador para elegir tu salto:',en:'Move the slider to choose your jump:'})+'</label>'+
         '<input type="range" id="m1slider" min="-20" max="20" step="1" value="0" oninput="m1Slide()"></div>'+
-      '<div class="metrics">'+
-        '<div class="metric"><div class="mlbl">'+L({es:'Salto',en:'Jump'})+'</div><div class="mnum ps" id="m1jump">0</div></div>'+
-        '<div class="metric"><div class="mlbl">'+L({es:'Caes en',en:'You land on'})+'</div><div class="mnum cs" id="m1land">0</div></div>'+
+      '<div class="metrics" style="margin:.7rem 0">'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Tu salto',en:'Your jump'})+'</div><div class="mnum ps" id="m1jump">0</div></div>'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Caes en',en:'You land on'})+'</div><div class="mnum cs" id="m1land">?</div></div>'+
         '<div class="metric"><div class="mlbl">'+L({es:'Meta',en:'Goal'})+'</div><div class="mnum ts" id="m1goal">0</div></div>'+
       '</div>'+
-      '<div class="mrow"><button class="mbtn" id="m1btn" onclick="m1Check()">'+L({es:'Confirmar salto',en:'Confirm jump'})+'</button></div>'+
+      '<div class="mrow" style="gap:.5rem">'+
+        '<button class="mbtn" id="m1btn" onclick="m1Check()">'+L({es:'Comprobar salto',en:'Check jump'})+'</button>'+
+        '<button class="mbtn" id="m1next" onclick="m1Next()" style="display:none">'+L({es:'Siguiente ronda →',en:'Next round →'})+'</button>'+
+      '</div>'+
       '<div class="mfb" id="m1fb"></div>'+
     '</div>'
   );
-  M1 = { round:0, tries:0, start:0, goal:0, jump:0, done:false, rng:subRng(rng,'m1') };
+  M1 = { round:0, tries:0, start:0, goal:0, jump:0, done:false, checked:false, rng:subRng(rng,'m1') };
   setTimeout(function(){ m1NewRound(); }, 120);
 
   /* ─── P1 ─── */
@@ -1684,9 +1842,13 @@ function buildLesson(rng){
     '</div>'+
     '<div class="gcrd">'+
       '<div class="mstage">'+L({es:'Máquina inversa',en:'Inverse machine'})+'</div>'+
-      '<div class="mexpr" id="m2expr"></div>'+
-      '<div style="font-size:.83rem;color:var(--text2);margin-top:.6rem">'+L({es:'Elige la tecla que devuelve el número de salida a su valor de entrada.',
-                                                                              en:'Choose the key that returns the output number to its input value.'})+'</div>'+
+      '<div style="font-size:.84rem;color:var(--text2);margin-bottom:.4rem">'+
+        L({es:'La máquina transformó un número de entrada con una operación. <strong>Tu misión: elegir la operación contraria</strong> para regresar al valor original.',
+           en:'The machine transformed an input number with an operation. <strong>Your mission: choose the opposite operation</strong> to get back to the original value.'})+'</div>'+
+      '<div style="font-size:.83rem;font-weight:600;color:var(--green-dark);margin:.4rem 0 .3rem">'+
+        L({es:'¿Cuál de estas operaciones aplicada al número de salida regresa al número de entrada?',
+           en:'Which of these operations, applied to the output number, gets back to the input number?'})+'</div>'+
+      '<div id="m2expr" style="background:var(--surface2);border-radius:8px;padding:.7rem .9rem;font-family:\'IBM Plex Mono\',monospace;font-size:.95rem;margin:.3rem 0 .5rem 0"></div>'+
       '<div class="mrow" id="m2keys"></div>'+
       '<div class="mfb" id="m2fb"></div>'+
       '<div class="mtrack" id="m2round"></div>'+
@@ -1779,11 +1941,14 @@ function buildLesson(rng){
   addSection(
     '<div class="gcrd">'+
       '<div class="mstage">'+L({es:'Banco de pruebas',en:'Test bench'})+'</div>'+
+      '<div style="font-size:.84rem;color:var(--text2);margin-bottom:.6rem">'+
+        L({es:'Elige una propiedad, mueve los deslizadores para probar distintos valores de <b>a</b>, <b>b</b> y <b>c</b>, y observa si los dos lados de la igualdad siempre coinciden. Si encuentras un caso donde <em>no</em> coinciden, esa propiedad no es válida para esa operación.',
+           en:'Choose a property, move the sliders to try different values of <b>a</b>, <b>b</b> and <b>c</b>, and see if both sides of the equality always match. If you find a case where they do <em>not</em> match, that property does not hold for that operation.'})+'</div>'+
       '<div class="mrow" style="margin-top:0">'+
-        '<button class="mbtn on" onclick="m3Mode(\'com\',this)">a + b</button>'+
-        '<button class="mbtn" onclick="m3Mode(\'res\',this)">a − b</button>'+
-        '<button class="mbtn" onclick="m3Mode(\'aso\',this)">( ) ×</button>'+
-        '<button class="mbtn" onclick="m3Mode(\'dis\',this)">a × ( )</button>'+
+        '<button class="mbtn on" onclick="m3Mode(\'com\',this)" title="'+L({es:'¿a + b siempre es igual a b + a?',en:'Is a + b always equal to b + a?'})+'">a + b</button>'+
+        '<button class="mbtn" onclick="m3Mode(\'res\',this)" title="'+L({es:'¿a − b siempre es igual a b − a?',en:'Is a − b always equal to b − a?'})+'">a − b</button>'+
+        '<button class="mbtn" onclick="m3Mode(\'aso\',this)" title="'+L({es:'¿(a × b) × c siempre es igual a a × (b × c)?',en:'Is (a × b) × c always equal to a × (b × c)?'})+'">( ) ×</button>'+
+        '<button class="mbtn" onclick="m3Mode(\'dis\',this)" title="'+L({es:'¿a × (b + c) siempre es igual a a × b + a × c?',en:'Is a × (b + c) always equal to a × b + a × c?'})+'">a × ( )</button>'+
       '</div>'+
       '<div class="cgrid" style="margin-top:.8rem">'+
         '<div class="cg"><label>a = <span class="cval" id="m3av">5</span></label><input type="range" id="m3a" min="-9" max="9" step="1" value="5" oninput="m3Update()"></div>'+
@@ -1887,7 +2052,11 @@ function buildLesson(rng){
   addSection(
     '<div class="gcrd">'+
       '<div class="mstage">'+L({es:'Constructor de pasos',en:'Step builder'})+'</div>'+
+      '<div style="font-size:.84rem;color:var(--text2);margin-bottom:.4rem">'+
+        L({es:'Esta es la expresión a calcular:',en:'This is the expression to calculate:'})+'</div>'+
       '<div class="mexpr big" id="m4expr"></div>'+
+      '<div style="font-size:.84rem;font-weight:600;color:var(--green-dark);margin:.55rem 0 .3rem" id="m4instr">'+
+        L({es:'Toca la operación que se debe resolver primero:',en:'Tap the operation that must be resolved first:'})+'</div>'+
       '<div class="mrow" id="m4chips"></div>'+
       '<div class="mfb" id="m4fb"></div>'+
       '<div class="mrow"><button class="mbtn" onclick="m4Reset()">'+L({es:'Reiniciar expresión',en:'Reset expression'})+'</button></div>'+
