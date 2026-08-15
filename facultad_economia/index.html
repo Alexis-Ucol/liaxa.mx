@@ -376,6 +376,27 @@ function normalize(str) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 }
 
+// Extra label variants that appear in titles but differ from the subject key
+const TITLE_ALIASES = {
+  'Series Tiempo':  ['Series de Tiempo', 'Series de Tiempo Financieras'],
+  'Financial Math': ['Financial Mathematics'],
+};
+
+// Strip trailing " — Subject", " · Subject", or ", Subject" from a title
+// Works even when the title's subject word has different accents from the data field
+function cleanTitle(title, subject) {
+  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const normTitle = norm(title);
+  const candidates = [subject, ...(TITLE_ALIASES[subject] || [])];
+  for (const candidate of candidates) {
+    const esc   = norm(candidate).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx    = new RegExp('[\\s]*[\\u2014\\u2013·,]+[\\s]*' + esc + '[\\s]*$');
+    const match = normTitle.search(rx);
+    if (match !== -1) return title.slice(0, match).trim();
+  }
+  return title;
+}
+
 function handleSearch() {
   searchQuery = document.getElementById('search-input').value;
   renderMaterials();
@@ -430,7 +451,7 @@ function renderMaterials() {
     div.innerHTML = `
       <div class="topic-group-header">
         <div class="topic-group-icon" style="background:${ic.bg}; font-size:1rem; color:#333;">${ic.icon}</div>
-        <span class="topic-group-title">${group.subject}${group.topic ? ' · ' + group.topic : ''}</span>
+        <span class="topic-group-title">${group.subject}${group.topic && group.topic !== group.subject ? ' · ' + group.topic : ''}</span>
         <span class="topic-group-count">${group.items.length}</span>
       </div>
       <div class="materials-list" id="list-${group.subject.replace(/\s/g,'')}-${group.topic.replace(/\s/g,'')}"></div>
@@ -449,10 +470,8 @@ function renderMaterials() {
 
       row.innerHTML = `
         <div class="mat-body">
-          <div class="mat-title">${mat.title}</div>
-          <div class="mat-meta">
-            <span class="mat-grade">${mat.subject}</span>
-          </div>
+          <div class="mat-title">${cleanTitle(mat.title, mat.subject)}</div>
+          <div class="mat-meta"></div>
         </div>
         <div class="mat-actions" onclick="event.preventDefault(); event.stopPropagation();">
           <button class="copy-btn" onclick="copyLink('${mat.url}', this)">
