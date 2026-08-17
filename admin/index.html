@@ -152,20 +152,6 @@ tbody td:first-child { font-weight: 600; color: var(--text); }
   font-weight: 600; padding: .2rem .6rem; border-radius: 20px;
 }
 
-/* ── GUIDE SELECTOR ── */
-.guide-selector {
-  display: flex; align-items: center; gap: .75rem; margin-bottom: 2rem;
-  background: var(--surface); border-radius: var(--radius);
-  padding: 1rem 1.5rem; box-shadow: var(--shadow);
-}
-.guide-selector label { font-size: .85rem; color: var(--text2); font-weight: 600; white-space: nowrap; }
-.guide-selector select {
-  flex: 1; padding: .5rem .75rem; border: 1.5px solid var(--border);
-  border-radius: 6px; font-size: .95rem; background: var(--bg);
-  outline: none; cursor: pointer;
-}
-.guide-selector select:focus { border-color: var(--navy); }
-
 /* ── LOADING / EMPTY ── */
 .loading { text-align: center; padding: 3rem; color: var(--text3); font-size: .9rem; }
 .empty   { text-align: center; padding: 2rem; color: var(--text3); font-size: .85rem; }
@@ -231,34 +217,36 @@ tbody td:first-child { font-weight: 600; color: var(--text); }
       <div class="stat-card ok"><div class="stat-label">Tiempo promedio</div><div class="stat-value" id="s-avgtime">—</div></div>
     </div>
 
-    <!-- Summary table -->
-    <div class="section-header">
-      <div class="section-title">Resumen por escuela</div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Escuela</th>
-            <th>Visitas portal</th>
-            <th>Sesiones módulo</th>
-            <th>Módulos distintos</th>
-            <th>Tiempo prom.</th>
-            <th>Último acceso</th>
-          </tr>
-        </thead>
-        <tbody id="summary-tbody">
-          <tr><td colspan="6" class="loading">Cargando datos…</td></tr>
-        </tbody>
-      </table>
+    <!-- School selector + summary table (hidden until school selected) -->
+    <div class="school-selector">
+      <label>Ver escuela:</label>
+      <select id="school-select" onchange="onSchoolSelect(this.value)">
+        <option value="">— Selecciona una escuela —</option>
+        <option value="__todas__">Todas las escuelas</option>
+      </select>
     </div>
 
-    <!-- School drill-down -->
-    <div class="school-selector">
-      <label>Ver detalle de escuela:</label>
-      <select id="school-select" onchange="loadSchoolDetail(this.value)">
-        <option value="">— Selecciona una escuela —</option>
-      </select>
+    <div id="summary-section" style="display:none;">
+      <div class="section-header">
+        <div class="section-title" id="summary-title">Resumen por escuela</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Escuela</th>
+              <th>Visitas portal</th>
+              <th>Sesiones módulo</th>
+              <th>Módulos distintos</th>
+              <th>Tiempo prom.</th>
+              <th>Último acceso</th>
+            </tr>
+          </thead>
+          <tbody id="summary-tbody">
+            <tr><td colspan="6" class="loading">Cargando datos…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div id="detail-container"></div>
@@ -281,13 +269,6 @@ tbody td:first-child { font-weight: 600; color: var(--text); }
           <tr><td colspan="4" class="loading">Cargando guías…</td></tr>
         </tbody>
       </table>
-    </div>
-
-    <div class="guide-selector">
-      <label>Ver detalle de guía:</label>
-      <select id="guide-select" onchange="loadGuideDetail(this.value)">
-        <option value="">— Selecciona una guía —</option>
-      </select>
     </div>
 
     <div id="guide-detail-container"></div>
@@ -361,8 +342,11 @@ function loadAll() {
     });
 }
 
+var ALL_SUMMARY_ROWS = [];
+
 function renderSummary(rows) {
-  // Global stats
+  ALL_SUMMARY_ROWS = rows;
+  // Global stats always visible
   var totalPortals  = rows.reduce(function(a, r) { return a + r.portal_loads; }, 0);
   var totalSessions = rows.reduce(function(a, r) { return a + r.module_sessions; }, 0);
   var allTimes      = rows.map(function(r) { return r.avg_time_sec; }).filter(Boolean);
@@ -374,36 +358,72 @@ function renderSummary(rows) {
   document.getElementById('s-portals').textContent  = totalPortals;
   document.getElementById('s-sessions').textContent = totalSessions;
   document.getElementById('s-avgtime').textContent  = fmtTime(globalAvg);
-
-  // Table
-  if (!rows.length) {
-    document.getElementById('summary-tbody').innerHTML =
-      '<tr><td colspan="6" class="empty">Sin datos todavía.</td></tr>';
-    return;
-  }
-  var html = rows.map(function(r) {
-    return '<tr onclick="loadSchoolDetail(\'' + r.school + '\')" style="cursor:pointer">' +
-      '<td>' + r.school + '</td>' +
-      '<td><span class="badge badge-gold">' + r.portal_loads + '</span></td>' +
-      '<td>' + r.module_sessions + '</td>' +
-      '<td>' + r.modules_used + '</td>' +
-      '<td>' + fmtTime(r.avg_time_sec) + '</td>' +
-      '<td>' + (r.last_seen || '—') + '</td>' +
-      '</tr>';
-  }).join('');
-  document.getElementById('summary-tbody').innerHTML = html;
+  // Table stays hidden until school is selected
 }
 
 function populateSchoolSelect(schools) {
   var sel = document.getElementById('school-select');
   var current = sel.value;
-  sel.innerHTML = '<option value="">— Selecciona una escuela —</option>';
+  sel.innerHTML = '<option value="">— Selecciona una escuela —</option>' +
+    '<option value="__todas__">Todas las escuelas</option>';
   schools.forEach(function(s) {
     var opt = document.createElement('option');
     opt.value = s; opt.textContent = s;
     if (s === current) opt.selected = true;
     sel.appendChild(opt);
   });
+}
+
+function onSchoolSelect(val) {
+  var section = document.getElementById('summary-section');
+  var detailContainer = document.getElementById('detail-container');
+
+  if (!val) {
+    section.style.display = 'none';
+    detailContainer.innerHTML = '';
+    return;
+  }
+
+  section.style.display = 'block';
+
+  if (val === '__todas__') {
+    document.getElementById('summary-title').textContent = 'Todas las escuelas';
+    // Render full summary table
+    var rows = ALL_SUMMARY_ROWS;
+    if (!rows.length) {
+      document.getElementById('summary-tbody').innerHTML =
+        '<tr><td colspan="6" class="empty">Sin datos todavía.</td></tr>';
+    } else {
+      document.getElementById('summary-tbody').innerHTML = rows.map(function(r) {
+        return '<tr onclick="onSchoolSelect(\'' + r.school + '\')" style="cursor:pointer">' +
+          '<td>' + r.school + '</td>' +
+          '<td><span class="badge badge-gold">' + r.portal_loads + '</span></td>' +
+          '<td>' + r.module_sessions + '</td>' +
+          '<td>' + r.modules_used + '</td>' +
+          '<td>' + fmtTime(r.avg_time_sec) + '</td>' +
+          '<td>' + (r.last_seen || '—') + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+    detailContainer.innerHTML = '';
+  } else {
+    // Single school selected — show its row only, then load detail
+    document.getElementById('summary-title').textContent = val;
+    var row = ALL_SUMMARY_ROWS.filter(function(r) { return r.school === val; })[0];
+    if (row) {
+      document.getElementById('summary-tbody').innerHTML =
+        '<tr>' +
+        '<td>' + row.school + '</td>' +
+        '<td><span class="badge badge-gold">' + row.portal_loads + '</span></td>' +
+        '<td>' + row.module_sessions + '</td>' +
+        '<td>' + row.modules_used + '</td>' +
+        '<td>' + fmtTime(row.avg_time_sec) + '</td>' +
+        '<td>' + (row.last_seen || '—') + '</td>' +
+        '</tr>';
+    }
+    document.getElementById('school-select').value = val;
+    loadSchoolDetail(val);
+  }
 }
 
 function loadSchoolDetail(school) {
@@ -442,7 +462,7 @@ function renderSchoolDetail(data) {
   if (data.modules && data.modules.length) {
     var rows = data.modules.map(function(m) {
       return '<tr>' +
-        '<td>' + m.module_id + '</td>' +
+        '<td>' + (m.module_title || m.module_id) + '</td>' +
         '<td><span class="badge badge-ok">' + m.session_count + '</span></td>' +
         '<td>' + fmtTime(m.avg_time_sec) + '</td>' +
         '<td>' + m.active_days + '</td>' +
@@ -452,7 +472,7 @@ function renderSchoolDetail(data) {
     modulesHtml =
       '<div style="margin-bottom:.5rem;font-size:.82rem;color:var(--text3);font-weight:600;">MÓDULOS</div>' +
       '<div class="table-wrap"><table>' +
-      '<thead><tr><th>Módulo</th><th>Sesiones</th><th>Tiempo prom.</th><th>Días activo</th><th>Último uso</th></tr></thead>' +
+      '<thead><tr><th>Guía</th><th>Sesiones</th><th>Tiempo prom.</th><th>Días activo</th><th>Último uso</th></tr></thead>' +
       '<tbody>' + rows + '</tbody></table></div>';
   } else {
     modulesHtml = '<div class="empty">Sin actividad en módulos todavía.</div>';
@@ -490,18 +510,6 @@ function renderGuideList(guides) {
       '</tr>';
   }).join('');
   document.getElementById('guides-tbody').innerHTML = html;
-
-  // Populate guide dropdown
-  var sel = document.getElementById('guide-select');
-  var current = sel.value;
-  sel.innerHTML = '<option value="">— Selecciona una guía —</option>';
-  guides.forEach(function(g) {
-    var opt = document.createElement('option');
-    opt.value = g.module_id;
-    opt.textContent = g.module_title || g.module_id;
-    if (g.module_id === current) opt.selected = true;
-    sel.appendChild(opt);
-  });
 }
 
 function loadGuideDetail(moduleId) {
@@ -509,7 +517,6 @@ function loadGuideDetail(moduleId) {
     document.getElementById('guide-detail-container').innerHTML = '';
     return;
   }
-  document.getElementById('guide-select').value = moduleId;
   document.getElementById('guide-detail-container').innerHTML =
     '<div class="loading">Cargando detalle…</div>';
 
