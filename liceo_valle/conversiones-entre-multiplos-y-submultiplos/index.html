@@ -1,0 +1,2149 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conversiones entre Múltiplos y Submúltiplos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Conversiones entre Múltiplos y Submúltiplos</div>
+    <div class="wcourse" id="wcourse-el">Física · Segundo de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Conversiones entre Múltiplos y Submúltiplos</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#242454', primaryDark:'#18183b', primaryBg:'#eaeaf3',
+  accent:'#6c6c84', accentBg:'#ebebef',
+  darkPrimary:'#5e5eab', darkPrimaryDark:'#8b8bce', darkPrimaryBg:'#151531',
+  darkAccent:'#9595a9', darkAccentBg:'#17171b',
+  pBR:36, pBG:36, pBB:84, pAR:108, pAG:108, pAB:132,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'Liceo Valle',
+  guideTitle:{ es:'Conversiones entre Múltiplos y Submúltiplos', en:'Converting Between Multiples and Submultiples' }, courseName:{ es:'Física · Segundo de Secundaria', en:'Physics · Second Year of Secondary School' }, filePrefix:'fis2_t02_g02', schoolSlug:'liceo_valle'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'fis2_t02_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Conversiones entre Múltiplos y Submúltiplos','wcourse':'Física · Segundo de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Converting Between Multiples and Submultiples','wcourse':'Physics · Second Year of Secondary School',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'fis2_t02_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'fis2_t02_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'fis2_t02_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'fis2_t02_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
+  }
+
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('fis2_t02_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   GUIA fis2_t02_g02  ::  Conversiones entre Multiplos y Submúltiplos
+   Fisica, segundo de secundaria. Concepto -> manipulativo -> problema.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+var GUIDE_CLEANUP = [];
+
+function L(o){ if(!o) return ''; return (o[LANG] !== undefined ? o[LANG] : o.es); }
+function ri(rng, a, b){ return a + Math.floor(rng() * (b - a + 1)); }
+function fmt(x){ return String(parseFloat(Number(x).toPrecision(12))); }
+function mf(n, d){ return '<span class="mf-outer"><span class="mf-num">' + n + '</span> <span class="mf-den">' + d + '</span></span>'; }
+function cssv(n){ try { var v = getComputedStyle(document.documentElement).getPropertyValue(n).trim(); return v || 'gray'; } catch(e){ return 'gray'; } }
+
+/* devuelve 4 opciones distintas con la correcta en la posicion 0 */
+function opts4(correct, cands){
+  var out = [correct], i, k = 1;
+  for (i = 0; i < cands.length && out.length < 4; i++){
+    if (cands[i] === null || cands[i] === undefined) continue;
+    if (out.indexOf(cands[i]) === -1) out.push(cands[i]);
+  }
+  while (out.length < 4){
+    var alt = correct + k * 10;
+    if (out.indexOf(alt) === -1) out.push(alt);
+    k++;
+  }
+  return out;
+}
+function withUnit(list, u){ return list.map(function(v){ return String(v) + ' ' + u; }); }
+
+/* ── CSS propio de la guia: solo tokens, sin hex crudo ── */
+function injectGuideCSS(){
+  if (document.getElementById('guideCSS')) return;
+  var st = document.createElement('style');
+  st.id = 'guideCSS';
+  st.textContent = '.gw{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin:1.1rem 0;}' +
+    '.gwh{font-size:.68rem;letter-spacing:.11em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.4rem;}' +
+    '.gwtask{font-size:.88rem;color:var(--text2);margin-bottom:.75rem;}' +
+    '.gwtask b{color:var(--green-dark);}' +
+    '.chips{display:flex;flex-wrap:wrap;gap:.5rem;}' +
+    '.chip{border:1.5px solid var(--border);border-radius:22px;padding:.4rem .85rem;font-size:.83rem;cursor:pointer;background:var(--surface2);min-height:44px;display:flex;flex-direction:column;justify-content:center;user-select:none;transition:all .14s;}' +
+    '.chip.mult{border-color:var(--green);background:var(--green-bg);}' +
+    '.chip.sub{border-color:var(--gold);background:var(--gold-bg);}' +
+    '.chip .cst{font-size:.68rem;color:var(--text3);}' +
+    '.tally{display:flex;flex-wrap:wrap;gap:1rem;font-size:.74rem;color:var(--text3);margin-top:.65rem;}' +
+    '.gmsg{margin-top:.7rem;font-size:.84rem;padding:.6rem .8rem;border-radius:8px;background:var(--surface2);color:var(--text2);}' +
+    '.gmsg.ok{background:var(--ok-bg);color:var(--ok);}' +
+    '.gmsg.bad{background:var(--bad-bg);color:var(--bad);}' +
+    '.gbtn{margin-top:.7rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.55rem 1.05rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;}' +
+    '.gbtn:hover{background:var(--green-dark);}' +
+    '.gbtn:disabled{opacity:.5;cursor:default;}' +
+    '.gbtn.alt{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}' +
+    '.gbtn.alt:hover{background:var(--border);}' +
+    '.ladder{display:flex;flex-direction:column;gap:.22rem;}' +
+    '.lrow{display:flex;align-items:center;gap:.7rem;padding:.4rem .7rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);font-size:.85rem;transition:all .16s;}' +
+    '.lrow.cur{border-color:var(--green);background:var(--green-bg);}' +
+    '.lrow.tgt{border-color:var(--gold);background:var(--gold-bg);}' +
+    '.lu{font-family:IBM Plex Mono,monospace;width:3.4rem;font-weight:600;color:var(--text);}' +
+    '.lv{font-family:IBM Plex Mono,monospace;color:var(--green-dark);font-weight:600;}' +
+    '.ltag{margin-left:auto;font-size:.66rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);}' +
+    '.lnav{display:flex;gap:.5rem;flex-wrap:wrap;}' +
+    '.fbank{display:flex;gap:.5rem;flex-wrap:wrap;margin:.3rem 0 .8rem;}' +
+    '.fopt{border:1.5px solid var(--border);border-radius:8px;padding:.45rem .8rem;font-size:.84rem;cursor:pointer;background:var(--surface2);min-height:44px;display:flex;align-items:center;user-select:none;}' +
+    '.fopt.sel{border-color:var(--green);background:var(--green-bg);color:var(--green-dark);font-weight:600;}' +
+    '.flbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.2rem;}' +
+    '.frow{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;font-size:.95rem;background:var(--surface2);border-radius:8px;padding:.7rem .85rem;}' +
+    '.fsurv{font-family:IBM Plex Mono,monospace;font-size:.85rem;color:var(--green-dark);font-weight:600;}' +
+    '.rulwrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);}' +
+    '.rulcv{display:block;width:100%;height:118px;touch-action:none;cursor:ew-resize;}' +
+    '.rread{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-top:.6rem;}' +
+    '.rr{background:var(--surface2);border-radius:8px;padding:.5rem;text-align:center;}' +
+    '.rrl{font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);}' +
+    '.rrv{font-family:IBM Plex Mono,monospace;font-size:.95rem;font-weight:600;color:var(--green-dark);}' +
+    '.gprog{font-size:.7rem;color:var(--text3);margin-top:.55rem;letter-spacing:.05em;text-transform:uppercase;}' +
+    '@media(max-width:600px){.gw{padding:.85rem;}.lu{width:2.9rem;}.chip{font-size:.78rem;}}';
+  document.head.appendChild(st);
+}
+
+/* ── constructores de estructura ── */
+function sec(tag, title, html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = '<div class="stag">' + tag + '</div><h2>' + title + '</h2>' + html;
+  document.getElementById('lessonBody').appendChild(d);
+  return d;
+}
+function wHost(parent, id){
+  var d = document.createElement('div');
+  d.className = 'gw';
+  d.id = id;
+  parent.appendChild(d);
+  return d;
+}
+function rcard(name, form, note){
+  return '<div class="rcard"><div class="rname">' + name + '</div><div class="rform">' + form + '</div><div class="rnote">' + note + '</div></div>';
+}
+function addProblem(rng, spec){
+  var idx = problems.length;
+  var correctVal = spec.options[spec.correct];
+  var sh = shuffle(spec.options, rng);
+  var prob = {
+    title: spec.title,
+    questionText: spec.q,
+    fn: spec.fn || '',
+    hint: spec.hint || '',
+    explanation: spec.exp || '',
+    options: sh,
+    correctIdx: sh.indexOf(correctVal),
+    showWork: !!spec.showWork,
+    studentChoice: null,
+    pendingChoice: null
+  };
+  problems.push(prob);
+  buildOneCard(prob, idx);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 1 :: clasificador de etiquetas
+   Cada toque cambia el lado de la etiqueta y el conteo se actualiza al vuelo.
+   ══════════════════════════════════════════════════════════════════════════ */
+function wSort(rng, host){
+  var pool = [
+    { t:{es:'500 mg de paracetamol', en:'500 mg of paracetamol'}, k:'sub',  p:{es:'mili', en:'milli'} },
+    { t:{es:'5 km de carrera', en:'a 5 km race'},                 k:'mult', p:{es:'kilo', en:'kilo'} },
+    { t:{es:'30 cL de jugo', en:'30 cL of juice'},                k:'sub',  p:{es:'centi', en:'centi'} },
+    { t:{es:'2 hL en la cisterna', en:'2 hL in the cistern'},     k:'mult', p:{es:'hecto', en:'hecto'} },
+    { t:{es:'8 dm de tubo', en:'8 dm of pipe'},                   k:'sub',  p:{es:'deci', en:'deci'} },
+    { t:{es:'12 dam de cuerda', en:'12 dam of rope'},             k:'mult', p:{es:'deca', en:'deca'} },
+    { t:{es:'250 mL de leche', en:'250 mL of milk'},              k:'sub',  p:{es:'mili', en:'milli'} },
+    { t:{es:'3 kg de arroz', en:'3 kg of rice'},                  k:'mult', p:{es:'kilo', en:'kilo'} }
+  ];
+  var items = shuffle(pool, rng).slice(0, 6);
+  var st = items.map(function(){ return ''; });
+  var tries = 0, closed = false;
+
+  host.innerHTML =
+    '<div class="gwh">' + L({es:'Clasificador de etiquetas', en:'Label sorter'}) + '</div>' +
+    '<div class="gwtask">' + L({
+      es:'Toca cada etiqueta hasta dejarla del lado que le toca: <b>múltiplo</b> si el prefijo agranda la unidad, <b>submúltiplo</b> si la achica.',
+      en:'Tap each label until it sits on the right side: <b>multiple</b> if the prefix makes the unit bigger, <b>submultiple</b> if it makes it smaller.'
+    }) + '</div>' +
+    '<div class="chips" id="' + host.id + '_c"></div>' +
+    '<div class="tally" id="' + host.id + '_t"></div>' +
+    '<button class="gbtn" id="' + host.id + '_b">' + L({es:'Revisar la mesa', en:'Check the table'}) + '</button>' +
+    '<div class="gmsg" id="' + host.id + '_m">' + L({es:'Todavía no colocas ninguna etiqueta.', en:'You have not placed any label yet.'}) + '</div>';
+
+  var cw = document.getElementById(host.id + '_c');
+  var tw = document.getElementById(host.id + '_t');
+  var mw = document.getElementById(host.id + '_m');
+  var bw = document.getElementById(host.id + '_b');
+
+  function lbl(s){
+    if (s === 'mult') return L({es:'agranda la unidad', en:'makes the unit bigger'});
+    if (s === 'sub')  return L({es:'achica la unidad', en:'makes the unit smaller'});
+    return L({es:'toca para colocar', en:'tap to place'});
+  }
+  function draw(){
+    cw.innerHTML = '';
+    items.forEach(function(it, i){
+      var d = document.createElement('div');
+      d.className = 'chip' + (st[i] ? ' ' + st[i] : '');
+      d.innerHTML = '<span><strong>' + L(it.t) + '</strong></span><span class="cst">' + lbl(st[i]) + '</span>';
+      if (!closed) d.addEventListener('click', function(){
+        st[i] = (st[i] === '') ? 'mult' : (st[i] === 'mult' ? 'sub' : '');
+        draw();
+      });
+      cw.appendChild(d);
+    });
+    var nm = 0, ns = 0;
+    st.forEach(function(v){ if (v === 'mult') nm++; if (v === 'sub') ns++; });
+    tw.textContent = L({es:'Múltiplos: ', en:'Multiples: '}) + nm + ' · ' +
+                     L({es:'Submúltiplos: ', en:'Submultiples: '}) + ns + ' · ' +
+                     L({es:'Sin colocar: ', en:'Unplaced: '}) + (items.length - nm - ns);
+  }
+  draw();
+
+  bw.addEventListener('click', function(){
+    if (closed) return;
+    var wrong = [];
+    items.forEach(function(it, i){ if (st[i] !== it.k) wrong.push(i); });
+    if (wrong.length === 0){
+      closed = true; draw();
+      mw.className = 'gmsg ok';
+      mw.innerHTML = L({
+        es:'Las seis quedaron en su lugar. Kilo, hecto y deca empujan la unidad hacia arriba; deci, centi y mili la parten en pedazos.',
+        en:'All six landed in place. Kilo, hecto and deca push the unit upwards; deci, centi and milli break it into pieces.'
+      });
+      bw.disabled = true;
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      closed = true;
+      items.forEach(function(it, i){ st[i] = it.k; });
+      draw();
+      mw.className = 'gmsg bad';
+      mw.innerHTML = L({
+        es:'Así quedan colocadas. La regla corta: kilo, hecto y deca multiplican la unidad; deci, centi y mili la dividen.',
+        en:'This is how they line up. Short rule: kilo, hecto and deca multiply the unit; deci, centi and milli divide it.'
+      });
+      bw.disabled = true;
+      return;
+    }
+    var i0 = wrong[0];
+    mw.className = 'gmsg bad';
+    mw.innerHTML = L({
+      es:'Quedan ' + wrong.length + ' fuera de lugar. Empieza por el prefijo ' + L(items[i0].p) + ': ',
+      en:'There are ' + wrong.length + ' out of place. Start with the prefix ' + L(items[i0].p) + ': '
+    }) + (items[i0].k === 'mult'
+      ? L({es:'junta varias unidades en una sola pieza.', en:'it bundles several units into one piece.'})
+      : L({es:'parte la unidad en pedazos más chicos.', en:'it splits the unit into smaller pieces.'}));
+    draw();
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 2 :: escalera de prefijos, 3 rondas con números nuevos
+   El valor se transforma en vivo con cada escalón y el mensaje dice
+   hacia donde se movio el punto decimal.
+   ══════════════════════════════════════════════════════════════════════════ */
+var FAM = {
+  len: { u:[['km',3],['hm',2],['dam',1],['m',0],['dm',-1],['cm',-2],['mm',-3]], n:{es:'longitud', en:'length'} },
+  vol: { u:[['kL',3],['hL',2],['daL',1],['L',0],['dL',-1],['cL',-2],['mL',-3]], n:{es:'capacidad', en:'capacity'} },
+  mas: { u:[['kg',3],['hg',2],['dag',1],['g',0],['dg',-1],['cg',-2],['mg',-3]], n:{es:'masa', en:'mass'} }
+};
+function wLadder(rng, host){
+  var keys = ['len', 'vol', 'mas'];
+  var round = 0, miss = 0, cur = 0, data = null, closed = false;
+
+  function build(){
+    var f = FAM[keys[Math.floor(rng() * 3)]];
+    var a = ri(rng, 0, 6), b = ri(rng, 0, 6);
+    while (b === a) b = ri(rng, 0, 6);
+    return { f: f, start: a, target: b, val: ri(rng, 11, 98) / 10 };
+  }
+  function valAt(i){
+    return parseFloat((data.val * Math.pow(10, data.f.u[data.start][1] - data.f.u[i][1])).toPrecision(12));
+  }
+
+  host.innerHTML =
+    '<div class="gwh">' + L({es:'Escalera de prefijos', en:'Prefix ladder'}) + '</div>' +
+    '<div class="gwtask" id="' + host.id + '_q"></div>' +
+    '<div class="ladder" id="' + host.id + '_l"></div>' +
+    '<div class="lnav">' +
+      '<button class="gbtn alt" id="' + host.id + '_up">' + L({es:'subir a la unidad mayor', en:'step up to the bigger unit'}) + '</button>' +
+      '<button class="gbtn alt" id="' + host.id + '_dn">' + L({es:'bajar a la unidad menor', en:'step down to the smaller unit'}) + '</button>' +
+    '</div>' +
+    '<div class="gmsg" id="' + host.id + '_m"></div>' +
+    '<div class="gprog" id="' + host.id + '_p"></div>';
+
+  var qw = document.getElementById(host.id + '_q');
+  var lw = document.getElementById(host.id + '_l');
+  var mw = document.getElementById(host.id + '_m');
+  var pw = document.getElementById(host.id + '_p');
+  var up = document.getElementById(host.id + '_up');
+  var dn = document.getElementById(host.id + '_dn');
+
+  function draw(){
+    lw.innerHTML = data.f.u.map(function(u, i){
+      var cls = 'lrow' + (i === cur ? ' cur' : '') + (i === data.target ? ' tgt' : '');
+      var v = (i === cur) ? fmt(valAt(i)) : (i === data.target ? '?' : '');
+      var tag = (i === data.target) ? L({es:'destino', en:'target'}) : (i === cur ? L({es:'aquí estás', en:'you are here'}) : '');
+      return '<div class="' + cls + '"><span class="lu">' + u[0] + '</span><span class="lv">' + v + '</span><span class="ltag">' + tag + '</span></div>';
+    }).join('');
+    pw.textContent = L({es:'Reto ', en:'Challenge '}) + Math.min(round + 1, 3) + L({es:' de 3', en:' of 3'});
+  }
+  function render(){
+    qw.innerHTML = L({
+      es:'Lleva la medida de <b>' + fmt(data.val) + ' ' + data.f.u[data.start][0] + '</b> hasta la fila de <b>' + data.f.u[data.target][0] + '</b>, un escalón a la vez.',
+      en:'Move the measurement of <b>' + fmt(data.val) + ' ' + data.f.u[data.start][0] + '</b> to the <b>' + data.f.u[data.target][0] + '</b> row, one step at a time.'
+    });
+    mw.className = 'gmsg';
+    mw.innerHTML = L({es:'Cada escalón vale diez. Observa el número mientras te mueves.', en:'Every step is worth ten. Watch the number as you move.'});
+    draw();
+  }
+  function nextRound(){
+    round++;
+    if (round >= 3){
+      closed = true;
+      up.disabled = true; dn.disabled = true;
+      mw.className = 'gmsg ok';
+      mw.innerHTML = L({
+        es:'Tres retos completos. Bajar un escalón multiplica el número por diez, subir uno lo divide entre diez.',
+        en:'Three challenges done. Stepping down multiplies the number by ten, stepping up divides it by ten.'
+      });
+      pw.textContent = L({es:'Recorrido terminado', en:'Run finished'});
+      return;
+    }
+    data = build(); cur = data.start; miss = 0;
+    render();
+  }
+  function move(dir){
+    if (closed) return;
+    var ni = cur + dir;
+    if (ni < 0 || ni > 6){
+      mw.className = 'gmsg bad';
+      mw.innerHTML = L({es:'Ese es el extremo de la escalera, no hay más escalones por ese lado.', en:'That is the end of the ladder, there are no more steps on that side.'});
+      return;
+    }
+    var before = Math.abs(cur - data.target);
+    var after = Math.abs(ni - data.target);
+    var from = data.f.u[cur][0], to = data.f.u[ni][0];
+    cur = ni;
+    draw();
+    if (cur === data.target){
+      mw.className = 'gmsg ok';
+      mw.innerHTML = L({
+        es:'Llegaste: ' + fmt(data.val) + ' ' + data.f.u[data.start][0] + ' = ' + fmt(valAt(cur)) + ' ' + to + '.',
+        en:'You made it: ' + fmt(data.val) + ' ' + data.f.u[data.start][0] + ' = ' + fmt(valAt(cur)) + ' ' + to + '.'
+      });
+      setTimeout(function(){ if (document.body.contains(host)) nextRound(); }, 1300);
+      return;
+    }
+    if (after > before){
+      miss++;
+      if (miss >= 3){
+        cur = data.target; draw();
+        mw.className = 'gmsg bad';
+        mw.innerHTML = L({
+          es:'Te la dejo puesta: ' + fmt(data.val) + ' ' + data.f.u[data.start][0] + ' = ' + fmt(valAt(cur)) + ' ' + data.f.u[data.target][0] + '. El destino estaba hacia ' + (data.target > data.start ? 'abajo' : 'arriba') + '.',
+          en:'Here it is: ' + fmt(data.val) + ' ' + data.f.u[data.start][0] + ' = ' + fmt(valAt(cur)) + ' ' + data.f.u[data.target][0] + '. The target was ' + (data.target > data.start ? 'downwards' : 'upwards') + '.'
+        });
+        setTimeout(function(){ if (document.body.contains(host)) nextRound(); }, 1600);
+        return;
+      }
+      mw.className = 'gmsg bad';
+      mw.innerHTML = L({
+        es:'Te alejaste del destino. La fila de ' + data.f.u[data.target][0] + ' está hacia ' + (data.target > cur ? 'abajo' : 'arriba') + '.',
+        en:'You moved away from the target. The ' + data.f.u[data.target][0] + ' row is ' + (data.target > cur ? 'downwards' : 'upwards') + '.'
+      });
+      return;
+    }
+    mw.className = 'gmsg';
+    mw.innerHTML = (dir > 0)
+      ? L({ es:'De ' + from + ' a ' + to + ': la unidad se hizo diez veces más chica, así que el número se multiplicó por diez y ahora marca ' + fmt(valAt(cur)) + '.',
+            en:'From ' + from + ' to ' + to + ': the unit became ten times smaller, so the number was multiplied by ten and now reads ' + fmt(valAt(cur)) + '.' })
+      : L({ es:'De ' + from + ' a ' + to + ': la unidad se hizo diez veces más grande, así que el número se dividió entre diez y ahora marca ' + fmt(valAt(cur)) + '.',
+            en:'From ' + from + ' to ' + to + ': the unit became ten times bigger, so the number was divided by ten and now reads ' + fmt(valAt(cur)) + '.' });
+  }
+  up.addEventListener('click', function(){ move(-1); });
+  dn.addEventListener('click', function(){ move(1); });
+
+  data = build(); cur = data.start;
+  render();
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 3 :: constructor del factor de conversión
+   El estudiante arma la fracción y la unidad que sobrevive se recalcula
+   en cuanto toca cualquiera de las dos piezas.
+   ══════════════════════════════════════════════════════════════════════════ */
+function wFactor(rng, host){
+  var bank = [
+    { v: ri(rng, 12, 89) * 100, from:'mg', to:'g',  k:1000, nf:{es:'gramos', en:'grams'} },
+    { v: ri(rng, 12, 89) * 100, from:'mL', to:'L',  k:1000, nf:{es:'litros', en:'litres'} },
+    { v: ri(rng, 12, 89) * 10,  from:'cm', to:'m',  k:100,  nf:{es:'metros', en:'metres'} }
+  ];
+  var d = bank[Math.floor(rng() * bank.length)];
+  var A = '1 ' + d.to;
+  var B = d.k + ' ' + d.from;
+  var num = null, den = null, tries = 0, closed = false;
+
+  host.innerHTML =
+    '<div class="gwh">' + L({es:'Constructor del factor', en:'Factor builder'}) + '</div>' +
+    '<div class="gwtask">' + L({
+      es:'Hay que expresar <b>' + d.v + ' ' + d.from + '</b> en ' + L(d.nf) + '. Arma la fracción que vale uno y observa qué unidad queda viva.',
+      en:'You need to express <b>' + d.v + ' ' + d.from + '</b> in ' + L(d.nf) + '. Build the fraction that is worth one and watch which unit stays alive.'
+    }) + '</div>' +
+    '<div class="flbl">' + L({es:'arriba', en:'top'}) + '</div>' +
+    '<div class="fbank" id="' + host.id + '_n"></div>' +
+    '<div class="flbl">' + L({es:'abajo', en:'bottom'}) + '</div>' +
+    '<div class="fbank" id="' + host.id + '_d"></div>' +
+    '<div class="frow" id="' + host.id + '_r"></div>' +
+    '<button class="gbtn" id="' + host.id + '_b">' + L({es:'Comprobar el factor', en:'Check the factor'}) + '</button>' +
+    '<div class="gmsg" id="' + host.id + '_m">' + L({es:'Elige una pieza arriba y otra abajo.', en:'Pick one piece on top and one at the bottom.'}) + '</div>';
+
+  var nw = document.getElementById(host.id + '_n');
+  var dw = document.getElementById(host.id + '_d');
+  var rw = document.getElementById(host.id + '_r');
+  var mw = document.getElementById(host.id + '_m');
+  var bw = document.getElementById(host.id + '_b');
+
+  function bankRow(el, cur, set){
+    el.innerHTML = '';
+    [A, B].forEach(function(txt){
+      var o = document.createElement('div');
+      o.className = 'fopt' + (cur === txt ? ' sel' : '');
+      o.textContent = txt;
+      if (!closed) o.addEventListener('click', function(){ set(txt); paint(); });
+      el.appendChild(o);
+    });
+  }
+  function survivor(){
+    if (!num || !den) return null;
+    if (num === den) return 'one';
+    if (den === B && num === A) return 'ok';
+    return 'bad';
+  }
+  function paint(){
+    bankRow(nw, num, function(t){ num = t; });
+    bankRow(dw, den, function(t){ den = t; });
+    var frac = (num && den) ? mf(num, den) : mf('?', '?');
+    var sv = survivor(), txt;
+    if (sv === null) txt = L({es:'faltan piezas', en:'pieces missing'});
+    else if (sv === 'one') txt = L({es:'las dos piezas son iguales: se cancelan y el dato sigue en ' + d.from, en:'both pieces are the same: they cancel and the value stays in ' + d.from});
+    else if (sv === 'ok') txt = L({es:'sobrevive ' + d.to, en:d.to + ' survives'});
+    else txt = d.from + ' · ' + d.from + ' / ' + d.to;
+    rw.innerHTML = '<span>' + d.v + ' ' + d.from + '</span><span>×</span>' + frac +
+      '<span class="fsurv">' + L({es:'unidad viva: ', en:'live unit: '}) + txt + '</span>';
+  }
+  paint();
+
+  bw.addEventListener('click', function(){
+    if (closed) return;
+    var sv = survivor();
+    if (sv === null){
+      mw.className = 'gmsg bad';
+      mw.innerHTML = L({es:'Todavía falta elegir una pieza.', en:'One piece is still missing.'});
+      return;
+    }
+    if (sv === 'ok'){
+      closed = true; paint(); bw.disabled = true;
+      mw.className = 'gmsg ok';
+      mw.innerHTML = L({
+        es:'Los ' + d.from + ' quedaron arriba y abajo, se cancelan: ' + d.v + ' ' + d.from + ' ÷ ' + d.k + ' = ' + fmt(d.v / d.k) + ' ' + d.to + '.',
+        en:'The ' + d.from + ' appear top and bottom, so they cancel: ' + d.v + ' ' + d.from + ' ÷ ' + d.k + ' = ' + fmt(d.v / d.k) + ' ' + d.to + '.'
+      });
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      num = A; den = B; closed = true; paint(); bw.disabled = true;
+      mw.className = 'gmsg bad';
+      mw.innerHTML = L({
+        es:'Así queda armada: ' + d.v + ' ' + d.from + ' × ' + A + ' entre ' + B + ' = ' + fmt(d.v / d.k) + ' ' + d.to + '.',
+        en:'This is how it is built: ' + d.v + ' ' + d.from + ' × ' + A + ' over ' + B + ' = ' + fmt(d.v / d.k) + ' ' + d.to + '.'
+      });
+      return;
+    }
+    mw.className = 'gmsg bad';
+    mw.innerHTML = (sv === 'one')
+      ? L({ es:'Con dos piezas iguales el factor no hace nada. Una de ellas tiene que traer los ' + d.from + '.',
+            en:'With two identical pieces the factor does nothing. One of them has to carry the ' + d.from + '.' })
+      : L({ es:'Mira la unidad viva: quedaron ' + d.from + ' arriba y abajo no hay con qué cancelarlos. Los ' + d.from + ' van abajo.',
+            en:'Look at the live unit: ' + d.from + ' ended up on top with nothing below to cancel them. The ' + d.from + ' go at the bottom.' });
+    paint();
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 4 :: regla graduada
+   La marca se arrastra sobre una regla en centímetros mientras el objetivo
+   viene dado en otra unidad. La lectura se actualiza en cada movimiento.
+   ══════════════════════════════════════════════════════════════════════════ */
+function wRuler(rng, host){
+  var MAXMM = 150;
+  var round = 0, tries = 0, target = 0, unit = 'mm', pos = 20, closed = false;
+
+  host.innerHTML =
+    '<div class="gwh">' + L({es:'Regla graduada', en:'Graduated ruler'}) + '</div>' +
+    '<div class="gwtask" id="' + host.id + '_q"></div>' +
+    '<div class="rulwrap"><canvas class="rulcv" id="' + host.id + '_cv"></canvas></div>' +
+    '<div class="rread">' +
+      '<div class="rr"><div class="rrl">' + L({es:'lectura de la regla', en:'ruler reading'}) + '</div><div class="rrv" id="' + host.id + '_v1">0 cm</div></div>' +
+      '<div class="rr"><div class="rrl">' + L({es:'objetivo', en:'target'}) + '</div><div class="rrv" id="' + host.id + '_v2"></div></div>' +
+    '</div>' +
+    '<button class="gbtn" id="' + host.id + '_b">' + L({es:'Comprobar la marca', en:'Check the mark'}) + '</button>' +
+    '<div class="gmsg" id="' + host.id + '_m"></div>' +
+    '<div class="gprog" id="' + host.id + '_p"></div>';
+
+  var cv = document.getElementById(host.id + '_cv');
+  var qw = document.getElementById(host.id + '_q');
+  var v1 = document.getElementById(host.id + '_v1');
+  var v2 = document.getElementById(host.id + '_v2');
+  var mw = document.getElementById(host.id + '_m');
+  var pw = document.getElementById(host.id + '_p');
+  var bw = document.getElementById(host.id + '_b');
+  var ctx = cv.getContext('2d');
+  var W = 0, H = 0, PAD = 22;
+
+  function size(){
+    var dpr = window.devicePixelRatio || 1;
+    var r = cv.getBoundingClientRect();
+    if (!r.width) return false;
+    cv.width = Math.round(r.width * dpr);
+    cv.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    W = r.width; H = r.height;
+    return true;
+  }
+  function xOf(mm){ return PAD + (W - 2 * PAD) * mm / MAXMM; }
+  function mmOf(x){ return Math.max(0, Math.min(MAXMM, Math.round((x - PAD) / (W - 2 * PAD) * MAXMM))); }
+
+  function draw(){
+    if (!W) return;
+    var cBg = cssv('--surface2'), cLine = cssv('--text3'), cTxt = cssv('--text2'),
+        cMark = cssv('--green'), cAcc = cssv('--gold'), cBody = cssv('--surface');
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = cBg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = cBody; ctx.fillRect(PAD - 8, 18, W - 2 * PAD + 16, 62);
+    ctx.strokeStyle = cLine; ctx.lineWidth = 1;
+    ctx.strokeRect(PAD - 8, 18, W - 2 * PAD + 16, 62);
+    var i;
+    for (i = 0; i <= MAXMM; i++){
+      var x = xOf(i), len = (i % 10 === 0) ? 26 : (i % 5 === 0 ? 16 : 9);
+      ctx.beginPath();
+      ctx.moveTo(x, 18); ctx.lineTo(x, 18 + len);
+      ctx.strokeStyle = cLine; ctx.lineWidth = (i % 10 === 0) ? 1.4 : 0.8;
+      ctx.stroke();
+      if (i % 10 === 0){
+        ctx.fillStyle = cTxt; ctx.font = '10px IBM Plex Sans, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(String(i / 10), x, 58);
+      }
+    }
+    ctx.fillStyle = cTxt; ctx.font = '9px IBM Plex Sans, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('cm', PAD - 6, 76);
+    var mx = xOf(pos);
+    ctx.strokeStyle = cMark; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(mx, 14); ctx.lineTo(mx, 88); ctx.stroke();
+    ctx.fillStyle = cAcc;
+    ctx.beginPath(); ctx.moveTo(mx, 88); ctx.lineTo(mx - 7, 102); ctx.lineTo(mx + 7, 102); ctx.closePath(); ctx.fill();
+  }
+  function readout(){
+    v1.textContent = fmt(pos / 10) + ' cm';
+    v2.textContent = (unit === 'mm') ? target + ' mm' : fmt(target / 1000) + ' m';
+  }
+  function newRound(){
+    target = ri(rng, 22, 146);
+    unit = (rng() < 0.5) ? 'mm' : 'm';
+    pos = ri(rng, 5, 30);
+    tries = 0;
+    qw.innerHTML = L({
+      es:'Coloca la marca en <b>' + ((unit === 'mm') ? target + ' mm' : fmt(target / 1000) + ' m') + '</b>. La regla está graduada en centímetros.',
+      en:'Place the mark at <b>' + ((unit === 'mm') ? target + ' mm' : fmt(target / 1000) + ' m') + '</b>. The ruler is graduated in centimetres.'
+    });
+    mw.className = 'gmsg';
+    mw.innerHTML = L({es:'Arrastra la marca sobre la regla.', en:'Drag the mark along the ruler.'});
+    pw.textContent = L({es:'Medición ', en:'Measurement '}) + Math.min(round + 1, 3) + L({es:' de 3', en:' of 3'});
+    readout(); draw();
+  }
+  function advance(){
+    round++;
+    if (round >= 3){
+      closed = true; bw.disabled = true;
+      mw.className = 'gmsg ok';
+      mw.innerHTML = L({
+        es:'Tres mediciones listas. Un centímetro de la regla son diez milímetros, y mil milímetros hacen un metro.',
+        en:'Three measurements done. One centimetre on the ruler is ten millimetres, and a thousand millimetres make a metre.'
+      });
+      pw.textContent = L({es:'Serie terminada', en:'Series finished'});
+      return;
+    }
+    newRound();
+  }
+  function setFromEvent(e){
+    if (closed) return;
+    var r = cv.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    pos = mmOf(src.clientX - r.left);
+    readout(); draw();
+  }
+  var dragging = false;
+  cv.addEventListener('mousedown', function(e){ e.preventDefault(); dragging = true; setFromEvent(e); });
+  cv.addEventListener('mousemove', function(e){ if (dragging){ e.preventDefault(); setFromEvent(e); } });
+  cv.addEventListener('mouseup', function(){ dragging = false; });
+  cv.addEventListener('mouseleave', function(){ dragging = false; });
+  cv.addEventListener('touchstart', function(e){ e.preventDefault(); dragging = true; setFromEvent(e); }, { passive:false });
+  cv.addEventListener('touchmove', function(e){ if (dragging){ e.preventDefault(); setFromEvent(e); } }, { passive:false });
+  cv.addEventListener('touchend', function(){ dragging = false; });
+
+  bw.addEventListener('click', function(){
+    if (closed) return;
+    var diff = pos - target;
+    if (Math.abs(diff) <= 1){
+      mw.className = 'gmsg ok';
+      mw.innerHTML = L({
+        es:'Justo ahí: ' + fmt(target / 1000) + ' m = ' + fmt(target / 10) + ' cm = ' + target + ' mm.',
+        en:'Right there: ' + fmt(target / 1000) + ' m = ' + fmt(target / 10) + ' cm = ' + target + ' mm.'
+      });
+      setTimeout(function(){ if (document.body.contains(host)) advance(); }, 1300);
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      pos = target; readout(); draw();
+      mw.className = 'gmsg bad';
+      mw.innerHTML = L({
+        es:'La marca iba en ' + fmt(target / 10) + ' cm, porque ' + fmt(target / 1000) + ' m son ' + target + ' mm.',
+        en:'The mark belonged at ' + fmt(target / 10) + ' cm, because ' + fmt(target / 1000) + ' m is ' + target + ' mm.'
+      });
+      setTimeout(function(){ if (document.body.contains(host)) advance(); }, 1600);
+      return;
+    }
+    mw.className = 'gmsg bad';
+    mw.innerHTML = L({
+      es:'Tu marca dice ' + fmt(pos / 10) + ' cm, es decir ' + pos + ' mm. Te ' + (diff < 0 ? 'faltan ' : 'sobran ') + Math.abs(diff) + ' mm.',
+      en:'Your mark reads ' + fmt(pos / 10) + ' cm, that is ' + pos + ' mm. You are ' + Math.abs(diff) + ' mm ' + (diff < 0 ? 'short.' : 'over.')
+    });
+  });
+
+  setTimeout(function(){ if (size()) { newRound(); } }, 90);
+  var onRz = function(){ if (size()) draw(); };
+  window.addEventListener('resize', onRz);
+  var mo = new MutationObserver(function(){ draw(); });
+  mo.observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
+  GUIDE_CLEANUP.push(function(){ window.removeEventListener('resize', onRz); mo.disconnect(); });
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROBLEMAS GRADUADOS :: cada ranura guarda dos variantes estructurales y
+   la semilla decide cuál aparece. Los números salen siempre de rng.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 1 · leer una etiqueta con prefijo */
+function mkP1(rng){
+  var v = ri(rng, 2, 9), w = ri(rng, 2, 9) * 50;
+  if (rng() < 0.5){
+    return {
+      title: L({es:'Leer una etiqueta', en:'Reading a label'}),
+      q: L({ es:'Una caja de tabletas indica que cada tableta contiene ' + w + ' mg de sustancia activa. ¿Qué afirmación describe correctamente esa medida?',
+             en:'A box of tablets states that each tablet contains ' + w + ' mg of active substance. Which statement correctly describes that measurement?' }),
+      options: [
+        L({es:'Cada tableta tiene menos de un gramo, porque mili señala la milésima parte de la unidad', en:'Each tablet holds less than one gram, because milli marks a thousandth of the unit'}),
+        L({es:'Cada tableta tiene más de un gramo, porque mili señala mil veces la unidad', en:'Each tablet holds more than one gram, because milli marks a thousand times the unit'}),
+        L({es:'Cada tableta tiene menos de un gramo, porque mili señala la centésima parte de la unidad', en:'Each tablet holds less than one gram, because milli marks a hundredth of the unit'}),
+        L({es:'Cada tableta tiene más de un gramo, porque mili señala cien veces la unidad', en:'Each tablet holds more than one gram, because milli marks a hundred times the unit'})
+      ],
+      correct: 0, showWork: false,
+      hint: L({es:'Sitúa el prefijo respecto a la unidad base: los que están por debajo de ella la parten, los que están por encima la juntan.', en:'Place the prefix relative to the base unit: those below it split the unit, those above it bundle it.'}),
+      exp: L({ es:'Mili vale una milésima, así que 1 mg equivale a 0.001 g. Entonces ' + w + ' mg = ' + w + ' ÷ 1000 g = ' + fmt(w / 1000) + ' g, una masa menor que un gramo.',
+               en:'Milli is worth a thousandth, so 1 mg equals 0.001 g. Then ' + w + ' mg = ' + w + ' ÷ 1000 g = ' + fmt(w / 1000) + ' g, a mass smaller than one gram.' })
+    };
+  }
+  return {
+    title: L({es:'Leer una etiqueta', en:'Reading a label'}),
+    q: L({ es:'El tanque del laboratorio está marcado con ' + v + ' hL de capacidad. ¿Qué afirmación describe correctamente esa medida?',
+           en:'The laboratory tank is marked with a capacity of ' + v + ' hL. Which statement correctly describes that measurement?' }),
+    options: [
+      L({es:'El tanque guarda más de un litro, porque hecto señala cien veces la unidad', en:'The tank holds more than one litre, because hecto marks a hundred times the unit'}),
+      L({es:'El tanque guarda menos de un litro, porque hecto señala la centésima parte de la unidad', en:'The tank holds less than one litre, because hecto marks a hundredth of the unit'}),
+      L({es:'El tanque guarda más de un litro, porque hecto señala mil veces la unidad', en:'The tank holds more than one litre, because hecto marks a thousand times the unit'}),
+      L({es:'El tanque guarda menos de un litro, porque hecto señala la décima parte de la unidad', en:'The tank holds less than one litre, because hecto marks a tenth of the unit'})
+    ],
+    correct: 0, showWork: false,
+    hint: L({es:'Sitúa el prefijo respecto a la unidad base: los que están por encima de ella la juntan en paquetes, los que están por debajo la parten.', en:'Place the prefix relative to the base unit: those above it bundle the unit, those below it split it.'}),
+    exp: L({ es:'Hecto vale cien, así que 1 hL equivale a 100 L. Entonces ' + v + ' hL = ' + v + ' × 100 L = ' + (v * 100) + ' L, mucho más que un litro.',
+             en:'Hecto is worth a hundred, so 1 hL equals 100 L. Then ' + v + ' hL = ' + v + ' × 100 L = ' + (v * 100) + ' L, far more than one litre.' })
+  };
+}
+
+/* 2 · comparar etiquetas con prefijos distintos */
+function mkP2(rng){
+  var setsA = [
+    { labs:['2 dL', '150 cL', '900 mL', '0.4 L'], val:[0.2, 1.5, 0.9, 0.4], c:1 },
+    { labs:['3 dL', '120 cL', '800 mL', '0.6 L'], val:[0.3, 1.2, 0.8, 0.6], c:1 }
+  ];
+  var setsB = [
+    { labs:['2.5 dam', '30 m', '1800 cm', '0.02 km'], val:[25, 30, 18, 20], c:1 },
+    { labs:['1.5 dam', '20 m', '1900 cm', '0.018 km'], val:[15, 20, 19, 18], c:1 }
+  ];
+  var useA = rng() < 0.5;
+  var d = useA ? setsA[Math.floor(rng() * 2)] : setsB[Math.floor(rng() * 2)];
+  var lst = d.labs.join(', ').replace(/,([^,]*)$/, L({es:' y$1', en:' and$1'}));
+  var chain = d.labs.map(function(lb, i){ return lb + ' = ' + fmt(d.val[i]) + (useA ? ' L' : ' m'); }).join(', ');
+  if (useA){
+    return {
+      title: L({es:'Comparar envases', en:'Comparing containers'}),
+      q: L({ es:'Cuatro envases del mismo jugo llegan etiquetados así: ' + lst + '. ¿Cuál de los cuatro envases contiene más jugo?',
+             en:'Four containers of the same juice arrive labelled like this: ' + lst + '. Which of the four containers holds the most juice?' }),
+      options: d.labs.map(function(lb, i){ return L({es:'El envase de ' + lb, en:'The ' + lb + ' container'}); }),
+      correct: d.c, showWork: true,
+      hint: L({es:'No se pueden comparar números escritos en unidades distintas: primero lleva las cuatro etiquetas a litros y después ordénalas.', en:'Numbers written in different units cannot be compared: first take all four labels to litres, then order them.'}),
+      exp: L({ es:'Llevando todo a litros: ' + chain + '. El valor más grande es ' + fmt(d.val[d.c]) + '. El envase con más jugo es el etiquetado ' + d.labs[d.c] + ', que contiene = ' + fmt(d.val[d.c]) + ' L.',
+               en:'Taking everything to litres: ' + chain + '. The largest value is ' + fmt(d.val[d.c]) + '. The container with the most juice is the one labelled ' + d.labs[d.c] + ', holding = ' + fmt(d.val[d.c]) + ' L.' })
+    };
+  }
+  return {
+    title: L({es:'Comparar tramos de cuerda', en:'Comparing lengths of rope'}),
+    q: L({ es:'En la bodega hay cuatro tramos de cuerda etiquetados así: ' + lst + '. ¿Cuál de los cuatro tramos es el más largo?',
+           en:'The storeroom has four lengths of rope labelled like this: ' + lst + '. Which of the four is the longest?' }),
+    options: d.labs.map(function(lb){ return L({es:'El tramo de ' + lb, en:'The ' + lb + ' length'}); }),
+    correct: d.c, showWork: true,
+    hint: L({es:'No se pueden comparar números escritos en unidades distintas: primero lleva las cuatro etiquetas a metros y después ordénalas.', en:'Numbers written in different units cannot be compared: first take all four labels to metres, then order them.'}),
+    exp: L({ es:'Llevando todo a metros: ' + chain + '. El valor más grande es ' + fmt(d.val[d.c]) + '. El tramo más largo es el etiquetado ' + d.labs[d.c] + ', que mide = ' + fmt(d.val[d.c]) + ' m.',
+             en:'Taking everything to metres: ' + chain + '. The largest value is ' + fmt(d.val[d.c]) + '. The longest rope is the one labelled ' + d.labs[d.c] + ', measuring = ' + fmt(d.val[d.c]) + ' m.' })
+  };
+}
+
+/* 3 · conversión directa hacia una unidad menor */
+function mkP3(rng){
+  var t = ri(rng, 11, 98), v = t / 10, correct = t * 100;
+  var big = (rng() < 0.5) ? 'km' : 'L';
+  var small = (big === 'km') ? 'm' : 'mL';
+  var nb = (big === 'km') ? L({es:'metros', en:'metres'}) : L({es:'mililitros', en:'millilitres'});
+  return {
+    title: L({es:'Bajar tres escalones', en:'Three steps down'}),
+    q: L({ es:'Convierte ' + fmt(v) + ' ' + big + ' a ' + nb + '.',
+           en:'Convert ' + fmt(v) + ' ' + big + ' to ' + nb + '.' }),
+    fn: fmt(v) + ' ' + big + ' → ? ' + small,
+    options: opts4(correct, [t * 10, t * 1000, t]).map(String),
+    correct: 0, showWork: true,
+    hint: L({es:'De ' + big + ' a ' + small + ' hay tres escalones en la escalera y cada escalón vale diez. Como la unidad de llegada es más pequeña, el número tiene que crecer.', en:'From ' + big + ' to ' + small + ' there are three steps on the ladder and each step is worth ten. Since the arriving unit is smaller, the number has to grow.'}),
+    exp: L({ es:'Cada ' + big + ' contiene 1000 ' + small + ', y al pasar a la unidad más pequeña el número crece: ' + fmt(v) + ' × 1000 = ' + correct,
+             en:'Each ' + big + ' contains 1000 ' + small + ', and moving to the smaller unit makes the number grow: ' + fmt(v) + ' × 1000 = ' + correct })
+  };
+}
+
+/* 4 · situación de la vida diaria que exige convertir antes de restar */
+function mkP4(rng){
+  var a = ri(rng, 4, 9), b = ri(rng, 11, 39) * 100;
+  var D = a * 1000 - b;
+  var cands = [a * 1000, a * 1000 + b, a * 1000 - b / 10];
+  if (rng() < 0.5){
+    return {
+      title: L({es:'Lo que falta de la carrera', en:'What is left of the race'}),
+      q: L({ es:'La carrera escolar tiene un recorrido de ' + a + ' km. Diana ya avanzó ' + b + ' m desde la salida. ¿Cuántos metros le faltan para llegar a la meta?',
+             en:'The school race covers ' + a + ' km. Diana has already run ' + b + ' m from the start. How many metres are left for her to reach the finish line?' }),
+      options: opts4(D, cands).map(String),
+      correct: 0, showWork: true,
+      hint: L({es:'Los dos datos están en unidades distintas, así que uno de ellos hay que reescribirlo antes de operar. Un kilómetro tiene 1000 metros.', en:'The two figures are in different units, so one of them must be rewritten before operating. One kilometre has 1000 metres.'}),
+      exp: L({ es:'El recorrido en metros es ' + a + ' × 1000 = ' + (a * 1000) + ' m. Lo que falta es la diferencia con lo ya avanzado: ' + (a * 1000) + ' − ' + b + ' = ' + D,
+               en:'The race in metres is ' + a + ' × 1000 = ' + (a * 1000) + ' m. What is left is the difference with the distance already run: ' + (a * 1000) + ' − ' + b + ' = ' + D })
+    };
+  }
+  var c = ri(rng, 2, 5), e = ri(rng, 3, 9) * 100;
+  var D2 = c * 1000 - e;
+  return {
+    title: L({es:'El agua del tinaco', en:'Water in the tank'}),
+    q: L({ es:'El tinaco de la escuela guarda ' + c + ' kL de agua y durante la mañana se usaron ' + e + ' L. ¿Cuántos litros de agua quedan en el tinaco?',
+           en:'The school tank holds ' + c + ' kL of water and ' + e + ' L were used during the morning. How many litres of water are left in the tank?' }),
+    options: opts4(D2, [c * 1000, c * 1000 + e, c * 1000 - e / 10]).map(String),
+    correct: 0, showWork: true,
+    hint: L({es:'Los dos datos están en unidades distintas, así que uno de ellos hay que reescribirlo antes de operar. Un kilolitro tiene 1000 litros.', en:'The two figures are in different units, so one of them must be rewritten before operating. One kilolitre has 1000 litres.'}),
+    exp: L({ es:'La capacidad en litros es ' + c + ' × 1000 = ' + (c * 1000) + ' L. Lo que queda es la diferencia con lo usado: ' + (c * 1000) + ' − ' + e + ' = ' + D2,
+             en:'The capacity in litres is ' + c + ' × 1000 = ' + (c * 1000) + ' L. What is left is the difference with what was used: ' + (c * 1000) + ' − ' + e + ' = ' + D2 })
+  };
+}
+
+/* 5 · elegir el factor cuya unidad sobrevive */
+function mkP5(rng){
+  if (rng() < 0.5){
+    return {
+      title: L({es:'El factor correcto', en:'The right factor'}),
+      q: L({ es:'Una masa está escrita en kilogramos y se necesita el mismo dato escrito en gramos. ¿Cuál de estos factores deja el resultado en gramos?',
+             en:'A mass is written in kilograms and the same figure is needed in grams. Which of these factors leaves the result in grams?' }),
+      options: [ mf('1000 g', '1 kg'), mf('1 kg', '1000 g'), mf('1 g', '1000 kg'), mf('1000 kg', '1 g') ],
+      correct: 0, showWork: false,
+      hint: L({es:'La unidad que se quiere eliminar va abajo para que se cancele con la del dato, y la unidad que se busca va arriba.', en:'The unit to be removed goes at the bottom so it cancels with the one in the data, and the wanted unit goes on top.'}),
+      exp: L({ es:'El dato viene en kilogramos, así que los kilogramos van abajo y se cancelan; arriba quedan los gramos, que son la unidad del resultado. Por ejemplo, 2 kg × 1000 g entre 1 kg = 2000 g.',
+               en:'The data comes in kilograms, so kilograms go at the bottom and cancel; grams stay on top and become the unit of the result. For instance, 2 kg × 1000 g over 1 kg = 2000 g.' })
+    };
+  }
+  return {
+    title: L({es:'El factor correcto', en:'The right factor'}),
+    q: L({ es:'Un volumen está escrito en mililitros y se necesita el mismo dato escrito en litros. ¿Cuál de estos factores deja el resultado en litros?',
+           en:'A volume is written in millilitres and the same figure is needed in litres. Which of these factors leaves the result in litres?' }),
+    options: [ mf('1 L', '1000 mL'), mf('1000 mL', '1 L'), mf('1 mL', '1000 L'), mf('1000 L', '1 mL') ],
+    correct: 0, showWork: false,
+    hint: L({es:'La unidad que se quiere eliminar va abajo para que se cancele con la del dato, y la unidad que se busca va arriba.', en:'The unit to be removed goes at the bottom so it cancels with the one in the data, and the wanted unit goes on top.'}),
+    exp: L({ es:'El dato viene en mililitros, así que los mililitros van abajo y se cancelan; arriba queda el litro, que es la unidad del resultado. Por ejemplo, 2500 mL × 1 L entre 1000 mL = 2.5 L.',
+             en:'The data comes in millilitres, so millilitres go at the bottom and cancel; the litre stays on top and becomes the unit of the result. For instance, 2500 mL × 1 L over 1000 mL = 2.5 L.' })
+  };
+}
+
+/* 6 · aplicar el factor a un dato con decimales */
+function mkP6(rng){
+  var h = ri(rng, 11, 98), t = ri(rng, 11, 98);
+  if (rng() < 0.5){
+    var v = h / 100, correct = h * 10;
+    return {
+      title: L({es:'Aplicar el factor', en:'Applying the factor'}),
+      q: L({ es:'Convierte ' + fmt(v) + ' kg a gramos.', en:'Convert ' + fmt(v) + ' kg to grams.' }),
+      fn: fmt(v) + ' kg → ? g',
+      options: opts4(correct, [h * 100, h, h * 1000]).map(String),
+      correct: 0, showWork: true,
+      hint: L({es:'Multiplica por el factor que trae los gramos arriba y los kilogramos abajo; los kilogramos se cancelan y sobrevive el gramo.', en:'Multiply by the factor with grams on top and kilograms at the bottom; the kilograms cancel and the gram survives.'}),
+      exp: L({ es:'Al multiplicar por 1000 g entre 1 kg los kilogramos se cancelan y queda ' + fmt(v) + ' × 1000 = ' + correct,
+               en:'Multiplying by 1000 g over 1 kg cancels the kilograms and leaves ' + fmt(v) + ' × 1000 = ' + correct })
+    };
+  }
+  var v2 = t / 10, correct2 = t * 100;
+  return {
+    title: L({es:'Aplicar el factor', en:'Applying the factor'}),
+    q: L({ es:'Convierte ' + fmt(v2) + ' m a milímetros.', en:'Convert ' + fmt(v2) + ' m to millimetres.' }),
+    fn: fmt(v2) + ' m → ? mm',
+    options: opts4(correct2, [t * 10, t * 1000, t]).map(String),
+    correct: 0, showWork: true,
+    hint: L({es:'Multiplica por el factor que trae los milímetros arriba y el metro abajo; el metro se cancela y sobrevive el milímetro.', en:'Multiply by the factor with millimetres on top and the metre at the bottom; the metre cancels and the millimetre survives.'}),
+    exp: L({ es:'Al multiplicar por 1000 mm entre 1 m el metro se cancela y queda ' + fmt(v2) + ' × 1000 = ' + correct2,
+             en:'Multiplying by 1000 mm over 1 m cancels the metre and leaves ' + fmt(v2) + ' × 1000 = ' + correct2 })
+  };
+}
+
+/* 7 · medida repartida en dos unidades distintas */
+function mkP7(rng){
+  var lap = ri(rng, 6, 9) * 100;
+  var need = ri(rng, 2, 3), wat = ri(rng, 2, 8) * 50, mlk = ri(rng, 2, 6);
+  if (rng() < 0.5){
+    var tot = 2 * lap + 1000;
+    return {
+      title: L({es:'La distancia del grupo', en:'The distance covered'}),
+      q: L({ es:'En la clase de educación física el grupo dio dos vueltas a la pista, de ' + lap + ' m cada una, y después caminó 1 km de regreso al salón. ¿Qué distancia total recorrió el grupo, expresada en kilómetros?',
+             en:'In the physical education class the group ran two laps of the track, ' + lap + ' m each, and then walked 1 km back to the classroom. What total distance did the group cover, expressed in kilometres?' }),
+      options: [ fmt(tot / 1000) + ' km', fmt(2 * lap / 1000) + ' km', fmt(tot / 100) + ' km', fmt(tot / 10000) + ' km' ],
+      correct: 0, showWork: true,
+      hint: L({es:'Las vueltas están en metros y el regreso en kilómetros: junta todo en una sola unidad y hasta el final pásalo a la unidad que pide la pregunta.', en:'The laps are in metres and the walk back is in kilometres: gather everything into a single unit and only at the end move it to the unit the question asks for.'}),
+      exp: L({ es:'Las dos vueltas suman 2 × ' + lap + ' = ' + (2 * lap) + ' m y el regreso son 1000 m, de modo que el total es ' + (2 * lap) + ' + 1000 = ' + tot + ' m. Como un kilómetro tiene 1000 metros, ' + tot + ' ÷ 1000 = ' + fmt(tot / 1000) + ' km',
+               en:'The two laps add up to 2 × ' + lap + ' = ' + (2 * lap) + ' m and the walk back is 1000 m, so the total is ' + (2 * lap) + ' + 1000 = ' + tot + ' m. Since one kilometre has 1000 metres, ' + tot + ' ÷ 1000 = ' + fmt(tot / 1000) + ' km' })
+    };
+  }
+  var rem = need * 1000 - wat - mlk * 100;
+  return {
+    title: L({es:'Completar el caldo', en:'Topping up the broth'}),
+    q: L({ es:'Una receta pide ' + need + ' L de caldo. En la olla ya se vertieron ' + wat + ' mL de agua y ' + mlk + ' dL de leche. ¿Cuántos mililitros faltan para completar el caldo?',
+           en:'A recipe calls for ' + need + ' L of broth. The pot already holds ' + wat + ' mL of water and ' + mlk + ' dL of milk. How many millilitres are still missing to complete the broth?' }),
+    options: opts4(rem, [need * 1000 - mlk * 100, need * 1000 - wat, wat + mlk * 100]).map(function(x){ return x + ' mL'; }),
+    correct: 0, showWork: true,
+    hint: L({es:'Los tres datos vienen en tres unidades distintas: escribe los tres en mililitros antes de sumar o restar nada.', en:'The three figures come in three different units: write all three in millilitres before adding or subtracting anything.'}),
+    exp: L({ es:'En mililitros la receta pide ' + need + ' × 1000 = ' + (need * 1000) + ' mL y la leche aporta ' + mlk + ' × 100 = ' + (mlk * 100) + ' mL. Lo que falta es ' + (need * 1000) + ' − ' + wat + ' − ' + (mlk * 100) + ' = ' + rem + ' mL',
+             en:'In millilitres the recipe calls for ' + need + ' × 1000 = ' + (need * 1000) + ' mL and the milk adds ' + mlk + ' × 100 = ' + (mlk * 100) + ' mL. What is missing is ' + (need * 1000) + ' − ' + wat + ' − ' + (mlk * 100) + ' = ' + rem + ' mL' })
+  };
+}
+
+/* 8 · prefijos grandes y pequeños comparados */
+function mkP8(rng){
+  var um = ri(rng, 2, 9) * 50, mw = ri(rng, 2, 6);
+  if (rng() < 0.5){
+    return {
+      title: L({es:'Dos láminas', en:'Two sheets'}),
+      q: L({ es:'Un fabricante describe el grosor de su lámina como ' + um + ' µm y otro describe la suya como ' + fmt(um / 1000) + ' mm. ¿Cómo se comparan los dos grosores?',
+             en:'One manufacturer describes its sheet as ' + um + ' µm thick and another describes its own as ' + fmt(um / 1000) + ' mm thick. How do the two thicknesses compare?' }),
+      options: [
+        L({es:'Las dos láminas tienen exactamente el mismo grosor', en:'The two sheets have exactly the same thickness'}),
+        L({es:'La lámina de ' + um + ' µm es diez veces más gruesa que la otra', en:'The ' + um + ' µm sheet is ten times thicker than the other'}),
+        L({es:'La lámina de ' + fmt(um / 1000) + ' mm es diez veces más gruesa que la otra', en:'The ' + fmt(um / 1000) + ' mm sheet is ten times thicker than the other'}),
+        L({es:'La lámina de ' + um + ' µm es mil veces más gruesa que la otra', en:'The ' + um + ' µm sheet is a thousand times thicker than the other'})
+      ],
+      correct: 0, showWork: false,
+      hint: L({es:'Micro vale una millonésima y mili una milésima, de modo que entre las dos hay un salto de mil. Escribe las dos medidas en la misma unidad antes de comparar.', en:'Micro is a millionth and milli is a thousandth, so there is a jump of a thousand between them. Write both measurements in the same unit before comparing.'}),
+      exp: L({ es:'Un milímetro contiene 1000 micrómetros, así que ' + um + ' µm = ' + um + ' ÷ 1000 mm = ' + fmt(um / 1000) + ' mm. Las dos láminas miden exactamente lo mismo.',
+               en:'One millimetre contains 1000 micrometres, so ' + um + ' µm = ' + um + ' ÷ 1000 mm = ' + fmt(um / 1000) + ' mm. Both sheets are exactly the same.' })
+    };
+  }
+  return {
+    title: L({es:'Dos generadores', en:'Two generators'}),
+    q: L({ es:'La central del municipio entrega ' + mw + ' MW y la planta de emergencia del hospital entrega ' + (mw * 100) + ' kW. ¿Cómo se comparan las dos potencias?',
+           en:'The town power station delivers ' + mw + ' MW and the hospital backup plant delivers ' + (mw * 100) + ' kW. How do the two outputs compare?' }),
+    options: [
+      L({es:'La central entrega diez veces más potencia que la planta del hospital', en:'The power station delivers ten times more than the hospital plant'}),
+      L({es:'Las dos instalaciones entregan exactamente la misma potencia', en:'Both installations deliver exactly the same output'}),
+      L({es:'La planta del hospital entrega diez veces más potencia que la central', en:'The hospital plant delivers ten times more than the power station'}),
+      L({es:'La central entrega cien veces más potencia que la planta del hospital', en:'The power station delivers a hundred times more than the hospital plant'})
+    ],
+    correct: 0, showWork: false,
+    hint: L({es:'Mega vale un millón y kilo vale mil, de modo que entre las dos hay un salto de mil. Escribe las dos potencias en la misma unidad antes de comparar.', en:'Mega is a million and kilo is a thousand, so there is a jump of a thousand between them. Write both outputs in the same unit before comparing.'}),
+    exp: L({ es:'Un megavatio equivale a 1000 kilovatios, así que la central entrega ' + mw + ' × 1000 = ' + (mw * 1000) + ' kW frente a ' + (mw * 100) + ' kW de la planta del hospital, diez veces más.',
+             en:'One megawatt equals 1000 kilowatts, so the station delivers ' + mw + ' × 1000 = ' + (mw * 1000) + ' kW against ' + (mw * 100) + ' kW from the hospital plant, ten times more.' })
+  };
+}
+
+/* 9 · salto largo de la escalera, con micro */
+function mkP9(rng){
+  var mg = ri(rng, 12, 89) * 10, ug = mg * 1000;
+  if (rng() < 0.5){
+    return {
+      title: L({es:'De microgramos a miligramos', en:'From micrograms to milligrams'}),
+      q: L({ es:'Convierte ' + ug + ' µg a miligramos.', en:'Convert ' + ug + ' µg to milligrams.' }),
+      fn: ug + ' µg → ? mg',
+      options: opts4(mg, [mg * 10, mg / 10, mg * 100]).map(String),
+      correct: 0, showWork: true,
+      hint: L({es:'Mil microgramos hacen un miligramo. Como la unidad de llegada es más grande, el número tiene que salir más chico.', en:'A thousand micrograms make one milligram. Since the arriving unit is bigger, the number has to come out smaller.'}),
+      exp: L({ es:'Un miligramo contiene 1000 microgramos, así que se divide entre 1000: ' + ug + ' ÷ 1000 = ' + mg,
+               en:'One milligram contains 1000 micrograms, so divide by 1000: ' + ug + ' ÷ 1000 = ' + mg })
+    };
+  }
+  return {
+    title: L({es:'De miligramos a microgramos', en:'From milligrams to micrograms'}),
+    q: L({ es:'Convierte ' + mg + ' mg a microgramos.', en:'Convert ' + mg + ' mg to micrograms.' }),
+    fn: mg + ' mg → ? µg',
+    options: opts4(ug, [mg * 100, mg * 10000, mg * 10]).map(String),
+    correct: 0, showWork: true,
+    hint: L({es:'Mil microgramos hacen un miligramo. Como la unidad de llegada es más pequeña, el número tiene que salir más grande.', en:'A thousand micrograms make one milligram. Since the arriving unit is smaller, the number has to come out bigger.'}),
+    exp: L({ es:'Un miligramo contiene 1000 microgramos, así que se multiplica por 1000: ' + mg + ' × 1000 = ' + ug,
+             en:'One milligram contains 1000 micrograms, so multiply by 1000: ' + mg + ' × 1000 = ' + ug })
+  };
+}
+
+/* 10 · cierre: convertir y repartir */
+function mkP10(rng){
+  var n = 2 * ri(rng, 2, 5);
+  var packG = pick([150, 200, 250, 300], rng);
+  var packM = pick([125, 250, 500], rng);
+  if (rng() < 0.5){
+    var totG = n * packG;
+    return {
+      title: L({es:'Los sobres de sal', en:'The salt sachets'}),
+      q: L({ es:'Para el experimento el equipo necesita ' + fmt(totG / 1000) + ' kg de sal y en la despensa solo hay sobres de ' + packG + ' g. ¿Cuántos sobres completos debe tomar el equipo?',
+             en:'For the experiment the team needs ' + fmt(totG / 1000) + ' kg of salt and the store only has ' + packG + ' g sachets. How many whole sachets must the team take?' }),
+      options: opts4(n, [n * 10, n * 100, n / 2]).map(String),
+      correct: 0, showWork: true,
+      hint: L({es:'La cantidad pedida y el contenido de cada sobre están en unidades distintas: escribe las dos en gramos y después reparte.', en:'The amount needed and the content of each sachet are in different units: write both in grams and then share out.'}),
+      exp: L({ es:'La masa pedida en gramos es ' + fmt(totG / 1000) + ' × 1000 = ' + totG + ' g. Repartida entre el contenido de cada sobre: ' + totG + ' ÷ ' + packG + ' = ' + n,
+               en:'The mass needed in grams is ' + fmt(totG / 1000) + ' × 1000 = ' + totG + ' g. Shared out by the content of each sachet: ' + totG + ' ÷ ' + packG + ' = ' + n })
+    };
+  }
+  var totM = n * packM;
+  return {
+    title: L({es:'Los frascos de agua', en:'The water flasks'}),
+    q: L({ es:'El laboratorio necesita ' + fmt(totM / 1000) + ' L de agua destilada y solo tiene frascos de ' + packM + ' mL. ¿Cuántos frascos completos debe usar?',
+           en:'The laboratory needs ' + fmt(totM / 1000) + ' L of distilled water and only has ' + packM + ' mL flasks. How many whole flasks must it use?' }),
+    options: opts4(n, [n * 10, n * 100, n / 2]).map(String),
+    correct: 0, showWork: true,
+    hint: L({es:'El volumen pedido y la capacidad de cada frasco están en unidades distintas: escribe los dos en mililitros y después reparte.', en:'The volume needed and the capacity of each flask are in different units: write both in millilitres and then share out.'}),
+    exp: L({ es:'El volumen pedido en mililitros es ' + fmt(totM / 1000) + ' × 1000 = ' + totM + ' mL. Repartido entre la capacidad de cada frasco: ' + totM + ' ÷ ' + packM + ' = ' + n,
+             en:'The volume needed in millilitres is ' + fmt(totM / 1000) + ' × 1000 = ' + totM + ' mL. Shared out by the capacity of each flask: ' + totM + ' ÷ ' + packM + ' = ' + n })
+  };
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   buildLesson :: concepto -> manipulativo -> problema, alternados
+   ══════════════════════════════════════════════════════════════════════════ */
+function buildLesson(rng){
+  GUIDE_CLEANUP.forEach(function(f){ try { f(); } catch(e){} });
+  GUIDE_CLEANUP = [];
+  injectGuideCSS();
+
+  /* ── Apertura ── */
+  sec(
+    L({es:'Punto de partida', en:'Starting point'}),
+    L({es:'La misma medida, escrita de varias maneras', en:'The same measurement, written in several ways'}),
+    '<p>' + L({
+      es:'Una botella dice 1.5 L, la caja de tabletas dice 500 mg, la carrera del domingo se anuncia con 5 km y la cisterna del laboratorio guarda 2 hL. Las cuatro etiquetas usan la misma idea: una unidad conocida acompañada de una palabra corta que la agranda o la achica.',
+      en:'A bottle says 1.5 L, the box of tablets says 500 mg, Sunday race is announced as 5 km and the laboratory cistern holds 2 hL. All four labels use the same idea: a familiar unit with a short word in front that makes it bigger or smaller.'
+    }) + '</p>' +
+    '<div class="callout"><p><strong>' + L({es:'Idea clave: ', en:'Key idea: '}) + '</strong>' + L({
+      es:'convertir no cambia lo que se midió, solo cambia el número y el nombre con que se escribe. La tableta pesa exactamente lo mismo si la etiqueta dice 500 mg que si dice 0.5 g.',
+      en:'converting does not change what was measured, it only changes the number and the name used to write it. The tablet weighs exactly the same whether the label says 500 mg or 0.5 g.'
+    }) + '</p></div>'
+  );
+
+  /* ══ CONCEPTO 1 ══ */
+  var s1 = sec(
+    L({es:'Concepto 1', en:'Concept 1'}),
+    L({es:'Lo que agrega un prefijo', en:'What a prefix adds'}),
+    '<p>' + L({
+      es:'Un prefijo es una palabra corta que se coloca delante de la unidad y le fija un factor de diez. Los que agrandan la unidad se llaman múltiplos y los que la achican se llaman submúltiplos. La magnitud sigue siendo la misma: kilo, deci o mili no convierten el metro en otra cosa, solo indican de qué tamaño es el paquete que se está contando.',
+      en:'A prefix is a short word placed in front of the unit that fixes a factor of ten for it. Those that make the unit bigger are called multiples and those that make it smaller are called submultiples. The quantity stays the same: kilo, deci or milli do not turn the metre into something else, they only state the size of the package being counted.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard('kilo (k)',  '× 1000', L({es:'mil unidades en una', en:'a thousand units in one'})) +
+      rcard('hecto (h)', '× 100',  L({es:'cien unidades en una', en:'a hundred units in one'})) +
+      rcard('deca (da)', '× 10',   L({es:'diez unidades en una', en:'ten units in one'})) +
+      rcard('deci (d)',  '÷ 10',   L({es:'la décima parte', en:'a tenth of the unit'})) +
+      rcard('centi (c)', '÷ 100',  L({es:'la centésima parte', en:'a hundredth of the unit'})) +
+      rcard('mili (m)',  '÷ 1000', L({es:'la milésima parte', en:'a thousandth of the unit'})) +
+    '</div>' +
+    '<div class="callout"><p>' + L({
+      es:'La familia es más grande de lo que parece: mega (M) vale un millón de unidades y micro (µ) vale una millonésima. Aparecen al hablar de la potencia de una central eléctrica o del grosor de una lámina, y siguen exactamente la misma lógica de potencias de diez.',
+      en:'The family is larger than it looks: mega (M) is worth a million units and micro (µ) is worth a millionth. They show up when talking about the output of a power station or the thickness of a metal sheet, and they follow exactly the same logic of powers of ten.'
+    }) + '</p></div>'
+  );
+  wSort(rng, wHost(s1, 'w_sort'));
+  addProblem(rng, mkP1(rng));
+  addProblem(rng, mkP2(rng));
+
+  /* ══ CONCEPTO 2 ══ */
+  var s2 = sec(
+    L({es:'Concepto 2', en:'Concept 2'}),
+    L({es:'Cada escalón vale diez', en:'Every step is worth ten'}),
+    '<p>' + L({
+      es:'Las unidades vecinas de la escalera se llevan un factor de diez. Al bajar hacia una unidad más pequeña se necesitan más piezas para cubrir lo mismo, así que el número crece. Al subir hacia una unidad más grande se necesitan menos piezas y el número se achica. Contar los escalones dice cuántos lugares recorre el punto decimal.',
+      en:'Neighbouring units on the ladder differ by a factor of ten. Stepping down towards a smaller unit means more pieces are needed to cover the same thing, so the number grows. Stepping up towards a bigger unit means fewer pieces are needed and the number shrinks. Counting the steps tells you how many places the decimal point travels.'
+    }) + '</p>' +
+    '<div class="callout"><p>' + L({
+      es:'Comprobación rápida antes de dar por buena una conversión: si la unidad de llegada es más pequeña que la de partida, el resultado tiene que salir con un número mayor. Si sale menor, la conversión se hizo al revés.',
+      en:'A quick check before accepting a conversion: if the arriving unit is smaller than the starting one, the result has to come out with a bigger number. If it comes out smaller, the conversion was done the wrong way round.'
+    }) + '</p></div>'
+  );
+  wLadder(rng, wHost(s2, 'w_ladder'));
+  addProblem(rng, mkP3(rng));
+  addProblem(rng, mkP4(rng));
+
+  /* ══ CONCEPTO 3 ══ */
+  var s3 = sec(
+    L({es:'Concepto 3', en:'Concept 3'}),
+    L({es:'Un factor que vale uno', en:'A factor worth one'}),
+    '<p>' + L({
+      es:'Contar escalones funciona, pero existe una herramienta que nunca se equivoca de dirección: una fracción formada por dos cantidades iguales, como 1000 g y 1 kg. Al valer uno, multiplicar por ella no altera la medida. La unidad que se quiere eliminar se coloca abajo y la unidad que se quiere obtener se coloca arriba.',
+      en:'Counting steps works, but there is a tool that never gets the direction wrong: a fraction made of two equal amounts, such as 1000 g and 1 kg. Since it is worth one, multiplying by it does not alter the measurement. The unit to be removed goes at the bottom and the unit to be obtained goes on top.'
+    }) + '</p>' +
+    '<div class="gcrd"><div class="frow"><span>2.4 kg</span><span>×</span>' + mf('1000 g', '1 kg') + '<span>=</span><span class="fsurv">2400 g</span></div></div>' +
+    '<div class="callout"><p>' + L({
+      es:'La pista está en las unidades: la que aparece arriba y abajo se cancela, y la que sobrevive es la del resultado. Si sobrevive la unidad equivocada, la fracción está al revés.',
+      en:'The clue is in the units: the one appearing top and bottom cancels out, and the one that survives is the unit of the result. If the wrong unit survives, the fraction is upside down.'
+    }) + '</p></div>'
+  );
+  wFactor(rng, wHost(s3, 'w_factor'));
+  addProblem(rng, mkP5(rng));
+  addProblem(rng, mkP6(rng));
+
+  /* ══ CONCEPTO 4 ══ */
+  var s4 = sec(
+    L({es:'Concepto 4', en:'Concept 4'}),
+    L({es:'Instrumentos y medidas partidas en dos', en:'Instruments and measurements split in two'}),
+    '<p>' + L({
+      es:'Cada instrumento trae su propia escala: la regla escolar está graduada en centímetros y milímetros, la probeta en mililitros, la báscula de cocina en gramos. Leer bien el instrumento es la mitad del trabajo; la otra mitad es escribir esa lectura en la unidad que pide el problema. Además, muchas medidas llegan partidas en dos unidades distintas, como un trayecto de 2 km y 350 m, y hay que reunirlas en una sola antes de operar.',
+      en:'Every instrument carries its own scale: the school ruler is graduated in centimetres and millimetres, the measuring cylinder in millilitres, the kitchen scale in grams. Reading the instrument properly is half the work; the other half is writing that reading in the unit the problem asks for. On top of that, many measurements arrive split into two different units, such as a trip of 2 km and 350 m, and they have to be gathered into a single one before operating.'
+    }) + '</p>' +
+    '<div class="callout"><p>' + L({
+      es:'Cuando las unidades quedan lejos en la escalera conviene avanzar por etapas: de microgramos a miligramos y de miligramos a gramos, en lugar de saltar de una sola vez y perder la cuenta de los ceros.',
+      en:'When the units sit far apart on the ladder it pays to advance in stages: from micrograms to milligrams and from milligrams to grams, instead of jumping all at once and losing count of the zeros.'
+    }) + '</p></div>'
+  );
+  wRuler(rng, wHost(s4, 'w_ruler'));
+  addProblem(rng, mkP7(rng));
+
+  /* ══ CIERRE ══ */
+  sec(
+    L({es:'Cierre', en:'Closing'}),
+    L({es:'Tres medidas del mundo real', en:'Three measurements from the real world'}),
+    '<p>' + L({
+      es:'Las siguientes tres situaciones mezclan prefijos grandes, prefijos pequeños e instrumentos.',
+      en:'The next three situations mix large prefixes, small prefixes and instruments.'
+    }) + '</p>'
+  );
+  addProblem(rng, mkP8(rng));
+  addProblem(rng, mkP9(rng));
+  addProblem(rng, mkP10(rng));
+}
+
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbzLGV15JRTPs9bbSvHRLfgOXeT9oUExDf1AH546WOwq5tYxXSdhX212OWi_bTJfMGx9/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Conversiones entre Múltiplos y Submúltiplos';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>
