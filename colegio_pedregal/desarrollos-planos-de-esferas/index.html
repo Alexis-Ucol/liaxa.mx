@@ -1,0 +1,2222 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desarrollos Planos de Esferas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── MANIPULATIVES ── */
+.mcv { display:block; width:100%; height:260px; touch-action:none; background:var(--surface); }
+.mrow { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-top:.7rem; }
+.mbtn { background:var(--surface2); border:1.5px solid var(--border); border-radius:8px; padding:.55rem .9rem; font-size:.82rem; cursor:pointer; color:var(--text2); font-family:inherit; min-height:44px; transition:all .14s; }
+.mbtn:hover { border-color:var(--green); color:var(--green); }
+.mbtn.go { background:var(--green); color:#fff; border-color:var(--green); }
+.mbtn.go:hover { background:var(--green-dark); color:#fff; }
+.mbtn.warn { border-color:var(--gold); color:var(--gold); }
+.mfb { margin-top:.7rem; padding:.6rem .85rem; border-radius:8px; font-size:.84rem; background:var(--surface2); color:var(--text2); border-left:3px solid var(--border); }
+.mfb.good { background:var(--ok-bg); color:var(--ok); border-left-color:var(--ok); }
+.mfb.near { background:var(--gold-bg); color:var(--text2); border-left-color:var(--gold); }
+.mstat { display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem; margin-top:.7rem; }
+.mtile { background:var(--surface2); border-radius:8px; padding:.55rem .35rem; text-align:center; border:1.5px solid var(--border); }
+.mtile.hit { border-color:var(--ok); background:var(--ok-bg); }
+.mtile .tl { font-size:.62rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text3); }
+.mtile .tv { font-family:'IBM Plex Mono',monospace; font-size:.9rem; font-weight:600; color:var(--text); }
+.mhead { display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; flex-wrap:wrap; margin-bottom:.4rem; }
+.mtitle { font-weight:600; font-size:.95rem; }
+.mround { font-family:'IBM Plex Mono',monospace; font-size:.68rem; letter-spacing:.09em; text-transform:uppercase; color:var(--gold); font-weight:600; }
+.mnote { font-size:.76rem; color:var(--text3); margin-top:.5rem; }
+.mhide { display:none; }
+@media (max-width:600px){ .mstat { grid-template-columns:1fr 1fr; } .mcv { height:230px; } .mbtn { font-size:.78rem; padding:.5rem .6rem; } }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Desarrollos Planos de Esferas</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 3° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Desarrollos Planos de Esferas</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c0c3c', primaryDark:'#0c0c47', primaryBg:'#e7e7f6',
+  accent:'#cc6c6c', accentBg:'#f6e4e4',
+  darkPrimary:'#4545c4', darkPrimaryDark:'#7575e5', darkPrimaryBg:'#0c0c3a',
+  darkAccent:'#cf6f6f', darkAccentBg:'#230f0f',
+  pBR:12, pBG:12, pBB:60, pAR:204, pAG:108, pAB:108,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'Colegio Pedregal',
+  guideTitle:{ es:'Desarrollos Planos de Esferas', en:'Flat Developments of Spheres' },
+  courseName:{ es:'Matemáticas · 3° de Secundaria', en:'Mathematics · 3° de Secundaria' },
+  filePrefix:'mat3_t05_g01', schoolSlug:'colegio_pedregal'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'mat3_t05_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Desarrollos Planos de Esferas','wcourse':'Matemáticas · 3° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Flat Developments of Spheres','wcourse':'Mathematics · 3° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'mat3_t05_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'mat3_t05_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'mat3_t05_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'mat3_t05_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
+  }
+
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('mat3_t05_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+
+/* ================================================
+   GUIDE CONTENT : Desarrollos Planos de Esferas
+   Matemáticas · 3° de Secundaria · Circunferencia, círculo y esfera
+   ================================================ */
+
+/* ---------- small helpers ---------- */
+var PIV = 3.1416;
+function L(es, en){ return LANG === 'en' ? en : es; }
+function cssv(n){ try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888'; } catch(e){ return '#888'; } }
+function n2(v){ return (Math.round(v * 100) / 100).toFixed(2); }
+function n1(v){ return (Math.round(v * 10) / 10).toFixed(1); }
+function frac(n, d){ return '<span class="mf-outer"><span class="mf-num">' + n + '</span><span class="mf-den">' + d + '</span></span>'; }
+function addSection(html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = html;
+  document.getElementById('lessonBody').appendChild(d);
+  return d;
+}
+function shuffleOpts(opts, correct, rng){
+  var a = opts.slice();
+  for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(rng() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+  return { options: a, correctIdx: a.indexOf(correct) };
+}
+function pushProb(spec, rng){
+  var s = shuffleOpts(spec.options, spec.correct, rng);
+  var prob = {
+    title: spec.title, questionText: spec.questionText, fn: spec.fn || '',
+    hint: spec.hint || '', explanation: spec.explanation || '',
+    options: s.options, correctIdx: s.correctIdx, showWork: !!spec.showWork,
+    studentChoice: null, pendingChoice: null
+  };
+  problems.push(prob);
+  buildOneCard(prob, problems.length - 1);
+}
+function setFb(id, msg, cls){
+  var e = document.getElementById(id); if (!e) return;
+  e.innerHTML = msg; e.className = 'mfb' + (cls ? ' ' + cls : '');
+}
+function showEl(id, on){ var e = document.getElementById(id); if (e) e.classList.toggle('mhide', !on); }
+function cvFit(id){
+  var cv = document.getElementById(id);
+  if (!cv) return null;
+  var dpr = window.devicePixelRatio || 1;
+  var r = cv.getBoundingClientRect();
+  var w = Math.max(240, Math.round(r.width));
+  var h = Math.max(180, Math.round(r.height));
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.font = '600 12px "IBM Plex Sans", sans-serif';
+  return { ctx: ctx, w: w, h: h };
+}
+function cvLabel(ctx, txt, x, y, col){
+  ctx.save(); ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = '500 11px "IBM Plex Sans", sans-serif';
+  ctx.fillText(txt, x, y); ctx.restore();
+}
+
+var M1 = null, M2 = null, M3 = null, M4 = null;
+
+/* ================================================
+   MANIPULATIVE 1 : Torno de revolución
+   The student spins a flat profile around the axis and names the solid.
+   Pattern B: 3 figures, directional profile hints, reveal on the 3rd miss.
+   ================================================ */
+var M1KINDS = ['esfera', 'media', 'cono', 'cilindro'];
+function m1Name(k){
+  return k === 'esfera'   ? L('una esfera', 'a sphere')
+       : k === 'media'    ? L('media esfera', 'a hemisphere')
+       : k === 'cono'     ? L('un cono', 'a cone')
+       :                    L('un cilindro', 'a cylinder');
+}
+function m1Figure(k){
+  return k === 'esfera'   ? L('un semicírculo girando sobre su diámetro', 'a semicircle spinning about its diameter')
+       : k === 'media'    ? L('un cuarto de círculo girando sobre uno de sus radios rectos', 'a quarter circle spinning about one of its straight radii')
+       : k === 'cono'     ? L('un triángulo rectángulo girando sobre uno de sus catetos', 'a right triangle spinning about one of its legs')
+       :                    L('un rectángulo girando sobre uno de sus lados', 'a rectangle spinning about one of its sides');
+}
+function m1Trait(k){
+  return k === 'esfera'   ? L('el perfil sale del eje, se abre al máximo justo a media altura y se vuelve a cerrar arriba y abajo', 'the profile leaves the axis, opens up to its maximum at mid height and closes again at the top and at the bottom')
+       : k === 'media'    ? L('el perfil se cierra en un extremo y termina de golpe con un borde plano en el otro', 'the profile closes at one end and stops abruptly with a flat edge at the other')
+       : k === 'cono'     ? L('el perfil es un segmento recto que se aleja del eje de forma pareja, de una punta a un borde ancho', 'the profile is a straight segment moving away from the axis evenly, from a tip to a wide edge')
+       :                    L('el perfil se mantiene siempre a la misma distancia del eje, de arriba abajo', 'the profile stays at the same distance from the axis all the way up and down');
+}
+function m1Build(rng){
+  var order = shuffle(M1KINDS, rng).slice(0, 3);
+  M1 = { kinds: order, round: 0, tries: 0, done: false, resolved: false, ang: 60 };
+}
+function m1H(k){ return k === 'media' ? 1 : 2; }
+function m1Rad(k, y){
+  if (k === 'esfera'){ var d = y - 1; return Math.sqrt(Math.max(0, 1 - d * d)); }
+  if (k === 'media'){ var e = 1 - y; return Math.sqrt(Math.max(0, 1 - e * e)); }
+  if (k === 'cono'){ return y / 2; }
+  return 1;
+}
+function m1Html(){
+  return '<div class="gcrd">' +
+    '<div class="mhead"><div class="mtitle">' + L('Torno de revolución', 'Revolution lathe') + '</div>' +
+    '<div class="mround" id="m1r"></div></div>' +
+    '<p style="font-size:.86rem">' + L(
+      'La figura dorada es plana y está pegada al eje punteado. Mueve el control de giro y observa qué cuerpo va barriendo en el aire. Cuando lo reconozcas, dilo.',
+      'The gold figure is flat and attached to the dashed axis. Move the spin control and watch which solid it sweeps out in the air. When you recognise it, say so.') + '</p>' +
+    '<div class="cvwrap"><canvas class="mcv" id="m1cv"></canvas></div>' +
+    '<div class="cgrid" style="margin-top:.8rem">' +
+      '<div class="cg"><label>' + L('Giro', 'Spin') + ': <span class="cval" id="m1lv"></span>°</label>' +
+        '<input type="range" id="m1a" min="0" max="360" step="5" oninput="m1Input()"></div>' +
+      '<div class="cg"><label>' + L('Figura plana', 'Flat figure') + ': <span class="cval" id="m1lf"></span></label>' +
+        '<div class="mnote" id="m1hintline"></div></div>' +
+    '</div>' +
+    '<div class="mrow">' +
+      '<button class="mbtn" onclick="m1Answer(\'esfera\')">' + L('Esfera', 'Sphere') + '</button>' +
+      '<button class="mbtn" onclick="m1Answer(\'media\')">' + L('Media esfera', 'Hemisphere') + '</button>' +
+      '<button class="mbtn" onclick="m1Answer(\'cono\')">' + L('Cono', 'Cone') + '</button>' +
+      '<button class="mbtn" onclick="m1Answer(\'cilindro\')">' + L('Cilindro', 'Cylinder') + '</button>' +
+    '</div>' +
+    '<div class="mfb" id="m1fb"></div>' +
+    '<div class="mrow"><button class="mbtn go mhide" id="m1next" onclick="m1Next()">' + L('Siguiente figura →', 'Next figure →') + '</button></div>' +
+  '</div>';
+}
+function m1Init(){
+  var a = document.getElementById('m1a'); if (!a || !M1) return;
+  a.value = M1.ang;
+  showEl('m1next', false);
+  setFb('m1fb', L('Empieza a girar la figura y fíjate en el rastro que deja.', 'Start spinning the figure and watch the trail it leaves behind.'), '');
+  m1Input();
+}
+function m1Input(){
+  var a = document.getElementById('m1a'); if (!a || !M1) return;
+  M1.ang = parseInt(a.value, 10);
+  document.getElementById('m1lv').textContent = M1.ang;
+  var lf = document.getElementById('m1lf');
+  if (lf) lf.textContent = (M1.round + 1) + ' / 3';
+  var rr = document.getElementById('m1r');
+  if (rr) rr.textContent = L('Figura ' + (M1.round + 1) + ' de 3', 'Figure ' + (M1.round + 1) + ' of 3');
+  var hl = document.getElementById('m1hintline');
+  if (hl) hl.textContent = M1.ang < 360
+    ? L('Todavía falta vuelta: has barrido ' + Math.round(M1.ang / 3.6) + ' % del cuerpo.', 'Still turning: you have swept ' + Math.round(M1.ang / 3.6) + ' % of the solid.')
+    : L('Vuelta completa: el cuerpo está cerrado.', 'Full turn: the solid is closed.');
+  m1Draw();
+}
+function m1Path(ctx, kind, ax, top, s, sx){
+  var H = m1H(kind), i, y, r;
+  ctx.beginPath();
+  ctx.moveTo(ax, top);
+  for (i = 0; i <= 44; i++){ y = H * i / 44; r = m1Rad(kind, y) * s * sx; ctx.lineTo(ax + r, top + y * s); }
+  ctx.lineTo(ax, top + H * s);
+  ctx.closePath();
+}
+function m1Draw(){
+  var f = cvFit('m1cv'); if (!f || !M1) return;
+  var ctx = f.ctx, kind = M1.kinds[M1.round], H = m1H(kind);
+  var s = Math.min((f.h - 54) / H, (f.w - 90) / 2.4);
+  var ax = f.w / 2, top = (f.h - H * s) / 2;
+  var th = M1.ang * Math.PI / 180;
+  ctx.save(); ctx.strokeStyle = cssv('--text3'); ctx.setLineDash([5, 5]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ax, top - 20); ctx.lineTo(ax, top + H * s + 20); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.strokeStyle = cssv('--green'); ctx.globalAlpha = 0.4; ctx.lineWidth = 1.3;
+  for (var k = 0; k <= 18; k++){
+    var y = H * k / 18, r = m1Rad(kind, y) * s;
+    if (r < 1.5) continue;
+    ctx.beginPath(); ctx.ellipse(ax, top + y * s, r, r * 0.3, 0, 0, Math.max(0.001, th)); ctx.stroke();
+  }
+  ctx.restore();
+  ctx.save(); ctx.globalAlpha = 0.9; ctx.strokeStyle = cssv('--green'); ctx.lineWidth = 2.4;
+  m1Path(ctx, kind, ax, top, s, Math.cos(th)); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.fillStyle = cssv('--gold-bg'); ctx.strokeStyle = cssv('--gold'); ctx.lineWidth = 2.6;
+  m1Path(ctx, kind, ax, top, s, 1); ctx.fill(); ctx.stroke(); ctx.restore();
+  cvLabel(ctx, L('figura plana', 'flat figure'), 10, 16, cssv('--gold'));
+  cvLabel(ctx, L('rastro del giro', 'trail of the spin'), 10, 33, cssv('--green'));
+  cvLabel(ctx, L('eje', 'axis'), ax + 6, top - 14, cssv('--text3'));
+}
+function m1Answer(k){
+  if (!M1 || M1.done || M1.resolved) return;
+  var tgt = M1.kinds[M1.round];
+  if (k === tgt){
+    M1.resolved = true;
+    setFb('m1fb', L('¡Eso es! Con ' + m1Figure(tgt) + ' se genera ' + m1Name(tgt) + ', porque ' + m1Trait(tgt) + '.',
+                    'That is it. With ' + m1Figure(tgt) + ' you generate ' + m1Name(tgt) + ', because ' + m1Trait(tgt) + '.'), 'good');
+    showEl('m1next', true);
+    return;
+  }
+  M1.tries++;
+  if (M1.tries >= 3){
+    M1.resolved = true;
+    setFb('m1fb', L('Era ' + m1Name(tgt) + ': ' + m1Trait(tgt) + '.', 'It was ' + m1Name(tgt) + ': ' + m1Trait(tgt) + '.'), 'near');
+    showEl('m1next', true);
+    return;
+  }
+  var msg = L('Todavía no. Para ' + m1Name(k) + ' el perfil tendría que cumplir que ' + m1Trait(k) + ', y aquí no pasa eso. Sigue girando y vuelve a mirar.',
+              'Not yet. For ' + m1Name(k) + ' the profile would have to satisfy that ' + m1Trait(k) + ', and that is not what happens here. Keep spinning and look again.');
+  setFb('m1fb', msg, 'near');
+}
+function m1Next(){
+  if (!M1) return;
+  M1.round++; M1.tries = 0; M1.resolved = false;
+  showEl('m1next', false);
+  if (M1.round >= 3){
+    M1.done = true; M1.round = 2;
+    setFb('m1fb', L('Las tres figuras giraron. Solo el semicírculo completo devuelve una esfera entera: sus puntos están todos a la misma distancia del centro del diámetro.',
+                    'All three figures have spun. Only the full semicircle gives back a whole sphere: all of its points sit at the same distance from the centre of the diameter.'), 'good');
+    return;
+  }
+  M1.ang = 60;
+  var a = document.getElementById('m1a'); if (a) a.value = 60;
+  setFb('m1fb', L('Figura nueva. Gírala y decide qué cuerpo aparece.', 'New figure. Spin it and decide which solid appears.'), '');
+  m1Input();
+}
+
+/* ================================================
+   MANIPULATIVE 2 : Mesa de husos
+   The gore pattern redraws live as n changes; the student matches a target
+   area per gore. Pattern B: 3 rounds, reveal within each round.
+   ================================================ */
+function m2Build(rng){
+  var Rs = [6, 9, 12, 15];
+  var ns = shuffle([6, 8, 10, 12, 15, 18, 20, 24], rng).slice(0, 3);
+  var rounds = [];
+  for (var i = 0; i < 3; i++) rounds.push({ R: Rs[Math.floor(rng() * Rs.length)], n: ns[i] });
+  M2 = { rounds: rounds, round: 0, tries: 0, done: false, resolved: false, n: 12 };
+}
+function m2Cur(){ return M2.rounds[M2.round]; }
+function m2Area(R, n){ return 4 * PIV * R * R / n; }
+function m2Html(){
+  return '<div class="gcrd">' +
+    '<div class="mhead"><div class="mtitle">' + L('Mesa de husos', 'Gore table') + '</div>' +
+    '<div class="mround" id="m2r"></div></div>' +
+    '<p style="font-size:.86rem">' + L(
+      'Aquí está el patrón de papel que envolverá la esfera. El rectángulo total mide siempre lo mismo, pero cambia en cuántas tiras lo cortas. Ajusta el número de husos hasta que cada uno cubra el área que te piden.',
+      'Here is the paper pattern that will wrap the sphere. The whole rectangle always measures the same, but you can change how many strips you cut it into. Adjust the number of gores until each one covers the area you are asked for.') + '</p>' +
+    '<div class="cvwrap"><canvas class="mcv" id="m2cv"></canvas></div>' +
+    '<div class="cgrid" style="margin-top:.8rem">' +
+      '<div class="cg"><label>' + L('Número de husos', 'Number of gores') + ': <span class="cval" id="m2lv"></span></label>' +
+        '<input type="range" id="m2n" min="4" max="24" step="1" oninput="m2Input()"></div>' +
+      '<div class="cg"><label>' + L('Ancho de cada huso en el ecuador', 'Width of each gore at the equator') + ': <span class="cval" id="m2lw"></span> cm</label>' +
+        '<div class="mnote" id="m2note"></div></div>' +
+    '</div>' +
+    '<div class="mstat">' +
+      '<div class="mtile"><div class="tl">' + L('Radio', 'Radius') + '</div><div class="tv" id="m2tR">·</div></div>' +
+      '<div class="mtile" id="m2ta"><div class="tl">' + L('Área de un huso', 'Area of one gore') + '</div><div class="tv" id="m2tv">·</div></div>' +
+      '<div class="mtile"><div class="tl">' + L('Objetivo', 'Target') + '</div><div class="tv" id="m2tg">·</div></div>' +
+    '</div>' +
+    '<div class="mrow"><button class="mbtn go" onclick="m2Check()">' + L('Comprobar el patrón', 'Check the pattern') + '</button>' +
+      '<button class="mbtn go mhide" id="m2next" onclick="m2Next()">' + L('Siguiente esfera →', 'Next sphere →') + '</button></div>' +
+    '<div class="mfb" id="m2fb"></div>' +
+  '</div>';
+}
+function m2Init(){
+  var s = document.getElementById('m2n'); if (!s || !M2) return;
+  s.value = M2.n;
+  showEl('m2next', false);
+  setFb('m2fb', L('Mueve el control y observa cómo cambian las tiras.', 'Move the control and watch how the strips change.'), '');
+  m2Input();
+}
+function m2Input(){
+  var s = document.getElementById('m2n'); if (!s || !M2) return;
+  M2.n = parseInt(s.value, 10);
+  var cur = m2Cur();
+  var area = m2Area(cur.R, M2.n), tgt = m2Area(cur.R, cur.n);
+  document.getElementById('m2lv').textContent = M2.n;
+  document.getElementById('m2lw').textContent = n2(2 * PIV * cur.R / M2.n);
+  document.getElementById('m2r').textContent = L('Esfera ' + (M2.round + 1) + ' de 3', 'Sphere ' + (M2.round + 1) + ' of 3');
+  document.getElementById('m2tR').textContent = cur.R + ' cm';
+  document.getElementById('m2tg').textContent = n2(tgt) + ' cm²';
+  var tile = document.getElementById('m2ta'), tv = document.getElementById('m2tv');
+  if (Math.abs(area - tgt) < 0.005){ tile.classList.add('hit'); tv.textContent = n2(area) + ' cm² ✓'; }
+  else { tile.classList.remove('hit'); tv.textContent = n2(area) + ' cm² ' + (area > tgt ? '▼' : '▲'); }
+  var nt = document.getElementById('m2note');
+  if (nt) nt.textContent = M2.n >= 16
+    ? L('Con tantos husos cada tira casi no se curva: el papel se pega bien.', 'With so many gores each strip barely curves: the paper sits flat.')
+    : L('Con pocos husos cada tira se arruga al pegarla sobre la esfera.', 'With few gores each strip wrinkles when glued onto the sphere.');
+  m2Draw();
+}
+function m2Draw(){
+  var f = cvFit('m2cv'); if (!f || !M2) return;
+  var ctx = f.ctx, n = M2.n;
+  var pad = 26;
+  var W = f.w - 2 * pad, H = Math.min(f.h - 2 * pad, W * 0.5);
+  var left = pad, top = (f.h - H) / 2;
+  ctx.save(); ctx.strokeStyle = cssv('--border'); ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.strokeRect(left, top, W, H); ctx.restore();
+  ctx.save(); ctx.strokeStyle = cssv('--gold'); ctx.setLineDash([6, 5]); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(left, top + H / 2); ctx.lineTo(left + W, top + H / 2); ctx.stroke(); ctx.restore();
+  var gw = W / n, i, j, v, hw;
+  for (i = 0; i < n; i++){
+    var cx = left + (i + 0.5) * gw;
+    ctx.beginPath();
+    for (j = 0; j <= 24; j++){ v = -1 + 2 * j / 24; hw = (gw / 2) * Math.cos(v * Math.PI / 2); ctx.lineTo(cx + hw, top + H / 2 + v * H / 2); }
+    for (j = 24; j >= 0; j--){ v = -1 + 2 * j / 24; hw = (gw / 2) * Math.cos(v * Math.PI / 2); ctx.lineTo(cx - hw, top + H / 2 + v * H / 2); }
+    ctx.closePath();
+    ctx.fillStyle = (i % 2 === 0) ? cssv('--green-bg') : cssv('--surface2');
+    ctx.fill();
+    ctx.strokeStyle = cssv('--green'); ctx.lineWidth = 1.2; ctx.stroke();
+  }
+  cvLabel(ctx, L('polo', 'pole'), left, top - 10, cssv('--text3'));
+  cvLabel(ctx, L('ecuador', 'equator'), left, top + H / 2 - 12, cssv('--gold'));
+  cvLabel(ctx, L('polo', 'pole'), left, top + H + 12, cssv('--text3'));
+}
+function m2Check(){
+  if (!M2 || M2.done || M2.resolved) return;
+  var cur = m2Cur();
+  if (M2.n === cur.n){
+    M2.resolved = true;
+    setFb('m2fb', L('¡Justo! Con ' + cur.n + ' husos cada tira cubre ' + n2(m2Area(cur.R, cur.n)) + ' cm², es decir la superficie completa repartida en ' + cur.n + ' partes iguales.',
+                    'Exactly. With ' + cur.n + ' gores each strip covers ' + n2(m2Area(cur.R, cur.n)) + ' cm², that is the whole surface split into ' + cur.n + ' equal parts.'), 'good');
+    showEl('m2next', true);
+    return;
+  }
+  M2.tries++;
+  if (M2.tries >= 3){
+    M2.resolved = true;
+    M2.n = cur.n;
+    var s = document.getElementById('m2n'); if (s) s.value = cur.n;
+    m2Input();
+    setFb('m2fb', L('Eran ' + cur.n + ' husos: la superficie de esta esfera repartida en ' + cur.n + ' partes deja ' + n2(m2Area(cur.R, cur.n)) + ' cm² en cada una.',
+                    'It was ' + cur.n + ' gores: the surface of this sphere split into ' + cur.n + ' parts leaves ' + n2(m2Area(cur.R, cur.n)) + ' cm² in each one.'), 'near');
+    showEl('m2next', true);
+    return;
+  }
+  var area = m2Area(cur.R, M2.n), tgt = m2Area(cur.R, cur.n);
+  setFb('m2fb', area > tgt
+    ? L('Cada huso todavía cubre demasiado (' + n2(area) + ' cm² contra ' + n2(tgt) + ' cm²). Reparte la misma superficie entre más tiras.',
+        'Each gore still covers too much (' + n2(area) + ' cm² against ' + n2(tgt) + ' cm²). Share the same surface among more strips.')
+    : L('Te pasaste de tiras: cada huso se quedó en ' + n2(area) + ' cm² y el objetivo es ' + n2(tgt) + ' cm². Usa menos husos.',
+        'You went past: each gore is only ' + n2(area) + ' cm² and the target is ' + n2(tgt) + ' cm². Use fewer gores.'), 'near');
+}
+function m2Next(){
+  if (!M2) return;
+  M2.round++; M2.tries = 0; M2.resolved = false;
+  showEl('m2next', false);
+  if (M2.round >= 3){
+    M2.done = true; M2.round = 2;
+    setFb('m2fb', L('Tres esferas repartidas. El patrón de husos siempre mide lo mismo en total porque la superficie de la esfera no cambia: solo cambia en cuántas tiras la partes.',
+                    'Three spheres shared out. The gore pattern always measures the same in total because the sphere surface does not change: only the number of strips does.'), 'good');
+    return;
+  }
+  M2.n = 12;
+  var s = document.getElementById('m2n'); if (s) s.value = 12;
+  setFb('m2fb', L('Esfera nueva, objetivo nuevo. Vuelve a ajustar las tiras.', 'New sphere, new target. Adjust the strips again.'), '');
+  m2Input();
+}
+
+/* ================================================
+   MANIPULATIVE 3 : Trasvase de Arquímedes
+   Cone / sphere / cylinder of matching radius pour into one another.
+   Reversible: the vessel can be emptied at any time. Reveal on the 3rd spill.
+   ================================================ */
+function m3Build(rng){
+  var Rs = [3, 4, 5, 6];
+  var order = shuffle(['esfera', 'cilindro', 'cilindro'], rng);
+  var rounds = [];
+  for (var i = 0; i < 3; i++) rounds.push({ v: order[i], R: Rs[Math.floor(rng() * Rs.length)] });
+  M3 = { rounds: rounds, round: 0, tries: 0, done: false, resolved: false, conos: 0, esferas: 0 };
+}
+function m3Cur(){ return M3.rounds[M3.round]; }
+function m3Cap(v){ return v === 'esfera' ? 2 : 3; }
+function m3Fill(){ return M3.conos + 2 * M3.esferas; }
+function m3Vol(kind, R){
+  if (kind === 'cono') return 2 * PIV * R * R * R / 3;
+  if (kind === 'esfera') return 4 * PIV * R * R * R / 3;
+  return 2 * PIV * R * R * R;
+}
+function m3CapH(fr){
+  var lo = 0, hi = 2, mid, v;
+  for (var i = 0; i < 40; i++){ mid = (lo + hi) / 2; v = mid * mid * (3 - mid) / 4; if (v < fr) lo = mid; else hi = mid; }
+  return (lo + hi) / 2;
+}
+function m3Html(){
+  return '<div class="gcrd">' +
+    '<div class="mhead"><div class="mtitle">' + L('Trasvase de Arquímedes', 'Archimedes pouring bench') + '</div>' +
+    '<div class="mround" id="m3r"></div></div>' +
+    '<p style="font-size:.86rem" id="m3task"></p>' +
+    '<div class="cvwrap"><canvas class="mcv" id="m3cv"></canvas></div>' +
+    '<div class="mrow">' +
+      '<button class="mbtn" onclick="m3Pour(\'cono\')" id="m3bc">' + L('Vaciar un cono', 'Pour one cone') + '</button>' +
+      '<button class="mbtn" onclick="m3Pour(\'esfera\')" id="m3be">' + L('Vaciar una esfera', 'Pour one sphere') + '</button>' +
+      '<button class="mbtn warn" onclick="m3Reset(true)">' + L('Vaciar el recipiente', 'Empty the vessel') + '</button>' +
+    '</div>' +
+    '<div class="mstat">' +
+      '<div class="mtile"><div class="tl">' + L('Conos vertidos', 'Cones poured') + '</div><div class="tv" id="m3tc">0</div></div>' +
+      '<div class="mtile"><div class="tl">' + L('Esferas vertidas', 'Spheres poured') + '</div><div class="tv" id="m3te">0</div></div>' +
+      '<div class="mtile" id="m3tf"><div class="tl">' + L('Llenado', 'Filled') + '</div><div class="tv" id="m3tv">0 %</div></div>' +
+    '</div>' +
+    '<div class="mnote" id="m3note"></div>' +
+    '<div class="mfb" id="m3fb"></div>' +
+    '<div class="mrow"><button class="mbtn go mhide" id="m3next" onclick="m3Next()">' + L('Siguiente recipiente →', 'Next vessel →') + '</button></div>' +
+  '</div>';
+}
+function m3Init(){
+  if (!M3 || !document.getElementById('m3cv')) return;
+  showEl('m3next', false);
+  m3Reset(false);
+}
+function m3Ask(){
+  var cur = m3Cur();
+  var el = document.getElementById('m3task');
+  if (el) el.textContent = cur.v === 'esfera'
+    ? L('El recipiente es una esfera hueca de radio ' + cur.R + ' cm. El cono que tienes a la mano tiene el mismo radio y su altura es igual al diámetro de la esfera. Llénala exactamente, sin derramar.',
+        'The vessel is a hollow sphere of radius ' + cur.R + ' cm. The cone at hand has the same radius and its height equals the diameter of the sphere. Fill it exactly, without spilling.')
+    : L('El recipiente es un cilindro de radio ' + cur.R + ' cm y altura igual al diámetro de la esfera. Tienes conos y esferas del mismo radio. Llénalo exactamente, sin derramar.',
+        'The vessel is a cylinder of radius ' + cur.R + ' cm and height equal to the diameter of the sphere. You have cones and spheres of the same radius. Fill it exactly, without spilling.');
+  var rr = document.getElementById('m3r');
+  if (rr) rr.textContent = L('Recipiente ' + (M3.round + 1) + ' de 3', 'Vessel ' + (M3.round + 1) + ' of 3');
+  var be = document.getElementById('m3be');
+  if (be) be.classList.toggle('mhide', cur.v === 'esfera');
+  var nt = document.getElementById('m3note');
+  if (nt) nt.textContent = L('Cono: ' + n2(m3Vol('cono', cur.R)) + ' cm³   ·   Esfera: ' + n2(m3Vol('esfera', cur.R)) + ' cm³   ·   Cilindro: ' + n2(m3Vol('cilindro', cur.R)) + ' cm³',
+                             'Cone: ' + n2(m3Vol('cono', cur.R)) + ' cm³   ·   Sphere: ' + n2(m3Vol('esfera', cur.R)) + ' cm³   ·   Cylinder: ' + n2(m3Vol('cilindro', cur.R)) + ' cm³');
+}
+function m3Reset(counts){
+  if (!M3) return;
+  if (counts && !M3.resolved && !M3.done && m3Fill() > 0){
+    M3.tries++;
+    if (M3.tries >= 3){ m3Reveal(); return; }
+  }
+  M3.conos = 0; M3.esferas = 0;
+  m3Ask();
+  m3Update();
+  if (!M3.resolved) setFb('m3fb', L('Recipiente vacío. Empieza a verter.', 'Vessel empty. Start pouring.'), '');
+}
+function m3Update(){
+  if (!M3) return;
+  var cur = m3Cur(), cap = m3Cap(cur.v), fill = m3Fill();
+  var tc = document.getElementById('m3tc'); if (tc) tc.textContent = M3.conos;
+  var te = document.getElementById('m3te'); if (te) te.textContent = M3.esferas;
+  var pctv = Math.round(Math.min(fill, cap) / cap * 100);
+  var tv = document.getElementById('m3tv'); if (tv) tv.textContent = pctv + ' %';
+  var tf = document.getElementById('m3tf'); if (tf) tf.classList.toggle('hit', fill === cap);
+  m3Draw();
+}
+function m3Draw(){
+  var f = cvFit('m3cv'); if (!f || !M3) return;
+  var ctx = f.ctx, cur = m3Cur(), cap = m3Cap(cur.v);
+  var fr = Math.min(1, m3Fill() / cap);
+  var r = Math.min((f.h - 46) / 2.5, (f.w - 60) / 3.2);
+  var cx = f.w / 2, top = (f.h - 2 * r) / 2 + 6;
+  var wat = cssv('--green'), lin = cssv('--text2');
+  if (cur.v === 'cilindro'){
+    var h = 2 * r * fr, ey = r * 0.26;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(cx - r, top + 2 * r - h, 2 * r, h);
+    ctx.fillStyle = wat; ctx.globalAlpha = 0.28; ctx.fill(); ctx.restore();
+    if (fr > 0.001){
+      ctx.save(); ctx.beginPath(); ctx.ellipse(cx, top + 2 * r - h, r, ey, 0, 0, 2 * Math.PI);
+      ctx.fillStyle = wat; ctx.globalAlpha = 0.55; ctx.fill(); ctx.restore();
+    }
+    ctx.save(); ctx.strokeStyle = lin; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - r, top); ctx.lineTo(cx - r, top + 2 * r); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + r, top); ctx.lineTo(cx + r, top + 2 * r); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, top + 2 * r, r, ey, 0, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, top, r, ey, 0, 0, 2 * Math.PI); ctx.stroke();
+    ctx.restore();
+  } else {
+    var hh = m3CapH(fr) * r;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, top + r, r, 0, 2 * Math.PI); ctx.clip();
+    ctx.beginPath(); ctx.rect(cx - r, top + 2 * r - hh, 2 * r, hh);
+    ctx.fillStyle = wat; ctx.globalAlpha = 0.28; ctx.fill();
+    ctx.restore();
+    if (fr > 0.001 && fr < 0.999){
+      var half = Math.sqrt(Math.max(0, r * r - (r - hh) * (r - hh)));
+      ctx.save(); ctx.beginPath(); ctx.ellipse(cx, top + 2 * r - hh, half, half * 0.26, 0, 0, 2 * Math.PI);
+      ctx.fillStyle = wat; ctx.globalAlpha = 0.55; ctx.fill(); ctx.restore();
+    }
+    ctx.save(); ctx.strokeStyle = lin; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, top + r, r, 0, 2 * Math.PI); ctx.stroke();
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = cssv('--text3'); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(cx, top + r, r, r * 0.28, 0, 0, 2 * Math.PI); ctx.stroke();
+    ctx.restore();
+  }
+  cvLabel(ctx, cur.v === 'esfera' ? L('esfera hueca', 'hollow sphere') : L('cilindro', 'cylinder'), 10, 16, cssv('--text3'));
+  cvLabel(ctx, L('capacidad ', 'capacity ') + n2(m3Vol(cur.v, cur.R)) + ' cm³', 10, 33, cssv('--gold'));
+  cvLabel(ctx, L('vertido ', 'poured ') + n2(m3Fill() * m3Vol('cono', cur.R)) + ' cm³', 10, 50, cssv('--green'));
+}
+function m3Pour(kind){
+  if (!M3 || M3.done || M3.resolved) return;
+  var cur = m3Cur(), cap = m3Cap(cur.v);
+  if (kind === 'esfera' && cur.v === 'esfera') return;
+  if (kind === 'cono') M3.conos++; else M3.esferas++;
+  var fill = m3Fill();
+  m3Update();
+  if (fill === cap){
+    M3.resolved = true;
+    var txt = cur.v === 'esfera'
+      ? L('Exacto: dos conos llenan la esfera. El cono se lleva ' + n2(m3Vol('cono', cur.R)) + ' cm³ y la esfera guarda ' + n2(m3Vol('esfera', cur.R)) + ' cm³, el doble.',
+          'Exact: two cones fill the sphere. The cone holds ' + n2(m3Vol('cono', cur.R)) + ' cm³ and the sphere holds ' + n2(m3Vol('esfera', cur.R)) + ' cm³, twice as much.')
+      : L('Exacto: el cilindro se llenó con ' + n2(m3Vol('cilindro', cur.R)) + ' cm³, que es lo mismo que tres conos, o una esfera más un cono.',
+          'Exact: the cylinder took ' + n2(m3Vol('cilindro', cur.R)) + ' cm³, the same as three cones, or one sphere plus one cone.');
+    setFb('m3fb', txt, 'good');
+    showEl('m3next', true);
+    return;
+  }
+  if (fill > cap){
+    M3.tries++;
+    if (M3.tries >= 3){ m3Reveal(); return; }
+    setFb('m3fb', L('Se derramó: metiste ' + n2(fill * m3Vol('cono', cur.R)) + ' cm³ en un recipiente de ' + n2(m3Vol(cur.v, cur.R)) + ' cm³. Vacía y prueba con menos.',
+                    'It spilled: you put in ' + n2(fill * m3Vol('cono', cur.R)) + ' cm³ in a vessel of ' + n2(m3Vol(cur.v, cur.R)) + ' cm³. Empty it and try with less.'), 'near');
+    M3.conos = 0; M3.esferas = 0;
+    m3Update();
+    return;
+  }
+  setFb('m3fb', L('Vas en ' + Math.round(fill / cap * 100) + ' %. Todavía cabe más.', 'You are at ' + Math.round(fill / cap * 100) + ' %. There is still room.'), '');
+}
+function m3Reveal(){
+  var cur = m3Cur();
+  M3.resolved = true;
+  if (cur.v === 'esfera'){ M3.conos = 2; M3.esferas = 0; }
+  else { M3.conos = 3; M3.esferas = 0; }
+  m3Update();
+  setFb('m3fb', cur.v === 'esfera'
+    ? L('Ahí lo tienes: la esfera cabe en dos conos de ese mismo radio y esa misma altura.', 'There it is: the sphere fits in exactly two cones of that same radius and height.')
+    : L('Ahí lo tienes: el cilindro cabe en tres conos de ese mismo radio y esa misma altura.', 'There it is: the cylinder fits in exactly three cones of that same radius and height.'), 'near');
+  showEl('m3next', true);
+}
+function m3Next(){
+  if (!M3) return;
+  M3.round++; M3.tries = 0; M3.resolved = false;
+  showEl('m3next', false);
+  if (M3.round >= 3){
+    M3.done = true; M3.round = 2;
+    setFb('m3fb', L('Cono, esfera y cilindro del mismo radio, con la altura igual al diámetro, se reparten en la proporción 1 a 2 a 3.',
+                    'Cone, sphere and cylinder of the same radius, with height equal to the diameter, share the proportion 1 to 2 to 3.'), 'good');
+    return;
+  }
+  m3Reset(false);
+}
+
+/* ================================================
+   MANIPULATIVE 4 : La piel de la esfera
+   Mode A: lay great circles until they add up to the sphere surface.
+   Mode B: unroll the lateral band of the circumscribed cylinder, live.
+   ================================================ */
+function m4Build(rng){
+  var Rs = [5, 6, 7, 8, 10];
+  M4 = { R: Rs[Math.floor(rng() * Rs.length)], mode: 'circulos', n: 1, tries: 0, done: false, un: 0 };
+}
+function m4Html(){
+  return '<div class="gcrd">' +
+    '<div class="mhead"><div class="mtitle">' + L('La piel de la esfera', 'The skin of the sphere') + '</div>' +
+    '<div class="mround" id="m4r"></div></div>' +
+    '<div class="mtabs">' +
+      '<button class="mtab active" id="m4t1" onclick="m4Mode(\'circulos\')">' + L('Círculos máximos', 'Great circles') + '</button>' +
+      '<button class="mtab" id="m4t2" onclick="m4Mode(\'banda\')">' + L('Banda del cilindro', 'Cylinder band') + '</button>' +
+    '</div>' +
+    '<p style="font-size:.86rem" id="m4desc"></p>' +
+    '<div class="cvwrap"><canvas class="mcv" id="m4cv"></canvas></div>' +
+    '<div id="m4rowA">' +
+      '<div class="mrow">' +
+        '<button class="mbtn" onclick="m4Add(-1)">' + L('− un círculo', '− one circle') + '</button>' +
+        '<button class="mbtn" onclick="m4Add(1)">' + L('+ un círculo', '+ one circle') + '</button>' +
+        '<button class="mbtn go" onclick="m4Check()">' + L('Comprobar', 'Check') + '</button>' +
+      '</div>' +
+      '<div class="mstat">' +
+        '<div class="mtile"><div class="tl">' + L('Círculos puestos', 'Circles laid') + '</div><div class="tv" id="m4tn">1</div></div>' +
+        '<div class="mtile" id="m4tp"><div class="tl">' + L('Piel cubierta', 'Skin covered') + '</div><div class="tv" id="m4tv">25 %</div></div>' +
+        '<div class="mtile"><div class="tl">' + L('Piel total', 'Total skin') + '</div><div class="tv" id="m4ts">·</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div id="m4rowB" class="mhide">' +
+      '<div class="cgrid" style="margin-top:.4rem">' +
+        '<div class="cg"><label>' + L('Desenrollar la banda', 'Unroll the band') + ': <span class="cval" id="m4lv">0</span> %</label>' +
+          '<input type="range" id="m4u" min="0" max="100" step="1" oninput="m4Input()"></div>' +
+        '<div class="cg"><div class="mnote" id="m4bnote"></div></div>' +
+      '</div>' +
+      '<div class="mstat">' +
+        '<div class="mtile"><div class="tl">' + L('Largo de la banda', 'Band length') + '</div><div class="tv" id="m4bw">·</div></div>' +
+        '<div class="mtile"><div class="tl">' + L('Alto de la banda', 'Band height') + '</div><div class="tv" id="m4bh">·</div></div>' +
+        '<div class="mtile"><div class="tl">' + L('Área de la banda', 'Band area') + '</div><div class="tv" id="m4ba">·</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="mfb" id="m4fb"></div>' +
+  '</div>';
+}
+function m4Init(){
+  if (!M4 || !document.getElementById('m4cv')) return;
+  var u = document.getElementById('m4u'); if (u) u.value = M4.un;
+  m4Mode(M4.mode);
+}
+function m4Mode(m){
+  if (!M4) return;
+  M4.mode = m;
+  var t1 = document.getElementById('m4t1'), t2 = document.getElementById('m4t2');
+  if (t1) t1.classList.toggle('active', m === 'circulos');
+  if (t2) t2.classList.toggle('active', m === 'banda');
+  showEl('m4rowA', m === 'circulos');
+  showEl('m4rowB', m === 'banda');
+  var d = document.getElementById('m4desc');
+  if (d) d.textContent = m === 'circulos'
+    ? L('A la izquierda está la esfera de radio ' + M4.R + ' cm. A la derecha vas poniendo recortes circulares del tamaño de su ecuador. Pon los que hagan falta para cubrir toda la piel de la esfera, ni uno más.',
+        'On the left is the sphere of radius ' + M4.R + ' cm. On the right you lay circular cut outs the size of its equator. Lay exactly as many as are needed to cover the whole skin of the sphere, not one more.')
+    : L('Ahora la esfera está apretada dentro de un cilindro que la toca por todas partes. Desenrolla la pared curva del cilindro y compárala con la piel de la esfera.',
+        'Now the sphere is squeezed inside a cylinder that touches it everywhere. Unroll the curved wall of the cylinder and compare it with the skin of the sphere.');
+  var rr = document.getElementById('m4r');
+  if (rr) rr.textContent = m === 'circulos' ? L('Recortes', 'Cut outs') : L('Envoltura', 'Wrapper');
+  if (m === 'circulos') m4Update(); else m4Input();
+}
+function m4Add(d){
+  if (!M4 || M4.done) return;
+  M4.n = Math.max(1, Math.min(6, M4.n + d));
+  m4Update();
+  setFb('m4fb', L('Llevas ' + (25 * M4.n) + ' % de la piel de la esfera cubierta.', 'You have covered ' + (25 * M4.n) + ' % of the sphere skin.'), '');
+}
+function m4Update(){
+  if (!M4) return;
+  var A = 4 * PIV * M4.R * M4.R;
+  var tn = document.getElementById('m4tn'); if (tn) tn.textContent = M4.n;
+  var tv = document.getElementById('m4tv'); if (tv) tv.textContent = (25 * M4.n) + ' %';
+  var ts = document.getElementById('m4ts'); if (ts) ts.textContent = n2(A) + ' cm²';
+  var tp = document.getElementById('m4tp'); if (tp) tp.classList.toggle('hit', M4.n === 4);
+  m4Draw();
+}
+function m4Input(){
+  if (!M4) return;
+  var u = document.getElementById('m4u'); if (!u) return;
+  M4.un = parseInt(u.value, 10);
+  var R = M4.R;
+  document.getElementById('m4lv').textContent = M4.un;
+  document.getElementById('m4bw').textContent = n2(2 * PIV * R) + ' cm';
+  document.getElementById('m4bh').textContent = (2 * R) + ' cm';
+  document.getElementById('m4ba').textContent = n2(4 * PIV * R * R) + ' cm²';
+  var bn = document.getElementById('m4bnote');
+  if (bn) bn.textContent = M4.un < 100
+    ? L('Sigue desenrollando: la banda todavía abraza la esfera.', 'Keep unrolling: the band still hugs the sphere.')
+    : L('Banda estirada. Su área coincide con la piel de la esfera.', 'Band stretched out. Its area matches the skin of the sphere.');
+  m4Draw();
+}
+function m4Draw(){
+  var f = cvFit('m4cv'); if (!f || !M4) return;
+  var ctx = f.ctx, lin = cssv('--text2');
+  if (M4.mode === 'circulos'){
+    var r = Math.min((f.h - 30) / 2.2, f.w / 6.2);
+    var cx = 18 + r, cy = f.h / 2;
+    ctx.save(); ctx.strokeStyle = lin; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.stroke();
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = cssv('--text3'); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(cx, cy, r, r * 0.3, 0, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.3, r, 0, 0, 2 * Math.PI); ctx.stroke();
+    ctx.restore();
+    var rr = r * 0.62, gx = cx + r + 26, i;
+    for (i = 0; i < M4.n; i++){
+      var col = i % 3, row = Math.floor(i / 3);
+      var px = gx + rr + col * (2 * rr + 8), py = cy - rr - 6 + row * (2 * rr + 10);
+      if (px + rr > f.w - 4) continue;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(px, py, rr, 0, 2 * Math.PI);
+      ctx.fillStyle = cssv('--green-bg'); ctx.fill();
+      ctx.strokeStyle = cssv('--green'); ctx.lineWidth = 1.8; ctx.stroke();
+      ctx.restore();
+    }
+    cvLabel(ctx, L('esfera', 'sphere'), 10, 14, cssv('--text3'));
+    cvLabel(ctx, L('recortes del tamaño del ecuador', 'cut outs the size of the equator'), gx, 14, cssv('--green'));
+  } else {
+    var t = M4.un / 100;
+    var rB = Math.min((f.h - 46) / 2.4, (f.w - 70) / (2 + 2 * Math.PI));
+    var bx = 20, by = (f.h - 2 * rB) / 2 + 4, ccx = bx + rB, ccy = by + rB;
+    ctx.save(); ctx.strokeStyle = cssv('--text3'); ctx.lineWidth = 1.4;
+    ctx.strokeRect(bx, by, 2 * rB, 2 * rB);
+    ctx.beginPath(); ctx.ellipse(ccx, by, rB, rB * 0.26, 0, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(ccx, by + 2 * rB, rB, rB * 0.26, 0, 0, 2 * Math.PI); ctx.stroke();
+    ctx.restore();
+    ctx.save(); ctx.strokeStyle = lin; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(ccx, ccy, rB, 0, 2 * Math.PI); ctx.stroke(); ctx.restore();
+    var wFull = 2 * Math.PI * rB;
+    var w = t * wFull;
+    var rx = bx + 2 * rB + 22;
+    if (w > 2){
+      ctx.save();
+      ctx.beginPath(); ctx.rect(rx, by, Math.min(w, f.w - rx - 8), 2 * rB);
+      ctx.fillStyle = cssv('--gold-bg'); ctx.fill();
+      ctx.strokeStyle = cssv('--gold'); ctx.lineWidth = 1.8; ctx.stroke();
+      ctx.restore();
+      cvLabel(ctx, '2 × 3.1416 × ' + M4.R + ' cm', rx + 4, by - 10, cssv('--gold'));
+      cvLabel(ctx, (2 * M4.R) + ' cm', rx + 4, by + 2 * rB + 12, cssv('--gold'));
+    }
+    cvLabel(ctx, L('esfera dentro del cilindro', 'sphere inside the cylinder'), 10, 14, cssv('--text3'));
+  }
+}
+function m4Check(){
+  if (!M4 || M4.done) return;
+  var A = 4 * PIV * M4.R * M4.R, g = PIV * M4.R * M4.R;
+  if (M4.n === 4){
+    M4.done = true;
+    setFb('m4fb', L('¡Exacto! Cuatro recortes de ' + n2(g) + ' cm² dan ' + n2(A) + ' cm², justo la piel de la esfera de radio ' + M4.R + ' cm.',
+                    'Exactly. Four cut outs of ' + n2(g) + ' cm² give ' + n2(A) + ' cm², precisely the skin of the sphere of radius ' + M4.R + ' cm.'), 'good');
+    return;
+  }
+  M4.tries++;
+  if (M4.tries >= 3){
+    M4.done = true; M4.n = 4; m4Update();
+    setFb('m4fb', L('Eran cuatro: la piel de la esfera equivale a cuatro círculos de su ecuador, ' + n2(A) + ' cm² en total.',
+                    'It was four: the skin of the sphere equals four circles of its equator, ' + n2(A) + ' cm² in total.'), 'near');
+    return;
+  }
+  setFb('m4fb', M4.n < 4
+    ? L('Con ' + M4.n + ' recortes cubres ' + (25 * M4.n) + ' % y quedan ' + n2(A - M4.n * g) + ' cm² de esfera al aire. Pon más.',
+        'With ' + M4.n + ' cut outs you cover ' + (25 * M4.n) + ' % and ' + n2(A - M4.n * g) + ' cm² of sphere are still bare. Lay more.')
+    : L('Te pasaste: con ' + M4.n + ' recortes sobran ' + n2(M4.n * g - A) + ' cm² de papel. Quita alguno.',
+        'Too many: with ' + M4.n + ' cut outs there are ' + n2(M4.n * g - A) + ' cm² of paper left over. Take one away.'), 'near');
+}
+
+/* ================================================
+   buildLesson — interleaved: concept → manipulative → graded problems
+   ================================================ */
+function buildLesson(rng){
+  problems = [];
+  M1 = M2 = M3 = M4 = null;
+  document.getElementById('lessonBody').innerHTML = '';
+
+  /* ───────── INTRO ───────── */
+  addSection(
+    '<div class="stag">' + L('Matemáticas · 3° de Secundaria', 'Mathematics · 3° de Secundaria') + '</div>' +
+    '<h2>' + L('Desarrollos planos de esferas', 'Flat developments of spheres') + '</h2>' +
+    '<p>' + L('Una caja de cartón se desarma y queda plana. Un cilindro también: la etiqueta de una lata sale entera y se convierte en un rectángulo. Con una pelota no pasa lo mismo, y por eso ningún mapa del mundo es del todo fiel.',
+              'A cardboard box comes apart and lies flat. A cylinder does too: the label of a can comes off in one piece and turns into a rectangle. With a ball that does not happen, and that is why no world map is completely faithful.') + '</p>' +
+    '<p>' + L('En esta guía vas a hacer girar figuras planas hasta que aparezcan cuerpos redondos, vas a cortar la piel de una esfera en tiras para poder aplanarla, y vas a descubrir por qué el cono, la esfera y el cilindro que se ajustan entre sí guardan una proporción muy sencilla.',
+              'In this guide you will spin flat figures until round solids appear, you will cut the skin of a sphere into strips so it can be flattened, and you will discover why a cone, a sphere and a cylinder that fit into one another keep a very simple proportion.') + '</p>'
+  );
+
+  /* ═════════ CONCEPTO 1 ═════════ */
+  addSection(
+    '<div class="stag">' + L('Generación por giro', 'Generation by spinning') + '</div>' +
+    '<h2>' + L('De una figura plana a un cuerpo redondo', 'From a flat figure to a round solid') + '</h2>' +
+    '<p>' + L('Un cuerpo de revolución nace cuando una figura plana da una vuelta completa alrededor de una recta fija llamada eje. Cada punto de la figura describe una circunferencia, y todas esas circunferencias juntas forman la superficie del cuerpo.',
+              'A solid of revolution is born when a flat figure makes a complete turn around a fixed line called the axis. Each point of the figure traces a circle, and all those circles together form the surface of the solid.') + '</p>' +
+    '<div class="callout"><p><strong>' + L('El perfil manda.', 'The profile rules.') + '</strong> ' +
+      L('Lo único que decide qué cuerpo aparece es cómo cambia la distancia de la figura al eje conforme subes. Si esa distancia no cambia sale un cilindro; si crece de forma pareja sale un cono; si se abre y se vuelve a cerrar en forma de arco sale una esfera.',
+        'The only thing that decides which solid appears is how the distance from the figure to the axis changes as you move up. If that distance never changes you get a cylinder; if it grows evenly you get a cone; if it opens and closes again in the shape of an arc you get a sphere.') + '</p></div>' +
+    '<p>' + L('Haz girar tú las figuras y anticipa el cuerpo antes de completar la vuelta.',
+              'Spin the figures yourself and name the solid before the turn is complete.') + '</p>' +
+    m1Html()
+  );
+  m1Build(rng);
+  setTimeout(m1Init, 90);
+
+  /* ── Problema 1 ── */
+  var p1v = Math.floor(rng() * 2);
+  if (p1v === 0){
+    var o1 = [
+      L('Un semicírculo que gira alrededor de su diámetro', 'A semicircle spinning around its diameter'),
+      L('Un círculo completo que gira alrededor de una recta que solo lo toca en un punto', 'A full circle spinning around a line that touches it at a single point'),
+      L('Un triángulo rectángulo que gira alrededor de uno de sus catetos', 'A right triangle spinning around one of its legs'),
+      L('Un rectángulo que gira alrededor de uno de sus lados', 'A rectangle spinning around one of its sides')
+    ];
+    pushProb({
+      title: L('La figura que engendra la esfera', 'The figure that breeds the sphere'),
+      questionText: L('¿Cuál de estas figuras planas genera una esfera al dar una vuelta completa alrededor del eje indicado?',
+                      'Which of these flat figures generates a sphere when it makes a complete turn around the indicated axis?'),
+      hint: L('En una esfera todos los puntos de la superficie quedan a la misma distancia de un solo centro. Busca la figura cuyo borde curvo cumple eso respecto de un punto del eje.',
+              'On a sphere every point of the surface lies at the same distance from a single centre. Look for the figure whose curved edge does that with respect to a point on the axis.'),
+      explanation: L('Todos los puntos del arco del semicírculo están a la misma distancia del centro del diámetro. Al girar, cada uno conserva esa distancia y barre una circunferencia, de modo que juntos forman la superficie esférica completa.',
+                     'Every point of the semicircle arc is at the same distance from the centre of the diameter. As it spins, each one keeps that distance and sweeps a circle, so together they form the complete spherical surface.'),
+      options: o1, correct: o1[0], showWork: false
+    }, rng);
+  } else {
+    var o1b = [
+      L('Media esfera', 'A hemisphere'),
+      L('Una esfera completa', 'A complete sphere'),
+      L('Un cono cuya altura es igual a su radio', 'A cone whose height equals its radius'),
+      L('Un cilindro cuya altura es igual a su radio', 'A cylinder whose height equals its radius')
+    ];
+    pushProb({
+      title: L('Media vuelta de arco', 'Half an arc'),
+      questionText: L('Un cuarto de círculo gira una vuelta completa alrededor de uno de sus dos radios rectos. ¿Qué cuerpo se genera?',
+                      'A quarter circle makes a complete turn around one of its two straight radii. Which solid is generated?'),
+      hint: L('Compara el arco de un cuarto de círculo con el arco de un semicírculo: fíjate qué parte del camino de polo a polo alcanza a recorrer.',
+              'Compare the arc of a quarter circle with the arc of a semicircle: notice how much of the journey from pole to pole it manages to cover.'),
+      explanation: L('El arco del cuarto de círculo llega del polo al ecuador, la mitad del recorrido que hace un semicírculo. Al girar genera solo la mitad de la superficie esférica, y el radio recto que no es eje barre el círculo plano que cierra la figura por abajo.',
+                     'The arc of the quarter circle reaches from the pole to the equator, half of what a semicircle covers. Spinning, it generates only half of the spherical surface, and the straight radius that is not the axis sweeps the flat circle that closes the figure underneath.'),
+      options: o1b, correct: o1b[0], showWork: false
+    }, rng);
+  }
+
+  /* ── Problema 2 ── */
+  var r2 = pick([5, 10, 15], rng);
+  var p2v = Math.floor(rng() * 2);
+  if (p2v === 0){
+    var vE = 4 * PIV * r2 * r2 * r2 / 3;
+    var o2 = [n2(vE) + ' cm³', n2(vE / 2) + ' cm³', n2(2 * PIV * r2 * r2 * r2) + ' cm³', n2(PIV * r2 * r2 * r2) + ' cm³'];
+    pushProb({
+      title: L('El volumen que barre el giro', 'The volume swept by the spin'),
+      questionText: L('Un semicírculo de radio ' + r2 + ' cm gira una vuelta completa alrededor de su diámetro. Calcula el volumen del cuerpo generado. Usa π ≈ 3.1416.',
+                      'A semicircle of radius ' + r2 + ' cm makes a complete turn around its diameter. Calculate the volume of the solid generated. Use π ≈ 3.1416.'),
+      fn: 'r = ' + r2 + ' cm · π ≈ 3.1416',
+      hint: L('Primero identifica el cuerpo que sale del giro. El volumen de una esfera es cuatro tercios de π por el radio elevado al cubo.',
+              'First identify the solid produced by the spin. The volume of a sphere is four thirds of π times the radius cubed.'),
+      explanation: L('El giro genera una esfera de radio ' + r2 + ' cm. Entonces V = ' + frac(4, 3) + ' × 3.1416 × ' + r2 + '³ = ' + n2(vE) + ' cm³.',
+                     'The spin generates a sphere of radius ' + r2 + ' cm. So V = ' + frac(4, 3) + ' × 3.1416 × ' + r2 + '³ = ' + n2(vE) + ' cm³.'),
+      options: o2, correct: o2[0], showWork: true
+    }, rng);
+  } else {
+    var vH = 2 * PIV * r2 * r2 * r2 / 3;
+    var o2b = [n2(vH) + ' cm³', n2(2 * vH) + ' cm³', n2(vH / 2) + ' cm³', n2(2 * PIV * r2 * r2 * r2) + ' cm³'];
+    pushProb({
+      title: L('El volumen que barre el giro', 'The volume swept by the spin'),
+      questionText: L('Un cuarto de círculo de radio ' + r2 + ' cm gira una vuelta completa alrededor de uno de sus radios rectos. Calcula el volumen del cuerpo generado. Usa π ≈ 3.1416.',
+                      'A quarter circle of radius ' + r2 + ' cm makes a complete turn around one of its straight radii. Calculate the volume of the solid generated. Use π ≈ 3.1416.'),
+      fn: 'r = ' + r2 + ' cm · π ≈ 3.1416',
+      hint: L('El cuerpo generado es la mitad de una esfera de ese radio, así que calcula el volumen de la esfera completa y quédate con la mitad.',
+              'The solid generated is half of a sphere of that radius, so work out the volume of the whole sphere and keep half of it.'),
+      explanation: L('El giro genera media esfera de radio ' + r2 + ' cm. La esfera completa mide ' + frac(4, 3) + ' × 3.1416 × ' + r2 + '³ = ' + n2(2 * vH) + ' cm³, y la mitad es ' + n2(2 * vH) + ' ÷ 2 = ' + n2(vH) + ' cm³.',
+                     'The spin generates a hemisphere of radius ' + r2 + ' cm. The whole sphere measures ' + frac(4, 3) + ' × 3.1416 × ' + r2 + '³ = ' + n2(2 * vH) + ' cm³, and half of that is ' + n2(2 * vH) + ' ÷ 2 = ' + n2(vH) + ' cm³.'),
+      options: o2b, correct: o2b[0], showWork: true
+    }, rng);
+  }
+
+  /* ═════════ CONCEPTO 2 ═════════ */
+  addSection(
+    '<div class="stag">' + L('Desarrollos planos', 'Flat developments') + '</div>' +
+    '<h2>' + L('La piel que no se deja aplanar', 'The skin that refuses to lie flat') + '</h2>' +
+    '<p>' + L('El desarrollo plano de un cuerpo es la figura que queda al extenderlo sobre una mesa sin estirarlo ni romperlo. El cilindro se abre en un rectángulo y dos círculos; el cono, en un sector circular y un círculo. La esfera no tiene desarrollo exacto: su superficie es curva en las dos direcciones a la vez y cualquier intento de aplanarla la arruga o la desgarra.',
+              'The flat development of a solid is the figure left when you spread it out on a table without stretching or tearing it. The cylinder opens into a rectangle and two circles; the cone into a circular sector and a circle. The sphere has no exact development: its surface curves in two directions at once, and any attempt to flatten it either wrinkles it or tears it.') + '</p>' +
+    '<div class="callout"><p><strong>' + L('La salida práctica: los husos.', 'The practical way out: gores.') + '</strong> ' +
+      L('Se corta la piel de la esfera de polo a polo en tiras iguales con forma de hoja, llamadas husos. Cada huso es angosto, así que casi no se curva de lado y se puede pegar sobre la esfera con muy poca arruga. Cuantos más husos, mejor pega el papel.',
+        'The skin of the sphere is cut from pole to pole into equal leaf shaped strips called gores. Each gore is narrow, so it barely curves sideways and can be glued onto the sphere with almost no wrinkling. The more gores, the better the paper fits.') + '</p></div>' +
+    '<p>' + L('Como los husos son todos iguales, cada uno se lleva la misma parte de la superficie total. Comprueba en la mesa de trabajo qué le toca a cada tira.',
+              'Since the gores are all equal, each one takes the same share of the total surface. Check on the work table how much falls to each strip.') + '</p>' +
+    m2Html()
+  );
+  m2Build(rng);
+  setTimeout(m2Init, 90);
+
+  /* ── Problema 3 ── */
+  var r3 = pick([5, 10, 15, 20], rng);
+  var n3 = pick([6, 8, 12, 24], rng);
+  var T3 = 4 * PIV * r3 * r3;
+  var p3v = Math.floor(rng() * 2);
+  if (p3v === 0){
+    var o3 = [n2(T3 / n3) + ' cm²', n2(T3) + ' cm²', n2(T3 / (4 * n3)) + ' cm²', n2(T3 / (2 * n3)) + ' cm²'];
+    pushProb({
+      title: L('Lo que le toca a cada tira', 'What each strip gets'),
+      questionText: L('La superficie de una esfera de ' + r3 + ' cm de radio se corta en ' + n3 + ' husos iguales. Calcula el área de cada huso. Usa π ≈ 3.1416.',
+                      'The surface of a sphere of radius ' + r3 + ' cm is cut into ' + n3 + ' equal gores. Calculate the area of each gore. Use π ≈ 3.1416.'),
+      fn: 'r = ' + r3 + ' cm · husos = ' + n3 + ' · π ≈ 3.1416',
+      hint: L('Obtén primero la superficie completa de la esfera, que vale cuatro veces π por el radio al cuadrado, y repártela entre las tiras.',
+              'First get the complete surface of the sphere, which is four times π times the radius squared, and share it among the strips.'),
+      explanation: L('La superficie total mide 4 × 3.1416 × ' + r3 + '² = ' + n2(T3) + ' cm². Repartida entre ' + n3 + ' husos iguales: ' + n2(T3) + ' ÷ ' + n3 + ' = ' + n2(T3 / n3) + ' cm².',
+                     'The total surface is 4 × 3.1416 × ' + r3 + '² = ' + n2(T3) + ' cm². Shared among ' + n3 + ' equal gores: ' + n2(T3) + ' ÷ ' + n3 + ' = ' + n2(T3 / n3) + ' cm².'),
+      options: o3, correct: o3[0], showWork: true
+    }, rng);
+  } else {
+    var o3b = [n3 + L(' husos', ' gores'), (n3 + 2) + L(' husos', ' gores'), (n3 > 6 ? n3 - 2 : n3 + 4) + L(' husos', ' gores'), (2 * n3) + L(' husos', ' gores')];
+    pushProb({
+      title: L('Contar las tiras', 'Counting the strips'),
+      questionText: L('La superficie de una esfera de ' + r3 + ' cm de radio se repartió en husos iguales de ' + n2(T3 / n3) + ' cm² cada uno. Calcula cuántos husos se usaron. Usa π ≈ 3.1416.',
+                      'The surface of a sphere of radius ' + r3 + ' cm was shared into equal gores of ' + n2(T3 / n3) + ' cm² each. Calculate how many gores were used. Use π ≈ 3.1416.'),
+      fn: 'r = ' + r3 + ' cm · área por huso = ' + n2(T3 / n3) + ' cm² · π ≈ 3.1416',
+      hint: L('Calcula la superficie total de la esfera, que vale cuatro veces π por el radio al cuadrado, y divídela entre lo que ocupa una sola tira.',
+              'Work out the total surface of the sphere, which is four times π times the radius squared, and divide it by what a single strip takes.'),
+      explanation: L('La superficie total mide 4 × 3.1416 × ' + r3 + '² = ' + n2(T3) + ' cm². Como cada huso ocupa ' + n2(T3 / n3) + ' cm²: ' + n2(T3) + ' ÷ ' + n2(T3 / n3) + ' = ' + n3 + '.',
+                     'The total surface is 4 × 3.1416 × ' + r3 + '² = ' + n2(T3) + ' cm². Since each gore takes ' + n2(T3 / n3) + ' cm²: ' + n2(T3) + ' ÷ ' + n2(T3 / n3) + ' = ' + n3 + '.'),
+      options: o3b, correct: o3b[0], showWork: true
+    }, rng);
+  }
+
+  /* ── Problema 4 ── */
+  var g4 = pick([{ R: 20, A: 200 }, { R: 15, A: 150 }, { R: 25, A: 400 }], rng);
+  var T4 = 4 * PIV * g4.R * g4.R;
+  var ans4 = Math.ceil(T4 / g4.A);
+  var half4 = Math.ceil(T4 / (2 * g4.A));
+  var o4 = [ans4 + L(' husos', ' gores'), (ans4 - 1) + L(' husos', ' gores'), (ans4 + 2) + L(' husos', ' gores'), half4 + L(' husos', ' gores')];
+  pushProb({
+    title: L('El pedido de la imprenta', 'The print shop order'),
+    questionText: L('Un taller fabrica globos terráqueos de ' + g4.R + ' cm de radio y cubre cada esfera con husos de papel iguales. La imprenta del taller no puede sacar piezas de más de ' + g4.A + ' cm², así que ningún huso puede pasar de ese tamaño. ¿Cuál es el menor número de husos en que deben cortar la superficie de cada globo? Usa π ≈ 3.1416.',
+                    'A workshop makes globes of radius ' + g4.R + ' cm and covers each sphere with equal paper gores. The workshop printer cannot produce pieces larger than ' + g4.A + ' cm², so no gore may exceed that size. What is the smallest number of gores they must cut the surface of each globe into? Use π ≈ 3.1416.'),
+    hint: L('Obtén la superficie completa del globo y averigua entre cuántas piezas hay que repartirla para que ninguna pase del límite. Si el reparto no da entero, un huso de más es obligatorio.',
+            'Get the complete surface of the globe and find out how many pieces it must be shared into so that none exceeds the limit. If the sharing is not a whole number, one extra gore is compulsory.'),
+    explanation: L('La superficie del globo mide 4 × 3.1416 × ' + g4.R + '² = ' + n2(T4) + ' cm². Al repartirla en piezas de ' + g4.A + ' cm² como máximo: ' + n2(T4) + ' ÷ ' + g4.A + ' = ' + n2(T4 / g4.A) + ', y como no se puede cortar un huso a medias hay que subir al entero siguiente = ' + ans4 + '.',
+                   'The surface of the globe is 4 × 3.1416 × ' + g4.R + '² = ' + n2(T4) + ' cm². Sharing it into pieces of at most ' + g4.A + ' cm²: ' + n2(T4) + ' ÷ ' + g4.A + ' = ' + n2(T4 / g4.A) + ', and since a gore cannot be cut in half you must round up to the next whole number = ' + ans4 + '.'),
+    options: o4, correct: o4[0], showWork: true
+  }, rng);
+
+  /* ═════════ CONCEPTO 3 ═════════ */
+  addSection(
+    '<div class="stag">' + L('Cono, esfera y cilindro', 'Cone, sphere and cylinder') + '</div>' +
+    '<h2>' + L('Tres cuerpos que se ajustan', 'Three solids that fit together') + '</h2>' +
+    '<p>' + L('Toma una esfera y constrúyele alrededor el cilindro más ajustado posible: mismo radio y altura igual al diámetro. Añade un cono con ese mismo radio y esa misma altura. Los tres cuerpos comparten radio y altura, y sus volúmenes guardan entre sí una relación fija que no depende del tamaño.',
+              'Take a sphere and build around it the tightest possible cylinder: same radius, height equal to the diameter. Add a cone with that same radius and that same height. The three solids share radius and height, and their volumes keep a fixed relation between them that does not depend on the size.') + '</p>' +
+    '<div class="callout"><p><strong>' + L('Arquímedes lo pidió en su tumba.', 'Archimedes asked for it on his tomb.') + '</strong> ' +
+      L('Este resultado le pareció tan valioso que quiso una esfera dentro de un cilindro grabada sobre su sepulcro. Descúbrelo tú mismo vertiendo líquido de un recipiente a otro.',
+        'He found this result so valuable that he wanted a sphere inside a cylinder carved on his tomb. Discover it yourself by pouring liquid from one vessel into another.') + '</p></div>' +
+    m3Html()
+  );
+  m3Build(rng);
+  setTimeout(m3Init, 90);
+
+  /* ── Problema 5 ── */
+  var p5v = Math.floor(rng() * 2);
+  if (p5v === 0){
+    var o5 = [
+      L('Dos tercios del volumen del cilindro', 'Two thirds of the volume of the cylinder'),
+      L('La mitad del volumen del cilindro', 'One half of the volume of the cylinder'),
+      L('Tres cuartos del volumen del cilindro', 'Three quarters of the volume of the cylinder'),
+      L('Un tercio del volumen del cilindro', 'One third of the volume of the cylinder')
+    ];
+    pushProb({
+      title: L('La pelota dentro de la lata', 'The ball inside the can'),
+      questionText: L('Una esfera de radio r cabe exactamente dentro de un cilindro que tiene el mismo radio y cuya altura es igual al diámetro de la esfera. ¿Qué parte del volumen del cilindro ocupa la esfera?',
+                      'A sphere of radius r fits exactly inside a cylinder that has the same radius and whose height equals the diameter of the sphere. What part of the volume of the cylinder does the sphere occupy?'),
+      hint: L('Escribe los dos volúmenes dejando el radio como letra: el del cilindro es π r² por la altura, y el de la esfera es cuatro tercios de π r³. Después divide uno entre el otro.',
+              'Write both volumes leaving the radius as a letter: the cylinder is π r² times the height, and the sphere is four thirds of π r³. Then divide one by the other.'),
+      explanation: L('La altura del cilindro es 2r, así que su volumen es π r² × 2r = 2π r³. El de la esfera es ' + frac(4, 3) + 'π r³. Al dividir, ' + frac(4, 3) + 'π r³ ÷ 2π r³ = ' + frac(2, 3) + '.',
+                     'The height of the cylinder is 2r, so its volume is π r² × 2r = 2π r³. The sphere is ' + frac(4, 3) + 'π r³. Dividing, ' + frac(4, 3) + 'π r³ ÷ 2π r³ = ' + frac(2, 3) + '.'),
+      options: o5, correct: o5[0], showWork: true
+    }, rng);
+  } else {
+    var o5b = [
+      L('Un tercio del volumen del cilindro', 'One third of the volume of the cylinder'),
+      L('Dos tercios del volumen del cilindro', 'Two thirds of the volume of the cylinder'),
+      L('Un cuarto del volumen del cilindro', 'One quarter of the volume of the cylinder'),
+      L('La mitad del volumen del cilindro', 'One half of the volume of the cylinder')
+    ];
+    pushProb({
+      title: L('El aire que sobra', 'The air left over'),
+      questionText: L('Una esfera de radio r cabe exactamente dentro de un cilindro que tiene el mismo radio y cuya altura es igual al diámetro de la esfera. ¿Qué parte del volumen del cilindro queda ocupada solo por aire?',
+                      'A sphere of radius r fits exactly inside a cylinder that has the same radius and whose height equals the diameter of the sphere. What part of the volume of the cylinder is left holding only air?'),
+      hint: L('Calcula qué parte del cilindro llena la esfera y réstala del total, que vale uno entero.',
+              'Work out what part of the cylinder the sphere fills and subtract it from the whole, which counts as one.'),
+      explanation: L('El cilindro mide π r² × 2r = 2π r³ y la esfera mide ' + frac(4, 3) + 'π r³, es decir ' + frac(2, 3) + ' del cilindro. Lo que sobra es 1 − ' + frac(2, 3) + ' = ' + frac(1, 3) + '.',
+                     'The cylinder measures π r² × 2r = 2π r³ and the sphere measures ' + frac(4, 3) + 'π r³, that is ' + frac(2, 3) + ' of the cylinder. What is left over is 1 − ' + frac(2, 3) + ' = ' + frac(1, 3) + '.'),
+      options: o5b, correct: o5b[0], showWork: true
+    }, rng);
+  }
+
+  /* ── Problema 6 ── */
+  var r6 = pick([3, 4, 5, 6], rng);
+  var p6v = Math.floor(rng() * 2);
+  if (p6v === 0){
+    var vE6 = 4 * PIV * r6 * r6 * r6 / 3;
+    var o6 = [n2(vE6 / 2) + ' cm³', n2(vE6 / 3) + ' cm³', n2(2 * vE6) + ' cm³', n2(3 * vE6 / 4) + ' cm³'];
+    pushProb({
+      title: L('Del volumen de la esfera al del cono', 'From the sphere volume to the cone volume'),
+      questionText: L('Una esfera y un cono tienen el mismo radio, ' + r6 + ' cm, y la altura del cono es igual al diámetro de la esfera. La esfera tiene un volumen de ' + n2(vE6) + ' cm³. Calcula el volumen del cono.',
+                      'A sphere and a cone have the same radius, ' + r6 + ' cm, and the height of the cone equals the diameter of the sphere. The sphere has a volume of ' + n2(vE6) + ' cm³. Calculate the volume of the cone.'),
+      fn: 'r = ' + r6 + ' cm · h = ' + (2 * r6) + ' cm · V esfera = ' + n2(vE6) + ' cm³',
+      hint: L('Con radio común y altura igual al diámetro, el cono es un tercio del cilindro que los envuelve y la esfera son dos tercios de ese mismo cilindro.',
+              'With a shared radius and a height equal to the diameter, the cone is one third of the cylinder that wraps them and the sphere is two thirds of that same cylinder.'),
+      explanation: L('El cilindro que envuelve a los dos vale tres conos y también una esfera más un cono, así que la esfera vale dos conos. Entonces el cono es la mitad de la esfera: ' + n2(vE6) + ' ÷ 2 = ' + n2(vE6 / 2) + ' cm³.',
+                     'The wrapping cylinder is worth three cones and also one sphere plus one cone, so the sphere is worth two cones. Then the cone is half of the sphere: ' + n2(vE6) + ' ÷ 2 = ' + n2(vE6 / 2) + ' cm³.'),
+      options: o6, correct: o6[0], showWork: true
+    }, rng);
+  } else {
+    var vC6 = 2 * PIV * r6 * r6 * r6;
+    var o6b = [n2(2 * vC6 / 3) + ' cm³', n2(vC6 / 2) + ' cm³', n2(vC6 / 3) + ' cm³', n2(3 * vC6 / 2) + ' cm³'];
+    pushProb({
+      title: L('Del volumen del cilindro al de la esfera', 'From the cylinder volume to the sphere volume'),
+      questionText: L('Un cilindro de ' + r6 + ' cm de radio y ' + (2 * r6) + ' cm de altura contiene ajustada una esfera del mismo radio. El cilindro tiene un volumen de ' + n2(vC6) + ' cm³. Calcula el volumen de la esfera.',
+                      'A cylinder of radius ' + r6 + ' cm and height ' + (2 * r6) + ' cm holds a snugly fitting sphere of the same radius. The cylinder has a volume of ' + n2(vC6) + ' cm³. Calculate the volume of the sphere.'),
+      fn: 'r = ' + r6 + ' cm · h = ' + (2 * r6) + ' cm · V cilindro = ' + n2(vC6) + ' cm³',
+      hint: L('Cuando la altura del cilindro es igual al diámetro de la esfera, la esfera ocupa dos de cada tres partes del cilindro.',
+              'When the height of the cylinder equals the diameter of the sphere, the sphere occupies two out of every three parts of the cylinder.'),
+      explanation: L('La esfera ocupa ' + frac(2, 3) + ' del cilindro que la ajusta, así que ' + n2(vC6) + ' × ' + frac(2, 3) + ' = ' + n2(2 * vC6 / 3) + ' cm³.',
+                     'The sphere occupies ' + frac(2, 3) + ' of the cylinder that fits it, so ' + n2(vC6) + ' × ' + frac(2, 3) + ' = ' + n2(2 * vC6 / 3) + ' cm³.'),
+      options: o6b, correct: o6b[0], showWork: true
+    }, rng);
+  }
+
+  /* ═════════ CONCEPTO 4 ═════════ */
+  addSection(
+    '<div class="stag">' + L('La superficie esférica', 'The spherical surface') + '</div>' +
+    '<h2>' + L('Cuánta piel tiene una esfera', 'How much skin a sphere has') + '</h2>' +
+    '<p>' + L('Aunque la piel de la esfera no se aplana de una pieza, sí se puede medir. Y el resultado es sorprendentemente limpio: equivale a cuatro círculos máximos, esos que se obtienen al cortar la esfera justo por el centro.',
+              'Although the skin of the sphere does not flatten in one piece, it can certainly be measured. And the result is surprisingly clean: it equals four great circles, the ones you get by slicing the sphere right through the centre.') + '</p>' +
+    '<div class="callout"><p><strong>' + L('El mismo cilindro, otra vez.', 'The same cylinder, again.') + '</strong> ' +
+      L('La pared curva del cilindro que envuelve ajustadamente a la esfera se desenrolla en un rectángulo, y ese rectángulo mide exactamente lo mismo que la piel de la esfera. Por eso los husos de un globo terráqueo caben en una hoja rectangular.',
+        'The curved wall of the cylinder that snugly wraps the sphere unrolls into a rectangle, and that rectangle measures exactly the same as the skin of the sphere. That is why the gores of a globe fit onto a rectangular sheet.') + '</p></div>' +
+    '<p>' + L('Pon los recortes que hagan falta y luego desenrolla la banda para verlo con tus propias medidas.',
+              'Lay out as many cut outs as needed and then unroll the band to see it with your own measurements.') + '</p>' +
+    m4Html()
+  );
+  m4Build(rng);
+  setTimeout(m4Init, 90);
+
+  /* ── Problema 7 ── */
+  var r7 = pick([5, 10, 15, 20], rng);
+  var A7 = 4 * PIV * r7 * r7;
+  var p7v = Math.floor(rng() * 2);
+  if (p7v === 0){
+    var o7 = [n2(A7) + ' cm²', n2(A7 / 4) + ' cm²', n2(A7 / 2) + ' cm²', n2(4 * A7) + ' cm²'];
+    pushProb({
+      title: L('Medir la piel', 'Measuring the skin'),
+      questionText: L('Calcula el área de la superficie de una esfera de ' + r7 + ' cm de radio. Usa π ≈ 3.1416.',
+                      'Calculate the surface area of a sphere of radius ' + r7 + ' cm. Use π ≈ 3.1416.'),
+      fn: 'r = ' + r7 + ' cm · π ≈ 3.1416',
+      hint: L('La superficie de una esfera equivale a cuatro círculos de su ecuador, y el área de un círculo es π por el radio al cuadrado.',
+              'The surface of a sphere equals four circles of its equator, and the area of a circle is π times the radius squared.'),
+      explanation: L('Un círculo máximo mide 3.1416 × ' + r7 + '² = ' + n2(A7 / 4) + ' cm², y la esfera vale cuatro de ellos: 4 × ' + n2(A7 / 4) + ' = ' + n2(A7) + ' cm².',
+                     'One great circle measures 3.1416 × ' + r7 + '² = ' + n2(A7 / 4) + ' cm², and the sphere is worth four of them: 4 × ' + n2(A7 / 4) + ' = ' + n2(A7) + ' cm².'),
+      options: o7, correct: o7[0], showWork: true
+    }, rng);
+  } else {
+    var o7b = [r7 + ' cm', (2 * r7) + ' cm', (r7 + 3) + ' cm', (r7 - 2) + ' cm'];
+    pushProb({
+      title: L('De la piel al radio', 'From the skin to the radius'),
+      questionText: L('La superficie de una esfera mide ' + n2(A7) + ' cm². Calcula su radio. Usa π ≈ 3.1416.',
+                      'The surface of a sphere measures ' + n2(A7) + ' cm². Calculate its radius. Use π ≈ 3.1416.'),
+      fn: 'A = ' + n2(A7) + ' cm² · π ≈ 3.1416',
+      hint: L('La superficie vale cuatro veces π por el radio al cuadrado. Deshaz esas operaciones en orden inverso: divide primero y saca la raíz cuadrada al final.',
+              'The surface is four times π times the radius squared. Undo those operations in reverse order: divide first and take the square root at the end.'),
+      explanation: L('Al dividir, ' + n2(A7) + ' ÷ (4 × 3.1416) = ' + (r7 * r7) + ', que es el radio al cuadrado. La raíz cuadrada de ' + (r7 * r7) + ' = ' + r7 + ' cm.',
+                     'Dividing, ' + n2(A7) + ' ÷ (4 × 3.1416) = ' + (r7 * r7) + ', which is the radius squared. The square root of ' + (r7 * r7) + ' = ' + r7 + ' cm.'),
+      options: o7b, correct: o7b[0], showWork: true
+    }, rng);
+  }
+
+  /* ── Problema 8 ── */
+  var p8v = Math.floor(rng() * 2);
+  if (p8v === 0){
+    var o8 = [
+      L('Son iguales', 'They are equal'),
+      L('La de la esfera es el doble de la pared del cilindro', 'The sphere one is twice the cylinder wall'),
+      L('La de la esfera es dos tercios de la pared del cilindro', 'The sphere one is two thirds of the cylinder wall'),
+      L('La de la esfera es la mitad de la pared del cilindro', 'The sphere one is half of the cylinder wall')
+    ];
+    pushProb({
+      title: L('La esfera contra su envoltura', 'The sphere against its wrapper'),
+      questionText: L('Una esfera está encerrada justo dentro de un cilindro que la toca a lo largo de todo su ecuador y en los dos polos. ¿Cómo se compara la superficie de la esfera con la superficie de la pared curva del cilindro?',
+                      'A sphere is enclosed exactly inside a cylinder that touches it all along its equator and at both poles. How does the surface of the sphere compare with the surface of the curved wall of the cylinder?'),
+      hint: L('La pared curva se desenrolla en un rectángulo: uno de sus lados es la circunferencia del ecuador, 2π r, y el otro es la altura del cilindro. Compara ese producto con cuatro veces π r².',
+              'The curved wall unrolls into a rectangle: one side is the equator circumference, 2π r, and the other is the height of the cylinder. Compare that product with four times π r².'),
+      explanation: L('La altura del cilindro es 2r, así que su pared desenrollada mide 2π r × 2r = 4π r². La esfera mide también 4π r², de modo que las dos superficies coinciden.',
+                     'The height of the cylinder is 2r, so its unrolled wall measures 2π r × 2r = 4π r². The sphere also measures 4π r², so the two surfaces coincide.'),
+      options: o8, correct: o8[0], showWork: false
+    }, rng);
+  } else {
+    var r8 = pick([6, 8, 9], rng);
+    var A8 = 4 * PIV * r8 * r8;
+    var o8b = [n2(A8) + ' cm²', n2(A8 / 2) + ' cm²', n2(2 * A8) + ' cm²', n2(A8 / 4) + ' cm²'];
+    pushProb({
+      title: L('La esfera contra su envoltura', 'The sphere against its wrapper'),
+      questionText: L('La pared curva de un cilindro que envuelve ajustadamente a una esfera de ' + r8 + ' cm de radio mide ' + n2(A8) + ' cm². ¿Cuánto mide la superficie de esa esfera?',
+                      'The curved wall of a cylinder that snugly wraps a sphere of radius ' + r8 + ' cm measures ' + n2(A8) + ' cm². How much does the surface of that sphere measure?'),
+      hint: L('Desenrolla mentalmente la pared: queda un rectángulo de 2π r por 2r, es decir 4π r². Compara ese valor con lo que mide la piel de la esfera.',
+              'Unroll the wall in your head: it leaves a rectangle of 2π r by 2r, that is 4π r². Compare that value with what the skin of the sphere measures.'),
+      explanation: L('La pared desenrollada mide 2π r × 2r = 4π r², que es justo la superficie de la esfera. Por eso la esfera mide los mismos ' + n2(A8) + ' cm².',
+                     'The unrolled wall measures 2π r × 2r = 4π r², which is exactly the surface of the sphere. That is why the sphere measures the same ' + n2(A8) + ' cm².'),
+      options: o8b, correct: o8b[0], showWork: false
+    }, rng);
+  }
+
+  /* ═════════ CIERRE ═════════ */
+  addSection(
+    '<div class="stag">' + L('Cierre', 'Closing') + '</div>' +
+    '<h2>' + L('Dos situaciones para resolver', 'Two situations to solve') + '</h2>'
+  );
+
+  /* ── Problema 9 ── */
+  var r9 = pick([15, 30], rng);
+  var cyl9 = 2 * PIV * r9 * r9 * r9;
+  var esf9 = 4 * PIV * r9 * r9 * r9 / 3;
+  var o9 = [(2 * r9 / 3) + ' cm', r9 + ' cm', (r9 / 3) + ' cm', (4 * r9 / 3) + ' cm'];
+  pushProb({
+    title: L('El agua que se pierde', 'The water that is lost'),
+    questionText: L('Un depósito cilíndrico de ' + r9 + ' cm de radio y ' + (2 * r9) + ' cm de altura está lleno de agua hasta el borde. Se sumerge por completo una bola de acero de ' + r9 + ' cm de radio, que entra justa, y toda el agua que se desborda se pierde. Después se saca la bola. ¿Qué altura alcanza el agua que queda en el depósito? Usa π ≈ 3.1416.',
+                    'A cylindrical tank of radius ' + r9 + ' cm and height ' + (2 * r9) + ' cm is full of water to the brim. A steel ball of radius ' + r9 + ' cm, which fits exactly, is fully submerged, and all the water that overflows is lost. The ball is then taken out. What height does the water left in the tank reach? Use π ≈ 3.1416.'),
+    hint: L('El agua perdida es exactamente la que ocupaba la bola. Resta ese volumen al del depósito y reparte lo que queda sobre la base circular para saber hasta dónde sube.',
+            'The lost water is exactly the amount the ball took up. Subtract that volume from the tank and spread what is left over the circular base to find how high it rises.'),
+    explanation: L('El depósito guarda 3.1416 × ' + r9 + '² × ' + (2 * r9) + ' = ' + n2(cyl9) + ' cm³ y la bola desplaza ' + frac(4, 3) + ' × 3.1416 × ' + r9 + '³ = ' + n2(esf9) + ' cm³. Quedan ' + n2(cyl9) + ' − ' + n2(esf9) + ' = ' + n2(cyl9 - esf9) + ' cm³ sobre una base de 3.1416 × ' + r9 + '² = ' + n2(PIV * r9 * r9) + ' cm², así que el agua sube ' + n2(cyl9 - esf9) + ' ÷ ' + n2(PIV * r9 * r9) + ' = ' + (2 * r9 / 3) + ' cm.',
+                   'The tank holds 3.1416 × ' + r9 + '² × ' + (2 * r9) + ' = ' + n2(cyl9) + ' cm³ and the ball displaces ' + frac(4, 3) + ' × 3.1416 × ' + r9 + '³ = ' + n2(esf9) + ' cm³. That leaves ' + n2(cyl9) + ' − ' + n2(esf9) + ' = ' + n2(cyl9 - esf9) + ' cm³ over a base of 3.1416 × ' + r9 + '² = ' + n2(PIV * r9 * r9) + ' cm², so the water rises ' + n2(cyl9 - esf9) + ' ÷ ' + n2(PIV * r9 * r9) + ' = ' + (2 * r9 / 3) + ' cm.'),
+    options: o9, correct: o9[0], showWork: true
+  }, rng);
+
+  /* ── Problema 10 ── */
+  var r10 = pick([5, 10, 15], rng);
+  var cyl10 = 2 * PIV * r10 * r10 * r10;
+  var esf10 = 4 * PIV * r10 * r10 * r10 / 3;
+  var air10 = cyl10 - esf10;
+  var o10 = [n2(air10) + ' cm³', n2(esf10) + ' cm³', n2(cyl10) + ' cm³', n2(air10 / 2) + ' cm³'];
+  pushProb({
+    title: L('El aire de la caja', 'The air in the box'),
+    questionText: L('Una pelota esférica de ' + r10 + ' cm de radio se guarda en una caja cilíndrica que la ajusta por completo: la caja tiene el mismo radio y su altura es igual al diámetro de la pelota. ¿Qué volumen de aire queda atrapado entre la pelota y la caja? Usa π ≈ 3.1416.',
+                    'A spherical ball of radius ' + r10 + ' cm is kept in a cylindrical box that fits it completely: the box has the same radius and its height equals the diameter of the ball. What volume of air is trapped between the ball and the box? Use π ≈ 3.1416.'),
+    hint: L('Calcula por separado lo que cabe en la caja y lo que ocupa la pelota; el aire es lo que sobra entre esos dos valores.',
+            'Work out separately what fits in the box and what the ball takes up; the air is what is left between those two values.'),
+    explanation: L('La caja mide 3.1416 × ' + r10 + '² × ' + (2 * r10) + ' = ' + n2(cyl10) + ' cm³ y la pelota mide ' + frac(4, 3) + ' × 3.1416 × ' + r10 + '³ = ' + n2(esf10) + ' cm³. El aire atrapado es la diferencia: ' + n2(cyl10) + ' − ' + n2(esf10) + ' = ' + n2(air10) + ' cm³.',
+                   'The box measures 3.1416 × ' + r10 + '² × ' + (2 * r10) + ' = ' + n2(cyl10) + ' cm³ and the ball measures ' + frac(4, 3) + ' × 3.1416 × ' + r10 + '³ = ' + n2(esf10) + ' cm³. The trapped air is the difference: ' + n2(cyl10) + ' − ' + n2(esf10) + ' = ' + n2(air10) + ' cm³.'),
+    options: o10, correct: o10[0], showWork: true
+  }, rng);
+}
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbzLGV15JRTPs9bbSvHRLfgOXeT9oUExDf1AH546WOwq5tYxXSdhX212OWi_bTJfMGx9/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Desarrollos Planos de Esferas';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2302 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estructura y Funciones de la Célula</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Estructura y Funciones de la Célula</div>
+    <div class="wcourse" id="wcourse-el">Biología · 1° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Estructura y Funciones de la Célula</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#1a1a1a', primaryDark:'#2a2a2a', primaryBg:'#eeeeee',
+  accent:'#ff6b00', accentBg:'#ffeadb',
+  darkPrimary:'#858585', darkPrimaryDark:'#adadad', darkPrimaryBg:'#232323',
+  darkAccent:'#ff903f', darkAccentBg:'#2d1604',
+  pBR:26, pBG:26, pBB:26, pAR:255, pAG:107, pAB:0,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'Community Innovative Humans',
+  guideTitle:{ es:'Estructura y Funciones de la Célula', en:'Cell Structure and Functions' },
+  courseName:{ es:'Biología · 1° de Secundaria', en:'Biology · Year 1 Secondary' }, filePrefix:'bio1_t08_g01', schoolSlug:'community_innovative_humans'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'bio1_t08_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Estructura y Funciones de la Célula','wcourse':'Biología · 1° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Cell Structure and Functions','wcourse':'Biology · Year 1 Secondary',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'bio1_t08_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'bio1_t08_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'bio1_t08_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'bio1_t08_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
+  }
+
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('bio1_t08_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   GUÍA :: Estructura y funciones de la célula.
+   Qué se veía con las primeras lentes y qué se ve hoy, cómo la membrana deja
+   entrar y salir, para qué sirve el citoplasma, qué guarda el núcleo cuando la
+   célula se divide y hereda, y cómo se pregunta y se debate sobre la
+   manipulación genética con beneficios y riesgos a la vista.
+   Bilingüe (Rule 10), variantes por semilla (Rule 4), manipulativos marcados
+   con data-widget (Part 0).
+   ══════════════════════════════════════════════════════════════════════════ */
+function L(o){ return (o && o[LANG] !== undefined) ? o[LANG] : (o ? o.es : ''); }
+function ri(rng, a, b){ return a + Math.floor(rng() * (b - a + 1)); }
+function pk(rng, a){ return a[Math.floor(rng() * a.length)]; }
+
+function say(host, cls, msg){
+  var e = host.querySelector('.gw-fb');
+  if (!e) return;
+  e.className = 'gw-fb' + (cls ? ' ' + cls : '');
+  e.innerHTML = msg;
+}
+
+function rcard(name, form, note){
+  return '<div class="rcard"><div class="rname">' + name + '</div><div class="rform">' + form + '</div><div class="rnote">' + note + '</div></div>';
+}
+
+function sec(tag, title, html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = '<div class="stag">' + tag + '</div><h2>' + title + '</h2>' + html;
+  document.getElementById('lessonBody').appendChild(d);
+  return d;
+}
+
+function widgetHost(parent, id, kind){
+  var d = document.createElement('div');
+  d.className = 'gw';
+  d.id = id;
+  d.setAttribute('data-widget', kind);
+  parent.appendChild(d);
+  return d;
+}
+
+function injectGuideCSS(){
+  if (document.getElementById('guideCSS')) return;
+  var s = document.createElement('style');
+  s.id = 'guideCSS';
+  s.textContent = [
+    '.gw{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin:1.1rem 0;}',
+    '.gw-h{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.55rem;}',
+    '.gw-q{font-size:1rem;font-weight:600;margin-bottom:.35rem;color:var(--text);}',
+    '.gw-mini{font-size:.78rem;color:var(--text3);margin-bottom:.6rem;}',
+    '.gw-tag{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin:.55rem 0 .2rem;}',
+    '.gw-row{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center;}',
+    '.gw-btn{min-width:44px;min-height:44px;padding:.5rem .8rem;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);font-family:inherit;font-size:.85rem;cursor:pointer;transition:all .14s;}',
+    '.gw-btn:hover{border-color:var(--green);background:var(--green-bg);}',
+    '.gw-btn.on{background:var(--green);color:#fff;border-color:var(--green);}',
+    '.gw-btn[disabled]{opacity:.45;cursor:default;}',
+    '.gw-fb{font-size:.84rem;padding:.6rem .8rem;border-radius:8px;margin-top:.65rem;background:var(--surface2);color:var(--text2);}',
+    '.gw-fb.good{background:var(--ok-bg);color:var(--ok);border-left:3px solid var(--ok);}',
+    '.gw-fb.warm{background:var(--gold-bg);color:var(--text2);border-left:3px solid var(--gold);}',
+    '.gw-fb.miss{background:var(--bad-bg);color:var(--bad);border-left:3px solid var(--bad);}',
+    '.work{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.7rem;}',
+    '.workv{font-family:"IBM Plex Mono",monospace;font-size:1.1rem;font-weight:700;color:var(--green);min-width:5ch;text-align:center;}',
+    /* microscopio */
+    '.mfield{width:190px;height:190px;max-width:100%;border-radius:50%;border:3px solid var(--border);background:var(--surface2);margin:.6rem auto .35rem;display:flex;align-items:center;justify-content:center;overflow:hidden;}',
+    '.mblob{width:20px;height:20px;border-radius:46% 54% 52% 48%;background:var(--green-bg);border:2px solid var(--green);transition:width .35s,height .35s,filter .35s;}',
+    '.mcap{font-size:.78rem;color:var(--text3);text-align:center;min-height:2.4em;}',
+    /* membrana */
+    '.mbar{height:12px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);overflow:hidden;margin:.3rem 0 .7rem;}',
+    '.mbarf{height:100%;width:60%;background:var(--green);transition:width .45s;}',
+    '.mbarf.low{background:var(--gold);}',
+    '.mcell{border:2.5px solid var(--green);border-radius:22px;background:var(--green-bg);padding:.6rem .75rem;min-height:62px;}',
+    '.mcyto{font-size:.76rem;color:var(--text2);}',
+    '.mitem{display:block;text-align:center;font-weight:600;font-size:.9rem;border:1.5px solid var(--gold);background:var(--gold-bg);border-radius:10px;padding:.6rem;margin:.7rem 0 .2rem;color:var(--text);}',
+    /* núcleo */
+    '.ncells{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem;}',
+    '.ncell{flex:1 1 44%;min-width:0;border:2px dashed var(--border);border-radius:16px;padding:.5rem;background:var(--surface2);text-align:center;}',
+    '.ncell.ok{border-color:var(--ok);border-style:solid;}',
+    '.ncell.off{opacity:.55;}',
+    '.nchr{display:inline-block;width:7px;height:20px;border-radius:4px;background:var(--green);margin:2px;}',
+    '.nslide{width:100%;accent-color:var(--green);min-height:44px;}',
+    '.nlbl{font-size:.72rem;color:var(--text3);}',
+    '.nbox{border:2px solid var(--green);border-radius:14px;background:var(--green-bg);padding:.5rem;text-align:center;}',
+    /* balanza */
+    '.beam{display:flex;gap:.5rem;align-items:flex-start;transition:transform .45s;margin-top:.5rem;}',
+    '.pan{flex:1 1 0;min-width:0;border:1.5px solid var(--border);border-radius:12px;background:var(--surface2);padding:.5rem;min-height:80px;}',
+    '.pan-h{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);font-weight:600;margin-bottom:.3rem;}',
+    '.pchip{font-size:.72rem;display:block;border-radius:8px;padding:.32rem .42rem;margin-bottom:.25rem;background:var(--surface);border:1px solid var(--border);color:var(--text2);}',
+    '.pivot{height:9px;border-radius:5px;background:var(--border);margin:.3rem auto 0;width:55%;}',
+    '.mcopt.pending{background:var(--gold-bg);}',
+    '@media (max-width:600px){.gw{padding:.8rem;}.mfield{width:150px;height:150px;}.ncell{flex:1 1 100%;}}'
+  ].join('');
+  document.head.appendChild(s);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 1 :: ajusta el microscopio
+   El alumno elige ocular y objetivo. El campo de visión responde al momento:
+   el objeto crece y se desenfoca según qué tan lejos esté del aumento que hace
+   falta. Tres muestras distintas; al tercer intento fallido se revela el par
+   de lentes correcto con su razón.
+   ══════════════════════════════════════════════════════════════════════════ */
+function wScope(rng, host){
+  var OCU = [5, 10, 15];
+  var OBJ = [4, 10, 40, 100];
+  var POOL = [
+    { tot:40, obj:{ es:'las celdillas de una laminilla de corcho', en:'the little cells of a slice of cork' },
+      nota:{ es:'Con pocos aumentos ya se distinguen las paredes vacías que se dibujaron por primera vez hace más de trescientos años.',
+             en:'With few magnifications you can already tell apart the empty walls that were first drawn more than three hundred years ago.' } },
+    { tot:100, obj:{ es:'las células de la piel de una cebolla', en:'the cells of an onion skin' },
+      nota:{ es:'Aquí se ve el contorno de cada célula y un punto más oscuro en el centro de cada una.',
+             en:'Here you see the outline of each cell and a darker dot in the middle of each one.' } },
+    { tot:400, obj:{ es:'una bacteria del sarro de los dientes', en:'a bacterium from tooth plaque' },
+      nota:{ es:'Una bacteria es muchísimo más pequeña que una célula de cebolla, por eso pide bastantes más aumentos.',
+             en:'A bacterium is far smaller than an onion cell, which is why it asks for many more magnifications.' } },
+    { tot:600, obj:{ es:'los glóbulos rojos de una gota de sangre', en:'the red blood cells of a drop of blood' },
+      nota:{ es:'A este aumento se nota que tienen forma de disco hundido en el centro.',
+             en:'At this magnification you can notice they are shaped like a disc sunken in the middle.' } },
+    { tot:1000, obj:{ es:'una bacteria diminuta de una gota de agua estancada', en:'a tiny bacterium from a drop of stagnant water' },
+      nota:{ es:'Este es casi el límite del microscopio de luz: para ver algo más pequeño, como un virus, hace falta el microscopio electrónico.',
+             en:'This is nearly the limit of the light microscope: to see anything smaller, like a virus, an electron microscope is needed.' } }
+  ];
+  var rounds = shuffle(POOL, rng).slice(0, 3);
+  var round = 0, oc = OCU[0], ob = OBJ[0], tries = 0, revealed = false, done = false;
+
+  host.innerHTML =
+    '<div class="gw-h iw-tag">' + L({ es:'Ajusta el microscopio', en:'Set up the microscope' }) + '</div>' +
+    '<div class="gw-q" data-r="q"></div>' +
+    '<div class="gw-mini iw-sub">' + L({
+      es:'Elige el ocular y el objetivo, mira cómo responde el campo de visión y presiona Observar cuando creas que la muestra ya se distingue. Puedes cambiar de lente cuantas veces quieras.',
+      en:'Choose the eyepiece and the objective, watch how the field of view responds and press Observe when you think the sample can be told apart. You can change lenses as often as you like.'
+    }) + '</div>' +
+    '<div class="mfield"><div class="mblob" data-r="blob"></div></div>' +
+    '<div class="mcap" data-r="cap"></div>' +
+    '<div class="gw-tag">' + L({ es:'Ocular', en:'Eyepiece' }) + '</div><div class="gw-row" data-r="oc"></div>' +
+    '<div class="gw-tag">' + L({ es:'Objetivo', en:'Objective' }) + '</div><div class="gw-row" data-r="ob"></div>' +
+    '<div class="work">' +
+      '<span class="gw-tag">' + L({ es:'Aumento total', en:'Total magnification' }) + '</span>' +
+      '<span class="workv" data-r="tot"></span>' +
+      '<button class="gw-btn" data-r="go">' + L({ es:'Observar', en:'Observe' }) + '</button>' +
+      '<button class="gw-btn" data-r="next" style="display:none">' + L({ es:'Siguiente muestra', en:'Next sample' }) + '</button>' +
+    '</div>' +
+    '<div class="gw-fb"></div>';
+
+  var elQ = host.querySelector('[data-r="q"]'),
+      elBlob = host.querySelector('[data-r="blob"]'),
+      elCap = host.querySelector('[data-r="cap"]'),
+      elOc = host.querySelector('[data-r="oc"]'),
+      elOb = host.querySelector('[data-r="ob"]'),
+      elTot = host.querySelector('[data-r="tot"]'),
+      elGo = host.querySelector('[data-r="go"]'),
+      elNext = host.querySelector('[data-r="next"]');
+
+  function target(){ return rounds[round]; }
+
+  function solution(){
+    var t = target().tot;
+    for (var a = 0; a < OCU.length; a++){
+      for (var b = 0; b < OBJ.length; b++){
+        if (OCU[a] * OBJ[b] === t) return [OCU[a], OBJ[b]];
+      }
+    }
+    return [OCU[1], OBJ[2]];
+  }
+
+  function lensRow(el, vals, cur, set){
+    el.innerHTML = vals.map(function(v){
+      return '<button class="gw-btn' + (v === cur ? ' on' : '') + '" data-v="' + v + '">' + v + 'x</button>';
+    }).join('');
+    el.querySelectorAll('.gw-btn').forEach(function(b){
+      b.addEventListener('click', function(){
+        if (done || revealed) return;
+        set(parseInt(b.getAttribute('data-v'), 10));
+        render();
+      });
+    });
+  }
+
+  function render(){
+    var t = target(), tot = oc * ob, r = tot / t.tot;
+    elQ.textContent = L({ es:'Muestra ' + (round + 1) + ' de 3: ', en:'Sample ' + (round + 1) + ' of 3: ' }) + L(t.obj);
+    lensRow(elOc, OCU, oc, function(v){ oc = v; });
+    lensRow(elOb, OBJ, ob, function(v){ ob = v; });
+    elTot.textContent = tot + 'x';
+    var size = Math.max(14, Math.min(168, Math.round(24 + r * 96)));
+    elBlob.style.width = size + 'px';
+    elBlob.style.height = size + 'px';
+    var blur = r < 1 ? (1 - r) * 7 : (r - 1) * 5;
+    elBlob.style.filter = 'blur(' + Math.min(9, Math.round(blur * 10) / 10) + 'px)';
+    if (r < 0.5) elCap.textContent = L({ es:'Con este aumento solo aparece una mancha clara en el centro del campo.', en:'At this magnification only a pale smudge shows up in the middle of the field.' });
+    else if (r < 1) elCap.textContent = L({ es:'Ya se adivinan formas, pero los bordes siguen sin definirse.', en:'Shapes can already be guessed, but the edges are still undefined.' });
+    else if (r === 1) elCap.textContent = L({ es:'Los bordes están nítidos y la muestra llena bien el campo.', en:'The edges are sharp and the sample fills the field nicely.' });
+    else elCap.textContent = L({ es:'Demasiado cerca: el campo se abre borroso y ya no cabe la muestra completa.', en:'Too close: the field opens up blurred and the whole sample no longer fits.' });
+    elGo.disabled = done || revealed;
+    elNext.style.display = revealed ? 'inline-block' : 'none';
+  }
+
+  function nextRound(){
+    round++;
+    if (round >= rounds.length){
+      done = true; revealed = false;
+      render();
+      elGo.disabled = true;
+      say(host, 'good', L({ es:'🎉 Tres muestras observadas. Cada objeto pide su propio aumento, y hay objetos que ninguna lente de luz alcanza.', en:'🎉 Three samples observed. Each object asks for its own magnification, and there are objects no light lens can reach.' }));
+      return;
+    }
+    tries = 0; revealed = false; oc = OCU[0]; ob = OBJ[0];
+    render();
+    say(host, '', L({ es:'Nueva muestra en la platina. Empieza con poco aumento y sube poco a poco.', en:'A new sample on the stage. Start with low magnification and go up little by little.' }));
+  }
+
+  elGo.addEventListener('click', function(){
+    if (done || revealed) return;
+    var t = target(), tot = oc * ob;
+    if (tot === t.tot){
+      say(host, 'good', L({ es:'🎉 Enfocado. A ' + tot + ' aumentos se distingue ' + L(t.obj) + '. ', en:'🎉 In focus. At ' + tot + ' magnifications you can tell apart ' + L(t.obj) + '. ' }) + L(t.nota));
+      revealed = true; render();
+      elNext.style.display = 'inline-block';
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      var s = solution();
+      oc = s[0]; ob = s[1]; revealed = true; render();
+      say(host, 'warm', L({ es:'Con el ocular de ' + s[0] + ' y el objetivo de ' + s[1] + ' se llega a ' + t.tot + ' aumentos, que es lo que pide esta muestra. ', en:'With the ' + s[0] + 'x eyepiece and the ' + s[1] + 'x objective you reach ' + t.tot + ' magnifications, which is what this sample asks for. ' }) + L(t.nota));
+      return;
+    }
+    if (tot < t.tot) say(host, 'miss', L({ es:'A ' + tot + ' aumentos la muestra sigue demasiado pequeña. Cambia una lente para subir el aumento.', en:'At ' + tot + ' magnifications the sample is still too small. Change one lens to raise the magnification.' }));
+    else say(host, 'miss', L({ es:'A ' + tot + ' aumentos te pasaste: el campo queda borroso. Baja el aumento con alguna de las dos lentes.', en:'At ' + tot + ' magnifications you went too far: the field turns blurry. Lower the magnification with one of the two lenses.' }));
+  });
+
+  elNext.addEventListener('click', nextRound);
+
+  render();
+  say(host, '', L({ es:'Primera muestra en la platina. Empieza con poco aumento y sube poco a poco.', en:'First sample on the stage. Start with low magnification and go up little by little.' }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 2 :: el portero de la membrana
+   Llegan sustancias a la orilla de la célula. El alumno decide qué hace la
+   membrana con cada una. El estado de la célula sube o baja al momento y lo
+   que entra aparece en el citoplasma. Reversible: el mismo caso vuelve a
+   quedar disponible hasta el tercer intento, donde se revela la respuesta.
+   ══════════════════════════════════════════════════════════════════════════ */
+function wMembrane(rng, host){
+  var BINS = [
+    { es:'Dejar entrar', en:'Let it in' },
+    { es:'Sacar', en:'Push it out' },
+    { es:'No dejar pasar', en:'Keep it out' }
+  ];
+  var POOL = [
+    { bin:0, txt:{ es:'Oxígeno disuelto en el agua de alrededor', en:'Oxygen dissolved in the water around' },
+      why:{ es:'La célula lo necesita adentro para obtener energía del alimento.', en:'The cell needs it inside to get energy out of food.' } },
+    { bin:0, txt:{ es:'Glucosa que hay en el medio', en:'Glucose present in the medium' },
+      why:{ es:'Es alimento: en el citoplasma se transforma y da energía.', en:'It is food: in the cytoplasm it is transformed and gives energy.' } },
+    { bin:1, txt:{ es:'Dióxido de carbono que sobra adentro', en:'Carbon dioxide left over inside' },
+      why:{ es:'Se produjo dentro y acumularlo dañaría a la célula.', en:'It was produced inside and piling it up would harm the cell.' } },
+    { bin:1, txt:{ es:'Desechos que quedaron después de usar el alimento', en:'Waste left after using the food' },
+      why:{ es:'Ya no sirven adentro y salen al medio por la membrana.', en:'They are of no more use inside and leave to the medium through the membrane.' } },
+    { bin:1, txt:{ es:'Agua que sobra en el interior de la célula', en:'Water left over inside the cell' },
+      why:{ es:'Si se queda, la célula se hincha; la membrana regula cuánta guarda.', en:'If it stays, the cell swells; the membrane regulates how much it keeps.' } },
+    { bin:2, txt:{ es:'Una sustancia tóxica que flota en el medio', en:'A toxic substance floating in the medium' },
+      why:{ es:'La membrana puede negarle el paso y así protege el interior.', en:'The membrane can refuse it passage and that protects the inside.' } },
+    { bin:2, txt:{ es:'Un grano de tierra que roza la superficie', en:'A grain of soil brushing the surface' },
+      why:{ es:'No es alimento ni desecho de la célula: se queda afuera.', en:'It is neither food nor cell waste: it stays outside.' } }
+  ];
+  var items = shuffle(POOL, rng).slice(0, 5);
+  var i = 0, tries = 0, salud = 60, done = false, lock = false, dentro = [];
+
+  host.innerHTML =
+    '<div class="gw-h iw-tag">' + L({ es:'El portero de la membrana', en:'The membrane doorkeeper' }) + '</div>' +
+    '<div class="gw-mini iw-sub">' + L({
+      es:'Llega algo a la orilla de la célula y tú decides qué hace la membrana. Mira cómo cambian el estado de la célula y lo que hay en el citoplasma después de cada decisión.',
+      en:'Something arrives at the edge of the cell and you decide what the membrane does. Watch how the state of the cell and the contents of the cytoplasm change after each decision.'
+    }) + '</div>' +
+    '<div class="nlbl">' + L({ es:'Estado de la célula', en:'State of the cell' }) + '</div>' +
+    '<div class="mbar"><div class="mbarf" data-r="bar"></div></div>' +
+    '<div class="mcell"><div class="nlbl">' + L({ es:'Citoplasma', en:'Cytoplasm' }) + '</div><div class="mcyto" data-r="cyto"></div></div>' +
+    '<div class="gw-q" data-r="prog"></div>' +
+    '<div class="mitem" data-r="item"></div>' +
+    '<div class="gw-row" data-r="bins"></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elBar = host.querySelector('[data-r="bar"]'),
+      elCyto = host.querySelector('[data-r="cyto"]'),
+      elProg = host.querySelector('[data-r="prog"]'),
+      elItem = host.querySelector('[data-r="item"]'),
+      elBins = host.querySelector('[data-r="bins"]');
+
+  function paintBar(){
+    elBar.style.width = salud + '%';
+    elBar.className = 'mbarf' + (salud < 50 ? ' low' : '');
+  }
+
+  function paintCyto(){
+    elCyto.innerHTML = dentro.length
+      ? dentro.join(' · ')
+      : L({ es:'Por ahora no ha entrado nada nuevo.', en:'So far nothing new has come in.' });
+  }
+
+  function dirMsg(correcto, elegido){
+    if (correcto === 0 && elegido === 2) return L({ es:'Si dejas afuera lo que alimenta a la célula, el citoplasma se queda sin material para trabajar. Piensa qué hace falta adentro.', en:'If you keep out what feeds the cell, the cytoplasm is left without material to work with. Think about what is needed inside.' });
+    if (correcto === 0 && elegido === 1) return L({ es:'Eso no está sobrando adentro: viene de afuera y la célula lo necesita.', en:'That is not left over inside: it comes from outside and the cell needs it.' });
+    if (correcto === 1 && elegido === 0) return L({ es:'Eso ya está dentro de la célula y ya no le sirve. Fíjate hacia dónde debería ir.', en:'That is already inside the cell and is of no more use. Look at where it should be heading.' });
+    if (correcto === 1 && elegido === 2) return L({ es:'No viene de afuera: se produjo adentro, así que la membrana tiene que dejarlo salir.', en:'It does not come from outside: it was produced inside, so the membrane has to let it out.' });
+    if (correcto === 2 && elegido === 0) return L({ es:'Si eso entra, la célula se daña. La membrana no deja pasar todo lo que toca su superficie.', en:'If that gets in, the cell is harmed. The membrane does not let everything that touches its surface through.' });
+    return L({ es:'No está adentro para sacarlo: está afuera, tocando la membrana.', en:'It is not inside to be pushed out: it is outside, touching the membrane.' });
+  }
+
+  function render(){
+    paintBar(); paintCyto();
+    if (done){
+      elProg.textContent = L({ es:'Turno de guardia terminado', en:'Watch duty finished' });
+      elItem.textContent = L({ es:'La membrana decidió cinco veces y el citoplasma recibió lo que hacía falta.', en:'The membrane decided five times and the cytoplasm received what was needed.' });
+      elBins.innerHTML = '';
+      return;
+    }
+    var it = items[i];
+    elProg.textContent = L({ es:'Caso ' + (i + 1) + ' de ' + items.length, en:'Case ' + (i + 1) + ' of ' + items.length });
+    elItem.textContent = L(it.txt);
+    elBins.innerHTML = BINS.map(function(b, bi){
+      return '<button class="gw-btn" data-b="' + bi + '">' + L(b) + '</button>';
+    }).join('');
+    elBins.querySelectorAll('.gw-btn').forEach(function(b){
+      b.addEventListener('click', function(){ choose(parseInt(b.getAttribute('data-b'), 10)); });
+    });
+  }
+
+  function advance(){
+    i++; tries = 0; lock = false;
+    if (i >= items.length){
+      done = true; render();
+      say(host, 'good', L({ es:'🎉 La membrana decide qué entra, qué sale y qué se queda afuera, y el citoplasma es donde se usa todo lo que entró.', en:'🎉 The membrane decides what comes in, what goes out and what stays outside, and the cytoplasm is where everything that came in gets used.' }));
+      return;
+    }
+    render();
+  }
+
+  function choose(bi){
+    if (done || lock) return;
+    var it = items[i];
+    if (bi === it.bin){
+      lock = true;
+      salud = Math.min(100, salud + 10);
+      if (it.bin === 0) dentro.push(L(it.txt));
+      say(host, 'good', L({ es:'Buena decisión. ', en:'Good call. ' }) + L(it.why));
+      setTimeout(advance, 900);
+      render();
+      return;
+    }
+    salud = Math.max(10, salud - 10);
+    tries++;
+    if (tries >= 3){
+      lock = true;
+      if (it.bin === 0) dentro.push(L(it.txt));
+      salud = Math.min(100, salud + 10);
+      say(host, 'warm', L({ es:'Lo que correspondía era: ', en:'What matched here was: ' }) + '<b>' + L(BINS[it.bin]) + '</b>. ' + L(it.why));
+      setTimeout(advance, 1600);
+      render();
+      return;
+    }
+    say(host, 'miss', dirMsg(it.bin, bi));
+    render();
+  }
+
+  render();
+  say(host, '', L({ es:'La célula está en buen estado. Cuida que siga así.', en:'The cell is in good shape. Keep it that way.' }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 3 :: reparte las instrucciones
+   El núcleo guarda un número de cromosomas. El alumno copia el material y
+   luego mueve el control para repartirlo entre dos células hijas; los dos
+   núcleos se dibujan al momento. Se revela la respuesta al tercer intento.
+   ══════════════════════════════════════════════════════════════════════════ */
+function wNucleus(rng, host){
+  var n = pk(rng, [4, 6, 8]);
+  var copiado = false, aA = 0, tries = 0, done = false;
+
+  host.innerHTML =
+    '<div class="gw-h iw-tag">' + L({ es:'Reparte las instrucciones', en:'Share out the instructions' }) + '</div>' +
+    '<div class="gw-mini iw-sub">' + L({
+      es:'El núcleo de esta célula guarda sus instrucciones en cromosomas. Prepárala para dividirse y reparte lo que hay entre las dos células hijas. Puedes deshacer y volver a repartir cuantas veces quieras.',
+      en:'The nucleus of this cell keeps its instructions in chromosomes. Get it ready to divide and share out what is there between the two daughter cells. You can undo and share again as often as you like.'
+    }) + '</div>' +
+    '<div class="nbox"><div class="nlbl">' + L({ es:'Núcleo de la célula madre', en:'Nucleus of the mother cell' }) + '</div><div data-r="madre"></div><div class="nlbl" data-r="madren"></div></div>' +
+    '<div class="gw-row" style="margin-top:.6rem">' +
+      '<button class="gw-btn" data-r="copy"></button>' +
+      '<button class="gw-btn" data-r="reset">' + L({ es:'Empezar de nuevo', en:'Start again' }) + '</button>' +
+    '</div>' +
+    '<div class="gw-tag" data-r="slbl"></div>' +
+    '<input class="nslide" type="range" min="0" max="1" value="0" data-r="sl">' +
+    '<div class="ncells"><div class="ncell" data-r="cA"></div><div class="ncell" data-r="cB"></div></div>' +
+    '<div class="gw-row" style="margin-top:.6rem"><button class="gw-btn" data-r="go">' + L({ es:'Dividir', en:'Divide' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elMadre = host.querySelector('[data-r="madre"]'),
+      elMadreN = host.querySelector('[data-r="madren"]'),
+      elCopy = host.querySelector('[data-r="copy"]'),
+      elReset = host.querySelector('[data-r="reset"]'),
+      elSlbl = host.querySelector('[data-r="slbl"]'),
+      elSl = host.querySelector('[data-r="sl"]'),
+      elA = host.querySelector('[data-r="cA"]'),
+      elB = host.querySelector('[data-r="cB"]'),
+      elGo = host.querySelector('[data-r="go"]');
+
+  function bars(k){
+    var out = '';
+    for (var j = 0; j < k; j++) out += '<span class="nchr"></span>';
+    return out || '<span class="nlbl">' + L({ es:'sin cromosomas', en:'no chromosomes' }) + '</span>';
+  }
+
+  function total(){ return copiado ? n * 2 : n; }
+
+  function render(){
+    elMadre.innerHTML = bars(total());
+    elMadreN.textContent = total() + ' ' + L({ es:'cromosomas', en:'chromosomes' });
+    elCopy.textContent = copiado ? L({ es:'Deshacer la copia', en:'Undo the copy' }) : L({ es:'Copiar el material', en:'Copy the material' });
+    elCopy.className = 'gw-btn' + (copiado ? ' on' : '');
+    elSl.max = String(total());
+    if (aA > total()) aA = total();
+    elSl.value = String(aA);
+    elSlbl.textContent = L({ es:'Cuántos cromosomas van a la célula hija A', en:'How many chromosomes go to daughter cell A' });
+    var b = total() - aA;
+    elA.innerHTML = '<div class="nlbl">' + L({ es:'Célula hija A', en:'Daughter cell A' }) + '</div>' + bars(aA) + '<div class="nlbl">' + aA + '</div>';
+    elB.innerHTML = '<div class="nlbl">' + L({ es:'Célula hija B', en:'Daughter cell B' }) + '</div>' + bars(b) + '<div class="nlbl">' + b + '</div>';
+    elA.className = 'ncell' + (done && aA === n ? ' ok' : (aA === 0 ? ' off' : ''));
+    elB.className = 'ncell' + (done && b === n ? ' ok' : (b === 0 ? ' off' : ''));
+    elGo.disabled = done;
+    elCopy.disabled = done;
+    elSl.disabled = done;
+  }
+
+  function live(){
+    if (done) return;
+    var b = total() - aA;
+    if (!copiado) say(host, '', L({ es:'Tal como está, hay ' + total() + ' cromosomas para dos células hijas. Fíjate con cuántos se quedaría cada una.', en:'As it stands, there are ' + total() + ' chromosomes for two daughter cells. Look at how many each one would keep.' }));
+    else if (aA === b) say(host, '', L({ es:'Las dos hijas llevan ' + aA + ' cromosomas cada una. Presiona Dividir cuando estés seguro.', en:'Both daughters carry ' + aA + ' chromosomes each. Press Divide when you are sure.' }));
+    else if (aA > b) say(host, '', L({ es:'La hija A lleva ' + aA + ' y la hija B lleva ' + b + '. Mueve el control hacia la izquierda.', en:'Daughter A carries ' + aA + ' and daughter B carries ' + b + '. Move the control to the left.' }));
+    else say(host, '', L({ es:'La hija A lleva ' + aA + ' y la hija B lleva ' + b + '. Mueve el control hacia la derecha.', en:'Daughter A carries ' + aA + ' and daughter B carries ' + b + '. Move the control to the right.' }));
+  }
+
+  elCopy.addEventListener('click', function(){
+    if (done) return;
+    copiado = !copiado; aA = 0; render(); live();
+  });
+  elReset.addEventListener('click', function(){
+    if (done) return;
+    copiado = false; aA = 0; render(); live();
+  });
+  elSl.addEventListener('input', function(){
+    if (done) return;
+    aA = parseInt(elSl.value, 10) || 0; render(); live();
+  });
+  elGo.addEventListener('click', function(){
+    if (done) return;
+    var b = total() - aA;
+    if (copiado && aA === n && b === n){
+      done = true; render();
+      say(host, 'good', L({ es:'🎉 Cada célula hija se lleva ' + n + ' cromosomas, los mismos que tenía la madre. Por eso la información completa se hereda en cada división.', en:'🎉 Each daughter cell takes ' + n + ' chromosomes, the same number the mother had. That is why the complete information is inherited at every division.' }));
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      copiado = true; aA = n; done = true; render();
+      say(host, 'warm', L({ es:'Así queda: primero se copian los ' + n + ' cromosomas y quedan ' + (n * 2) + '; al repartirlos en partes iguales cada hija recibe ' + n + ', igual que la madre.', en:'This is how it goes: first the ' + n + ' chromosomes are copied and there are ' + (n * 2) + '; sharing them in equal parts each daughter receives ' + n + ', the same as the mother.' }));
+      return;
+    }
+    if (!copiado) say(host, 'miss', L({ es:'Sin copiar primero, entre las dos hijas solo hay ' + n + ' cromosomas para repartir y ninguna quedaría completa.', en:'Without copying first, between the two daughters there are only ' + n + ' chromosomes to share and neither would be complete.' }));
+    else if (aA !== b) say(host, 'miss', L({ es:'El reparto quedó disparejo: ' + aA + ' y ' + b + '. Una de las dos hijas recibiría instrucciones incompletas.', en:'The share-out came out uneven: ' + aA + ' and ' + b + '. One of the two daughters would receive incomplete instructions.' }));
+    else say(host, 'miss', L({ es:'Revisa el número: cada hija debería quedar con los mismos cromosomas que tenía la madre.', en:'Check the number: each daughter should end up with the same chromosomes the mother had.' }));
+    render();
+  });
+
+  render();
+  say(host, '', L({ es:'La célula madre tiene ' + n + ' cromosomas y está por dividirse.', en:'The mother cell has ' + n + ' chromosomes and is about to divide.' }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 4 :: la balanza de la manipulación genética
+   Cada caso real se coloca en el plato de los beneficios o en el de los
+   riesgos; la balanza se inclina al momento según cómo van los dos platos.
+   Al tercer intento se coloca sola y se explica por qué.
+   ══════════════════════════════════════════════════════════════════════════ */
+function wBalance(rng, host){
+  var POOL = [
+    { side:0, txt:{ es:'Bacterias modificadas fabrican la insulina que usan las personas con diabetes', en:'Modified bacteria make the insulin used by people with diabetes' },
+      why:{ es:'Es un beneficio en la salud: hay medicamento suficiente y más barato.', en:'It is a health benefit: there is enough medicine and it is cheaper.' } },
+    { side:0, txt:{ es:'Un cultivo modificado resiste una plaga y se pierde menos cosecha', en:'A modified crop resists a pest and less harvest is lost' },
+      why:{ es:'Es un beneficio: se produce alimento con menos pérdidas y menos plaguicidas.', en:'It is a benefit: food is produced with fewer losses and fewer pesticides.' } },
+    { side:0, txt:{ es:'Se corrige el gen que causa una enfermedad hereditaria en una familia', en:'The gene causing an inherited disease in a family is corrected' },
+      why:{ es:'Es un beneficio en la salud, aunque exige revisar cada caso con cuidado.', en:'It is a health benefit, though each case has to be reviewed carefully.' } },
+    { side:1, txt:{ es:'La planta modificada se cruza con plantas silvestres del campo vecino', en:'The modified plant crosses with wild plants in the neighbouring field' },
+      why:{ es:'Es un riesgo para el medio ambiente: el cambio pasa a plantas que nadie modificó.', en:'It is an environmental risk: the change passes to plants nobody modified.' } },
+    { side:1, txt:{ es:'Todavía faltan estudios sobre qué ocurre tras muchos años de consumo', en:'Studies are still missing about what happens after many years of consumption' },
+      why:{ es:'Es un riesgo mientras no haya datos: no saber no es lo mismo que estar seguro.', en:'It is a risk while there are no data: not knowing is not the same as being sure.' } },
+    { side:1, txt:{ es:'Quienes siembran dependen de una sola empresa para conseguir la semilla', en:'Those who sow depend on a single company to get the seed' },
+      why:{ es:'Es un riesgo: quien controla la semilla controla el precio de la cosecha.', en:'It is a risk: whoever controls the seed controls the price of the harvest.' } }
+  ];
+  var cards = shuffle(POOL, rng).slice(0, 5);
+  var i = 0, tries = 0, done = false, lock = false, ben = [], rie = [];
+
+  host.innerHTML =
+    '<div class="gw-h iw-tag">' + L({ es:'La balanza de la manipulación genética', en:'The balance of genetic manipulation' }) + '</div>' +
+    '<div class="gw-mini iw-sub">' + L({
+      es:'Coloca cada caso en el plato que le corresponde y observa hacia dónde se inclina la balanza. Si te equivocas, el caso se queda para volver a intentarlo.',
+      en:'Place each case on the pan it belongs to and watch which way the balance tips. If you miss, the case stays for another try.'
+    }) + '</div>' +
+    '<div class="beam" data-r="beam">' +
+      '<div class="pan"><div class="pan-h">' + L({ es:'Beneficios', en:'Benefits' }) + '</div><div data-r="ben"></div></div>' +
+      '<div class="pan"><div class="pan-h">' + L({ es:'Riesgos', en:'Risks' }) + '</div><div data-r="rie"></div></div>' +
+    '</div>' +
+    '<div class="pivot"></div>' +
+    '<div class="gw-q" data-r="prog"></div>' +
+    '<div class="mitem" data-r="card"></div>' +
+    '<div class="gw-row" data-r="btns"></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elBeam = host.querySelector('[data-r="beam"]'),
+      elBen = host.querySelector('[data-r="ben"]'),
+      elRie = host.querySelector('[data-r="rie"]'),
+      elProg = host.querySelector('[data-r="prog"]'),
+      elCard = host.querySelector('[data-r="card"]'),
+      elBtns = host.querySelector('[data-r="btns"]');
+
+  function paintPans(){
+    elBen.innerHTML = ben.map(function(t){ return '<span class="pchip">' + t + '</span>'; }).join('') ||
+      '<span class="nlbl">' + L({ es:'plato vacío', en:'empty pan' }) + '</span>';
+    elRie.innerHTML = rie.map(function(t){ return '<span class="pchip">' + t + '</span>'; }).join('') ||
+      '<span class="nlbl">' + L({ es:'plato vacío', en:'empty pan' }) + '</span>';
+    var deg = Math.max(-9, Math.min(9, (rie.length - ben.length) * 4));
+    elBeam.style.transform = 'rotate(' + deg + 'deg)';
+  }
+
+  function render(){
+    paintPans();
+    if (done){
+      elProg.textContent = L({ es:'Balanza completa', en:'Balance complete' });
+      elCard.textContent = L({ es:'Los dos platos tienen peso: por eso conviene revisar los dos antes de tomar postura.', en:'Both pans carry weight: that is why it pays to review both before taking a position.' });
+      elBtns.innerHTML = '';
+      return;
+    }
+    var c = cards[i];
+    elProg.textContent = L({ es:'Caso ' + (i + 1) + ' de ' + cards.length, en:'Case ' + (i + 1) + ' of ' + cards.length });
+    elCard.textContent = L(c.txt);
+    elBtns.innerHTML =
+      '<button class="gw-btn" data-s="0">' + L({ es:'Al plato de beneficios', en:'To the benefits pan' }) + '</button>' +
+      '<button class="gw-btn" data-s="1">' + L({ es:'Al plato de riesgos', en:'To the risks pan' }) + '</button>';
+    elBtns.querySelectorAll('.gw-btn').forEach(function(b){
+      b.addEventListener('click', function(){ place(parseInt(b.getAttribute('data-s'), 10)); });
+    });
+  }
+
+  function drop(c){
+    if (c.side === 0) ben.push(L(c.txt)); else rie.push(L(c.txt));
+  }
+
+  function advance(){
+    i++; tries = 0; lock = false;
+    if (i >= cards.length){
+      done = true; render();
+      say(host, 'good', L({ es:'🎉 Ningún plato quedó vacío. Una postura sólida se arma mirando los dos y pidiendo datos de cada lado.', en:'🎉 Neither pan was left empty. A solid position is built by looking at both and asking for data from each side.' }));
+      return;
+    }
+    render();
+  }
+
+  function place(s){
+    if (done || lock) return;
+    var c = cards[i];
+    if (s === c.side){
+      lock = true;
+      drop(c);
+      say(host, 'good', L(c.why));
+      setTimeout(advance, 900);
+      render();
+      return;
+    }
+    tries++;
+    if (tries >= 3){
+      lock = true;
+      drop(c);
+      say(host, 'warm', L({ es:'Este caso pesa del otro lado. ', en:'This case weighs on the other side. ' }) + L(c.why));
+      setTimeout(advance, 1600);
+      render();
+      return;
+    }
+    if (c.side === 0) say(host, 'miss', L({ es:'Vuelve a leerlo: ¿quién sale ganando aquí y qué problema queda resuelto?', en:'Read it again: who gains here and what problem gets solved?' }));
+    else say(host, 'miss', L({ es:'Vuelve a leerlo: ¿qué podría salir mal, y a quién le tocaría?', en:'Read it again: what could go wrong, and who would it fall on?' }));
+    render();
+  }
+
+  render();
+  say(host, '', L({ es:'La balanza empieza en equilibrio, con los dos platos vacíos.', en:'The balance starts level, with both pans empty.' }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 5 :: cuaderno de postura
+   Un espacio para escribir o dibujar la propia respuesta, con una consigna
+   distinta por intento. La respuesta se guarda y se comenta sin veredicto.
+   ══════════════════════════════════════════════════════════════════════════ */
+function wReflect(rng, host){
+  var PROMPTS = [
+    { es:'Escribe una pregunta que te gustaría investigar sobre la manipulación genética y anota qué dato tendrías que encontrar para responderla.',
+      en:'Write a question you would like to investigate about genetic manipulation and note what data you would need to find in order to answer it.' },
+    { es:'Dibuja una célula con su membrana, su citoplasma y su núcleo, y escribe junto a cada parte qué hace.',
+      en:'Draw a cell with its membrane, its cytoplasm and its nucleus, and write next to each part what it does.' },
+    { es:'Elige un uso real de la manipulación genética y explica qué beneficio y qué riesgo revisarías antes de defender una postura en un debate.',
+      en:'Choose a real use of genetic manipulation and explain what benefit and what risk you would review before defending a position in a debate.' },
+    { es:'Compara lo que veía Hooke con su lente y lo que ve hoy quien usa un microscopio electrónico, y escribe qué pregunta nueva se pudo hacer gracias a ese avance.',
+      en:'Compare what Hooke saw with his lens and what someone using an electron microscope sees today, and write what new question that advance made possible.' }
+  ];
+  var p = pk(rng, PROMPTS);
+
+  host.innerHTML =
+    '<div class="gw-h iw-tag">' + L({ es:'Cuaderno de postura', en:'Position notebook' }) + '</div>' +
+    '<div class="gw-mini iw-sub">' + L({ es:'Responde con tus palabras o con un dibujo. Aquí no hay una sola respuesta buena: importa cómo la sostienes.', en:'Answer in your own words or with a drawing. There is no single good answer here: what matters is how you back it up.' }) + '</div>' +
+    '<div class="gw-q">' + L(p) + '</div>' +
+    '<div class="wtabs">' +
+      '<button class="wtab active" data-t="type">' + t('tab-type') + '</button>' +
+      '<button class="wtab" data-t="draw">' + t('tab-draw') + '</button>' +
+    '</div>' +
+    '<div class="wpanel active" id="wr_type"><textarea class="wtextarea" id="wrTa" placeholder="' + L({ es:'Tu respuesta', en:'Your answer' }) + '"></textarea></div>' +
+    '<div class="wpanel" id="wr_draw">' +
+      '<div class="cvwrap">' +
+        '<canvas class="dcanvas" id="wrCv"></canvas>' +
+        '<div class="ctoolbar">' +
+          '<button class="tbtn2 bpen on">' + t('btn-pen') + '</button>' +
+          '<button class="tbtn2 bmarker">' + t('btn-marker') + '</button>' +
+          '<button class="tbtn2 beraser">' + t('btn-eraser') + '</button>' +
+          '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+          '<div class="cdot" data-color="#1a1a16" style="background:#1a1a16"></div>' +
+          '<div class="cdot" data-color="#8b2500" style="background:#8b2500"></div>' +
+          '<div class="cdot" data-color="#1d4e89" style="background:#1d4e89"></div>' +
+          '<button class="clrbtn">' + t('btn-clear') + '</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="gw-row" style="margin-top:.6rem"><button class="gw-btn" data-r="save">' + L({ es:'Guardar mi respuesta', en:'Save my answer' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  host.querySelectorAll('.wtab').forEach(function(b){
+    b.addEventListener('click', function(){
+      var which = b.getAttribute('data-t');
+      ['type', 'draw'].forEach(function(k){
+        var pnl = document.getElementById('wr_' + k);
+        if (pnl) pnl.classList.toggle('active', k === which);
+      });
+      host.querySelectorAll('.wtab').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      if (which === 'draw') setTimeout(function(){
+        var c = document.getElementById('wrCv');
+        if (c && !c.width) initCanvas(c);
+      }, 60);
+    });
+  });
+
+  host.querySelector('[data-r="save"]').addEventListener('click', function(){
+    var ta = document.getElementById('wrTa');
+    var largo = ta && ta.value.trim().length;
+    if (largo > 40) say(host, 'good', L({ es:'✓ Guardado. Tu respuesta ya trae razones: eso es lo que sostiene una postura en un debate.', en:'✓ Saved. Your answer already brings reasons: that is what holds up a position in a debate.' }));
+    else if (largo > 0) say(host, 'good', L({ es:'✓ Guardado. Si le agregas un ejemplo o un dato, tu idea se defiende sola.', en:'✓ Saved. If you add an example or a piece of data, your idea defends itself.' }));
+    else say(host, 'good', L({ es:'✓ Guardado. Lo que dibujaste también cuenta como respuesta.', en:'✓ Saved. What you drew also counts as an answer.' }));
+  });
+
+  say(host, '', L({ es:'Escribe o dibuja con calma. Puedes corregir todo lo que quieras antes de guardar.', en:'Write or draw calmly. You can correct as much as you like before saving.' }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROBLEMAS GRADUADOS (10) — cada uno con variantes por semilla (Rule 4)
+   ══════════════════════════════════════════════════════════════════════════ */
+function addProblem(rng, v){
+  var idx = problems.length;
+  var opts = L(v.opts).slice();
+  var correctVal = opts[v.ci];
+  var sh = shuffle(opts, rng);
+  var prob = {
+    title: L(v.title),
+    questionText: L(v.q),
+    fn: '',
+    hint: L(v.hint),
+    explanation: L(v.exp),
+    options: sh,
+    correctIdx: sh.indexOf(correctVal),
+    showWork: !!v.showWork,
+    studentChoice: null,
+    pendingChoice: null
+  };
+  problems.push(prob);
+  buildOneCard(prob, idx);
+}
+
+function mkP1(rng){
+  var vs = [
+    {
+      title:{ es:'El mismo corcho, otro instrumento', en:'The same cork, another instrument' },
+      q:{ es:'Un museo exhibe dos observaciones del mismo trozo de corcho: la más antigua, hecha con una lente sencilla, y la actual, hecha con un microscopio electrónico. ¿Qué muestra la observación actual que no aparecía en la antigua?',
+          en:'A museum shows two observations of the same piece of cork: the older one, made with a simple lens, and the current one, made with an electron microscope. What does the current observation show that did not appear in the older one?' },
+      opts:{ es:['El interior de las células y estructuras tan pequeñas como un virus',
+                 'El contorno de las celdillas vacías del corcho',
+                 'La forma completa del trozo de corcho y su color',
+                 'El peso del corcho y el material del que está hecho'],
+             en:['The inside of the cells and structures as small as a virus',
+                 'The outline of the empty little cells of the cork',
+                 'The whole shape of the piece of cork and its colour',
+                 'The weight of the cork and the material it is made of'] },
+      ci:0,
+      hint:{ es:'Compara hasta dónde llega cada instrumento: uno alcanza a mostrar celdillas y el otro llega mucho más adentro.',
+             en:'Compare how far each instrument reaches: one manages to show little cells and the other goes much deeper in.' },
+      exp:{ es:'La lente sencilla apenas alcanzaba para ver el contorno de las celdillas, que es lo que se dibujó en aquella época. El microscopio electrónico llega mucho más lejos y muestra lo que hay dentro de la célula e incluso los virus, que ningún microscopio de luz alcanza.',
+            en:'The simple lens was barely enough to see the outline of the little cells, which is what was drawn back then. The electron microscope reaches much further and shows what is inside the cell and even viruses, which no light microscope can reach.' }
+    },
+    {
+      title:{ es:'Lupa contra microscopio', en:'Hand lens against microscope' },
+      q:{ es:'Dos alumnos observan la misma gota de agua de charca: uno con una lupa de mano y otro con un microscopio de luz. Cada uno anota lo que ve. ¿Qué diferencia se espera entre los dos reportes?',
+          en:'Two students observe the same drop of pond water: one with a hand lens and one with a light microscope. Each writes down what they see. What difference is expected between the two reports?' },
+      opts:{ es:['Quien usó el microscopio distingue organismos formados por una sola célula',
+                 'Quien usó la lupa distingue bacterias que el microscopio no alcanza',
+                 'Los dos reportes coinciden porque el agua de charca es transparente',
+                 'Quien usó la lupa ve el interior de las células y el otro solo el borde'],
+             en:['The one who used the microscope tells apart organisms made of a single cell',
+                 'The one who used the hand lens tells apart bacteria the microscope cannot reach',
+                 'The two reports agree because pond water is transparent',
+                 'The one who used the hand lens sees inside the cells and the other only the edge'] },
+      ci:0,
+      hint:{ es:'La lupa aumenta unas pocas veces; el microscopio de luz aumenta cientos de veces.',
+             en:'A hand lens magnifies a few times; a light microscope magnifies hundreds of times.' },
+      exp:{ es:'Con la lupa se ven a lo más motitas moviéndose, porque aumenta muy poco. El microscopio de luz aumenta cientos de veces y con él aparecen organismos de una sola célula con su forma y su movimiento. La lupa nunca alcanza a mostrar bacterias.',
+            en:'With the hand lens you see specks moving at most, because it magnifies very little. The light microscope magnifies hundreds of times and with it organisms of a single cell appear with their shape and movement. The hand lens never manages to show bacteria.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP2(rng){
+  var A = { oc:10, ob:40, tot:400, mal1:50, mal2:4, mal3:800 };
+  var B = { oc:15, ob:10, tot:150, mal1:25, mal2:5, mal3:1500 };
+  var vs = [
+    {
+      title:{ es:'Cuánto aumenta el equipo', en:'How much the setup magnifies' },
+      q:{ es:'En el laboratorio hay un microscopio con un ocular de ' + A.oc + ' aumentos. Para revisar una muestra de sarro dental se coloca el objetivo de ' + A.ob + ' aumentos. ¿Con cuántos aumentos se está observando la muestra?',
+          en:'In the lab there is a microscope with an eyepiece of ' + A.oc + ' magnifications. To check a sample of dental plaque the objective of ' + A.ob + ' magnifications is set in place. At how many magnifications is the sample being observed?' },
+      opts:{ es:[A.tot + ' aumentos', A.mal1 + ' aumentos', A.mal2 + ' aumentos', A.mal3 + ' aumentos'],
+             en:[A.tot + ' magnifications', A.mal1 + ' magnifications', A.mal2 + ' magnifications', A.mal3 + ' magnifications'] },
+      ci:0, showWork:true,
+      hint:{ es:'Las dos lentes trabajan una después de la otra: lo que aumenta el ocular se aplica sobre lo que ya aumentó el objetivo.',
+             en:'The two lenses work one after the other: what the eyepiece magnifies is applied on top of what the objective already magnified.' },
+      exp:{ es:'El aumento total se obtiene multiplicando el del ocular por el del objetivo: ' + A.oc + ' por ' + A.ob + ' = ' + A.tot + ' aumentos. Sumarlos daría ' + A.mal1 + ', que no corresponde a lo que hacen dos lentes seguidas.',
+            en:'The total magnification comes from multiplying the eyepiece by the objective: ' + A.oc + ' times ' + A.ob + ' = ' + A.tot + ' magnifications. Adding them would give ' + A.mal1 + ', which is not what two lenses in a row do.' }
+    },
+    {
+      title:{ es:'Otro par de lentes', en:'Another pair of lenses' },
+      q:{ es:'Un equipo trabaja con un microscopio cuyo ocular es de ' + B.oc + ' aumentos y coloca el objetivo de ' + B.ob + ' aumentos para observar células de cebolla. ¿Con cuántos aumentos queda la observación?',
+          en:'A team works with a microscope whose eyepiece is ' + B.oc + ' magnifications and sets the objective of ' + B.ob + ' magnifications to observe onion cells. At how many magnifications does the observation end up?' },
+      opts:{ es:[B.tot + ' aumentos', B.mal1 + ' aumentos', B.mal2 + ' aumentos', B.mal3 + ' aumentos'],
+             en:[B.tot + ' magnifications', B.mal1 + ' magnifications', B.mal2 + ' magnifications', B.mal3 + ' magnifications'] },
+      ci:0, showWork:true,
+      hint:{ es:'El aumento de una lente se aplica sobre la imagen que ya formó la otra, no se junta con ella.',
+             en:'The magnification of one lens is applied on the image the other already formed; it is not added to it.' },
+      exp:{ es:'Se multiplican los dos aumentos: ' + B.oc + ' por ' + B.ob + ' = ' + B.tot + ' aumentos. La suma daría ' + B.mal1 + ' y la resta daría ' + B.mal2 + ', y ninguna de las dos describe lo que ocurre con dos lentes seguidas.',
+            en:'The two magnifications are multiplied: ' + B.oc + ' times ' + B.ob + ' = ' + B.tot + ' magnifications. Adding would give ' + B.mal1 + ' and subtracting would give ' + B.mal2 + ', and neither describes what happens with two lenses in a row.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP3(rng){
+  var vs = [
+    {
+      title:{ es:'Lo que entra y lo que no', en:'What gets in and what does not' },
+      q:{ es:'Una célula vive en agua que tiene nutrientes y también una sustancia dañina. Con el tiempo se observa que los nutrientes están adentro, la sustancia dañina no y los desechos aparecen afuera. ¿Qué parte de la célula hace posible ese resultado?',
+          en:'A cell lives in water that has nutrients and also a harmful substance. Over time it is observed that the nutrients are inside, the harmful substance is not and the waste shows up outside. Which part of the cell makes that result possible?' },
+      opts:{ es:['La membrana celular', 'El núcleo', 'El citoplasma', 'El material hereditario'],
+             en:['The cell membrane', 'The nucleus', 'The cytoplasm', 'The hereditary material'] },
+      ci:0,
+      hint:{ es:'Piensa en la parte que está justo en el límite entre el interior de la célula y el medio.',
+             en:'Think about the part that sits right at the boundary between the inside of the cell and the medium.' },
+      exp:{ es:'La membrana celular rodea a la célula y no deja pasar cualquier cosa: permite la entrada de lo que sirve, la salida de los desechos y bloquea lo que puede dañarla. El núcleo y el citoplasma están adentro y no controlan ese paso.',
+            en:'The cell membrane surrounds the cell and does not let just anything through: it allows in what is useful, lets waste out and blocks what could harm it. The nucleus and the cytoplasm are inside and do not control that passage.' }
+    },
+    {
+      title:{ es:'Dos células y un colorante', en:'Two cells and a dye' },
+      q:{ es:'En un experimento se colocan dos células en agua con colorante. Una queda sin teñir por dentro; la otra, cuya superficie fue dañada con una aguja, se tiñe por completo. ¿Qué explica la diferencia?',
+          en:'In an experiment two cells are placed in water with dye. One is left unstained inside; the other, whose surface was damaged with a needle, is stained completely. What explains the difference?' },
+      opts:{ es:['La primera conserva la membrana que regula el paso de sustancias y la segunda la perdió',
+                 'La primera tiene más citoplasma y por eso el colorante no la alcanza',
+                 'El núcleo de la segunda célula atrae el colorante hacia el interior',
+                 'La segunda célula estaba fabricando colorante en su interior'],
+             en:['The first keeps the membrane that regulates the passage of substances and the second lost it',
+                 'The first has more cytoplasm and that is why the dye does not reach it',
+                 'The nucleus of the second cell pulls the dye towards the inside',
+                 'The second cell was making dye inside itself'] },
+      ci:0,
+      hint:{ es:'Lo único distinto entre las dos células es el estado de su superficie.',
+             en:'The only thing different between the two cells is the state of their surface.' },
+      exp:{ es:'Mientras la membrana está completa decide qué pasa y el colorante se queda afuera. Al romperla se pierde ese control y el colorante entra sin freno, así que la diferencia está en la membrana y no en el núcleo ni en la cantidad de citoplasma.',
+            en:'While the membrane is intact it decides what goes through and the dye stays outside. Once it is broken that control is lost and the dye comes in unchecked, so the difference lies in the membrane and not in the nucleus or the amount of cytoplasm.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP4(rng){
+  var vs = [
+    {
+      title:{ es:'Dónde se usa el alimento', en:'Where the food gets used' },
+      q:{ es:'Una célula toma glucosa del medio. Dentro de ella esa glucosa se transforma y libera la energía que la célula necesita para funcionar. ¿En qué parte de la célula ocurre esa transformación?',
+          en:'A cell takes glucose from the medium. Inside it that glucose is transformed and releases the energy the cell needs to work. In which part of the cell does that transformation happen?' },
+      opts:{ es:['En el citoplasma', 'En la membrana celular', 'En el núcleo', 'Afuera, en el medio que la rodea'],
+             en:['In the cytoplasm', 'In the cell membrane', 'In the nucleus', 'Outside, in the medium around it'] },
+      ci:0,
+      hint:{ es:'Después de cruzar el límite de la célula, el alimento llega a un material que llena todo el interior.',
+             en:'After crossing the boundary of the cell, the food arrives in a material that fills the whole inside.' },
+      exp:{ es:'El citoplasma es el material que llena la célula por dentro y ahí ocurren las transformaciones que dan energía, además del transporte de las sustancias de un lado a otro. La membrana solo permitió la entrada y el núcleo se ocupa de la información.',
+            en:'The cytoplasm is the material that fills the cell inside and that is where the transformations that give energy happen, along with moving substances from place to place. The membrane only allowed the entry and the nucleus deals with information.' }
+    },
+    {
+      title:{ es:'Nada se mueve adentro', en:'Nothing moves inside' },
+      q:{ es:'En una célula enferma, las sustancias que logran entrar se quedan pegadas junto a la orilla y no llegan a donde se usan, aunque la superficie está intacta y el núcleo también. ¿Qué parte dejó de funcionar?',
+          en:'In a sick cell, the substances that manage to get in stay stuck near the edge and never reach where they are used, even though the surface is intact and so is the nucleus. Which part stopped working?' },
+      opts:{ es:['El citoplasma', 'La membrana celular', 'El núcleo', 'El medio que rodea a la célula'],
+             en:['The cytoplasm', 'The cell membrane', 'The nucleus', 'The medium around the cell'] },
+      ci:0,
+      hint:{ es:'Descarta las partes que el enunciado dice que están bien y quédate con la que ocupa todo el interior.',
+             en:'Rule out the parts the statement says are fine and keep the one that occupies the whole inside.' },
+      exp:{ es:'El citoplasma no solo aloja las transformaciones: también reparte las sustancias por el interior de la célula. Si deja de moverlas, lo que entró no llega a donde hace falta, aunque la membrana y el núcleo estén completos.',
+            en:'The cytoplasm does not only host the transformations: it also spreads substances around the inside of the cell. If it stops moving them, what came in never reaches where it is needed, even though the membrane and the nucleus are intact.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP5(rng){
+  var vs = [
+    {
+      title:{ es:'Una célula sin su centro', en:'A cell without its centre' },
+      q:{ es:'En un laboratorio se le retira el núcleo a una célula. La célula sigue tomando alimento un tiempo, pero ya no se divide ni forma células nuevas. ¿Qué explica ese resultado?',
+          en:'In a laboratory the nucleus is taken out of a cell. The cell keeps taking in food for a while, but it no longer divides or forms new cells. What explains that result?' },
+      opts:{ es:['En el núcleo están las instrucciones que se copian y se reparten al dividirse',
+                 'El núcleo es la puerta por donde entra el alimento a la célula',
+                 'El núcleo transforma la glucosa y libera la energía de la célula',
+                 'El núcleo sostiene la forma de la célula desde afuera'],
+             en:['The nucleus holds the instructions that get copied and shared out when dividing',
+                 'The nucleus is the door through which food enters the cell',
+                 'The nucleus transforms glucose and releases the energy of the cell',
+                 'The nucleus holds the shape of the cell from outside'] },
+      ci:0,
+      hint:{ es:'Fíjate en qué sí pudo seguir haciendo la célula y en qué dejó de poder hacer.',
+             en:'Look at what the cell could still do and what it stopped being able to do.' },
+      exp:{ es:'Alimentarse depende de la membrana y del citoplasma, y por eso continuó un tiempo. Dividirse exige copiar la información y repartirla, y esa información está guardada en el núcleo: sin él no hay nada que copiar ni que heredar.',
+            en:'Feeding depends on the membrane and the cytoplasm, which is why it carried on for a while. Dividing requires copying the information and sharing it out, and that information is stored in the nucleus: without it there is nothing to copy or to inherit.' }
+    },
+    {
+      title:{ es:'El parecido de las flores', en:'The likeness of the flowers' },
+      q:{ es:'Una planta de flores moradas produce semillas y las plantas que nacen de ellas también dan flores moradas. ¿Qué parte de las células explica ese parecido entre una generación y la siguiente?',
+          en:'A plant with purple flowers produces seeds and the plants born from them also give purple flowers. Which part of the cells explains that likeness between one generation and the next?' },
+      opts:{ es:['El núcleo, porque guarda el material que se hereda',
+                 'La membrana, porque deja entrar el color desde el suelo',
+                 'El citoplasma, porque fabrica el color de los pétalos',
+                 'La semilla, porque conserva el color de la flor anterior'],
+             en:['The nucleus, because it stores the material that is inherited',
+                 'The membrane, because it lets the colour in from the soil',
+                 'The cytoplasm, because it makes the colour of the petals',
+                 'The seed, because it keeps the colour of the previous flower'] },
+      ci:0,
+      hint:{ es:'El parecido viaja en la información que pasa de unas células a otras, no en la sustancia del color.',
+             en:'The likeness travels in the information passing from some cells to others, not in the colour substance itself.' },
+      exp:{ es:'Lo que pasa de una generación a la siguiente es la información guardada en el núcleo, que se copia y se reparte cuando las células se dividen. El citoplasma puede fabricar el color, pero lo hace siguiendo esas instrucciones heredadas.',
+            en:'What passes from one generation to the next is the information stored in the nucleus, which is copied and shared out when cells divide. The cytoplasm may make the colour, but it does so by following those inherited instructions.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP6(rng){
+  var n = pk(rng, [8, 10, 12, 14, 16]);
+  var vs = [
+    {
+      title:{ es:'Lo que recibe cada hija', en:'What each daughter receives' },
+      q:{ es:'El núcleo de una célula guarda ' + n + ' cromosomas. Antes de dividirse, la célula copia todo su material y después se reparte en dos células hijas iguales. ¿Cuántos cromosomas queda con cada célula hija?',
+          en:'The nucleus of a cell holds ' + n + ' chromosomes. Before dividing, the cell copies all of its material and then splits into two equal daughter cells. How many chromosomes does each daughter cell end up with?' },
+      opts:{ es:[String(n), String(n * 2), String(n / 2), String(n * 4)],
+             en:[String(n), String(n * 2), String(n / 2), String(n * 4)] },
+      ci:0, showWork:true,
+      hint:{ es:'Primero hay el doble del material, y ese doble se parte en dos partes iguales.',
+             en:'First there is double the material, and that double is split into two equal parts.' },
+      exp:{ es:'Al copiarse, los ' + n + ' cromosomas pasan a ser ' + (n * 2) + '. Al repartirlos en dos partes iguales, cada célula hija recibe ' + (n * 2) + ' entre 2 = ' + n + '. Por eso las hijas quedan con el mismo número que tenía la célula madre.',
+            en:'When copied, the ' + n + ' chromosomes become ' + (n * 2) + '. Sharing them into two equal parts, each daughter cell receives ' + (n * 2) + ' divided by 2 = ' + n + '. That is why the daughters end up with the same number the mother cell had.' }
+    },
+    {
+      title:{ es:'De vuelta a la célula madre', en:'Back to the mother cell' },
+      q:{ es:'Después de una división, se cuentan los cromosomas del núcleo de cada célula hija y hay ' + n + ' en cada una. ¿Cuántos cromosomas tenía la célula madre antes de copiar su material?',
+          en:'After a division, the chromosomes in the nucleus of each daughter cell are counted and there are ' + n + ' in each one. How many chromosomes did the mother cell have before copying its material?' },
+      opts:{ es:[String(n), String(n * 2), String(n / 2), String(n * 4)],
+             en:[String(n), String(n * 2), String(n / 2), String(n * 4)] },
+      ci:0, showWork:true,
+      hint:{ es:'La copia y el reparto se compensan: lo que cada hija recibe es lo mismo que había al principio.',
+             en:'The copy and the share-out cancel out: what each daughter receives is the same as there was at the start.' },
+      exp:{ es:'Antes de dividirse la célula duplicó su material, así que llegó a la división con ' + (n * 2) + ' cromosomas y cada hija se quedó con la mitad. Regresando el reparto, la célula madre tenía ' + (n * 2) + ' entre 2 = ' + n + ' cromosomas.',
+            en:'Before dividing the cell doubled its material, so it reached the division with ' + (n * 2) + ' chromosomes and each daughter kept half. Undoing the share-out, the mother cell had ' + (n * 2) + ' divided by 2 = ' + n + ' chromosomes.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP7(rng){
+  var vs = [
+    {
+      title:{ es:'La pregunta que sí se investiga', en:'The question that can be investigated' },
+      q:{ es:'Un equipo quiere estudiar un maíz modificado que resiste una plaga y necesita empezar por una pregunta. ¿Cuál de estas preguntas puede responderse reuniendo datos y evidencias?',
+          en:'A team wants to study a modified corn that resists a pest and needs to start from a question. Which of these questions can be answered by gathering data and evidence?' },
+      opts:{ es:['¿Qué efecto tuvo ese maíz sobre los insectos del campo donde se sembró?',
+                 '¿Está bien o está mal modificar las plantas del campo?',
+                 '¿A cuánta gente del salón le parece agradable ese maíz?',
+                 '¿Debería prohibirse todo lo que no sea completamente natural?'],
+             en:['What effect did that corn have on the insects of the field where it was sown?',
+                 'Is it right or wrong to modify the plants of the field?',
+                 'How many people in the classroom find that corn pleasant?',
+                 'Should everything that is not completely natural be banned?'] },
+      ci:0,
+      hint:{ es:'Una pregunta investigable señala algo que se puede medir, contar u observar en un lugar concreto.',
+             en:'An investigable question points at something that can be measured, counted or observed in a concrete place.' },
+      exp:{ es:'Contar los insectos del campo antes y después es algo que se puede medir y comparar, así que esa pregunta se responde con datos. Las otras piden una opinión o un gusto, que sirven para el debate pero no se resuelven reuniendo evidencias.',
+            en:'Counting the insects of the field before and after is something that can be measured and compared, so that question is answered with data. The others ask for an opinion or a taste, useful for debate but not settled by gathering evidence.' }
+    },
+    {
+      title:{ es:'Antes de escribir en el cartel', en:'Before writing on the poster' },
+      q:{ es:'Un equipo va a presentar un cartel sobre bacterias modificadas que producen insulina y debe elegir la pregunta que guiará su búsqueda. ¿Cuál de estas preguntas puede responderse con datos?',
+          en:'A team is going to present a poster about modified bacteria that produce insulin and must choose the question that will guide its search. Which of these questions can be answered with data?' },
+      opts:{ es:['¿Cómo cambió el precio de la insulina desde que la producen bacterias?',
+                 '¿Es correcto que las personas usen bacterias para curarse?',
+                 '¿Cuál es la bacteria más simpática de todas las conocidas?',
+                 '¿Sería mejor un mundo sin ninguna clase de laboratorio?'],
+             en:['How has the price of insulin changed since bacteria produce it?',
+                 'Is it right for people to use bacteria to get better?',
+                 'Which is the nicest bacterium of all the known ones?',
+                 'Would a world without any kind of laboratory be better?'] },
+      ci:0,
+      hint:{ es:'Busca la pregunta cuya respuesta se puede rastrear en registros o mediciones ya existentes.',
+             en:'Look for the question whose answer can be traced in existing records or measurements.' },
+      exp:{ es:'El precio de la insulina está registrado año con año, así que la comparación se puede hacer con datos reales. Las demás preguntas piden juicios o preferencias, y por más interesantes que sean no se contestan buscando evidencia.',
+            en:'The price of insulin is recorded year by year, so the comparison can be made with real data. The other questions ask for judgements or preferences, and however interesting they are they are not answered by looking for evidence.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP8(rng){
+  var vs = [
+    {
+      title:{ es:'Insulina de bacterias', en:'Insulin from bacteria' },
+      q:{ es:'Hoy la insulina que usan las personas con diabetes la producen bacterias modificadas en grandes recipientes; antes se obtenía en cantidades pequeñas a partir de animales. ¿Cómo se clasifica este resultado?',
+          en:'Today the insulin used by people with diabetes is produced by modified bacteria in large containers; before it was obtained in small amounts from animals. How is this result classified?' },
+      opts:{ es:['Un beneficio en la salud, porque alcanza el medicamento para quien lo necesita',
+                 'Un riesgo para la salud, porque la insulina de bacterias no sirve como tratamiento',
+                 'Un beneficio ambiental, porque las bacterias limpian el agua de los recipientes',
+                 'Un riesgo ambiental, porque las bacterias del laboratorio sustituyen a las plantas'],
+             en:['A health benefit, because there is enough medicine for those who need it',
+                 'A health risk, because insulin from bacteria does not work as a treatment',
+                 'An environmental benefit, because the bacteria clean the water in the containers',
+                 'An environmental risk, because laboratory bacteria replace plants'] },
+      ci:0,
+      hint:{ es:'Fíjate en qué problema resuelve el cambio y a quién le resuelve algo.',
+             en:'Look at what problem the change solves and for whom it solves something.' },
+      exp:{ es:'Producir insulina en bacterias permitió pasar de cantidades pequeñas a una producción constante, así que el efecto directo es que hay tratamiento disponible para muchas más personas: un beneficio en el ámbito de la salud.',
+            en:'Producing insulin in bacteria made it possible to go from small amounts to steady production, so the direct effect is that treatment is available for many more people: a benefit in the field of health.' }
+    },
+    {
+      title:{ es:'La parcela de al lado', en:'The plot next door' },
+      q:{ es:'Una planta modificada para resistir una plaga se siembra junto a un terreno con plantas silvestres emparentadas, y el viento lleva su polen hasta ellas. ¿Cómo se clasifica esta situación?',
+          en:'A plant modified to resist a pest is sown next to a plot with related wild plants, and the wind carries its pollen to them. How is this situation classified?' },
+      opts:{ es:['Un riesgo ambiental, porque el cambio puede pasar a plantas que nadie modificó',
+                 'Un beneficio ambiental, porque las plantas silvestres crecerán más rápido',
+                 'Un riesgo para la salud, porque el polen enferma a quien lo respira',
+                 'Un beneficio para la salud, porque el terreno vecino producirá medicamentos'],
+             en:['An environmental risk, because the change may pass to plants nobody modified',
+                 'An environmental benefit, because the wild plants will grow faster',
+                 'A health risk, because the pollen makes whoever breathes it ill',
+                 'A health benefit, because the neighbouring plot will produce medicines'] },
+      ci:0,
+      hint:{ es:'Sigue el camino del polen y pregúntate en qué seres vivos termina el cambio.',
+             en:'Follow the path of the pollen and ask which living things the change ends up in.' },
+      exp:{ es:'El polen lleva la información de la planta modificada a plantas silvestres emparentadas, que pueden quedar cambiadas sin que nadie lo decidiera. El efecto cae sobre el ambiente del lugar, y por eso conviene vigilarlo y estudiarlo antes de ampliar la siembra.',
+            en:'The pollen carries the information of the modified plant to related wild plants, which may end up changed without anyone deciding it. The effect falls on the environment of the place, which is why it is worth watching and studying before extending the sowing.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP9(rng){
+  var vs = [
+    {
+      title:{ es:'Por qué los virus llegaron tarde', en:'Why viruses arrived late' },
+      q:{ es:'En una línea del tiempo de la microscopía se ve que las bacterias se describieron mucho antes que los virus. El equipo debe escribir la razón. ¿Cuál corresponde?',
+          en:'On a timeline of microscopy it can be seen that bacteria were described long before viruses. The team has to write the reason. Which one fits?' },
+      opts:{ es:['Los virus son mucho más pequeños y hizo falta el microscopio electrónico para verlos',
+                 'Los virus aparecieron en la naturaleza después que las bacterias',
+                 'Los virus solo se observan con lupa de mano y casi nadie la usaba',
+                 'Las bacterias son transparentes y los virus tienen color propio'],
+             en:['Viruses are far smaller and the electron microscope was needed to see them',
+                 'Viruses appeared in nature after bacteria did',
+                 'Viruses are only observed with a hand lens and hardly anyone used one',
+                 'Bacteria are transparent and viruses have a colour of their own'] },
+      ci:0,
+      hint:{ es:'La fecha de una descripción depende del instrumento disponible, no de cuándo existe el ser vivo.',
+             en:'The date of a description depends on the instrument available, not on when the living thing exists.' },
+      exp:{ es:'Con los microscopios de luz de aquella época ya se alcanzaba a ver bacterias, pero los virus son tan pequeños que ninguna lente de luz los muestra. Se pudieron describir cuando apareció el microscopio electrónico, mucho después.',
+            en:'With the light microscopes of that time bacteria could already be seen, but viruses are so small that no light lens shows them. They could be described once the electron microscope appeared, much later.' }
+    },
+    {
+      title:{ es:'De la celdilla al interior', en:'From the little cell to the inside' },
+      q:{ es:'Un cartel debe explicar por qué las primeras observaciones mostraban celdillas vacías y hoy se distinguen las partes de una célula viva. ¿Qué explicación corresponde?',
+          en:'A poster has to explain why the first observations showed empty little cells and today the parts of a living cell can be told apart. Which explanation fits?' },
+      opts:{ es:['Los instrumentos mejoraron y hoy se logran muchos más aumentos y más nitidez',
+                 'Las células de antes estaban vacías y las de ahora tienen contenido',
+                 'Antes se observaba de día y ahora se observa con luz artificial',
+                 'Los dibujos antiguos se hicieron a mano y por eso salían incompletos'],
+             en:['The instruments improved and today many more magnifications and more sharpness are achieved',
+                 'The cells of the past were empty and those of today have content',
+                 'Observations used to be made by day and now they are made with artificial light',
+                 'The old drawings were made by hand and that is why they came out incomplete'] },
+      ci:0,
+      hint:{ es:'Compara los instrumentos de cada época antes de comparar lo que se dibujó.',
+             en:'Compare the instruments of each period before comparing what was drawn.' },
+      exp:{ es:'Aquellas celdillas eran corcho seco, sin contenido vivo, y además la lente daba pocos aumentos. Los microscopios actuales alcanzan muchos más aumentos y una imagen más nítida, y por eso hoy se distinguen membrana, citoplasma y núcleo en una célula viva.',
+            en:'Those little cells were dry cork, with no living content, and besides the lens gave few magnifications. Today microscopes reach many more magnifications and a sharper image, which is why membrane, cytoplasm and nucleus can be told apart in a living cell.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+function mkP10(rng){
+  var vs = [
+    {
+      title:{ es:'Una postura en el debate', en:'A position in the debate' },
+      q:{ es:'En un debate escolar, un equipo sostiene que cierto cultivo modificado no tiene ningún riesgo porque hasta hoy nadie ha reportado un daño. ¿Cuál es la mejor forma de responder a ese argumento?',
+          en:'In a school debate, a team argues that a certain modified crop carries no risk at all because so far nobody has reported any harm. What is the best way to answer that argument?' },
+      opts:{ es:['Pedir qué estudios se hicieron y durante cuánto tiempo, porque no haber visto un daño no es haberlo descartado',
+                 'Aceptar la conclusión, porque si nadie reportó un daño el asunto ya quedó resuelto',
+                 'Responder que todo cultivo modificado es peligroso aunque no existan estudios',
+                 'Cambiar de tema y hablar de los beneficios de ese cultivo en la salud'],
+             en:['Ask what studies were done and for how long, because not having seen harm is not having ruled it out',
+                 'Accept the conclusion, because if nobody reported harm the matter is already settled',
+                 'Reply that every modified crop is dangerous even if no studies exist',
+                 'Change the subject and talk about the health benefits of that crop'] },
+      ci:0,
+      hint:{ es:'Una postura se sostiene con evidencia; conviene revisar de dónde sale la afirmación del otro equipo.',
+             en:'A position is held up by evidence; it is worth checking where the other team claim comes from.' },
+      exp:{ es:'La falta de reportes puede significar que no hubo daño, pero también que se estudió poco tiempo o en pocos lugares. Pedir los estudios y sus condiciones permite discutir con evidencia, sin aceptar la conclusión ni rechazarla de entrada.',
+            en:'The lack of reports may mean there was no harm, but also that it was studied for a short time or in few places. Asking for the studies and their conditions makes it possible to argue with evidence, without either accepting the conclusion or rejecting it outright.' }
+    },
+    {
+      title:{ es:'El modelo de la clase', en:'The classroom model' },
+      q:{ es:'Un equipo arma un modelo de célula con una bolsa transparente que solo deja pasar algunas sustancias, gelatina que llena la bolsa y una canica con un papel doblado adentro. ¿Qué representa cada material?',
+          en:'A team builds a cell model with a transparent bag that only lets some substances through, jelly filling the bag and a marble with a folded paper inside. What does each material represent?' },
+      opts:{ es:['La bolsa es la membrana, la gelatina el citoplasma y la canica el núcleo con la información',
+                 'La bolsa es el citoplasma, la gelatina el núcleo y la canica la membrana',
+                 'La bolsa es el núcleo, la gelatina la membrana y la canica el citoplasma',
+                 'La bolsa es la membrana, la gelatina el núcleo y la canica el alimento de la célula'],
+             en:['The bag is the membrane, the jelly the cytoplasm and the marble the nucleus with the information',
+                 'The bag is the cytoplasm, the jelly the nucleus and the marble the membrane',
+                 'The bag is the nucleus, the jelly the membrane and the marble the cytoplasm',
+                 'The bag is the membrane, the jelly the nucleus and the marble the food of the cell'] },
+      ci:0,
+      hint:{ es:'Empareja cada material con la parte que hace lo mismo que él dentro de una célula real.',
+             en:'Match each material with the part that does the same thing inside a real cell.' },
+      exp:{ es:'La bolsa que deja pasar solo algunas sustancias hace lo mismo que la membrana; la gelatina llena el interior y sostiene lo que ocurre ahí, como el citoplasma; y la canica con el papel doblado guarda la información, como el núcleo con el material que se hereda.',
+            en:'The bag that lets only some substances through does the same as the membrane; the jelly fills the inside and holds what happens there, like the cytoplasm; and the marble with the folded paper stores the information, like the nucleus with the material that is inherited.' }
+    }
+  ];
+  return pk(rng, vs);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   buildLesson
+   ══════════════════════════════════════════════════════════════════════════ */
+function buildLesson(rng){
+  injectGuideCSS();
+
+  /* ── Apertura ── */
+  sec(
+    L({ es:'Punto de partida', en:'Starting point' }),
+    L({ es:'Lo vivo cabe en una caja diminuta', en:'Living things fit inside a tiny box' }),
+    '<p>' + L({
+      es:'Una hoja de cebolla, la saliva de tu boca y la punta de tu dedo parecen materiales muy distintos, pero si los miras de cerca, y luego más de cerca todavía, los tres terminan en lo mismo: cajitas ordenadas una junto a la otra. Cada cajita es una célula, y en ese espacio pequeñísimo caben todas las tareas de estar vivo: alimentarse, responder a lo que pasa afuera y formar nuevas células.',
+      en:'An onion leaf, the saliva in your mouth and the tip of your finger look like very different materials, but if you look closely, and then closer still, all three end up in the same thing: little boxes lined up one next to the other. Each little box is a cell, and in that tiny space fit all the tasks of being alive: feeding, responding to what happens outside and forming new cells.'
+    }) + '</p>' +
+    '<div class="callout"><p><strong>' + L({ es:'Lo que vas a hacer: ', en:'What you are going to do: ' }) + '</strong>' + L({
+      es:'vas a ajustar un microscopio hasta que cada muestra se vea nítida, a decidir qué deja pasar la membrana de una célula, a preparar un núcleo para repartir sus instrucciones entre dos células hijas y a pesar en una balanza los beneficios y los riesgos de cambiar esas instrucciones.',
+      en:'you are going to set up a microscope until each sample looks sharp, decide what the membrane of a cell lets through, get a nucleus ready to share out its instructions between two daughter cells and weigh on a balance the benefits and the risks of changing those instructions.'
+    }) + '</p></div>'
+  );
+
+  /* ══ CONCEPTO 1 ══ */
+  var s1 = sec(
+    L({ es:'Concepto 1', en:'Concept 1' }),
+    L({ es:'Lo que se veía antes y lo que se ve hoy', en:'What used to be seen and what is seen today' }),
+    '<p>' + L({
+      es:'Nadie sospechaba que existieran las células hasta que alguien miró un material común a través de una lente. Con un instrumento sencillo, hace más de trescientos años, se observó una laminilla de corcho y aparecieron pequeñas celdillas vacías, ordenadas como un panal; a esas cajitas se les llamó células. Poco después, otras lentes de mayor calidad mostraron algo todavía más sorprendente: en una gota de agua estancada se movían seres vivos formados por una sola célula, que nadie había visto jamás.',
+      en:'Nobody suspected that cells existed until somebody looked at an everyday material through a lens. With a simple instrument, more than three hundred years ago, a slice of cork was observed and small empty little cells appeared, arranged like a honeycomb; those little boxes were called cells. Soon after, other lenses of better quality showed something even more surprising: in a drop of stagnant water living things made of a single cell were moving about, which nobody had ever seen.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'El microscopio de luz que usas en la escuela tiene dos lentes que trabajan una después de la otra: el objetivo, que está cerca de la muestra, y el ocular, por donde miras. El aumento total se obtiene multiplicando el aumento del objetivo por el del ocular, y por eso un equipo modesto llega a cientos de aumentos. Aun así, la luz tiene un límite. Los microscopios electrónicos, que no usan luz sino haces de electrones, llegan mucho más lejos: con ellos se vio por dentro a la célula y, por primera vez, a los virus, tan pequeños que ninguna lente de luz los alcanza. Cada instrumento nuevo no solo mostró más detalle: hizo posibles preguntas que antes ni siquiera podían plantearse.',
+      en:'The light microscope you use at school has two lenses that work one after the other: the objective, close to the sample, and the eyepiece, which you look through. The total magnification comes from multiplying the magnification of the objective by that of the eyepiece, and that is why a modest setup reaches hundreds of magnifications. Even so, light has a limit. Electron microscopes, which use beams of electrons instead of light, reach much further: with them the inside of the cell was seen and, for the first time, viruses, so small that no light lens can reach them. Each new instrument did not only show more detail: it made possible questions that could not even be asked before.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard(L({ es:'Lente sencilla', en:'Simple lens' }), L({ es:'decenas de aumentos', en:'tens of magnifications' }), L({ es:'celdillas del corcho', en:'the little cells of cork' })) +
+      rcard(L({ es:'Microscopio de luz', en:'Light microscope' }), L({ es:'cientos de aumentos', en:'hundreds of magnifications' }), L({ es:'células vivas y bacterias', en:'living cells and bacteria' })) +
+      rcard(L({ es:'Microscopio electrónico', en:'Electron microscope' }), L({ es:'miles de aumentos', en:'thousands of magnifications' }), L({ es:'el interior de la célula y los virus', en:'the inside of the cell and viruses' })) +
+      rcard(L({ es:'Aumento total', en:'Total magnification' }), L({ es:'ocular por objetivo', en:'eyepiece times objective' }), L({ es:'las dos lentes trabajan seguidas', en:'the two lenses work in a row' })) +
+    '</div>'
+  );
+  wScope(rng, widgetHost(s1, 'wScope', 'microscope'));
+  addProblem(rng, mkP1(rng));
+  addProblem(rng, mkP2(rng));
+
+  /* ══ CONCEPTO 2 ══ */
+  var s2 = sec(
+    L({ es:'Concepto 2', en:'Concept 2' }),
+    L({ es:'La membrana decide y el citoplasma trabaja', en:'The membrane decides and the cytoplasm works' }),
+    '<p>' + L({
+      es:'Toda célula tiene un límite: la membrana celular, una capa finísima que la separa del medio. No es una pared cerrada ni un colador que deje pasar todo. Es un filtro que elige: permite la entrada del oxígeno y de los alimentos disueltos, deja salir los desechos y el agua que sobra, y bloquea sustancias que podrían dañarla. Gracias a ese control, el interior de la célula se mantiene distinto de lo que hay afuera. La membrana también es lo primero que recibe lo que ocurre en el medio, así que participa en la función de relación: por ahí llega la información de un cambio de temperatura o la señal de una célula vecina.',
+      en:'Every cell has a boundary: the cell membrane, a very thin layer separating it from the medium. It is neither a closed wall nor a sieve that lets everything through. It is a filter that chooses: it allows in oxygen and dissolved food, lets waste and leftover water out, and blocks substances that could harm it. Thanks to that control, the inside of the cell stays different from what is outside. The membrane is also the first thing to receive what happens in the medium, so it takes part in the function of relation: through it arrives the information about a change in temperature or the signal from a neighbouring cell.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Lo que logra entrar cae en el citoplasma, un material espeso que llena a la célula por dentro. Ahí ocurre casi todo el trabajo: los alimentos se transforman y liberan la energía que la célula necesita, y las sustancias se reparten de un extremo a otro. Membrana y citoplasma se reparten así la función de nutrición: una decide qué pasa, el otro usa lo que pasó.',
+      en:'Whatever manages to get in falls into the cytoplasm, a thick material that fills the cell inside. Almost all the work happens there: food is transformed and releases the energy the cell needs, and substances are spread from one end to the other. Membrane and cytoplasm share out the function of nutrition in this way: one decides what goes through, the other uses what went through.'
+    }) + '</p>'
+  );
+  wMembrane(rng, widgetHost(s2, 'wMembrana', 'membrane'));
+  addProblem(rng, mkP3(rng));
+  addProblem(rng, mkP4(rng));
+
+  /* ══ CONCEPTO 3 ══ */
+  var s3 = sec(
+    L({ es:'Concepto 3', en:'Concept 3' }),
+    L({ es:'El núcleo guarda las instrucciones', en:'The nucleus keeps the instructions' }),
+    '<p>' + L({
+      es:'Casi en el centro de la célula hay un cuerpo redondeado que se distingue bien al microscopio: el núcleo. Adentro está el material que funciona como un instructivo completo de la célula, organizado en cromosomas. Ese instructivo dice cómo se construye cada parte y cómo se hacen las tareas, y solo tiene sentido si se conserva completo.',
+      en:'Almost at the centre of the cell there is a rounded body that stands out well under the microscope: the nucleus. Inside is the material that works as a complete instruction booklet for the cell, organised into chromosomes. That booklet says how each part is built and how the tasks are done, and it only makes sense if it is kept complete.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'Cuando una célula va a formar dos células nuevas hace algo muy ordenado: primero copia todo el material del núcleo, de modo que por un momento hay el doble, y después lo reparte en partes iguales. Así cada célula hija recibe un instructivo completo, igual al de la célula madre. En eso consiste la función de reproducción, y de ahí sale también la herencia: los hijos se parecen a sus padres porque reciben copias de ese material, no porque copien lo que ven.',
+      en:'When a cell is going to form two new cells it does something very orderly: first it copies all the material of the nucleus, so that for a moment there is double the amount, and then it shares it out in equal parts. That way each daughter cell receives a complete booklet, the same as the mother cell. That is what the function of reproduction consists of, and inheritance comes out of it too: children resemble their parents because they receive copies of that material, not because they copy what they see.'
+    }) + '</p>' +
+    '<div class="rules-grid">' +
+      rcard(L({ es:'Membrana', en:'Membrane' }), L({ es:'nutrición y relación', en:'nutrition and relation' }), L({ es:'decide qué entra y qué sale', en:'decides what comes in and what goes out' })) +
+      rcard(L({ es:'Citoplasma', en:'Cytoplasm' }), L({ es:'nutrición', en:'nutrition' }), L({ es:'transforma el alimento y reparte', en:'transforms the food and spreads it' })) +
+      rcard(L({ es:'Núcleo', en:'Nucleus' }), L({ es:'reproducción y herencia', en:'reproduction and inheritance' }), L({ es:'guarda y reparte las instrucciones', en:'stores and shares out the instructions' })) +
+      rcard(L({ es:'Cromosomas', en:'Chromosomes' }), L({ es:'dentro del núcleo', en:'inside the nucleus' }), L({ es:'se copian antes de cada división', en:'are copied before each division' })) +
+    '</div>'
+  );
+  wNucleus(rng, widgetHost(s3, 'wNucleo', 'nucleus'));
+  addProblem(rng, mkP5(rng));
+  addProblem(rng, mkP6(rng));
+
+  /* ══ CONCEPTO 4 ══ */
+  var s4 = sec(
+    L({ es:'Concepto 4', en:'Concept 4' }),
+    L({ es:'Cambiar las instrucciones', en:'Changing the instructions' }),
+    '<p>' + L({
+      es:'Si las instrucciones de un ser vivo están guardadas en el núcleo de sus células, entonces se pueden leer, y desde hace unas décadas también se pueden cambiar o pasar de un ser vivo a otro. A eso se le llama manipulación genética. Con ella hay bacterias que fabrican la insulina que necesitan las personas con diabetes, plantas que resisten una plaga sin tanto plaguicida y tratamientos que corrigen un gen que causa una enfermedad hereditaria.',
+      en:'If the instructions of a living thing are stored in the nucleus of its cells, then they can be read, and for some decades now they can also be changed or moved from one living thing to another. That is called genetic manipulation. Thanks to it there are bacteria that make the insulin people with diabetes need, plants that resist a pest without so much pesticide and treatments that correct a gene causing an inherited disease.'
+    }) + '</p>' +
+    '<p>' + L({
+      es:'También hay motivos para tener cuidado. Una planta modificada puede cruzarse con plantas silvestres del campo vecino y llevarles el cambio; de algunos usos todavía faltan estudios de largo plazo; y quien controla la semilla controla el precio de la cosecha. Para participar en esta discusión no basta con estar a favor o en contra: conviene hacer preguntas que se puedan investigar, del tipo qué pasó, dónde, en cuánto tiempo y con qué medición, y buscar datos de los dos lados antes de defender una postura en un debate.',
+      en:'There are also reasons to be careful. A modified plant may cross with wild plants in the neighbouring field and carry the change to them; for some uses long term studies are still missing; and whoever controls the seed controls the price of the harvest. To take part in this discussion it is not enough to be for or against: it pays to ask questions that can be investigated, of the kind what happened, where, over how long and with what measurement, and to look for data from both sides before defending a position in a debate.'
+    }) + '</p>'
+  );
+  wBalance(rng, widgetHost(s4, 'wBalanza', 'balance'));
+  addProblem(rng, mkP7(rng));
+  addProblem(rng, mkP8(rng));
+  wReflect(rng, widgetHost(s4, 'wReflexion', 'reflect'));
+
+  /* ══ CIERRE ══ */
+  sec(
+    L({ es:'Para cerrar', en:'To finish' }),
+    L({ es:'Junta el instrumento, la célula y la discusión', en:'Put together the instrument, the cell and the discussion' }),
+    '<p>' + L({
+      es:'Las siguientes situaciones vienen de un museo, de un salón de clases y de un debate. En cada una hay que decidir qué explica mejor lo que ocurre: el instrumento con el que se observó, la parte de la célula que hace el trabajo o la evidencia que sostiene una postura.',
+      en:'The situations below come from a museum, a classroom and a debate. In each one you have to decide what best explains what is happening: the instrument used to observe, the part of the cell doing the work or the evidence that holds up a position.'
+    }) + '</p>'
+  );
+  addProblem(rng, mkP9(rng));
+  addProblem(rng, mkP10(rng));
+}
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbzLGV15JRTPs9bbSvHRLfgOXeT9oUExDf1AH546WOwq5tYxXSdhX212OWi_bTJfMGx9/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Estructura y Funciones de la Célula';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>
