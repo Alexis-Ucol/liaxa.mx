@@ -152,6 +152,20 @@ tbody td:first-child { font-weight: 600; color: var(--text); }
   font-weight: 600; padding: .2rem .6rem; border-radius: 20px;
 }
 
+/* ── GUIDE SELECTOR ── */
+.guide-selector {
+  display: flex; align-items: center; gap: .75rem; margin-bottom: 2rem;
+  background: var(--surface); border-radius: var(--radius);
+  padding: 1rem 1.5rem; box-shadow: var(--shadow);
+}
+.guide-selector label { font-size: .85rem; color: var(--text2); font-weight: 600; white-space: nowrap; }
+.guide-selector select {
+  flex: 1; padding: .5rem .75rem; border: 1.5px solid var(--border);
+  border-radius: 6px; font-size: .95rem; background: var(--bg);
+  outline: none; cursor: pointer;
+}
+.guide-selector select:focus { border-color: var(--navy); }
+
 /* ── LOADING / EMPTY ── */
 .loading { text-align: center; padding: 3rem; color: var(--text3); font-size: .9rem; }
 .empty   { text-align: center; padding: 2rem; color: var(--text3); font-size: .85rem; }
@@ -249,6 +263,35 @@ tbody td:first-child { font-weight: 600; color: var(--text); }
 
     <div id="detail-container"></div>
 
+    <!-- Guide cross-school view -->
+    <div class="section-header" style="margin-top:2rem;">
+      <div class="section-title">Uso por guía (todas las escuelas)</div>
+    </div>
+    <div class="table-wrap" style="margin-bottom:1.5rem;">
+      <table>
+        <thead>
+          <tr>
+            <th>Guía</th>
+            <th>Sesiones totales</th>
+            <th>Escuelas</th>
+            <th>Tiempo prom.</th>
+          </tr>
+        </thead>
+        <tbody id="guides-tbody">
+          <tr><td colspan="4" class="loading">Cargando guías…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="guide-selector">
+      <label>Ver detalle de guía:</label>
+      <select id="guide-select" onchange="loadGuideDetail(this.value)">
+        <option value="">— Selecciona una guía —</option>
+      </select>
+    </div>
+
+    <div id="guide-detail-container"></div>
+
   </div>
   <div class="footer">Liaxa Analytics · uso interno</div>
 </div>
@@ -299,6 +342,11 @@ function loadAll() {
     .then(function(r) { return r.json(); })
     .then(function(schools) {
       populateSchoolSelect(schools);
+      return fetch(GAS_URL + '?action=guides');
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(guides) {
+      renderGuideList(guides);
       document.getElementById('last-updated').textContent =
         'Actualizado: ' + new Date().toLocaleTimeString('es-MX');
       btn.disabled = false;
@@ -425,6 +473,79 @@ function fmtTime(sec) {
   var m = Math.floor(sec / 60);
   var s = sec % 60;
   return m + 'm' + (s ? ' ' + s + 's' : '');
+}
+
+function renderGuideList(guides) {
+  if (!guides || !guides.length) {
+    document.getElementById('guides-tbody').innerHTML =
+      '<tr><td colspan="4" class="empty">Sin datos de guías todavía.</td></tr>';
+    return;
+  }
+  var html = guides.map(function(g) {
+    return '<tr onclick="loadGuideDetail(\'' + g.module_id + '\')" style="cursor:pointer">' +
+      '<td>' + (g.module_title || g.module_id) + '</td>' +
+      '<td><span class="badge badge-ok">' + g.total_sessions + '</span></td>' +
+      '<td>' + g.school_count + '</td>' +
+      '<td>' + fmtTime(g.avg_time_sec) + '</td>' +
+      '</tr>';
+  }).join('');
+  document.getElementById('guides-tbody').innerHTML = html;
+
+  // Populate guide dropdown
+  var sel = document.getElementById('guide-select');
+  var current = sel.value;
+  sel.innerHTML = '<option value="">— Selecciona una guía —</option>';
+  guides.forEach(function(g) {
+    var opt = document.createElement('option');
+    opt.value = g.module_id;
+    opt.textContent = g.module_title || g.module_id;
+    if (g.module_id === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function loadGuideDetail(moduleId) {
+  if (!moduleId) {
+    document.getElementById('guide-detail-container').innerHTML = '';
+    return;
+  }
+  document.getElementById('guide-select').value = moduleId;
+  document.getElementById('guide-detail-container').innerHTML =
+    '<div class="loading">Cargando detalle…</div>';
+
+  fetch(GAS_URL + '?action=guide&module_id=' + encodeURIComponent(moduleId))
+    .then(function(r) { return r.json(); })
+    .then(renderGuideDetail)
+    .catch(function() {
+      document.getElementById('guide-detail-container').innerHTML =
+        '<div class="empty">Error al cargar el detalle.</div>';
+    });
+}
+
+function renderGuideDetail(data) {
+  if (!data.schools || !data.schools.length) {
+    document.getElementById('guide-detail-container').innerHTML =
+      '<div class="detail-panel"><h2>' + (data.module_title || data.module_id) + '</h2>' +
+      '<div class="empty">Sin actividad en esta guía todavía.</div></div>';
+    return;
+  }
+  var rows = data.schools.map(function(s) {
+    return '<tr>' +
+      '<td>' + s.school + '</td>' +
+      '<td><span class="badge badge-gold">' + s.session_count + '</span></td>' +
+      '<td>' + fmtTime(s.avg_time_sec) + '</td>' +
+      '<td>' + s.active_days + '</td>' +
+      '<td>' + (s.last_used || '—') + '</td>' +
+      '</tr>';
+  }).join('');
+
+  document.getElementById('guide-detail-container').innerHTML =
+    '<div class="detail-panel">' +
+    '<h2>' + (data.module_title || data.module_id) + '</h2>' +
+    '<div style="margin-bottom:.5rem;font-size:.82rem;color:var(--text3);font-weight:600;">USO POR ESCUELA</div>' +
+    '<div class="table-wrap"><table>' +
+    '<thead><tr><th>Escuela</th><th>Sesiones</th><th>Tiempo prom.</th><th>Días activo</th><th>Último uso</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div></div>';
 }
 
 // Auto-load if already logged in
