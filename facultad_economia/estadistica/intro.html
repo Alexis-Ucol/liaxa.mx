@@ -92,9 +92,9 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .gcrd p{margin-bottom:.5rem}
 
 /* DRAG-DROP */
-.dd-pool{display:flex;flex-wrap:wrap;gap:.5rem;padding:.9rem;background:var(--surface2);border-radius:10px;border:2px dashed var(--border);margin:.75rem 0;min-height:52px}
-.dd-chip{background:var(--green);color:#fff;border-radius:6px;padding:.32rem .8rem;font-size:.82rem;font-weight:500;cursor:grab;user-select:none;transition:opacity .15s,transform .1s;border:2px solid transparent}
-.dd-chip:active{cursor:grabbing;transform:scale(1.06)}
+.dd-pool{display:flex;flex-wrap:wrap;gap:.5rem;padding:.9rem;background:var(--surface2);border-radius:10px;border:2px dashed var(--border);margin:.75rem 0;min-height:52px;align-items:flex-start}
+.dd-chip{background:var(--green);color:#fff;border-radius:6px;padding:.32rem .8rem;font-size:.82rem;font-weight:500;cursor:grab;user-select:none;transition:opacity .15s,transform .1s;border:2px solid transparent;white-space:normal;line-height:1.35;max-width:100%}
+.dd-chip:active{cursor:grabbing;transform:scale(1.03)}
 .dd-chip.used{opacity:.3;cursor:default;pointer-events:none}
 .dd-chip.gold{background:var(--gold);color:#1a1a00}
 .dd-bins{display:grid;gap:.65rem;margin:.75rem 0}
@@ -103,9 +103,9 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .dd-bin{min-height:70px;border-radius:10px;border:2px dashed var(--border);padding:.6rem .8rem;background:var(--surface);transition:background .16s,border-color .16s}
 .dd-bin.over{background:var(--green-bg);border-color:var(--green)}
 .dd-bin h4{font-size:.72rem;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.45rem;pointer-events:none}
-.dd-bin .dd-chip{margin:.2rem .2rem .2rem 0;cursor:default}
-.dd-bin .dd-chip.ok-chip{background:var(--ok);border-color:var(--ok)}
-.dd-bin .dd-chip.bad-chip{background:var(--bad);border-color:var(--bad)}
+.dd-bin .dd-chip{margin:.2rem .2rem .2rem 0;cursor:default;font-size:.77rem}
+.dd-bin .dd-chip.ok-chip{background:var(--ok);border-color:var(--ok);color:#fff}
+.dd-bin .dd-chip.bad-chip{background:var(--bad);border-color:var(--bad);color:#fff}
 .dd-actions{display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap}
 .dd-check{background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.1rem;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit}
 .dd-reset{background:none;border:1.5px solid var(--border);color:var(--text2);border-radius:8px;padding:.45rem .9rem;font-size:.82rem;cursor:pointer;font-family:inherit}
@@ -187,7 +187,6 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
   <div class="stickybar">
     <div class="hlogos">
       <span style="font-family:'Crimson Pro',serif;font-weight:700;font-size:1.1rem;color:#1a4a8a;letter-spacing:.05em">ALEXIS</span>
-      
     </div>
     <div class="hsep"></div>
     <div class="htitle" id="h-title">Introducción a la Estadística</div>
@@ -240,7 +239,6 @@ function applyLang(){
   var sg=document.getElementById('sGroup');   if(sg) sg.placeholder=t('ph-group');
   document.getElementById('btn-es').classList.toggle('active',LANG==='es');
   document.getElementById('btn-en').classList.toggle('active',LANG==='en');
-  // rebuild lesson if running
   if(lessonBuilt) rebuildLesson();
 }
 function setLang(l){ LANG=l; applyLang(); }
@@ -327,19 +325,14 @@ function rebuildLesson(){
 }
 
 // ═══════════════════════════════════════════════════
-// DRAG-DROP ENGINE
+// DRAG-DROP ENGINE  (activity-safe)
 // ═══════════════════════════════════════════════════
 var dragging=null, tapping=null;
 
+// Return chip to its own pool using data-pool attribute
 function chipToPool(chip){
-  // Walk up until we find a common ancestor that contains both a dd-bin and a dd-pool,
-  // then find the dd-pool sibling
-  var el=chip.parentElement;
-  while(el){
-    var pool=el.querySelector('.dd-pool');
-    if(pool){ pool.appendChild(chip); break; }
-    el=el.parentElement;
-  }
+  var pool=document.getElementById(chip.dataset.pool);
+  if(pool){ pool.appendChild(chip); }
   chip.style.opacity='1';
   chip.classList.remove('used','in-bin');
   chip.style.outline='';
@@ -352,44 +345,44 @@ function chipToBin(chip,bin){
 }
 
 // ── Drag ──
-function ddStart(chip){
-  // If chip is in a bin, drag it back — handled in ddDrop via origin
-  dragging=chip; chip.style.opacity='.5';
-}
+function ddStart(chip){ dragging=chip; chip.style.opacity='.5'; }
 function ddEnd(chip){ chip.style.opacity='1'; }
 function ddOver(e,bin){ e.preventDefault(); bin.classList.add('over'); }
 function ddLeave(bin){ bin.classList.remove('over'); }
 function ddDrop(e,bin){
   e.preventDefault(); bin.classList.remove('over');
   if(!dragging) return;
+  // FIX: enforce activity boundary — chip and bin must share the same data-act
+  if(dragging.dataset.act !== bin.dataset.act) return;
   chipToBin(dragging,bin);
   dragging=null;
 }
-// Drop onto pool — returns chip
 function poolDrop(e,pool){
   e.preventDefault();
   if(!dragging) return;
+  // Only accept back if this is the chip's own pool
+  if(dragging.dataset.pool !== pool.id) return;
   chipToPool(dragging);
   dragging=null;
 }
 
 // ── Tap (mobile) ──
-function chipTap(chip, e){
-  if(e) e.stopPropagation(); // prevent click bubbling to bin
-  // If chip is already in a bin → return it to pool on tap
+function chipTap(chip,e){
+  if(e) e.stopPropagation();
   if(chip.classList.contains('in-bin')){
     if(tapping){ tapping.style.outline=''; tapping=null; }
     chipToPool(chip);
     return;
   }
-  // Otherwise select/deselect it
-  if(tapping === chip){ tapping.style.outline=''; tapping=null; return; }
+  if(tapping===chip){ tapping.style.outline=''; tapping=null; return; }
   if(tapping){ tapping.style.outline=''; }
   tapping=chip; chip.style.outline='2px solid var(--gold)';
 }
-function binTap(bin, e){
+function binTap(bin,e){
   if(!tapping) return;
   if(e) e.stopPropagation();
+  // FIX: enforce activity boundary
+  if(tapping.dataset.act !== bin.dataset.act) return;
   chipToBin(tapping,bin);
   tapping.style.outline=''; tapping=null;
 }
@@ -445,8 +438,9 @@ function buildLesson(rng){
   lb.appendChild(s1);
 
   // ─── ACTIVITY 1: Drag scenarios into bins ───
+  // FIX: chips now carry the full scenario text directly (no separate numbered list)
   var scenariosES=[
-    {text:'El departamento de RRHH reporta que el 42% de los empleados de la empresa tiene contrato temporal.',ans:'D'},
+    {text:'El depto. de RRHH reporta que el 42% de los empleados de la empresa tiene contrato temporal.',ans:'D'},
     {text:'Con base en 300 encuestas, se estima que el ingreso promedio de los hogares del municipio es $8,500.',ans:'I'},
     {text:'El inventario muestra que se vendieron 1,240 unidades en marzo.',ans:'D'},
     {text:'Una prueba con 80 clientes sugiere que el nuevo empaque aumentará las ventas en toda la región.',ans:'I'},
@@ -467,38 +461,34 @@ function buildLesson(rng){
   ];
   var scenarios=shuffle(es?scenariosES:scenariosEN,rng).slice(0,6);
 
+  // FIX: chips carry full text; data-act='1'; data-pool='pool1'; data-ans has the answer
+  var chips1=scenarios.map(function(sc,i){
+    return '<div class="dd-chip" draggable="true"'+
+      ' data-act="1" data-pool="pool1" data-ans="'+sc.ans+'" data-idx="'+i+'"'+
+      ' ondragstart="ddStart(this)" ondragend="ddEnd(this)"'+
+      ' onclick="chipTap(this,event)">'+
+      sc.text+'</div>';
+  }).join('');
+
   var act1=document.createElement('div');
   act1.className='section';
   act1.id='act1';
-  var chips1=scenarios.map(function(sc,i){
-    return '<div class="dd-chip" draggable="true" data-idx="'+i+'" data-ans="'+sc.ans+'"'+
-      ' ondragstart="ddStart(this)" ondragend="ddEnd(this)"'+
-      ' onclick="chipTap(this,event)">'+
-      (es?'Escenario ':'Scenario ')+(i+1)+'</div>';
-  }).join('');
-  // scenario texts listed
-  var scTexts=scenarios.map(function(sc,i){
-    return '<div style="display:flex;gap:.5rem;margin-bottom:.45rem;font-size:.83rem;color:var(--text2);line-height:1.5">'+
-      '<span style="flex-shrink:0;font-weight:700;color:var(--green-dark)">'+(i+1)+'.</span>'+
-      '<span>'+sc.text+'</span></div>';
-  }).join('');
-
   act1.innerHTML=
     '<div class="stag">'+(es?'Actividad 1 de 4':'Activity 1 of 4')+'</div>'+
     '<h2>'+(es?'¿Descriptiva o Inferencial?':'Descriptive or Inferential?')+'</h2>'+
     '<p>'+(es?
-      'Lee cada escenario y arrastra su ficha al grupo correcto. En móvil: toca la ficha y luego el grupo.':
-      'Read each scenario and drag its chip to the correct group. On mobile: tap the chip then tap the group.')+'</p>'+
-    '<div class="gcrd" style="margin-bottom:.5rem">'+scTexts+'</div>'+
-    '<p style="font-size:.78rem;color:var(--text3);margin-bottom:.35rem">'+(es?'Arrastra las fichas:':'Drag the chips:')+'</p>'+
-    '<div class="dd-pool" id="pool1" ondragover="ddOver(event,this)" ondragleave="ddLeave(this)" ondrop="poolDrop(event,this)">'+chips1+'</div>'+
+      'Lee cada enunciado y arrástralo al grupo correcto. En móvil: toca el enunciado y luego el grupo.':
+      'Read each statement and drag it to the correct group. On mobile: tap the statement, then tap the group.')+'</p>'+
+    '<div class="dd-pool" id="pool1"'+
+      ' ondragover="ddOver(event,this)" ondragleave="ddLeave(this)"'+
+      ' ondrop="poolDrop(event,this)">'+chips1+'</div>'+
     '<div class="dd-bins cols2">'+
-      '<div class="dd-bin" id="bin1-D" data-bin="D"'+
+      '<div class="dd-bin" id="bin1-D" data-act="1"'+
         ' ondragover="ddOver(event,this)" ondragleave="ddLeave(this)" ondrop="ddDrop(event,this)"'+
         ' onclick="binTap(this,event)">'+
         '<h4>'+(es?'📊 Descriptiva':'📊 Descriptive')+'</h4>'+
       '</div>'+
-      '<div class="dd-bin" id="bin1-I" data-bin="I"'+
+      '<div class="dd-bin" id="bin1-I" data-act="1"'+
         ' ondragover="ddOver(event,this)" ondragleave="ddLeave(this)" ondrop="ddDrop(event,this)"'+
         ' onclick="binTap(this,event)">'+
         '<h4>'+(es?'🔍 Inferencial':'🔍 Inferential')+'</h4>'+
@@ -508,11 +498,10 @@ function buildLesson(rng){
       '<button class="dd-check" onclick="checkDD1()">'+(es?'✓ Verificar':'✓ Check')+'</button>'+
       '<button class="dd-reset" onclick="resetDD1()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
     '</div>'+
-    '<div class="dd-fb" id="fb1"></div>'+
-    '<div id="fb1-detail" style="display:none;margin-top:.6rem"></div>';
+    '<div class="dd-fb" id="fb1"></div>';
   lb.appendChild(act1);
 
-  // Store scenario answers for checking
+  // Store for scoring (still used for total count)
   window._sc1=scenarios;
 
   // ─── SECTION 2: Tipos de Variables ───
@@ -594,8 +583,10 @@ function buildLesson(rng){
   var varItems=shuffle(es?varItemsES:varItemsEN,rng).slice(0,8);
   window._var2=varItems;
 
+  // FIX: data-act='2'; data-pool='pool2'; data-ans carries the answer directly
   var chips2=varItems.map(function(item,i){
-    return '<div class="dd-chip gold" draggable="true" data-idx2="'+i+'" data-ans2="'+item.ans+'"'+
+    return '<div class="dd-chip gold" draggable="true"'+
+      ' data-act="2" data-pool="pool2" data-ans="'+item.ans+'" data-idx2="'+i+'"'+
       ' ondragstart="ddStart(this)" ondragend="ddEnd(this)"'+
       ' onclick="chipTap(this,event)">'+item.text+'</div>';
   }).join('');
@@ -609,19 +600,21 @@ function buildLesson(rng){
     '<p>'+(es?
       'Arrastra cada variable al grupo correcto. En móvil: toca la ficha y luego el grupo.':
       'Drag each variable to the correct group. On mobile: tap the chip then tap the group.')+'</p>'+
-    '<div class="dd-pool" id="pool2" ondragover="ddOver(event,this)" ondragleave="ddLeave(this)" ondrop="poolDrop(event,this)">'+chips2+'</div>'+
+    '<div class="dd-pool" id="pool2"'+
+      ' ondragover="ddOver(event,this)" ondragleave="ddLeave(this)"'+
+      ' ondrop="poolDrop(event,this)">'+chips2+'</div>'+
     '<div class="dd-bins" style="grid-template-columns:1fr 1fr 1fr">'+
-      '<div class="dd-bin" id="bin2-cual" data-bin2="cual"'+
+      '<div class="dd-bin" id="bin2-cual" data-act="2"'+
         ' ondragover="ddOver(event,this)" ondragleave="ddLeave(this)" ondrop="ddDrop(event,this)"'+
         ' onclick="binTap(this,event)">'+
         '<h4>'+(es?'🏷 Cualitativa':'🏷 Qualitative')+'</h4>'+
       '</div>'+
-      '<div class="dd-bin" id="bin2-disc" data-bin2="disc"'+
+      '<div class="dd-bin" id="bin2-disc" data-act="2"'+
         ' ondragover="ddOver(event,this)" ondragleave="ddLeave(this)" ondrop="ddDrop(event,this)"'+
         ' onclick="binTap(this,event)">'+
         '<h4>'+(es?'🔢 Cuant. Discreta':'🔢 Quant. Discrete')+'</h4>'+
       '</div>'+
-      '<div class="dd-bin" id="bin2-cont" data-bin2="cont"'+
+      '<div class="dd-bin" id="bin2-cont" data-act="2"'+
         ' ondragover="ddOver(event,this)" ondragleave="ddLeave(this)" ondrop="ddDrop(event,this)"'+
         ' onclick="binTap(this,event)">'+
         '<h4>'+(es?'📏 Cuant. Continua':'📏 Quant. Continuous')+'</h4>'+
@@ -647,60 +640,58 @@ function buildLesson(rng){
       '<div class="rcard">'+
         '<div class="rname">1. '+(es?'Nominal':'Nominal')+'</div>'+
         '<div class="rval">'+(es?'Solo etiquetas':'Labels only')+'</div>'+
-        '<div class="rnote">'+(es?'Categorías sin orden. No se puede decir que una es "mayor" que otra.':'Categories with no order. You cannot say one is "greater" than another.')+'<br><em style="font-size:.72rem;color:var(--gold)">'+(es?'Ej: color, género, región':'Ex: color, gender, region')+'</em></div>'+
+        '<div class="rnote">'+(es?'Categorías sin orden.':'Categories with no order.')+'<br><em style="font-size:.72rem;color:var(--gold)">'+(es?'Ej: color, género, región':'Ex: color, gender, region')+'</em></div>'+
       '</div>'+
       '<div class="rcard">'+
         '<div class="rname">2. '+(es?'Ordinal':'Ordinal')+'</div>'+
         '<div class="rval">'+(es?'Orden, sin distancia':'Order, no distance')+'</div>'+
-        '<div class="rnote">'+(es?'Hay orden claro, pero la distancia entre niveles no es exacta ni igual.':'There is a clear order, but the distance between levels is not exact or equal.')+'<br><em style="font-size:.72rem;color:var(--gold)">'+(es?'Ej: Bajo / Medio / Alto':'Ex: Low / Medium / High')+'</em></div>'+
+        '<div class="rnote">'+(es?'Hay orden claro, pero la distancia entre niveles no es exacta.':'Clear order, but distances between levels are not exact.')+'<br><em style="font-size:.72rem;color:var(--gold)">'+(es?'Ej: Bajo / Medio / Alto':'Ex: Low / Medium / High')+'</em></div>'+
       '</div>'+
       '<div class="rcard">'+
         '<div class="rname">3. '+(es?'Intervalo':'Interval')+'</div>'+
         '<div class="rval">'+(es?'Distancias iguales':'Equal distances')+'</div>'+
-        '<div class="rnote">'+(es?'Las distancias entre valores son iguales, pero el cero no significa "ausencia total".':'Distances between values are equal, but zero does not mean "total absence".')+'<br><em style="font-size:.72rem;color:var(--gold)">'+(es?'Ej: temperatura °C, año calendario':'Ex: temperature °C, calendar year')+'</em></div>'+
+        '<div class="rnote">'+(es?'Distancias iguales, pero el cero no significa ausencia total.':'Equal distances, but zero does not mean total absence.')+'<br><em style="font-size:.72rem;color:var(--gold)">'+(es?'Ej: temperatura °C, año':'Ex: temperature °C, year')+'</em></div>'+
       '</div>'+
       '<div class="rcard">'+
         '<div class="rname">4. '+(es?'Razón':'Ratio')+'</div>'+
         '<div class="rval">'+(es?'Distancias + cero real':'Distances + true zero')+'</div>'+
-        '<div class="rnote">'+(es?'Como intervalo, pero el cero significa ausencia real. Puedes decir "el doble de".':'Like interval, but zero means true absence. You can say "twice as much".')+'<br><em style="font-size:.72rem;color:var(--gold)">'+(es?'Ej: ventas en $, edad, peso':'Ex: sales in $, age, weight')+'</em></div>'+
+        '<div class="rnote">'+(es?'Cero significa ausencia real. Puedes decir "el doble de".':'Zero means true absence. You can say "twice as much".')+'<br><em style="font-size:.72rem;color:var(--gold)">'+(es?'Ej: ventas en $, edad, peso':'Ex: sales in $, age, weight')+'</em></div>'+
       '</div>'+
     '</div>'+
     '<div class="callout">'+
       '<strong>'+(es?'Truco para Intervalo vs. Razón:':'Trick for Interval vs. Ratio:')+'</strong>'+
       '<p>'+(es?
-        ' Pregúntate: ¿el cero significa <em>nada</em> de verdad? 0°C no significa nada de calor → <strong>Intervalo</strong>. $0 de ventas sí significa ninguna venta → <strong>Razón</strong>.':
-        ' Ask yourself: does zero truly mean <em>nothing</em>? 0°C doesn\'t mean no heat → <strong>Interval</strong>. $0 in sales truly means no sales → <strong>Ratio</strong>.')+'</p>'+
+        ' ¿El cero significa <em>nada</em> de verdad? 0°C no significa nada de calor → <strong>Intervalo</strong>. $0 de ventas sí significa ninguna venta → <strong>Razón</strong>.':
+        ' Does zero truly mean <em>nothing</em>? 0°C doesn\'t mean no heat → <strong>Interval</strong>. $0 in sales truly means no sales → <strong>Ratio</strong>.')+'</p>'+
     '</div>';
   lb.appendChild(s3);
-
-
 
   // ─── ACTIVITY 3: Match variables to levels ───
   var matchItemsES=[
     {v:'Código postal del cliente',    ctx:'Registro bancario',            ans:'nominal'},
     {v:'Temperatura de almacén (°C)',  ctx:'Control de calidad',           ans:'intervalo'},
-    {v:'Número de quejas por semana',  ctx:'Reporte de servicio',          ans:'discreta'},
+    {v:'Número de quejas por semana',  ctx:'Reporte de servicio',          ans:'razon'},
     {v:'Satisfacción: Malo/Regular/Bueno/Excelente', ctx:'Encuesta',      ans:'ordinal'},
     {v:'Ingresos mensuales ($)',       ctx:'Base de datos de nómina',      ans:'razon'},
     {v:'Sector industrial',            ctx:'Encuesta empresarial',         ans:'nominal'},
     {v:'Año de fundación de la empresa',ctx:'Directorio corporativo',      ans:'intervalo'},
-    {v:'Unidades producidas por turno',ctx:'Reporte de planta',            ans:'discreta'}
+    {v:'Unidades producidas por turno',ctx:'Reporte de planta',            ans:'razon'}
   ];
   var matchItemsEN=[
     {v:'Customer postal code',         ctx:'Bank records',                 ans:'nominal'},
     {v:'Warehouse temperature (°C)',   ctx:'Quality control',              ans:'intervalo'},
-    {v:'Complaints per week',          ctx:'Service report',               ans:'discreta'},
+    {v:'Complaints per week',          ctx:'Service report',               ans:'razon'},
     {v:'Satisfaction: Poor/Fair/Good/Excellent', ctx:'Survey',            ans:'ordinal'},
     {v:'Monthly income ($)',           ctx:'Payroll database',             ans:'razon'},
-    {v:'Industry sector',              ctx:'Business survey',              ans:'nominal'},
+    {v:'Industry sector',             ctx:'Business survey',               ans:'nominal'},
     {v:'Year company was founded',     ctx:'Corporate directory',          ans:'intervalo'},
-    {v:'Units produced per shift',     ctx:'Plant report',                 ans:'discreta'}
+    {v:'Units produced per shift',     ctx:'Plant report',                 ans:'razon'}
   ];
   var matchItems=shuffle(es?matchItemsES:matchItemsEN,rng).slice(0,6);
 
   var levelOpts=es?
-    '<option value="">—</option><option value="nominal">Nominal</option><option value="ordinal">Ordinal</option><option value="intervalo">Intervalo</option><option value="razon">Razón</option><option value="discreta">Cuant. Discreta</option>':
-    '<option value="">—</option><option value="nominal">Nominal</option><option value="ordinal">Ordinal</option><option value="intervalo">Interval</option><option value="razon">Ratio</option><option value="discreta">Quant. Discrete</option>';
+    '<option value="">—</option><option value="nominal">Nominal</option><option value="ordinal">Ordinal</option><option value="intervalo">Intervalo</option><option value="razon">Razón</option>':
+    '<option value="">—</option><option value="nominal">Nominal</option><option value="ordinal">Ordinal</option><option value="intervalo">Interval</option><option value="razon">Ratio</option>';
 
   var rows=matchItems.map(function(item,i){
     return '<div class="match-row" id="mr'+i+'">'+
@@ -734,7 +725,6 @@ function buildLesson(rng){
   // ─── SECTION 4: Caso Integrador ───
   var s4=document.createElement('div');
   s4.className='section';
-  // pick a randomised business context
   var contexts=es?[
     {biz:'una cadena de farmacias',study:'la empresa encuestó a 400 clientes para estimar la satisfacción de todos sus clientes a nivel nacional'},
     {biz:'una empresa manufacturera',study:'el gerente revisó la producción exacta de las 12 líneas de ensamblaje del mes pasado'},
@@ -775,100 +765,96 @@ function buildLesson(rng){
             'At '+ctx.biz+', '+ctx.study+'. Among the collected data: <strong>branch region</strong>, <strong>number of customer visits per month</strong>, and <strong>annual customer income</strong>.')+
       '</div>'+
     '</div>'+
-
-    // Q1
     '<div class="case-box">'+
       '<div class="case-q"><strong>1. </strong>'+(es?'¿Este estudio es descriptivo o inferencial? ¿Por qué?':'Is this study descriptive or inferential? Why?')+'</div>'+
       '<textarea class="case-input" id="ci1" rows="2" placeholder="'+(es?'Escribe tu respuesta...':'Write your answer...')+'"></textarea>'+
       '<button class="case-reveal" onclick="reveal(\'ca1\')">'+(es?'Ver respuesta':'See answer')+'</button>'+
       '<div class="case-answer" id="ca1">'+
         (es?
-          '<strong>'+( ctx.study.includes('estimó')||ctx.study.includes('estimated')||ctx.study.includes('encuestó')||ctx.study.includes('surveyed') ? 'Inferencial.' : 'Descriptivo.' )+'</strong> '+
-          ( ctx.study.includes('encuestó')||ctx.study.includes('surveyed') ?
-            'Se usó una muestra (400 clientes) para concluir algo sobre <em>todos</em> los clientes a nivel nacional. El resultado va más allá del grupo observado.' :
-            ctx.study.includes('estimó') || ctx.study.includes('estimated') ?
-            'Se usó una muestra (250 cuentas) para estimar algo sobre <em>todos</em> los clientes del banco. El resultado va más allá del grupo observado.' :
-            'Se observaron las 12 líneas completas, sin extrapolar a ninguna población mayor. El resultado describe exactamente el grupo medido.' ) :
+          '<strong>'+( ctx.study.includes('estimó')||ctx.study.includes('encuestó') ? 'Inferencial.' : 'Descriptivo.' )+'</strong> '+
+          ( ctx.study.includes('encuestó') ?
+            'Se usó una muestra (400 clientes) para concluir algo sobre <em>todos</em> los clientes a nivel nacional.' :
+            ctx.study.includes('estimó') ?
+            'Se usó una muestra (250 cuentas) para estimar algo sobre <em>todos</em> los clientes del banco.' :
+            'Se observaron las 12 líneas completas, sin extrapolar a ninguna población mayor.' ) :
           '<strong>'+( ctx.study.includes('estimated')||ctx.study.includes('surveyed') ? 'Inferential.' : 'Descriptive.' )+'</strong> '+
           ( ctx.study.includes('surveyed') ?
-            'A sample (400 customers) was used to conclude something about <em>all</em> customers nationwide. The result goes beyond the observed group.' :
+            'A sample (400 customers) was used to conclude something about <em>all</em> customers nationwide.' :
             ctx.study.includes('estimated') ?
-            'A sample (250 accounts) was used to estimate something about <em>all</em> bank customers. The result goes beyond the observed group.' :
-            'All 12 lines were observed without extrapolating to a larger population. The result describes exactly the group measured.' ))+
+            'A sample (250 accounts) was used to estimate something about <em>all</em> bank customers.' :
+            'All 12 lines were observed without extrapolating to a larger population.' ))+
       '</div>'+
     '</div>'+
-
-    // Q2
     '<div class="case-box">'+
       '<div class="case-q"><strong>2. </strong>'+(es?'Clasifica las tres variables (cualitativa, cuantitativa discreta, cuantitativa continua):':'Classify the three variables (qualitative, quantitative discrete, quantitative continuous):')+'</div>'+
       '<textarea class="case-input" id="ci2" rows="3" placeholder="'+(es?'Escribe tu clasificación...':'Write your classification...')+'"></textarea>'+
       '<button class="case-reveal" onclick="reveal(\'ca2\')">'+(es?'Ver respuesta':'See answer')+'</button>'+
       '<div class="case-answer" id="ca2">'+
-        '<strong>'+(es?'Región de la sucursal':'Branch region')+'</strong> → '+(es?'Cualitativa':'Qualitative')+' ('+( es?'es una categoría sin valor numérico':'it is a category with no numerical value')+').<br>'+
-        '<strong>'+(es?'Número de visitas al mes':'Visits per month')+'</strong> → '+(es?'Cuantitativa discreta':'Quantitative discrete')+' ('+( es?'es un conteo entero; no puede ser 3.7 visitas':'it is a whole number count; cannot be 3.7 visits')+').<br>'+
-        '<strong>'+(es?'Ingresos anuales':'Annual income')+'</strong> → '+(es?'Cuantitativa continua':'Quantitative continuous')+' ('+( es?'puede tomar cualquier valor decimal; ej: $42,318.50':'can take any decimal value; ex: $42,318.50')+').'+
+        '<strong>'+(es?'Región de la sucursal':'Branch region')+'</strong> → '+(es?'Cualitativa':'Qualitative')+' ('+(es?'categoría sin valor numérico':'category with no numerical value')+').<br>'+
+        '<strong>'+(es?'Número de visitas al mes':'Visits per month')+'</strong> → '+(es?'Cuantitativa discreta':'Quantitative discrete')+' ('+(es?'conteo entero; no puede ser 3.7 visitas':'whole number count; cannot be 3.7 visits')+').<br>'+
+        '<strong>'+(es?'Ingresos anuales':'Annual income')+'</strong> → '+(es?'Cuantitativa continua':'Quantitative continuous')+' ('+(es?'puede tomar cualquier valor decimal':'can take any decimal value')+').'+
       '</div>'+
     '</div>'+
-
-    // Q3
     '<div class="case-box">'+
       '<div class="case-q"><strong>3. </strong>'+(es?'¿Cuál es el nivel de medición de los ingresos anuales? ¿Por qué no es Intervalo?':'What is the level of measurement of annual income? Why is it not Interval?')+'</div>'+
       '<textarea class="case-input" id="ci3" rows="2" placeholder="'+(es?'Escribe tu respuesta...':'Write your answer...')+'"></textarea>'+
       '<button class="case-reveal" onclick="reveal(\'ca3\')">'+(es?'Ver respuesta':'See answer')+'</button>'+
       '<div class="case-answer" id="ca3">'+
         '<strong>'+(es?'Razón.':'Ratio.')+'</strong> '+(es?
-          '$0 de ingresos significa ausencia real de ingresos (cero absoluto verdadero). Por eso se puede decir que alguien gana "el doble" que otro. En Intervalo (como temperatura °C) el cero no significa ausencia total, y esa operación no tendría sentido.':
-          '$0 in income means a true absence of income (true absolute zero). That is why you can say someone earns "twice as much" as another. In Interval (like °C temperature) zero does not mean total absence, and that operation would not make sense.')+
+          '$0 de ingresos significa ausencia real (cero absoluto verdadero). Por eso se puede decir que alguien gana "el doble" que otro. En Intervalo (temperatura °C) el cero no significa ausencia total.':
+          '$0 in income means a true absence of income (true absolute zero). That is why you can say someone earns "twice as much". In Interval (°C temperature) zero does not mean total absence.')+
       '</div>'+
     '</div>';
   lb.appendChild(act4);
-
-  // Mark act4 as done when any reveal is clicked (it's reflective, not scored)
-  // Score tracked separately
 }
 
 // ═══════════════════════════════════════════════════
-// ACTIVITY 1 CHECK
+// ACTIVITY 1 CHECK  (reads data-ans from chip directly)
 // ═══════════════════════════════════════════════════
 function checkDD1(){
-  var scenarios=window._sc1;
   var binD=document.getElementById('bin1-D');
   var binI=document.getElementById('bin1-I');
-  var correct=0; var total=0;
-  var placed={};
-  binD.querySelectorAll('.dd-chip').forEach(function(chip){
-    var idx=parseInt(chip.dataset.idx);
-    placed[idx]='D'; total++;
-    var ok=scenarios[idx].ans==='D';
-    chip.classList.add(ok?'ok-chip':'bad-chip');
-    if(ok) correct++;
-  });
-  binI.querySelectorAll('.dd-chip').forEach(function(chip){
-    var idx=parseInt(chip.dataset.idx);
-    placed[idx]='I'; total++;
-    var ok=scenarios[idx].ans==='I';
-    chip.classList.add(ok?'ok-chip':'bad-chip');
-    if(ok) correct++;
-  });
-  var fb=document.getElementById('fb1');
+  var correct=0, total=0;
   var es=LANG==='es';
-  if(total<scenarios.length){
+
+  // Only process chips that belong to activity 1
+  binD.querySelectorAll('.dd-chip[data-act="1"]').forEach(function(chip){
+    total++;
+    var ok=(chip.dataset.ans==='D');
+    chip.classList.add(ok?'ok-chip':'bad-chip');
+    if(ok) correct++;
+  });
+  binI.querySelectorAll('.dd-chip[data-act="1"]').forEach(function(chip){
+    total++;
+    var ok=(chip.dataset.ans==='I');
+    chip.classList.add(ok?'ok-chip':'bad-chip');
+    if(ok) correct++;
+  });
+
+  var needed=window._sc1.length;
+  var fb=document.getElementById('fb1');
+  if(total<needed){
     fb.className='dd-fb show part';
-    fb.textContent=es?'⚠ Coloca todas las fichas antes de verificar.':'⚠ Place all chips before checking.';
+    fb.textContent=es?'⚠ Coloca todos los enunciados antes de verificar.':'⚠ Place all statements before checking.';
+    // clear any partial coloring
+    binD.querySelectorAll('.dd-chip').forEach(function(c){c.classList.remove('ok-chip','bad-chip');});
+    binI.querySelectorAll('.dd-chip').forEach(function(c){c.classList.remove('ok-chip','bad-chip');});
     return;
   }
   if(correct===total){
     fb.className='dd-fb show ok';
-    fb.textContent=es?'✓ ¡Perfecto! Todos los escenarios están clasificados correctamente.':'✓ Perfect! All scenarios are correctly classified.';
+    fb.textContent=es?'✓ ¡Perfecto! Todos los enunciados están clasificados correctamente.':'✓ Perfect! All statements are correctly classified.';
   } else {
     fb.className='dd-fb show bad';
-    fb.textContent=(es?'Obtuviste '+correct+' de '+total+' correctos. Las fichas en rojo están mal clasificadas.':'You got '+correct+' out of '+total+' correct. The red chips are misclassified.');
+    fb.textContent=(es?'Obtuviste '+correct+' de '+total+' correctos. Los enunciados en rojo están mal clasificados.':'You got '+correct+' out of '+total+' correct. Red statements are misclassified.');
   }
   activityScores.dd1=correct/total;
   updateProgress();
-  document.querySelectorAll('#bin1-D .dd-chip, #bin1-I .dd-chip').forEach(function(c){c.style.pointerEvents='none'; c.style.cursor='default';});
+  binD.querySelectorAll('.dd-chip').forEach(function(c){c.style.pointerEvents='none';c.style.cursor='default';});
+  binI.querySelectorAll('.dd-chip').forEach(function(c){c.style.pointerEvents='none';c.style.cursor='default';});
   document.querySelector('#act1 .dd-check').disabled=true;
 }
+
 function resetDD1(){
   var pool=document.getElementById('pool1');
   ['bin1-D','bin1-I'].forEach(function(id){
@@ -884,27 +870,32 @@ function resetDD1(){
 }
 
 // ═══════════════════════════════════════════════════
-// ACTIVITY 2 CHECK (tipos de variables)
+// ACTIVITY 2 CHECK  (reads data-ans from chip directly)
 // ═══════════════════════════════════════════════════
 function checkDD2(){
-  var items=window._var2;
-  var bins={cual:document.getElementById('bin2-cual'),disc:document.getElementById('bin2-disc'),cont:document.getElementById('bin2-cont')};
-  var correct=0; var total=0;
-  ['cual','disc','cont'].forEach(function(binKey){
-    var bin=bins[binKey];
-    bin.querySelectorAll('.dd-chip').forEach(function(chip){
-      var idx=parseInt(chip.dataset.idx2);
+  var binKeys=['cual','disc','cont'];
+  var correct=0, total=0;
+  var es=LANG==='es';
+
+  binKeys.forEach(function(binKey){
+    var bin=document.getElementById('bin2-'+binKey);
+    // Only process chips that belong to activity 2
+    bin.querySelectorAll('.dd-chip[data-act="2"]').forEach(function(chip){
       total++;
-      var ok=items[idx].ans===binKey;
+      var ok=(chip.dataset.ans===binKey);
       chip.classList.add(ok?'ok-chip':'bad-chip');
       if(ok) correct++;
     });
   });
+
+  var needed=window._var2.length;
   var fb=document.getElementById('fb2');
-  var es=LANG==='es';
-  if(total<items.length){
+  if(total<needed){
     fb.className='dd-fb show part';
     fb.textContent=es?'⚠ Coloca todas las fichas antes de verificar.':'⚠ Place all chips before checking.';
+    binKeys.forEach(function(k){
+      document.getElementById('bin2-'+k).querySelectorAll('.dd-chip').forEach(function(c){c.classList.remove('ok-chip','bad-chip');});
+    });
     return;
   }
   if(correct===total){
@@ -916,11 +907,12 @@ function checkDD2(){
   }
   activityScores.dd2=correct/total;
   updateProgress();
-  ['cual','disc','cont'].forEach(function(k){
-    document.getElementById('bin2-'+k).querySelectorAll('.dd-chip').forEach(function(c){c.style.pointerEvents='none'; c.style.cursor='default';});
+  binKeys.forEach(function(k){
+    document.getElementById('bin2-'+k).querySelectorAll('.dd-chip').forEach(function(c){c.style.pointerEvents='none';c.style.cursor='default';});
   });
   document.querySelector('#act2 .dd-check').disabled=true;
 }
+
 function resetDD2(){
   var pool=document.getElementById('pool2');
   ['cual','disc','cont'].forEach(function(k){
@@ -934,7 +926,6 @@ function resetDD2(){
   var btn=document.querySelector('#act2 .dd-check'); if(btn) btn.disabled=false;
   activityScores.dd2=null; updateProgress();
 }
-
 
 // ═══════════════════════════════════════════════════
 // ACTIVITY 3 CHECK (levels of measurement)
@@ -950,9 +941,9 @@ function checkMatch(){
     var val=sel.value;
     if(!val){ row.className='match-row'; icon.textContent=''; return; }
     sel.disabled=true;
-    var ok=val===item.ans;
+    var ok=(val===item.ans);
     if(ok){ correct++; row.className='match-row ok'; icon.textContent='✓'; }
-    else { row.className='match-row bad'; icon.textContent='✗'; }
+    else   { row.className='match-row bad'; icon.textContent='✗'; }
   });
   var total=items.length;
   var fb=document.getElementById('fb3');
@@ -967,14 +958,14 @@ function checkMatch(){
   updateProgress();
   document.querySelector('#act3 .dd-check').disabled=true;
 }
+
 function resetMatch(){
   var items=window._matchItems;
   items.forEach(function(item,i){
     var sel=document.getElementById('ms'+i);
-    var row=document.getElementById('mr'+i);
-    var icon=document.getElementById('mi'+i);
     sel.value=''; sel.disabled=false;
-    row.className='match-row'; icon.textContent='';
+    document.getElementById('mr'+i).className='match-row';
+    document.getElementById('mi'+i).textContent='';
   });
   var fb=document.getElementById('fb3'); fb.className='dd-fb';
   var btn=document.querySelector('#act3 .dd-check'); if(btn) btn.disabled=false;
@@ -982,7 +973,7 @@ function resetMatch(){
 }
 
 // ═══════════════════════════════════════════════════
-// ACTIVITY 3 REVEAL
+// ACTIVITY 4 REVEAL
 // ═══════════════════════════════════════════════════
 var revealed=0;
 function reveal(id){
@@ -998,44 +989,68 @@ function reveal(id){
 // ═══════════════════════════════════════════════════
 // PDF
 // ═══════════════════════════════════════════════════
+// Detect iOS Safari — it blocks programmatic blob downloads outside a direct gesture
+function isIOS(){
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+}
+
+function buildPDFDoc(){
+  var es=LANG==='es';
+  var jspdf=window.jspdf;
+  var doc=new jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+  var PW=215.9,M=18,TW=PW-M*2,y=20;
+  var pBR=26,pBG=74,pBB=138;
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,16,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text((es?'Introduccion a la Estadistica - Semana 1':'Introduction to Statistics - Week 1'),M,11);
+  y=24;
+  doc.setTextColor(20,24,32); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text((es?'Alumno: ':'Student: ')+studentName+'   '+(es?'Grupo: ':'Group: ')+studentGroup,M,y); y+=6;
+  doc.text(new Date().toLocaleDateString(es?'es-MX':'en-US'),M,y); y+=10;
+  var s1=activityScores.dd1!==null?Math.round(activityScores.dd1*6)+'/6':'-';
+  var s2=activityScores.dd2!==null?Math.round(activityScores.dd2*8)+'/8':'-';
+  var s3=activityScores.match1!==null?Math.round(activityScores.match1*6)+'/6':'-';
+  var s4=activityScores.case1!==null?'3/3':'-';
+  doc.setFillColor(237,245,235); doc.roundedRect(M,y,TW,22,3,3,'F');
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text(es?'RESULTADOS POR ACTIVIDAD':'ACTIVITY RESULTS',M+4,y+7);
+  doc.setTextColor(20,24,32); doc.setFont('helvetica','normal');
+  doc.text((es?'Act 1 - Descriptiva/Inferencial: ':'Act 1 - Descriptive/Inferential: ')+s1,M+4,y+13);
+  doc.text((es?'Act 2 - Tipos de variables: ':'Act 2 - Variable types: ')+s2,M+80,y+13);
+  doc.text((es?'Act 3 - Niveles de medicion: ':'Act 3 - Levels of measurement: ')+s3,M+4,y+19);
+  doc.text((es?'Act 4 - Caso integrador: ':'Act 4 - Integrative case: ')+s4,M+80,y+19);
+  y+=28;
+  doc.setTextColor(130,140,160); doc.setFontSize(7);
+  doc.text('ALEXIS - liaxa.mx', PW/2, y, {align:'center'});
+  return doc;
+}
+
 function generatePDF(){
   var btn=document.getElementById('dlBtn');
   var es=LANG==='es';
-  btn.textContent=es?'Generando PDF...':'Generating PDF...';
-  btn.disabled=true;
-  setTimeout(function(){
-    var jspdf=window.jspdf;
-    var doc=new jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
-    var PW=215.9,M=18,TW=PW-M*2,y=20;
-    var pBR=26,pBG=74,pBB=138;
-    // header
-    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,16,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
-    doc.text((es?'Introducción a la Estadística · Semana 1':'Introduction to Statistics · Week 1'),M,11);
-    y=24;
-    doc.setTextColor(20,24,32); doc.setFontSize(9); doc.setFont('helvetica','normal');
-    doc.text((es?'Alumno: ':'Student: ')+studentName+'   '+( es?'Grupo: ':'Group: ')+studentGroup,M,y); y+=6;
-    doc.text(new Date().toLocaleDateString(es?'es-MX':'en-US'),M,y); y+=10;
-    // scores
-    var s1=activityScores.dd1!==null?Math.round(activityScores.dd1*6)+'/6':'-';
-    var s2=activityScores.dd2!==null?Math.round(activityScores.dd2*8)+'/8':'-';
-    var s3=activityScores.match1!==null?Math.round(activityScores.match1*6)+'/6':'-';
-    var s4=activityScores.case1!==null?'3/3':'-';
-    doc.setFillColor(237,245,235); doc.roundedRect(M,y,TW,22,3,3,'F');
-    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(8); doc.setFont('helvetica','bold');
-    doc.text(es?'RESULTADOS POR ACTIVIDAD':'ACTIVITY RESULTS',M+4,y+7);
-    doc.setTextColor(20,24,32); doc.setFont('helvetica','normal');
-    doc.text((es?'Act 1 – Descriptiva/Inferencial: ':'Act 1 – Descriptive/Inferential: ')+s1,M+4,y+13);
-    doc.text((es?'Act 2 – Tipos de variables: ':'Act 2 – Variable types: ')+s2,M+80,y+13);
-    doc.text((es?'Act 3 – Niveles de medición: ':'Act 3 – Levels of measurement: ')+s3,M+4,y+19);
-    doc.text((es?'Act 4 – Caso integrador: ':'Act 4 – Integrative case: ')+s4,M+80,y+19);
-    y+=28;
-    doc.setTextColor(130,140,160); doc.setFontSize(7);
-    doc.text('ALEXIS · liaxa.mx', PW/2, y, {align:'center'});
-    doc.save('estadistica_sem1_'+studentName.replace(/\s+/g,'_')+'.pdf');
+  var filename='estadistica_sem1_'+studentName.replace(/\s+/g,'_')+'.pdf';
+
+  if(isIOS()){
+    // iOS Safari cannot download blobs triggered outside a direct tap gesture.
+    // Open the PDF in a new tab instead — user taps Share > Save to Files / Print.
+    btn.textContent=es?'Abriendo PDF...':'Opening PDF...';
+    btn.disabled=true;
+    var doc=buildPDFDoc();
+    doc.output('dataurlnewwindow',{filename:filename});
     btn.textContent=es?'⬇ Descargar resultados en PDF':'⬇ Download results as PDF';
     btn.disabled=false;
-  },200);
+  } else {
+    // Android, desktop: standard blob download
+    btn.textContent=es?'Generando PDF...':'Generating PDF...';
+    btn.disabled=true;
+    setTimeout(function(){
+      var doc=buildPDFDoc();
+      doc.save(filename);
+      btn.textContent=es?'⬇ Descargar resultados en PDF':'⬇ Download results as PDF';
+      btn.disabled=false;
+    },200);
+  }
 }
 </script>
 </body>
