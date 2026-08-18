@@ -1,0 +1,2208 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visualización de Datos · ALEXIS</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green:      #1a4a8a;
+  --green-dark: #0f2d5a;
+  --green-bg:   #e8edf5;
+  --gold:       #c9a84c;
+  --gold-bg:    #faf3e0;
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #1e7d45;
+  --ok-bg:      rgba(30,125,69,.12);
+  --bad:        #c0321a;
+  --bad-bg:     rgba(192,50,26,.10);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:#18181a; --surface:#242420; --surface2:#2e2e28; --border:#3a3830;
+  --text:#e8e4da; --text2:#b0aa9e; --text3:#7a7468; --shadow:0 4px 20px rgba(0,0,0,.35);
+  --green:#4a7abf; --green-dark:#7aaae0; --green-bg:#0e1e38;
+  --gold:#d4b86a; --gold-bg:#241e0e;
+  --ok:#4a9a6f; --ok-bg:rgba(74,154,111,.12);
+  --bad:#c05030; --bad-bg:rgba(192,80,48,.10);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+
+/* WELCOME */
+#welcomeScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem}
+.wcard{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:2.4rem 2rem;width:100%;max-width:460px;text-align:center;border-top:4px solid var(--gold)}
+.wlogos{display:flex;justify-content:center;align-items:center;gap:1.4rem;margin-bottom:1.6rem;padding-bottom:1.6rem;border-bottom:1px solid var(--border)}
+.wtitle{font-family:'Crimson Pro',serif;font-size:1.65rem;font-weight:700;margin-bottom:.25rem}
+.wcourse{font-size:.78rem;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:1.6rem}
+.flabel{display:block;font-size:.75rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;text-align:left}
+.finput{width:100%;padding:.7rem .9rem;border:1.5px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:.95rem;font-family:inherit;margin-bottom:.9rem;transition:border-color .18s}
+.finput:focus{outline:none;border-color:var(--green)}
+.sbtn{width:100%;padding:.85rem;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;transition:background .18s}
+.sbtn:hover{background:var(--green-dark)}
+.serr{min-height:1.2rem;font-size:.82rem;color:var(--bad);margin-top:.4rem}
+.wfoot{margin-top:1rem;font-size:.75rem;color:var(--text3)}
+
+/* LESSON */
+#lessonScreen{display:none}
+.stickybar{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1.2rem;display:flex;align-items:center;gap:.7rem;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.hlogos{display:flex;gap:.5rem;align-items:center}
+.hsep{width:1px;height:22px;background:var(--border);flex-shrink:0}
+.htitle{font-family:'Crimson Pro',serif;font-size:1rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.hchip{font-size:.7rem;background:var(--green-bg);color:var(--green-dark);padding:.2rem .65rem;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.tbtn{background:none;border:1px solid var(--border);border-radius:7px;padding:.28rem .55rem;cursor:pointer;font-size:.82rem;color:var(--text2);flex-shrink:0}
+.progbar{height:3px;background:var(--border);position:sticky;top:47px;z-index:99}
+.progfill{height:100%;background:var(--green);width:0%;transition:width .4s}
+.lang-toggle{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;flex-shrink:0}
+.lang-btn{padding:.28rem .7rem;font-size:.72rem;font-weight:600;letter-spacing:.06em;cursor:pointer;border:none;background:none;color:var(--text3);font-family:inherit;transition:all .15s}
+.lang-btn.active{background:var(--green);color:#fff}
+
+/* CONTENT */
+.lbody{max-width:780px;margin:0 auto;padding:2rem 1.2rem 4rem}
+.section{opacity:0;transform:translateY(16px);transition:opacity .48s,transform .48s;margin-bottom:2.8rem}
+.section.vis{opacity:1;transform:none}
+.stag{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.45rem}
+.section h2{font-family:'Crimson Pro',serif;font-size:1.65rem;font-weight:700;margin-bottom:.7rem}
+.section p{color:var(--text2);margin-bottom:.8rem}
+.callout{background:var(--green-bg);border-left:4px solid var(--green);border-radius:0 10px 10px 0;padding:1rem 1.2rem;margin:1rem 0}
+.callout strong{color:var(--green-dark)}
+.callout p{margin-bottom:0}
+.gold-callout{background:var(--gold-bg);border-left:4px solid var(--gold);border-radius:0 10px 10px 0;padding:1rem 1.2rem;margin:1rem 0}
+.gold-callout strong{color:#7a5800}
+.gcrd{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.3rem;margin:.9rem 0}
+.gcrd p{margin-bottom:.5rem}
+
+/* RULE CARDS */
+.rules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:.75rem;margin:1.1rem 0}
+.rcard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem;border-top:3px solid var(--green);overflow-x:auto}
+.rname{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:.35rem}
+.rval{font-size:.88rem;color:var(--green-dark);font-weight:600;margin-bottom:.3rem}
+.rnote{font-size:.76rem;color:var(--text3)}
+
+/* DRAG-DROP */
+.dd-pool{display:flex;flex-wrap:wrap;gap:.5rem;padding:.9rem;background:var(--surface2);border-radius:10px;border:2px dashed var(--border);margin:.75rem 0;min-height:52px}
+.dd-chip{background:var(--green);color:#fff;border-radius:6px;padding:.32rem .8rem;font-size:.82rem;font-weight:500;cursor:grab;user-select:none;transition:opacity .15s,transform .1s;border:2px solid transparent}
+.dd-chip:active{cursor:grabbing;transform:scale(1.06)}
+.dd-chip.gold-chip{background:var(--gold);color:#1a1a00}
+.dd-chip.in-bin{cursor:default}
+.dd-chip.ok-chip{background:var(--ok);border-color:var(--ok)}
+.dd-chip.bad-chip{background:var(--bad);border-color:var(--bad)}
+.dd-bins{display:grid;gap:.65rem;margin:.75rem 0}
+.dd-bins.cols2{grid-template-columns:1fr 1fr}
+.dd-bin{min-height:70px;border-radius:10px;border:2px dashed var(--border);padding:.6rem .8rem;background:var(--surface);transition:background .16s,border-color .16s}
+.dd-bin.over{background:var(--green-bg);border-color:var(--green)}
+.dd-bin h4{font-size:.72rem;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.45rem;pointer-events:none}
+.dd-actions{display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap}
+.dd-check{background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.1rem;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit}
+.dd-reset{background:none;border:1.5px solid var(--border);color:var(--text2);border-radius:8px;padding:.45rem .9rem;font-size:.82rem;cursor:pointer;font-family:inherit}
+.dd-fb{font-size:.82rem;margin-top:.55rem;padding:.55rem .85rem;border-radius:8px;display:none;line-height:1.5}
+.dd-fb.show{display:block}
+.dd-fb.ok{background:var(--ok-bg);color:var(--ok)}
+.dd-fb.bad{background:var(--bad-bg);color:var(--bad)}
+.dd-fb.part{background:var(--gold-bg);color:#7a5800}
+
+/* MATCH ROWS */
+.match-grid{display:flex;flex-direction:column;gap:.55rem;margin:.75rem 0}
+.match-row{display:flex;align-items:center;gap:.65rem;background:var(--surface);border:1.5px solid var(--border);border-radius:9px;padding:.65rem .9rem;transition:border-color .2s}
+.match-row.ok{border-color:var(--ok);background:var(--ok-bg)}
+.match-row.bad{border-color:var(--bad);background:var(--bad-bg)}
+.match-var{flex:1;font-size:.85rem;font-weight:500}
+.match-sel{border:1.5px solid var(--border);border-radius:7px;padding:.35rem .5rem;font-family:'IBM Plex Sans',sans-serif;font-size:.8rem;background:var(--surface2);color:var(--text);cursor:pointer;min-width:130px}
+.match-sel:focus{outline:none;border-color:var(--green)}
+.match-icon{font-size:1rem;flex-shrink:0;width:22px;text-align:center}
+
+/* HISTOGRAM INTERACTIVE */
+.hist-container{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.4rem;margin:1rem 0}
+.hist-controls{display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:1rem;align-items:center}
+.scenario-btn{padding:.38rem .85rem;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .18s}
+.scenario-btn.active{background:var(--green);color:#fff;border-color:var(--green)}
+.slider-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.5rem}
+.slider-row label{font-size:.75rem;color:var(--text3);white-space:nowrap;min-width:90px}
+.slider-row input[type=range]{flex:1;accent-color:var(--green)}
+.slider-val{font-size:.78rem;font-family:'IBM Plex Mono',monospace;color:var(--green-dark);min-width:32px;text-align:right}
+#histCanvas{width:100%;border-radius:8px;display:block}
+.hist-caption{font-size:.78rem;color:var(--text3);margin-top:.6rem;text-align:center;font-style:italic}
+.shape-badge{display:inline-block;background:var(--green-bg);color:var(--green-dark);border-radius:20px;padding:.22rem .75rem;font-size:.75rem;font-weight:600;margin-left:.4rem}
+
+/* SHAPE CARDS */
+.shape-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.75rem;margin:1rem 0}
+.shape-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:.9rem;cursor:pointer;transition:all .18s;text-align:center}
+.shape-card:hover{border-color:var(--green)}
+.shape-card.selected{border-color:var(--green);background:var(--green-bg)}
+.shape-card.correct{border-color:var(--ok);background:var(--ok-bg)}
+.shape-card.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.shape-mini-canvas{width:100%;height:60px;border-radius:6px;margin-bottom:.5rem}
+.shape-label{font-size:.78rem;font-weight:600;color:var(--text2)}
+
+/* PIE CHART INTERACTIVE */
+.pie-container{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.4rem;margin:1rem 0}
+.pie-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;align-items:start}
+.pie-canvas-wrap{display:flex;flex-direction:column;align-items:center}
+#pieCanvas{border-radius:50%;display:block}
+.pie-legend{display:flex;flex-direction:column;gap:.5rem}
+.pie-legend-row{display:flex;align-items:center;gap:.5rem;font-size:.82rem}
+.pie-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.pie-sliders{display:flex;flex-direction:column;gap:.75rem;margin-top:.8rem}
+.pie-slider-row{display:grid;grid-template-columns:auto 1fr auto;gap:.5rem;align-items:center}
+.pie-slider-label{font-size:.78rem;font-weight:600;min-width:90px}
+.pie-slider-row input[type=range]{accent-color:var(--green)}
+.pie-pct-display{font-size:.78rem;font-family:'IBM Plex Mono',monospace;color:var(--green-dark);text-align:right;min-width:36px}
+.pie-total-row{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;padding:.5rem .7rem;background:var(--surface2);border-radius:8px;margin-top:.4rem}
+.pie-total-val{font-weight:700;font-family:'IBM Plex Mono',monospace}
+.pie-total-val.over{color:var(--bad)}
+.pie-total-val.exact{color:var(--ok)}
+
+/* PIE ACTIVITY — compute + type + drag */
+.pie-act-container{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.4rem;margin:1rem 0}
+.pie-data-table{width:100%;border-collapse:collapse;margin-bottom:1rem;font-size:.83rem}
+.pie-data-table th{background:var(--green);color:#fff;padding:.45rem .7rem;text-align:left;font-weight:600}
+.pie-data-table td{padding:.42rem .7rem;border-bottom:1px solid var(--border)}
+.pie-data-table tr:last-child td{border-bottom:none}
+.pct-input{width:70px;padding:.3rem .45rem;border:1.5px solid var(--border);border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:.82rem;background:var(--surface2);color:var(--text);text-align:center;transition:border-color .18s}
+.pct-input:focus{outline:none;border-color:var(--green)}
+.pct-input.ok-input{border-color:var(--ok);background:var(--ok-bg)}
+.pct-input.bad-input{border-color:var(--bad);background:var(--bad-bg)}
+.pie-drop-area{position:relative;width:220px;height:220px;margin:0 auto}
+#actPieCanvas{border-radius:50%;position:absolute;top:0;left:0}
+.pie-drop-zones{position:absolute;top:0;left:0;width:220px;height:220px;border-radius:50%;overflow:hidden;pointer-events:none}
+.label-pool{display:flex;flex-wrap:wrap;gap:.5rem;padding:.75rem;background:var(--surface2);border-radius:10px;border:2px dashed var(--border);margin:.75rem 0;min-height:48px;justify-content:center}
+.label-chip{background:var(--green);color:#fff;border-radius:6px;padding:.3rem .75rem;font-size:.8rem;font-weight:500;cursor:grab;user-select:none;transition:opacity .15s;border:2px solid transparent}
+.label-chip:active{cursor:grabbing}
+.label-chip.placed{opacity:.3;pointer-events:none}
+.slice-targets{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.5rem 0}
+.slice-target{min-height:44px;border-radius:8px;border:2px dashed var(--border);padding:.4rem .6rem;background:var(--surface);display:flex;align-items:center;gap:.4rem;transition:background .16s,border-color .16s;font-size:.8rem}
+.slice-target.over{background:var(--green-bg);border-color:var(--green)}
+.slice-target .swatch{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.slice-target .placed-label{font-size:.8rem;font-weight:600}
+.slice-target.ok-slot{border-color:var(--ok);background:var(--ok-bg)}
+.slice-target.bad-slot{border-color:var(--bad);background:var(--bad-bg)}
+
+/* NEW PIE DROP ROWS */
+.slice-drop-row{display:flex;align-items:center;gap:.55rem;border:2px dashed var(--border);border-radius:9px;padding:.45rem .65rem;background:var(--surface);min-height:44px;transition:background .15s,border-color .15s;cursor:pointer}
+.slice-drop-row.over{background:var(--green-bg);border-color:var(--green)}
+.slice-drop-row.ok-slot{border-color:var(--ok);background:var(--ok-bg);border-style:solid}
+.slice-drop-row.bad-slot{border-color:var(--bad);background:var(--bad-bg);border-style:solid}
+.slice-drop-num{width:24px;height:24px;border-radius:50%;background:var(--surface2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:var(--text3);flex-shrink:0}
+.slice-drop-content{flex:1;display:flex;align-items:center;gap:.5rem;font-size:.82rem}
+
+/* STEP INDICATOR */
+.step-indicator{display:flex;gap:.35rem;margin-bottom:1rem;flex-wrap:wrap}
+.step-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--text3);transition:all .2s}
+.step-dot.active{background:var(--green);border-color:var(--green);color:#fff}
+.step-dot.done{background:var(--ok);border-color:var(--ok);color:#fff}
+
+/* CASE */
+.case-box{background:var(--gold-bg);border:1.5px solid rgba(201,168,76,.4);border-radius:12px;padding:1.2rem 1.4rem;margin:.85rem 0}
+.case-q{font-size:.88rem;color:var(--text2);margin-bottom:.65rem;line-height:1.6}
+.case-q strong{color:var(--text)}
+.case-input{width:100%;padding:.6rem .85rem;border:1.5px solid var(--border);border-radius:8px;font-family:'IBM Plex Sans',sans-serif;font-size:.85rem;background:var(--surface);color:var(--text);margin-bottom:.45rem;transition:border-color .18s}
+.case-input:focus{outline:none;border-color:var(--green)}
+.case-reveal{background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.1rem;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:.3rem}
+.case-answer{display:none;margin-top:.65rem;background:var(--green-bg);border-left:4px solid var(--green);border-radius:0 9px 9px 0;padding:.75rem 1rem;font-size:.83rem;color:var(--text2);line-height:1.55}
+.case-answer.show{display:block}
+.case-answer strong{color:var(--green-dark)}
+
+/* RESULTS */
+.dlbtn{background:var(--green);color:#fff;border:none;border-radius:10px;padding:.8rem 1.8rem;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .18s}
+.dlbtn:hover{background:var(--green-dark)}
+.dlbtn:disabled{opacity:.6;cursor:wait}
+
+/* FREQ TABLE */
+.freq-table{width:100%;border-collapse:collapse;font-size:.83rem;margin:.75rem 0}
+.freq-table th{background:var(--green);color:#fff;padding:.4rem .7rem;text-align:center;font-weight:600}
+.freq-table td{padding:.38rem .7rem;border-bottom:1px solid var(--border);text-align:center}
+.freq-table tr:last-child td{border-bottom:none;font-weight:700;background:var(--surface2)}
+.freq-input{width:54px;padding:.28rem .4rem;border:1.5px solid var(--border);border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:.8rem;text-align:center;background:var(--surface2);color:var(--text)}
+.freq-input:focus{outline:none;border-color:var(--green)}
+.freq-input.ok-cell{border-color:var(--ok);background:var(--ok-bg);color:var(--ok)}
+.freq-input.bad-cell{border-color:var(--bad);background:var(--bad-bg)}
+
+@media(max-width:600px){
+  .wcard{padding:1.6rem 1.1rem}
+  .lbody{padding:1.2rem .7rem 3rem}
+  .section h2{font-size:1.3rem}
+  .htitle{display:none}
+  .pie-layout{grid-template-columns:1fr}
+  .lang-btn{padding:.26rem .48rem;font-size:.68rem}
+  .rules-grid{grid-template-columns:1fr 1fr}
+  .shape-grid{grid-template-columns:1fr 1fr}
+  .slice-targets{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" style="border-bottom:none;margin-bottom:.8rem;padding-bottom:.4rem">
+      <div style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:700;letter-spacing:.06em;color:#1a4a8a;line-height:1">ALEXIS</div>
+    </div>
+    <div class="wtitle" id="w-title">Visualización de Datos</div>
+    <div class="wcourse" id="w-course">Estadística · Semana 2</div>
+    <label class="flabel" for="sName" id="lbl-name">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name">
+    <label class="flabel" for="sGroup" id="lbl-group">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar</button>
+    <div class="serr" id="startErr"></div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.9rem">
+      <svg width="160" height="52" viewBox="0 0 180 52" xmlns="http://www.w3.org/2000/svg">
+        <style>.lbt{font-family:'Crimson Pro',serif;font-weight:700;letter-spacing:.1em;fill:#1a4a8a;font-size:28px}.lbl{stroke:#c9a84c;stroke-width:2.5}.lba{fill:#c9a84c}</style>
+        <polyline points="5,40 14,28 24,33 36,14" fill="none" stroke="#1a4a8a" stroke-width="3"/>
+        <circle cx="36" cy="14" r="4.5" class="lba"/>
+        <line x1="52" y1="6" x2="52" y2="46" class="lbl"/>
+        <text x="64" y="38" class="lbt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <span style="font-family:'Crimson Pro',serif;font-weight:700;font-size:1.1rem;color:#1a4a8a;letter-spacing:.05em">ALEXIS</span>
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle" id="h-title">Visualización de Datos</div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button>
+      <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+    </div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+  <div class="section" id="s_results" style="display:none">
+    <div style="text-align:center;padding:2rem 1rem">
+      <button class="dlbtn" id="dlBtn" onclick="generatePDF()">⬇ &nbsp;<span id="pdf-lbl">Descargar resultados en PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════
+// BILINGUAL
+// ═══════════════════════════════════════════════════
+var LANG = 'es';
+var TX = {
+  es:{
+    'w-title':'Visualización de Datos','w-course':'Estadística · Semana 2',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo',
+    'startBtn':'Comenzar','startErr':'Por favor llena ambos campos.',
+    'h-title':'Visualización de Datos','pdf-lbl':'Descargar resultados en PDF',
+    'ph-name':'Tu nombre completo','ph-group':'ej. 3A'
+  },
+  en:{
+    'w-title':'Data Visualization','w-course':'Statistics · Week 2',
+    'lbl-name':'Full name','lbl-group':'Group',
+    'startBtn':'Start','startErr':'Please fill in both fields.',
+    'h-title':'Data Visualization','pdf-lbl':'Download results as PDF',
+    'ph-name':'Your full name','ph-group':'e.g. 3A'
+  }
+};
+function t(k){ return (TX[LANG]&&TX[LANG][k])||TX.es[k]||k; }
+function applyLang(){
+  ['w-title','w-course','lbl-name','lbl-group','h-title','pdf-lbl'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.textContent=t(id);
+  });
+  var sb=document.getElementById('startBtn'); if(sb) sb.textContent=t('startBtn');
+  var sn=document.getElementById('sName');    if(sn) sn.placeholder=t('ph-name');
+  var sg=document.getElementById('sGroup');   if(sg) sg.placeholder=t('ph-group');
+  document.getElementById('btn-es').classList.toggle('active',LANG==='es');
+  document.getElementById('btn-en').classList.toggle('active',LANG==='en');
+  if(lessonBuilt) rebuildLesson();
+}
+function setLang(l){ LANG=l; applyLang(); }
+
+// ═══════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════
+function toggleTheme(){
+  var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  document.getElementById('themeBtn').textContent=next==='dark'?'☀️':'🌙';
+  if(lessonBuilt){ drawHistogram(); drawDemoPie(); if(pieSliceAngles.length===0) computePieAngles(); drawActPie(); }
+}
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+var studentName='', studentGroup='', lessonBuilt=false;
+var activityScores={freq:null, histShape:null, chartChoice:null, pieAct:null, caseAct:null};
+var totalActivities=5;
+var currentScenario=0;
+var binCount=8;
+
+// Pie activity state
+var pieActData=[];
+var pieActColors=['#1a4a8a','#c9a84c','#2e8b57','#c0321a'];
+var labelAssignments={};
+var pctVerified=false;
+var labelsVerified=false;
+
+// Active RNG — set once per fresh session
+var _rng=null;
+
+// ── Attempt counter (localStorage) ──
+var LS_PREFIX='vizdata2';
+function lsKey(){ return LS_PREFIX+'__'+(studentName+'__'+studentGroup).replace(/\s+/g,'_'); }
+function attKey(){ return lsKey()+'__att'; }
+function currentAttempt(){
+  try{ var v=localStorage.getItem(attKey()); return v?parseInt(v):0; }
+  catch(e){ return 0; }
+}
+function nextAttempt(){
+  var n=currentAttempt()+1;
+  try{ localStorage.setItem(attKey(),n); } catch(e){}
+  return n;
+}
+function makeRng(att){ return seededRng(studentName+studentGroup+'v2_'+att); }
+
+function updateProgress(){
+  var done=Object.values(activityScores).filter(function(v){return v!==null;}).length;
+  document.getElementById('progFill').style.width=Math.round(done/totalActivities*100)+'%';
+  if(done===totalActivities){
+    document.getElementById('s_results').style.display='block';
+    document.getElementById('s_results').classList.add('vis');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// SEEDED RNG
+// ═══════════════════════════════════════════════════
+function seededRng(seed){
+  var s=0;
+  for(var i=0;i<seed.length;i++) s=(Math.imul(31,s)+seed.charCodeAt(i))|0;
+  return function(){
+    s=(s+0x9e3779b9)|0;
+    var t=s^(s>>>16); t=Math.imul(t,0x21f0aaad);
+    t^=(t>>>15); t=Math.imul(t,0x735a2d97);
+    return((t^(t>>>15))>>>0)/4294967296;
+  };
+}
+
+// ═══════════════════════════════════════════════════
+// HISTOGRAM DATASETS
+// ═══════════════════════════════════════════════════
+var SCENARIOS = {
+  es:[
+    {
+      key:'symmetric',
+      label:'Simétrico',
+      title:'Ventas diarias en tienda minorista (miles de $)',
+      desc:'Una tienda registró las ventas diarias de 120 días. La distribución muestra que la mayoría de los días las ventas se concentran alrededor del promedio, con pocos días extremos.',
+      interp:'La distribución simétrica indica que las ventas son predecibles y estables. El promedio es una medida representativa. La empresa puede planificar inventario con confianza.',
+      data:[12,15,18,18,20,20,20,22,22,22,22,24,24,24,24,24,26,26,26,26,26,26,28,28,28,28,28,28,28,30,30,30,30,30,30,30,30,32,32,32,32,32,32,32,34,34,34,34,34,34,36,36,36,36,36,38,38,38,38,40,40,40,42]
+    },
+    {
+      key:'right',
+      label:'Sesgada derecha',
+      title:'Ingresos mensuales de empleados ($)',
+      desc:'Los ingresos de 80 empleados de una empresa. La mayoría gana entre $8,000 y $15,000, pero algunos ejecutivos elevan el promedio.',
+      interp:'La cola hacia la derecha indica que pocos empleados de altos ingresos jalan el promedio hacia arriba. La mediana es mejor medida de tendencia central que la media. Esta distribución es típica de salarios en organizaciones jerárquicas.',
+      data:[8000,8200,8300,8500,8500,8700,8800,9000,9000,9200,9200,9200,9500,9500,9500,9500,9800,9800,9800,10000,10000,10000,10000,10200,10200,10200,10500,10500,10500,10500,11000,11000,11000,11500,11500,12000,12000,12500,13000,14000,15000,16500,18000,20000,25000,32000,45000]
+    },
+    {
+      key:'left',
+      label:'Sesgada izquierda',
+      title:'Calificaciones de satisfacción del cliente (0-100)',
+      desc:'Encuesta de satisfacción a 90 clientes de un banco premium. Los clientes tienden a calificar alto, pero algunos tienen experiencias negativas.',
+      interp:'La cola hacia la izquierda indica que la mayoría de los clientes están muy satisfechos. Las pocas calificaciones bajas merecen atención especial. Una empresa con esta distribución puede promocionar su alto nivel de satisfacción.',
+      data:[40,55,58,62,65,68,70,72,72,74,75,75,76,76,78,78,78,80,80,80,80,82,82,82,82,82,84,84,84,84,84,84,85,85,85,85,85,85,86,86,86,86,86,87,87,87,87,88,88,88,88,88,88,89,89,89,89,90,90,90,90,90,90,90,91,91,91,92,92,92,93,93,94,94,95,96,97,98]
+    },
+    {
+      key:'bimodal',
+      label:'Bimodal',
+      title:'Edad de clientes en tienda departamental',
+      desc:'La tienda identificó dos grupos principales de clientes: jóvenes adultos y adultos mayores con más poder adquisitivo.',
+      interp:'La distribución bimodal revela dos segmentos de clientes distintos. Esto sugiere que la empresa tiene dos mercados objetivo diferentes y debería diseñar estrategias de marketing separadas para cada grupo.',
+      data:[18,19,20,20,21,21,22,22,22,23,23,23,23,24,24,24,24,24,25,25,25,25,25,26,26,26,27,27,28,30,32,35,37,39,42,44,46,47,48,48,49,50,50,51,51,51,52,52,52,52,53,53,53,53,54,54,54,54,55,55,55,55,55,56,56,56,56,57,57,58,58,59,60]
+    }
+  ],
+  en:[
+    {
+      key:'symmetric',
+      label:'Symmetric',
+      title:'Daily sales at a retail store (thousands $)',
+      desc:'A store recorded daily sales over 120 days. The distribution shows that most days sales cluster around the average, with few extreme days.',
+      interp:'The symmetric distribution indicates stable and predictable sales. The mean is a representative measure. The company can plan inventory with confidence.',
+      data:[12,15,18,18,20,20,20,22,22,22,22,24,24,24,24,24,26,26,26,26,26,26,28,28,28,28,28,28,28,30,30,30,30,30,30,30,30,32,32,32,32,32,32,32,34,34,34,34,34,34,36,36,36,36,36,38,38,38,38,40,40,40,42]
+    },
+    {
+      key:'right',
+      label:'Right-skewed',
+      title:'Monthly employee income ($)',
+      desc:'Income of 80 employees at a company. Most earn between $8,000 and $15,000, but some executives pull the average up.',
+      interp:'The right tail indicates that a few high earners pull the mean upward. The median is a better measure of central tendency than the mean. This distribution is typical of salaries in hierarchical organizations.',
+      data:[8000,8200,8300,8500,8500,8700,8800,9000,9000,9200,9200,9200,9500,9500,9500,9500,9800,9800,9800,10000,10000,10000,10000,10200,10200,10200,10500,10500,10500,10500,11000,11000,11000,11500,11500,12000,12000,12500,13000,14000,15000,16500,18000,20000,25000,32000,45000]
+    },
+    {
+      key:'left',
+      label:'Left-skewed',
+      title:'Customer satisfaction scores (0-100)',
+      desc:'Satisfaction survey of 90 customers at a premium bank. Customers tend to rate highly, but a few have negative experiences.',
+      interp:'The left tail indicates that most customers are very satisfied. The few low scores deserve special attention. A company with this distribution can market its high satisfaction level.',
+      data:[40,55,58,62,65,68,70,72,72,74,75,75,76,76,78,78,78,80,80,80,80,82,82,82,82,82,84,84,84,84,84,84,85,85,85,85,85,85,86,86,86,86,86,87,87,87,87,88,88,88,88,88,88,89,89,89,89,90,90,90,90,90,90,90,91,91,91,92,92,92,93,93,94,94,95,96,97,98]
+    },
+    {
+      key:'bimodal',
+      label:'Bimodal',
+      title:'Customer age at a department store',
+      desc:'The store identified two main customer groups: young adults and older adults with more purchasing power.',
+      interp:'The bimodal distribution reveals two distinct customer segments. This suggests the company has two different target markets and should design separate marketing strategies for each.',
+      data:[18,19,20,20,21,21,22,22,22,23,23,23,23,24,24,24,24,24,25,25,25,25,25,26,26,26,27,27,28,30,32,35,37,39,42,44,46,47,48,48,49,50,50,51,51,51,52,52,52,52,53,53,53,53,54,54,54,54,55,55,55,55,55,56,56,56,56,57,57,58,58,59,60]
+    }
+  ]
+};
+
+// ═══════════════════════════════════════════════════
+// PIE DEMO DATA
+// ═══════════════════════════════════════════════════
+var PIE_DEMO_DATA = {
+  es:{
+    title:'Ventas por región (año fiscal)',
+    slices:[
+      {label:'Norte',  value:35, color:'#1a4a8a'},
+      {label:'Sur',    value:20, color:'#c9a84c'},
+      {label:'Centro', value:30, color:'#2e8b57'},
+      {label:'Occidente', value:15, color:'#c0321a'}
+    ]
+  },
+  en:{
+    title:'Sales by region (fiscal year)',
+    slices:[
+      {label:'North',  value:35, color:'#1a4a8a'},
+      {label:'South',  value:20, color:'#c9a84c'},
+      {label:'Center', value:30, color:'#2e8b57'},
+      {label:'West',   value:15, color:'#c0321a'}
+    ]
+  }
+};
+
+var pieSliders=[35,20,30,15]; // live demo values
+
+// PIE_ACT_SCENARIOS and CHART_ITEMS are now generated dynamically inside buildLesson via RNG
+
+// ═══════════════════════════════════════════════════
+// START / REBUILD
+// ═══════════════════════════════════════════════════
+function startLesson(){
+  studentName  = document.getElementById('sName').value.trim();
+  studentGroup = document.getElementById('sGroup').value.trim();
+  if(!studentName||!studentGroup){
+    document.getElementById('startErr').textContent=t('startErr'); return;
+  }
+  document.getElementById('startErr').textContent='';
+  document.getElementById('welcomeScreen').style.display='none';
+  document.getElementById('lessonScreen').style.display='block';
+  document.getElementById('studentChip').textContent=studentName+' · '+studentGroup;
+  // Fresh start: increment attempt counter so numbers are new
+  var att=nextAttempt();
+  _rng=makeRng(att);
+  buildLesson(_rng);
+  lessonBuilt=true;
+  observeSections();
+}
+
+function rebuildLesson(){
+  var lb=document.getElementById('lessonBody');
+  lb.innerHTML='';
+  activityScores={freq:null,histShape:null,chartChoice:null,pieAct:null,caseAct:null};
+  currentScenario=0; binCount=8; pieSliders=[35,20,30,15];
+  labelAssignments={}; pctVerified=false; labelsVerified=false;
+  // Language rebuild: recreate RNG with same attempt so numbers stay consistent
+  var att=currentAttempt();
+  _rng=makeRng(att);
+  buildLesson(_rng);
+  document.getElementById('progFill').style.width='0%';
+  document.getElementById('s_results').style.display='none';
+  observeSections();
+}
+
+function observeSections(){
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); });
+  },{threshold:0.05});
+  document.querySelectorAll('.section').forEach(function(s){obs.observe(s);});
+}
+
+// ═══════════════════════════════════════════════════
+// BUILD LESSON
+// ═══════════════════════════════════════════════════
+function rInt(rng,lo,hi){ return lo+Math.floor(rng()*(hi-lo+1)); }
+function rFloat(rng,lo,hi,dec){
+  var v=lo+rng()*(hi-lo);
+  return v.toFixed(dec||1);
+}
+function shuffle(arr,rng){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j=Math.floor(rng()*(i+1));
+    var t=a[i];a[i]=a[j];a[j]=t;
+  }
+  return a;
+}
+
+function buildLesson(rng){
+  var lb=document.getElementById('lessonBody');
+  var es=LANG==='es';
+
+  // ── SECTION 1: Discovery first — randomized numbers ──
+  // Generate 10 random income values
+  var incomes=[];
+  for(var i=0;i<10;i++) incomes.push('$'+rInt(rng,8,24)*100+','+rInt(rng,0,9)+'00');
+  // Generate 10 wait times
+  var waits=[];
+  for(var i=0;i<10;i++) waits.push(rFloat(rng,2.1,14.8,1));
+  // Generate 10 complaint counts
+  var comps=[];
+  for(var i=0;i<10;i++) comps.push(rInt(rng,1,14));
+  // Regions — always categorical
+  var regsEs=['Norte','Sur','Centro','Oeste','Este'];
+  var regsEn=['North','South','Center','West','East'];
+  var regPool=es?regsEs:regsEn;
+  var regions=[];
+  for(var i=0;i<10;i++) regions.push(regPool[Math.floor(rng()*regPool.length)]);
+
+  var s1=document.createElement('div');
+  s1.className='section';
+  s1.innerHTML=
+    '<div class="stag">'+(es?'Parte 1 de 5':'Part 1 of 5')+'</div>'+
+    '<h2>'+(es?'Antes de la teoría: un experimento':'Before the theory: an experiment')+'</h2>'+
+    '<p>'+(es?
+      'Mira estos cuatro conjuntos de datos de negocios reales. No te decimos nada todavía sobre cómo graficarlos. Primero, obsérvalos y piensa en esta pregunta:':
+      'Look at these four real business datasets. We are not telling you anything yet about how to chart them. First, observe them and think about this question:')+'</p>'+
+    '<div class="gold-callout">'+
+      '<strong>'+(es?'¿Cuál de estos cuatro datasets es fundamentalmente diferente a los otros tres? ¿Por qué?':'Which of these four datasets is fundamentally different from the other three? Why?')+'</strong>'+
+    '</div>'+
+    '<div class="rules-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">'+
+      '<div class="rcard">'+
+        '<div class="rname">A — '+(es?'Ingresos mensuales':'Monthly income')+'</div>'+
+        '<div class="rnote" style="font-family:\'IBM Plex Mono\',monospace;font-size:.75rem;line-height:1.7">'+incomes.join(' · ')+'</div>'+
+      '</div>'+
+      '<div class="rcard">'+
+        '<div class="rname">B — '+(es?'Tiempo de espera (min)':'Wait time (min)')+'</div>'+
+        '<div class="rnote" style="font-family:\'IBM Plex Mono\',monospace;font-size:.75rem;line-height:1.7">'+waits.join(' · ')+'</div>'+
+      '</div>'+
+      '<div class="rcard">'+
+        '<div class="rname">C — '+(es?'Quejas por semana':'Complaints per week')+'</div>'+
+        '<div class="rnote" style="font-family:\'IBM Plex Mono\',monospace;font-size:.75rem;line-height:1.7">'+comps.join(' · ')+'</div>'+
+      '</div>'+
+      '<div class="rcard" style="border-top-color:var(--gold)">'+
+        '<div class="rname">D — '+(es?'Región de la sucursal':'Branch region')+'</div>'+
+        '<div class="rnote" style="font-family:\'IBM Plex Mono\',monospace;font-size:.75rem;line-height:1.7">'+regions.join(' · ')+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div id="disc-answer" style="display:none">'+
+      '<div class="callout" style="margin-top:.8rem">'+
+        '<strong>'+(es?'Lo que acabas de descubrir:':'What you just discovered:')+'</strong>'+
+        '<p>'+(es?
+          ' El dataset D es fundamentalmente diferente porque sus valores son <strong>palabras (categorías)</strong>, no números. Los otros tres contienen números que puedes sumar, promediar o restar. Con D, ninguna de esas operaciones tiene sentido. Esta diferencia — categórico vs. numérico — es exactamente lo que determina qué tipo de gráfica debes usar.':
+          ' Dataset D is fundamentally different because its values are <strong>words (categories)</strong>, not numbers. The other three contain numbers you can add, average, or subtract. With D, none of those operations make sense. This difference — categorical vs. numerical — is exactly what determines which type of chart to use.')+'</p>'+
+      '</div>'+
+      '<div class="rules-grid">'+
+        '<div class="rcard">'+
+          '<div class="rname">'+(es?'Histograma':'Histogram')+'</div>'+
+          '<div class="rval">'+(es?'Para A, B, C (numéricos)':'For A, B, C (numerical)')+'</div>'+
+          '<div class="rnote">'+(es?'Los valores numéricos se agrupan en intervalos. El histograma muestra cómo se distribuyen: dónde se concentran, si hay valores extremos, qué forma tienen.':'Numerical values are grouped into intervals. The histogram shows how they distribute: where they concentrate, whether there are extreme values, what shape they form.')+'</div>'+
+        '</div>'+
+        '<div class="rcard">'+
+          '<div class="rname">'+(es?'Gráfica de pastel':'Pie chart')+'</div>'+
+          '<div class="rval">'+(es?'Para D (categórico)':'For D (categorical)')+'</div>'+
+          '<div class="rnote">'+(es?'Las categorías se cuentan y se convierten en proporciones de un total. El pastel muestra cuánto del todo corresponde a cada parte.':'Categories are counted and converted into proportions of a total. The pie chart shows how much of the whole belongs to each part.')+'</div>'+
+        '</div>'+
+        '<div class="rcard" style="border-top-color:var(--gold)">'+
+          '<div class="rname" style="color:var(--gold)">'+(es?'La regla real':'The real rule')+'</div>'+
+          '<div class="rval" style="color:var(--text2)">'+(es?'Tipo de variable + pregunta analítica':'Variable type + analytical question')+'</div>'+
+          '<div class="rnote">'+(es?'El tipo de variable es el primer filtro. Pero también importa qué pregunta quieres responder: ¿distribución?, ¿proporciones? La gráfica correcta responde tu pregunta específica.':'Variable type is the first filter. But the question you want to answer also matters: distribution? proportions? The right chart answers your specific question.')+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="callout">'+
+        '<strong>'+(es?'Conexión con la semana anterior:':'Connection to last week:')+'</strong>'+
+        '<p>'+(es?' Si la variable es <strong>cualitativa</strong> (nominal u ordinal) → pastel para ver proporciones. Si es <strong>cuantitativa</strong> (discreta o continua) → histograma para ver la distribución. Pero si quieres comparar tamaños exactos entre categorías, un gráfico de barras puede ser mejor que el pastel.':' If the variable is <strong>qualitative</strong> (nominal or ordinal) → pie chart to see proportions. If it is <strong>quantitative</strong> (discrete or continuous) → histogram to see the distribution. But if you want to compare exact sizes between categories, a bar chart may be better than a pie chart.')+'</p>'+
+      '</div>'+
+    '</div>'+
+    '<div class="dd-actions">'+
+      '<button class="dd-check" id="disc-reveal-btn" onclick="revealDiscovery()">'+(es?'Ver la respuesta':'See the answer')+'</button>'+
+    '</div>';
+  lb.appendChild(s1);
+
+  // ── SECTION 2: Frequency tables ──
+  var s2=document.createElement('div');
+  s2.className='section';
+  s2.innerHTML=
+    '<div class="stag">'+(es?'Parte 2 de 5':'Part 2 of 5')+'</div>'+
+    '<h2>'+(es?'La tabla de frecuencias: base del histograma':'The frequency table: histogram foundation')+'</h2>'+
+    '<p>'+(es?
+      'Un histograma no dibuja cada dato individualmente. Primero agrupa los datos en <strong>intervalos de clase</strong> y cuenta cuántos datos caen en cada uno. Esa tabla se llama tabla de frecuencias y es la base de cualquier histograma.':
+      'A histogram does not plot each data point individually. It first groups data into <strong>class intervals</strong> and counts how many values fall in each one. That table is called a frequency table and is the foundation of any histogram.')+'</p>'+
+    '<div class="gcrd">'+
+      '<p><strong>'+(es?'Ejemplo:':'Example:')+'</strong> '+(es?
+        '20 registros de tiempo de espera de clientes (minutos): 3, 7, 5, 12, 8, 15, 4, 9, 11, 6, 13, 7, 10, 8, 14, 5, 9, 11, 6, 10':
+        '20 customer wait time records (minutes): 3, 7, 5, 12, 8, 15, 4, 9, 11, 6, 13, 7, 10, 8, 14, 5, 9, 11, 6, 10')+'</p>'+
+      '<p style="font-size:.82rem;color:var(--text3)">'+(es?'Paso 1: definir intervalos iguales (aquí: amplitud = 5 minutos)':'Step 1: define equal intervals (here: width = 5 minutes)')+'</p>'+
+      '<table class="freq-table">'+
+        '<thead><tr>'+
+          '<th>'+(es?'Intervalo':'Interval')+'</th>'+
+          '<th>'+(es?'Conteo':'Count')+'</th>'+
+          '<th>'+(es?'Frecuencia relativa':'Relative frequency')+'</th>'+
+        '</tr></thead>'+
+        '<tbody>'+
+          '<tr><td>1 – 5</td><td>4</td><td>4/20 = 20%</td></tr>'+
+          '<tr><td>6 – 10</td><td>10</td><td>10/20 = 50%</td></tr>'+
+          '<tr><td>11 – 15</td><td>6</td><td>6/20 = 30%</td></tr>'+
+          '<tr><td><strong>Total</strong></td><td><strong>20</strong></td><td><strong>100%</strong></td></tr>'+
+        '</tbody>'+
+      '</table>'+
+      '<p style="font-size:.82rem;color:var(--text3)">'+(es?'El histograma dibuja un borde por cada intervalo. La altura de cada barra = su frecuencia.':'The histogram draws one bar per interval. The height of each bar = its frequency.')+'</p>'+
+    '</div>';
+  lb.appendChild(s2);
+
+  // ── ACTIVITY 1: Complete frequency table — fully randomized ──
+  var act1=document.createElement('div');
+  act1.className='section';
+  act1.id='act-freq';
+
+  // Pick a business context from a pool
+  var freqContexts={
+    es:[
+      {topic:'montos de compra ($) de clientes en una tienda de ropa',unit:'$',lo:200,hi:1800,width:400,label:'Monto ($)'},
+      {topic:'tiempos de entrega (días) en una empresa logística',unit:'días',lo:1,hi:16,width:3,label:'Tiempo (días)'},
+      {topic:'montos de ticket (pesos) en un restaurante de comida rápida',unit:'$',lo:50,hi:500,width:100,label:'Ticket ($)'},
+      {topic:'horas de capacitación recibidas por empleados este trimestre',unit:'h',lo:0,hi:30,width:6,label:'Horas'}
+    ],
+    en:[
+      {topic:'purchase amounts ($) of customers at a clothing store',unit:'$',lo:200,hi:1800,width:400,label:'Amount ($)'},
+      {topic:'delivery times (days) at a logistics company',unit:'days',lo:1,hi:16,width:3,label:'Time (days)'},
+      {topic:'ticket amounts (pesos) at a fast food restaurant',unit:'$',lo:50,hi:500,width:100,label:'Ticket ($)'},
+      {topic:'training hours received by employees this quarter',unit:'h',lo:0,hi:30,width:6,label:'Hours'}
+    ]
+  };
+  var ctxPool=es?freqContexts.es:freqContexts.en;
+  var ctx=ctxPool[Math.floor(rng()*ctxPool.length)];
+
+  // Generate exactly 24 data points across 3 intervals
+  // Counts: pick c0 (6-10), c2 (4-8), c1 = 24 - c0 - c2
+  var c0=rInt(rng,6,10);
+  var c2=rInt(rng,4,8);
+  var c1=24-c0-c2;
+  // Make sure c1 is reasonable (at least 6)
+  if(c1<6){ c2=c2-(6-c1); c1=6; }
+  var counts=[c0,c1,c2];
+  var total=24;
+
+  // Build intervals
+  var lo=ctx.lo, w=ctx.width;
+  var intervals=[
+    ctx.unit==='$'?
+      ('$'+lo+' – $'+(lo+w-1)):
+      (lo+' – '+(lo+w-1)+' '+ctx.unit),
+    ctx.unit==='$'?
+      ('$'+(lo+w)+' – $'+(lo+2*w-1)):
+      ((lo+w)+' – '+(lo+2*w-1)+' '+ctx.unit),
+    ctx.unit==='$'?
+      ('$'+(lo+2*w)+' – $'+(lo+3*w-1)):
+      ((lo+2*w)+' – '+(lo+3*w-1)+' '+ctx.unit)
+  ];
+
+  // Generate raw data list in sorted-then-shuffled order for display
+  var rawData=[];
+  counts.forEach(function(cnt,bi){
+    for(var k=0;k<cnt;k++){
+      var val=rInt(rng, lo+bi*w, lo+(bi+1)*w-1);
+      rawData.push(val);
+    }
+  });
+  rawData=shuffle(rawData,rng);
+
+  // Compute percentages (integer, may not sum to 100 due to rounding — force last one)
+  var pcts=counts.map(function(c){ return Math.round(c/total*100); });
+  pcts[2]=100-pcts[0]-pcts[1];
+
+  // Store answers globally for checker
+  window._freqAns={counts:counts, pcts:pcts, total:total};
+
+  // Table rows: row 0 → count+pct hidden; row 1 → pct hidden; row 2 → count hidden
+  var tableRows=intervals.map(function(intv,i){
+    if(i===0){
+      return '<tr><td>'+intv+'</td>'+
+        '<td><input class="freq-input" id="fi-c0" type="number" min="0" max="'+total+'" data-ans="'+counts[0]+'"></td>'+
+        '<td><input class="freq-input" id="fi-p0" type="text" data-ans="'+pcts[0]+'%" placeholder="%"></td></tr>';
+    } else if(i===1){
+      return '<tr><td>'+intv+'</td>'+
+        '<td>'+counts[1]+'</td>'+
+        '<td><input class="freq-input" id="fi-p1" type="text" data-ans="'+pcts[1]+'%" placeholder="%"></td></tr>';
+    } else {
+      return '<tr><td>'+intv+'</td>'+
+        '<td><input class="freq-input" id="fi-c2" type="number" min="0" max="'+total+'" data-ans="'+counts[2]+'"></td>'+
+        '<td>'+pcts[2]+'%</td></tr>';
+    }
+  }).join('');
+
+  var introText=(es?'Una empresa registró los '+ctx.topic+' de '+total+' registros: ':'A company recorded the '+ctx.topic+' for '+total+' records: ')+
+    rawData.join(', ');
+
+  act1.innerHTML=
+    '<div class="stag">'+(es?'Actividad 1 de 5':'Activity 1 of 5')+'</div>'+
+    '<h2>'+(es?'Completa la tabla de frecuencias':'Complete the frequency table')+'</h2>'+
+    '<p>'+(es?'Lee los datos y llena las celdas vacías. Cuenta cuidadosamente cuántos valores caen en cada intervalo.':'Read the data and fill in the empty cells. Count carefully how many values fall in each interval.')+'</p>'+
+    '<div class="gcrd"><p style="font-size:.83rem;font-family:\'IBM Plex Mono\',monospace;line-height:1.8;color:var(--text2)">'+introText+'</p></div>'+
+    '<table class="freq-table">'+
+      '<thead><tr><th>'+ctx.label+'</th><th>'+(es?'Conteo':'Count')+'</th><th>'+(es?'Frec. relativa':'Rel. freq.')+'</th></tr></thead>'+
+      '<tbody>'+tableRows+
+        '<tr><td><strong>Total</strong></td><td><strong>'+total+'</strong></td><td><strong>100%</strong></td></tr>'+
+      '</tbody>'+
+    '</table>'+
+    '<div class="dd-actions">'+
+      '<button class="dd-check" onclick="checkFreqTable()">'+(es?'✓ Verificar':'✓ Check')+'</button>'+
+      '<button class="dd-reset" onclick="resetFreqTable()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
+    '</div>'+
+    '<div class="dd-fb" id="fb-freq"></div>';
+  lb.appendChild(act1);
+
+  // ── SECTION 3: Histogram interactive ──
+  var s3=document.createElement('div');
+  s3.className='section';
+  s3.innerHTML=
+    '<div class="stag">'+(es?'Parte 3 de 5':'Part 3 of 5')+'</div>'+
+    '<h2>'+(es?'El histograma: forma y significado':'The histogram: shape and meaning')+'</h2>'+
+    '<p>'+(es?
+      'La <strong>forma</strong> de un histograma es la información más valiosa que contiene. Cuatro formas son esenciales en análisis de negocios. Cambia el escenario para ver cada una y luego ajusta el número de barras para ver cómo la amplitud de los intervalos afecta la imagen.':
+      'The <strong>shape</strong> of a histogram is its most valuable information. Four shapes are essential in business analysis. Switch the scenario to see each one, then adjust the number of bars to see how interval width affects the picture.')+'</p>'+
+    '<div class="hist-container" id="hist-container">'+
+      '<div class="hist-controls" id="hist-scenario-btns"></div>'+
+      '<div class="slider-row">'+
+        '<label id="bins-label">'+(es?'Nº de barras:':'No. of bars:')+'</label>'+
+        '<input type="range" id="binSlider" min="4" max="16" value="8" oninput="onBinChange(this.value)">'+
+        '<span class="slider-val" id="binVal">8</span>'+
+      '</div>'+
+      '<canvas id="histCanvas" height="280"></canvas>'+
+      '<div class="hist-caption" id="hist-caption"></div>'+
+      '<div class="callout" id="hist-interp" style="margin-top:.8rem"></div>'+
+    '</div>';
+  lb.appendChild(s3);
+
+  // Build shape cards below histogram for conceptual reference
+  var s3b=document.createElement('div');
+  s3b.className='section';
+  var shapeData=[
+    {key:'symmetric', es:{name:'Simétrico',biz:'Las ventas, el desempeño o los tiempos de proceso son estables y predecibles. La media y la mediana coinciden. Uso recomendado de la media.'},en:{name:'Symmetric',biz:'Sales, performance, or processing times are stable and predictable. Mean and median coincide. Mean is recommended.'}},
+    {key:'right',     es:{name:'Sesgada a la derecha',biz:'Pocos valores extremos altos jalan la media. Común en ingresos y precios. La mediana es más representativa que la media.'},en:{name:'Right-skewed',biz:'A few extreme high values pull the mean up. Common in incomes and prices. Median is more representative than mean.'}},
+    {key:'left',      es:{name:'Sesgada a la izquierda',biz:'La mayoría de valores son altos; pocos valores bajos jalan la media hacia abajo. Común en calificaciones o tiempos de entrega cuando el proceso es bueno.'},en:{name:'Left-skewed',biz:'Most values are high; few low values pull the mean down. Common in grades or delivery times when the process is good.'}},
+    {key:'bimodal',   es:{name:'Bimodal',biz:'Dos grupos distintos en los datos. Señal de que hay dos mercados, turnos, o poblaciones mezcladas. Analizar por separado.'},en:{name:'Bimodal',biz:'Two distinct groups in the data. Signal of two markets, shifts, or mixed populations. Analyze separately.'}}
+  ];
+  var shapeCardsHtml=shapeData.map(function(sh,idx){
+    var info=es?sh.es:sh.en;
+    return '<div class="rcard" style="border-top-color:var(--green)">'+
+      '<canvas class="shape-mini-canvas" id="smini'+idx+'" height="60"></canvas>'+
+      '<div class="rval" style="margin-bottom:.3rem">'+info.name+'</div>'+
+      '<div class="rnote">'+info.biz+'</div>'+
+    '</div>';
+  }).join('');
+  s3b.innerHTML=
+    '<div class="stag">'+(es?'Referencia visual':'Visual reference')+'</div>'+
+    '<h2>'+(es?'Las cuatro formas y su significado en negocios':'The four shapes and their business meaning')+'</h2>'+
+    '<div class="rules-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">'+shapeCardsHtml+'</div>';
+  lb.appendChild(s3b);
+
+  // ── ACTIVITY 2: Identify histogram shape ──
+  var act2=document.createElement('div');
+  act2.className='section';
+  act2.id='act-hist-shape';
+  // Large pool — 3 drawn per shape type, shuffle pick 1 of each + 1 random extra
+  var shapePools={
+    es:{
+      symmetric:[
+        {desc:'Los registros de inventario muestran que la mayoría de los pedidos se procesan en 2-4 días, con pocos pedidos muy rápidos o muy lentos.',hint:'¿Los valores extremos se distribuyen de forma similar en ambos lados?'},
+        {desc:'El tiempo de respuesta del servicio al cliente se concentra entre 8 y 12 minutos, con pocas llamadas muy cortas o muy largas.',hint:'¿El centro de la distribución está rodeado de forma equilibrada por ambos lados?'},
+        {desc:'Las unidades producidas por turno en la fábrica se distribuyen de forma equilibrada alrededor de las 200 unidades diarias.',hint:'¿Hay una cola larga hacia alguno de los extremos?'}
+      ],
+      right:[
+        {desc:'El análisis de gastos de viaje revela que la mayoría de los empleados gasta poco, pero algunos ejecutivos tienen gastos extraordinariamente altos.',hint:'¿Dónde está la cola larga: a la izquierda o la derecha del pico?'},
+        {desc:'Los montos de las facturas de clientes muestran que la mayoría paga montos pequeños, pero unos pocos clientes tienen facturas muy grandes.',hint:'¿Hay valores extremos del lado derecho que jalan la distribución?'},
+        {desc:'El tiempo que los clientes esperan para ser atendidos tiene muchos casos cortos pero algunos casos con esperas muy largas.',hint:'La cola apunta hacia donde están los valores extremos altos.'}
+      ],
+      left:[
+        {desc:'Las calificaciones en el examen final muestran que casi todos los estudiantes obtuvieron entre 75-100, con muy pocos reprobados.',hint:'La cola apunta hacia el lado de los valores bajos.'},
+        {desc:'La satisfacción de clientes en un hotel de lujo tiende a ser muy alta, con muy pocas evaluaciones negativas.',hint:'¿Dónde están los pocos valores atípicos — a la derecha o a la izquierda?'},
+        {desc:'El porcentaje de tareas completadas a tiempo por el equipo es generalmente alto, con pocas semanas de bajo desempeño.',hint:'La mayoría de los valores están del lado alto; la cola es hacia los bajos.'}
+      ],
+      bimodal:[
+        {desc:'Las edades de los clientes de una tienda departamental muestran concentraciones alrededor de los 25 y los 55 años.',hint:'¿Hay un solo pico o dos grupos claramente separados?'},
+        {desc:'Los tiempos de espera en el supermercado tienen un grupo alrededor de 3 minutos (caja express) y otro alrededor de 12 minutos (caja normal).',hint:'¿Podría haber dos tipos distintos de clientes o procesos mezclados?'},
+        {desc:'Los salarios en la empresa muestran un grupo de trabajadores operativos y otro muy diferente de gerentes y directivos.',hint:'Dos grupos muy distintos suelen crear dos picos separados.'}
+      ]
+    },
+    en:{
+      symmetric:[
+        {desc:'Inventory records show that most orders are processed in 2-4 days, with few very fast or very slow orders.',hint:'Do extreme values distribute similarly on both sides?'},
+        {desc:'Customer service response times cluster between 8 and 12 minutes, with few very short or very long calls.',hint:'Is the center surrounded equally on both sides?'},
+        {desc:'Units produced per factory shift are evenly distributed around 200 daily units.',hint:'Is there a long tail toward either extreme?'}
+      ],
+      right:[
+        {desc:'Travel expense analysis reveals most employees spend little, but some executives have extraordinarily high expenses.',hint:'Where is the long tail: to the left or right of the peak?'},
+        {desc:'Customer invoice amounts show most clients pay small amounts, but a few have very large bills.',hint:'Are there extreme values on the right side pulling the distribution?'},
+        {desc:'Customer wait times show many short cases but some with very long waits.',hint:'The tail points toward where the high extreme values are.'}
+      ],
+      left:[
+        {desc:'Final exam grades show almost all students scored between 75-100, with very few failing.',hint:'The tail points toward the low-value side.'},
+        {desc:'Customer satisfaction at a luxury hotel tends to be very high, with very few negative reviews.',hint:'Where are the few outliers — to the right or to the left?'},
+        {desc:'The percentage of tasks completed on time by the team is generally high, with few low-performance weeks.',hint:'Most values are on the high side; the tail points toward the low values.'}
+      ],
+      bimodal:[
+        {desc:'Customer ages at a department store show concentrations around ages 25 and 55.',hint:'Is there one peak or two clearly separate groups?'},
+        {desc:'Supermarket wait times have one group around 3 minutes (express lane) and another around 12 minutes (regular lane).',hint:'Could there be two distinct types of customers or processes mixed together?'},
+        {desc:'Company salaries show one group of operational workers and a very different group of managers and executives.',hint:'Two very distinct groups usually create two separate peaks.'}
+      ]
+    }
+  };
+
+  // Pick one challenge per shape, shuffled
+  var pool=es?shapePools.es:shapePools.en;
+  var shapes=['symmetric','right','left','bimodal'];
+  var allChallenges=shapes.map(function(sh){
+    var items=pool[sh];
+    var picked=items[Math.floor(rng()*items.length)];
+    return {desc:picked.desc, ans:sh, hint:picked.hint};
+  });
+  // Shuffle and pick 3
+  allChallenges=shuffle(allChallenges,rng).slice(0,3);
+  var challenges=allChallenges;
+  var shapeNames=es?
+    {symmetric:'Simétrico',right:'Sesgada derecha',left:'Sesgada izquierda',bimodal:'Bimodal'}:
+    {symmetric:'Symmetric',right:'Right-skewed',left:'Left-skewed',bimodal:'Bimodal'};
+  var challengeHtml=challenges.map(function(ch,i){
+    var opts=['symmetric','right','left','bimodal'].map(function(k){
+      return '<div class="shape-card" id="sc-'+i+'-'+k+'" onclick="selectShape('+i+',\''+k+'\')" data-shape="'+k+'">'+
+        '<canvas class="shape-mini-canvas" id="sch-'+i+'-'+k+'" height="60"></canvas>'+
+        '<div class="shape-label">'+shapeNames[k]+'</div>'+
+      '</div>';
+    }).join('');
+    return '<div class="gcrd" style="margin-bottom:.7rem">'+
+      '<p style="font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:.6rem">'+(es?'Escenario ':'Scenario ')+(i+1)+': '+ch.desc+'</p>'+
+      '<p style="font-size:.73rem;color:var(--text3);margin-bottom:.6rem">💡 <em>'+ch.hint+'</em></p>'+
+      '<div class="shape-grid" id="shape-grid-'+i+'">'+opts+'</div>'+
+      '<div class="dd-fb" id="sf-'+i+'"></div>'+
+    '</div>';
+  }).join('');
+  act2.innerHTML=
+    '<div class="stag">'+(es?'Actividad 2 de 5':'Activity 2 of 5')+'</div>'+
+    '<h2>'+(es?'Identifica la forma del histograma':'Identify the histogram shape')+'</h2>'+
+    '<p>'+(es?'Lee cada descripción de negocios y selecciona la forma del histograma que mejor la representa.':'Read each business description and select the histogram shape that best represents it.')+'</p>'+
+    challengeHtml+
+    '<div class="dd-actions">'+
+      '<button class="dd-check" onclick="checkShapes()">'+(es?'✓ Verificar':'✓ Check')+'</button>'+
+      '<button class="dd-reset" onclick="resetShapes()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
+    '</div>'+
+    '<div class="dd-fb" id="fb-shapes"></div>';
+  lb.appendChild(act2);
+  window._shapeChallenges=challenges;
+
+  // ── SECTION 4: Pie charts ──
+  var s4=document.createElement('div');
+  s4.className='section';
+  s4.innerHTML=
+    '<div class="stag">'+(es?'Parte 4 de 5':'Part 4 of 5')+'</div>'+
+    '<h2>'+(es?'La gráfica de pastel':'The pie chart')+'</h2>'+
+    '<p>'+(es?
+      'Una gráfica de pastel divide un círculo en sectores proporcionales a la frecuencia relativa de cada categoría. Es la herramienta correcta cuando tienes una <strong>variable cualitativa</strong> y quieres mostrar cómo se reparte un total entre sus partes.':
+      'A pie chart divides a circle into sectors proportional to the relative frequency of each category. It is the right tool when you have a <strong>qualitative variable</strong> and want to show how a total is split among its parts.')+'</p>'+
+    '<div class="gold-callout">'+
+      '<strong>'+(es?'¿Cuándo NO usar pastel?':'When NOT to use a pie chart?')+'</strong>'+
+      '<p>'+(es?' Cuando tienes más de 6-7 categorías, cuando las categorías no suman a un total significativo, o cuando quieres comparar tamaños exactos entre categorías. En esos casos, un gráfico de barras es más claro.':' When you have more than 6-7 categories, when categories do not sum to a meaningful total, or when you want to compare exact sizes between categories. In those cases, a bar chart is clearer.')+'</p>'+
+    '</div>'+
+    '<p><strong>'+(es?'Usa los deslizadores para explorar:':'Use the sliders to explore:')+'</strong> '+(es?'ajusta el porcentaje de cada región y observa cómo cambia el pastel en tiempo real. Mantén el total en 100%.':'adjust the percentage of each region and watch the pie change in real time. Keep the total at 100%.')+'</p>'+
+    '<div class="pie-container">'+
+      '<div style="font-weight:600;font-family:\'Crimson Pro\',serif;font-size:1.05rem;margin-bottom:.8rem" id="pie-demo-title"></div>'+
+      '<div class="pie-layout">'+
+        '<div class="pie-canvas-wrap">'+
+          '<canvas id="pieCanvas" width="220" height="220"></canvas>'+
+          '<div class="pie-legend" id="pie-legend" style="margin-top:.7rem;width:220px"></div>'+
+        '</div>'+
+        '<div>'+
+          '<div class="pie-sliders" id="pie-sliders"></div>'+
+          '<div class="pie-total-row">'+
+            '<span>'+(es?'Total:':'Total:')+'</span>'+
+            '<span class="pie-total-val" id="pie-total-val">100%</span>'+
+          '</div>'+
+          '<div class="dd-fb" id="pie-hint" style="display:block;background:var(--green-bg);color:var(--green-dark);margin-top:.5rem">'+
+            (es?'💡 El total debe ser exactamente 100%. Observa cómo el tamaño de cada sector es proporcional a su porcentaje.':
+                '💡 The total must be exactly 100%. Notice how each sector size is proportional to its percentage.')+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  lb.appendChild(s4);
+
+  // ── ACTIVITY 3: Chart choice ──
+  var act3=document.createElement('div');
+  act3.className='section';
+  act3.id='act-chart-choice';
+  // Expanded chart items pool — shuffle and pick 6
+  var CHART_POOL={
+    es:[
+      {v:'Ingresos anuales por empleado ($)',         ans:'hist', why:'Variable cuantitativa continua → histograma para ver la distribución de salarios.'},
+      {v:'Distribución de clientes por región',       ans:'pie',  why:'Variable cualitativa que suma a un total → pastel para ver proporciones.'},
+      {v:'Número de quejas recibidas por semana',     ans:'hist', why:'Variable cuantitativa discreta → histograma para ver el patrón de frecuencias.'},
+      {v:'Tipo de contrato de los empleados',         ans:'pie',  why:'Variable cualitativa con categorías → pastel para comparar proporciones.'},
+      {v:'Tiempo de espera del cliente (minutos)',    ans:'hist', why:'Variable cuantitativa continua → histograma para ver la forma de la distribución.'},
+      {v:'Participación de mercado por empresa',      ans:'pie',  why:'Proporciones de un total → pastel es la elección natural.'},
+      {v:'Monto de cada ticket de compra ($)',        ans:'hist', why:'Variable cuantitativa continua → histograma para ver si hay sesgos o grupos.'},
+      {v:'Canal de ventas preferido por los clientes',ans:'pie',  why:'Variable cualitativa nominal → pastel para ver qué canal domina.'},
+      {v:'Edad exacta de los empleados (años)',       ans:'hist', why:'Variable cuantitativa continua → histograma para ver la distribución por edades.'},
+      {v:'Turno de trabajo (mañana/tarde/noche)',     ans:'pie',  why:'Variable cualitativa con 3 categorías que suman el 100% del personal → pastel.'}
+    ],
+    en:[
+      {v:'Annual employee income ($)',                ans:'hist', why:'Continuous quantitative variable → histogram to see the salary distribution.'},
+      {v:'Customer distribution by region',          ans:'pie',  why:'Qualitative variable summing to a total → pie chart to see proportions.'},
+      {v:'Number of complaints received per week',   ans:'hist', why:'Discrete quantitative variable → histogram to see the frequency pattern.'},
+      {v:'Employee contract type',                   ans:'pie',  why:'Qualitative variable with categories → pie chart to compare proportions.'},
+      {v:'Customer wait time (minutes)',             ans:'hist', why:'Continuous quantitative variable → histogram to see the shape of the distribution.'},
+      {v:'Market share by company',                  ans:'pie',  why:'Proportions of a total → pie chart is the natural choice.'},
+      {v:'Individual purchase ticket amount ($)',    ans:'hist', why:'Continuous quantitative variable → histogram to detect skew or groups.'},
+      {v:'Preferred sales channel',                  ans:'pie',  why:'Qualitative nominal variable → pie chart to see which channel dominates.'},
+      {v:'Exact employee age (years)',               ans:'hist', why:'Continuous quantitative variable → histogram to see the age distribution.'},
+      {v:'Work shift (morning/afternoon/night)',     ans:'pie',  why:'Qualitative variable with 3 categories summing to 100% of staff → pie chart.'}
+    ]
+  };
+  var fullPool=es?CHART_POOL.es:CHART_POOL.en;
+  // Ensure at least 3 hist and 3 pie in the 6 selected
+  var histItems=shuffle(fullPool.filter(function(x){return x.ans==='hist';}),rng);
+  var pieItems=shuffle(fullPool.filter(function(x){return x.ans==='pie';}),rng);
+  var chartItems=shuffle(histItems.slice(0,3).concat(pieItems.slice(0,3)),rng);
+  var chartRows=chartItems.map(function(item,i){
+    return '<div class="match-row" id="ccr'+i+'">'+
+      '<div class="match-var" style="flex:1">'+item.v+'</div>'+
+      '<select class="match-sel" id="ccs'+i+'" data-ans="'+item.ans+'">'+
+        '<option value="">—</option>'+
+        '<option value="hist">'+(es?'📊 Histograma':'📊 Histogram')+'</option>'+
+        '<option value="pie">'+(es?'🥧 Pastel':'🥧 Pie chart')+'</option>'+
+      '</select>'+
+      '<div class="match-icon" id="cci'+i+'"></div>'+
+    '</div>';
+  }).join('');
+  act3.innerHTML=
+    '<div class="stag">'+(es?'Actividad 3 de 5':'Activity 3 of 5')+'</div>'+
+    '<h2>'+(es?'¿Histograma o pastel?':'Histogram or pie chart?')+'</h2>'+
+    '<p>'+(es?'Para cada variable, selecciona la gráfica correcta. Piensa en el tipo de variable y en qué pregunta quieres responder.':'For each variable, select the correct chart. Think about the variable type and what question you want to answer.')+'</p>'+
+    '<div class="match-grid">'+chartRows+'</div>'+
+    '<div class="dd-actions">'+
+      '<button class="dd-check" onclick="checkChartChoice()">'+(es?'✓ Verificar':'✓ Check')+'</button>'+
+      '<button class="dd-reset" onclick="resetChartChoice()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
+    '</div>'+
+    '<div class="dd-fb" id="fb-chart-choice"></div>'+
+    '<div id="chart-choice-detail" style="margin-top:.6rem"></div>'+
+    '<div id="chart-choice-defend" style="display:none;margin-top:1.1rem">'+
+      '<div class="gold-callout">'+
+        '<strong>'+(es?'Una pregunta más difícil:':'One harder question:')+'</strong>'+
+        '<p style="margin-top:.4rem">'+(es?
+          'Un gerente quiere usar una gráfica de pastel para comparar las ventas exactas de sus cinco sucursales. ¿Por qué esta podría ser una mala decisión?':
+          'A manager wants to use a pie chart to compare the exact sales of his five branches. Why might this be a bad decision?')+'</p>'+
+      '</div>'+
+      '<textarea class="case-input" id="defend-input" rows="2" placeholder="'+(es?'Escribe tu razonamiento...':'Write your reasoning...')+'"></textarea>'+
+      '<button class="case-reveal" onclick="revealDefend()">'+(es?'Ver argumento':'See argument')+'</button>'+
+      '<div class="case-answer" id="defend-answer">'+
+        '<strong>'+(es?'El pastel es malo para comparar tamaños exactos.':'Pie charts are poor for comparing exact sizes.')+'</strong> '+(es?
+          'Los humanos somos malos estimando diferencias entre ángulos y áreas de sectores. Si dos sucursales tienen ventas de 22% y 18%, es muy difícil verlo en un pastel. Un gráfico de barras muestra la diferencia con mucha más claridad porque compara <em>alturas</em>, no <em>áreas</em>. Regla: usa el pastel solo cuando la historia es "una parte domina el total", no cuando quieres comparar categorías entre sí.':
+          'Humans are poor at estimating differences between angles and sector areas. If two branches have sales of 22% and 18%, it is very difficult to see that in a pie chart. A bar chart shows the difference much more clearly because it compares <em>heights</em>, not <em>areas</em>. Rule: use a pie chart only when the story is "one part dominates the total", not when you want to compare categories against each other.')+
+      '</div>'+
+    '</div>';
+  lb.appendChild(act3);
+  window._chartItems=chartItems;
+
+  // ── SECTION 5: Pie activity concept ──
+  var s5=document.createElement('div');
+  s5.className='section';
+  s5.innerHTML=
+    '<div class="stag">'+(es?'Parte 5 de 5':'Part 5 of 5')+'</div>'+
+    '<h2>'+(es?'Construyendo una gráfica de pastel paso a paso':'Building a pie chart step by step')+'</h2>'+
+    '<p>'+(es?
+      'Para construir una gráfica de pastel a partir de datos reales, sigues tres pasos: primero <strong>calculas el porcentaje</strong> de cada categoría, luego <strong>verificas</strong> que los porcentajes son correctos, y finalmente <strong>identificas</strong> qué sector corresponde a qué categoría.':
+      'To build a pie chart from real data, you follow three steps: first <strong>calculate the percentage</strong> of each category, then <strong>verify</strong> that the percentages are correct, and finally <strong>identify</strong> which sector corresponds to which category.')+'</p>'+
+    '<div class="gcrd">'+
+      '<p><strong>'+(es?'La fórmula:':'The formula:')+'</strong></p>'+
+      '<div style="text-align:center;padding:.8rem;background:var(--surface2);border-radius:8px;margin:.5rem 0;font-family:\'IBM Plex Mono\',monospace;font-size:.9rem;color:var(--green-dark)">'+
+        (es?'Porcentaje (%) = (Frecuencia de la categoría ÷ Total) × 100':'Percentage (%) = (Category frequency ÷ Total) × 100')+
+      '</div>'+
+      '<p style="font-size:.82rem;color:var(--text3)">'+(es?
+        'Ejemplo: si hay 960 ventas de Software de un total de 2400 → (960 ÷ 2400) × 100 = 40%':
+        'Example: if there are 960 Software sales out of 2400 total → (960 ÷ 2400) × 100 = 40%')+'</p>'+
+    '</div>';
+  lb.appendChild(s5);
+
+  // ── ACTIVITY 4: Pie compute + type + drag ──
+  var act4=document.createElement('div');
+  act4.className='section';
+  act4.id='act-pie';
+  // Randomized pie scenarios — pick context, generate percentages that sum to 100
+  var pieContextPool={
+    es:[
+      {scenario:'Una empresa de tecnología registró las ventas de sus cuatro líneas de productos en el último trimestre.',
+       cats:['Software','Hardware','Servicios','Consultoría']},
+      {scenario:'Una cadena de restaurantes registró sus ventas por tipo de producto durante el mes de marzo.',
+       cats:['Alimentos','Bebidas','Postres','Combos']},
+      {scenario:'Un banco registró la distribución de sus productos financieros activos entre sus clientes.',
+       cats:['Cuentas de ahorro','Créditos','Inversiones','Seguros']},
+      {scenario:'Una tienda departamental registró sus ventas por departamento durante la temporada navideña.',
+       cats:['Ropa','Electrónica','Hogar','Juguetes']}
+    ],
+    en:[
+      {scenario:'A technology company recorded sales for its four product lines in the last quarter.',
+       cats:['Software','Hardware','Services','Consulting']},
+      {scenario:'A restaurant chain recorded its sales by product type during the month of March.',
+       cats:['Food','Beverages','Desserts','Combos']},
+      {scenario:'A bank recorded the distribution of its active financial products among its clients.',
+       cats:['Savings accounts','Loans','Investments','Insurance']},
+      {scenario:'A department store recorded its sales by department during the holiday season.',
+       cats:['Clothing','Electronics','Home','Toys']}
+    ]
+  };
+  var piePool=es?pieContextPool.es:pieContextPool.en;
+  var pieCtx=piePool[Math.floor(rng()*piePool.length)];
+
+  // Generate 4 percentages that sum to 100, all multiples of 5, between 10–45
+  // Strategy: pick 3 from [10,15,20,25,30,35,40], fourth = 100-sum
+  function genPiePcts(rng){
+    var attempts=0;
+    while(attempts<100){
+      attempts++;
+      var opts=[10,15,20,25,30,35,40];
+      var p=[];
+      for(var i=0;i<3;i++){
+        p.push(opts[Math.floor(rng()*opts.length)]);
+      }
+      var last=100-p[0]-p[1]-p[2];
+      if(last>=10 && last<=45){
+        p.push(last);
+        // Sort descending so biggest slice is always first (clockwise from 12)
+        p.sort(function(a,b){return b-a;});
+        return p;
+      }
+    }
+    return [40,25,20,15]; // fallback
+  }
+  var pcts=genPiePcts(rng);
+  var pieTotalN=2000+rInt(rng,0,8)*100; // realistic total between 2000-2800
+  pieActData=pieCtx.cats.map(function(cat,i){
+    return {cat:cat, n:Math.round(pcts[i]/100*pieTotalN), pct:pcts[i], color:pieActColors[i]};
+  });
+  // Store scenario text and total for HTML display
+  window._pieScenario=pieCtx.scenario;
+  window._pieTotalN=pieTotalN;
+  var tableHtml=pieActData.map(function(d,i){
+    return '<tr>'+
+      '<td style="display:flex;align-items:center;gap:.4rem">'+
+        '<span style="width:12px;height:12px;border-radius:3px;background:'+d.color+';display:inline-block;flex-shrink:0"></span>'+
+        d.cat+
+      '</td>'+
+      '<td>'+d.n+'</td>'+
+      '<td>'+window._pieTotalN+'</td>'+
+      '<td><input class="pct-input" id="pct'+i+'" type="number" min="0" max="100" placeholder="?" data-ans="'+d.pct+'"></td>'+
+    '</tr>';
+  }).join('');
+  var sliceTargetsHtml=pieActData.map(function(d,i){
+    return '<div class="slice-target" id="slice-target-'+i+'"'+
+      ' ondragover="sliceDragOver(event,'+i+')" ondragleave="sliceDragLeave('+i+')" ondrop="sliceDrop(event,'+i+')"'+
+      ' onclick="sliceTap('+i+',event)">'+
+      '<span class="swatch" style="background:'+d.color+'"></span>'+
+      '<span style="font-size:.7rem;color:var(--text3)">'+(es?'Sector ':'Sector ')+(i+1)+'</span>'+
+    '</div>';
+  }).join('');
+  var labelChipsHtml=pieActData.map(function(d,i){
+    return '<div class="label-chip" id="lchip-'+i+'" draggable="true"'+
+      ' ondragstart="labelDragStart('+i+',this)" ondragend="labelDragEnd(this)"'+
+      ' onclick="labelTap('+i+',this,event)" data-lidx="'+i+'">'+
+      d.cat+' <span style="opacity:.75;font-size:.75em">('+d.pct+'%)</span>'+
+    '</div>';
+  }).join('');
+  act4.innerHTML=
+    '<div class="stag">'+(es?'Actividad 4 de 5':'Activity 4 of 5')+'</div>'+
+    '<h2>'+(es?'Construye la gráfica paso a paso':'Build the chart step by step')+'</h2>'+
+    '<div class="step-indicator" id="pie-steps">'+
+      '<div class="step-dot active" id="pdot-0">1</div>'+
+      '<div class="step-dot" id="pdot-1">2</div>'+
+      '<div class="step-dot" id="pdot-2">3</div>'+
+    '</div>'+
+    '<div class="case-box" style="margin-bottom:.75rem"><div class="case-q">'+window._pieScenario+'</div></div>'+
+
+    '<div id="pie-step-1">'+
+      '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin-bottom:.4rem">'+
+        (es?'Paso 1 — Calcula el porcentaje de cada categoría (Total = '+window._pieTotalN.toLocaleString()+'):':'Step 1 — Calculate the percentage for each category (Total = '+window._pieTotalN.toLocaleString()+'):')+
+      '</p>'+
+      '<table class="pie-data-table">'+
+        '<thead><tr>'+
+          '<th>'+(es?'Categoría':'Category')+'</th>'+
+          '<th>'+(es?'Frecuencia':'Frequency')+'</th>'+
+          '<th>Total</th>'+
+          '<th>%</th>'+
+        '</tr></thead>'+
+        '<tbody>'+tableHtml+'</tbody>'+
+      '</table>'+
+      '<div class="dd-actions">'+
+        '<button class="dd-check" onclick="checkPctStep()">'+(es?'✓ Verificar porcentajes':'✓ Check percentages')+'</button>'+
+        '<button class="dd-reset" onclick="resetPctStep()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
+      '</div>'+
+      '<div class="dd-fb" id="fb-pct"></div>'+
+    '</div>'+
+
+    '<div id="pie-step-2" style="display:none">'+
+      '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin-bottom:.4rem">'+
+        (es?'Paso 2 — Identifica cada sector por su tamaño':'Step 2 — Identify each sector by its size')+
+      '</p>'+
+      '<p style="font-size:.83rem;color:var(--text2);margin-bottom:.8rem">'+
+        (es?
+          'La gráfica está construida pero sin color ni etiquetas. Los sectores están numerados en sentido horario desde las 12. Usa los porcentajes que calculaste para razonar cuál categoría corresponde a cada sector — el sector más grande es el mayor porcentaje. Arrastra cada chip al sector correcto. El color aparece al soltar.':
+          'The chart is built but without color or labels. Sectors are numbered clockwise from 12. Use the percentages you calculated to reason which category belongs to each sector — the largest sector is the highest percentage. Drag each chip to the correct sector. Color fills in when you drop.')+
+      '</p>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;align-items:start">'+
+        '<div style="display:flex;flex-direction:column;align-items:center">'+
+          '<div style="position:relative;width:220px;height:220px">'+
+            '<canvas id="actPieCanvas" width="220" height="220" style="display:block;position:absolute;top:0;left:0"></canvas>'+
+            '<canvas id="actPieOverlay" width="220" height="220" style="display:block;position:absolute;top:0;left:0;pointer-events:none"></canvas>'+
+          '</div>'+
+          '<p style="font-size:.7rem;color:var(--text3);text-align:center;margin-top:.5rem;max-width:220px">'+
+            (es?'↑ Sectores numerados en sentido horario desde las 12':'↑ Sectors numbered clockwise from 12')+
+          '</p>'+
+        '</div>'+
+        '<div>'+
+          '<p style="font-size:.78rem;font-weight:600;color:var(--text3);margin-bottom:.5rem">'+
+            (es?'Chips disponibles — arrastra al sector correcto:':'Available chips — drag to the correct sector:')+
+          '</p>'+
+          '<div class="label-pool" id="label-pool">'+labelChipsHtml+'</div>'+
+          '<div style="margin-top:.9rem;display:flex;flex-direction:column;gap:.45rem" id="slice-drop-list">'+
+            pieActData.map(function(d,i){
+              return '<div class="slice-drop-row" id="sdr-'+i+'"'+
+                ' ondragover="sliceDragOver(event,'+i+')" ondragleave="sliceDragLeave('+i+')" ondrop="sliceDrop(event,'+i+')"'+
+                ' onclick="sliceTap('+i+',event)">'+
+                '<div class="slice-drop-num">'+( i+1 )+'</div>'+
+                '<div class="slice-drop-content" id="sdc-'+i+'">'+
+                  '<span style="font-size:.75rem;color:var(--text3)">'+(es?'Arrastra aquí':'Drop here')+'</span>'+
+                '</div>'+
+              '</div>';
+            }).join('')+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="dd-actions" style="margin-top:.9rem">'+
+        '<button class="dd-check" onclick="checkLabelDrop()">'+(es?'✓ Verificar':'✓ Check')+'</button>'+
+        '<button class="dd-reset" onclick="resetLabelDrop()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
+      '</div>'+
+      '<div class="dd-fb" id="fb-labels"></div>'+
+    '</div>'+
+
+    '<div id="pie-step-3" style="display:none">'+
+      '<div class="dd-fb show ok" id="pie-final-msg"></div>'+
+    '</div>';
+  lb.appendChild(act4);
+
+  // ── ACTIVITY 5: Integrative case — manager brief ──
+  var act5=document.createElement('div');
+  act5.className='section';
+  act5.id='act-case';
+  act5.innerHTML=
+    '<div class="stag">'+(es?'Actividad 5 de 5':'Activity 5 of 5')+'</div>'+
+    '<h2>'+(es?'Informe para la gerencia':'Management brief')+'</h2>'+
+    '<p>'+(es?
+      'Eres analista de datos en una cadena de supermercados. La directora general te pide un informe visual de los datos del último año antes de la junta del lunes. Este es el encargo real:':
+      'You are a data analyst at a supermarket chain. The CEO asks you for a visual data report from last year before Monday\'s board meeting. This is the real assignment:')+'</p>'+
+    '<div class="case-box" style="border-color:rgba(201,168,76,.6)">'+
+      '<div class="case-q">'+
+        '<strong>'+(es?'El encargo de la directora:':'The CEO\'s request:')+'</strong>'+
+        '<p style="margin-top:.5rem">'+(es?
+          '"Necesito entender tres cosas sobre nuestro año: (1) cómo se distribuyen las ventas entre nuestras cinco sucursales (Norte, Sur, Centro, Este, Oeste), (2) cómo se comportan los montos de los tickets de compra de nuestros clientes, y (3) qué está pasando con los tiempos de espera en caja — hay quejas pero no entiendo el patrón."':
+          '"I need to understand three things about our year: (1) how sales are distributed across our five branches (North, South, Center, East, West), (2) how our customers\' purchase ticket amounts behave, and (3) what is happening with checkout wait times — there are complaints but I don\'t understand the pattern."')+
+        '</p>'+
+        '<p style="margin-top:.5rem;font-size:.82rem;color:var(--text3)">'+(es?
+          'Los datos: 50,000 transacciones registradas. Variables disponibles: sucursal (Norte/Sur/Centro/Este/Oeste), monto del ticket ($), tiempo de espera (minutos). El histograma de tickets es sesgado a la derecha. El histograma de tiempos de espera es bimodal, con picos en 3 min y 12 min.':
+          'The data: 50,000 recorded transactions. Available variables: branch (North/South/Center/East/West), ticket amount ($), wait time (minutes). The ticket histogram is right-skewed. The wait time histogram is bimodal, with peaks at 3 min and 12 min.')+
+        '</p>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="case-box">'+
+      '<div class="case-q"><strong>1. </strong>'+
+        (es?'¿Qué gráfica usarías para mostrar la distribución de ventas por sucursal? Elige la gráfica Y justifica por qué es la mejor opción para este objetivo específico.':
+            'What chart would you use to show sales distribution by branch? Choose the chart AND justify why it is the best option for this specific objective.')+
+      '</div>'+
+      '<textarea class="case-input" id="case1" rows="3" placeholder="'+(es?'Elige la gráfica y explica tu razonamiento...':'Choose the chart and explain your reasoning...')+'"></textarea>'+
+      '<button class="case-reveal" onclick="revealCase(\'ca1\')">'+(es?'Ver respuesta de referencia':'See reference answer')+'</button>'+
+      '<div class="case-answer" id="ca1">'+
+        '<strong>'+(es?'Gráfica de pastel.':'Pie chart.')+'</strong> '+(es?
+          '"Sucursal" es una variable cualitativa nominal — las sucursales son categorías, no números. La pregunta de la directora es sobre proporciones ("cómo se distribuyen"), y el pastel es el instrumento correcto para mostrar cómo un total se divide entre partes. Si la directora quisiera comparar las ventas exactas en pesos entre sucursales, un gráfico de barras sería más preciso; pero para ver participación de mercado interna, el pastel es ideal.':
+          '"Branch" is a qualitative nominal variable — the branches are categories, not numbers. The CEO\'s question is about proportions ("how sales are distributed"), and the pie chart is the right instrument to show how a total divides among its parts. If the CEO wanted to compare exact sales in dollars between branches, a bar chart would be more precise; but to see internal market share, the pie chart is ideal.')+
+      '</div>'+
+      '<div id="ca1-reflect" style="display:none;margin-top:.6rem;background:var(--surface2);border-radius:8px;padding:.75rem 1rem">'+
+        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+
+          (es?'Compara con tu respuesta:':'Compare with your answer:')+
+        '</p>'+
+        '<p style="font-size:.8rem;color:var(--text3)">'+
+          (es?'¿Mencionaste el tipo de variable Y el objetivo de la pregunta? ¿Consideraste cuándo el pastel podría no ser la mejor opción? Esas dos ideas son las que distinguen a un analista que aplica reglas de uno que razona.':
+              'Did you mention the variable type AND the objective of the question? Did you consider when the pie chart might not be the best option? Those two ideas distinguish an analyst who applies rules from one who reasons.')+
+        '</p>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="case-box">'+
+      '<div class="case-q"><strong>2. </strong>'+
+        (es?'El histograma de montos de ticket es sesgado a la derecha. Escribe dos oraciones para el informe de la directora: (a) qué significa esto para el negocio, y (b) qué decisión de negocio podría tomar con esta información.':
+            'The ticket amount histogram is right-skewed. Write two sentences for the CEO\'s report: (a) what this means for the business, and (b) what business decision could be made with this information.')+
+      '</div>'+
+      '<textarea class="case-input" id="case2" rows="3" placeholder="'+(es?'(a) Significado del sesgo... (b) Decisión posible...':'(a) Meaning of the skew... (b) Possible decision...')+'"></textarea>'+
+      '<button class="case-reveal" onclick="revealCase(\'ca2\')">'+(es?'Ver respuesta de referencia':'See reference answer')+'</button>'+
+      '<div class="case-answer" id="ca2">'+
+        '<strong>(a) '+(es?'Significado:':'Meaning:')+'</strong> '+(es?
+          'La mayoría de los clientes realizan compras pequeñas, pero un grupo reducido de clientes realiza compras muy grandes que jalan el promedio hacia arriba — por lo que la media del ticket sobreestima el gasto del cliente típico, y la mediana sería más representativa.':
+          'The majority of customers make small purchases, but a small group makes very large purchases that pull the mean upward — so the mean ticket overestimates the typical customer\'s spending, and the median would be more representative.')+
+        '<br><br><strong>(b) '+(es?'Decisión:':'Decision:')+'</strong> '+(es?
+          'La empresa podría segmentar sus clientes en dos grupos: compradores habituales de bajo ticket y clientes de alto valor. Diseñar programas de lealtad diferenciados o estrategias de up-selling para cada segmento maximizaría el ingreso por cliente.':
+          'The company could segment its customers into two groups: regular low-ticket buyers and high-value customers. Designing differentiated loyalty programs or upselling strategies for each segment would maximize revenue per customer.')+
+      '</div>'+
+      '<div id="ca2-reflect" style="display:none;margin-top:.6rem;background:var(--surface2);border-radius:8px;padding:.75rem 1rem">'+
+        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+
+          (es?'Compara con tu respuesta:':'Compare with your answer:')+
+        '</p>'+
+        '<p style="font-size:.8rem;color:var(--text3)">'+
+          (es?'¿Mencionaste que la media es engañosa con sesgos? ¿Tu decisión de negocio fue concreta y accionable, o general? Un buen informe de analista conecta el patrón estadístico con una acción específica.':
+              'Did you mention that the mean is misleading with skew? Was your business decision concrete and actionable, or general? A good analyst report connects the statistical pattern to a specific action.')+
+        '</p>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="case-box">'+
+      '<div class="case-q"><strong>3. </strong>'+
+        (es?'El histograma de tiempos de espera es bimodal (picos a los 3 y 12 minutos). Escribe dos oraciones: (a) una hipótesis de negocio que explique este patrón, y (b) qué variable adicional investigarías para confirmarla.':
+            'The wait time histogram is bimodal (peaks at 3 and 12 minutes). Write two sentences: (a) a business hypothesis that explains this pattern, and (b) what additional variable you would investigate to confirm it.')+
+      '</div>'+
+      '<textarea class="case-input" id="case3" rows="3" placeholder="'+(es?'(a) Mi hipótesis... (b) Variable adicional...':'(a) My hypothesis... (b) Additional variable...')+'"></textarea>'+
+      '<button class="case-reveal" onclick="revealCase(\'ca3\')">'+(es?'Ver respuesta de referencia':'See reference answer')+'</button>'+
+      '<div class="case-answer" id="ca3">'+
+        '<strong>(a) '+(es?'Hipótesis:':'Hypothesis:')+'</strong> '+(es?
+          'La distribución bimodal sugiere que existen dos grupos de clientes con experiencias radicalmente distintas: probablemente clientes de caja express (pocos artículos, ~3 min) y clientes de caja regular (muchos artículos, ~12 min). Estos dos grupos están mezclados en el mismo histograma, creando los dos picos.':
+          'The bimodal distribution suggests two groups of customers with radically different experiences: probably express lane customers (few items, ~3 min) and regular lane customers (many items, ~12 min). These two groups are mixed in the same histogram, creating the two peaks.')+
+        '<br><br><strong>(b) '+(es?'Variable adicional:':'Additional variable:')+'</strong> '+(es?
+          'Investigaría el "tipo de caja" (express vs. regular) o el "número de artículos por ticket". Si al separar los datos por tipo de caja los dos picos desaparecen y cada grupo muestra una distribución simétrica, la hipótesis se confirma.':
+          'I would investigate "lane type" (express vs. regular) or "number of items per ticket". If separating the data by lane type makes the two peaks disappear and each group shows a symmetric distribution, the hypothesis is confirmed.')+
+      '</div>'+
+      '<div id="ca3-reflect" style="display:none;margin-top:.6rem;background:var(--surface2);border-radius:8px;padding:.75rem 1rem">'+
+        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+
+          (es?'Compara con tu respuesta:':'Compare with your answer:')+
+        '</p>'+
+        '<p style="font-size:.8rem;color:var(--text3)">'+
+          (es?'¿Tu hipótesis explicó por qué hay DOS grupos, no solo uno? ¿Tu variable adicional es verificable con los datos existentes o requiere nuevos datos? Pensar en cómo confirmar una hipótesis es el inicio del método científico aplicado a negocios.':
+              'Did your hypothesis explain why there are TWO groups, not just one? Is your additional variable verifiable with existing data or does it require new data? Thinking about how to confirm a hypothesis is the beginning of the scientific method applied to business.')+
+        '</p>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="case-box">'+
+      '<div class="case-q"><strong>4. </strong>'+
+        (es?'De las tres variables, ¿cuál merece mayor atención inmediata de la directora y por qué?':
+            'Of the three variables, which one deserves the CEO\'s most immediate attention and why?')+
+      '</div>'+
+      '<textarea class="case-input" id="case4" rows="3" placeholder="'+(es?'Elige una variable y justifica tu prioridad...':'Choose one variable and justify your priority...')+'"></textarea>'+
+      '<button class="case-reveal" onclick="revealCase(\'ca4\')">'+(es?'Ver respuesta de referencia':'See reference answer')+'</button>'+
+      '<div class="case-answer" id="ca4">'+
+        '<strong>'+(es?'No hay una sola respuesta correcta — pero sí hay argumentos más sólidos.':'There is no single correct answer — but there are stronger arguments.')+'</strong><br><br>'+
+        (es?
+          '<strong>Argumento para el tiempo de espera:</strong> Es la variable con el patrón más inesperado (bimodal) y está directamente vinculada a la satisfacción del cliente — una variable estratégica. Además, si la hipótesis de dos tipos de caja es correcta, puede mejorarse con una intervención operacional concreta.<br><br>'+
+          '<strong>Argumento para los tickets:</strong> El sesgo a la derecha revela que hay clientes de alto valor que probablemente no están siendo atendidos con estrategias diferenciadas, lo que representa una oportunidad de ingreso no capturada.<br><br>'+
+          '<strong>Lo más importante:</strong> Un analista que puede justificar su elección con datos y argumentos es más valioso que uno que da la respuesta "correcta" sin razonamiento.':
+          '<strong>Argument for wait time:</strong> It is the variable with the most unexpected pattern (bimodal) and is directly linked to customer satisfaction — a strategic variable. Also, if the two-lane hypothesis is correct, it can be improved with a concrete operational intervention.<br><br>'+
+          '<strong>Argument for ticket amounts:</strong> The right skew reveals there are high-value customers who are probably not being served with differentiated strategies, representing uncaptured revenue opportunity.<br><br>'+
+          '<strong>Most important:</strong> An analyst who can justify their choice with data and arguments is more valuable than one who gives the "correct" answer without reasoning.')+
+      '</div>'+
+      '<div id="ca4-reflect" style="display:none;margin-top:.6rem;background:var(--surface2);border-radius:8px;padding:.75rem 1rem">'+
+        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+
+          (es?'Compara con tu respuesta:':'Compare with your answer:')+
+        '</p>'+
+        '<p style="font-size:.8rem;color:var(--text3)">'+
+          (es?'¿Tu justificación fue basada en datos o fue una opinión? ¿Consideraste el impacto en el negocio, no solo la rareza estadística? Esta pregunta no tiene respuesta única — lo que importa es la calidad del argumento.':
+              'Was your justification data-based or was it an opinion? Did you consider the business impact, not just the statistical rarity? This question has no single answer — what matters is the quality of the argument.')+
+        '</p>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="dd-actions">'+
+      '<button class="dd-reset" onclick="resetCase()">'+(es?'↺ Reiniciar respuestas':'↺ Reset answers')+'</button>'+
+    '</div>'+
+    '<div class="dd-fb" id="fb-case"></div>';
+  lb.appendChild(act5);
+
+  // Initialize all canvases after DOM is ready
+  setTimeout(function(){
+    initHistogramScenario();
+    initDemoPie();
+    drawMiniShapes();
+    drawChallengeShapes();
+    drawActPie();
+  }, 120);
+}
+
+// ═══════════════════════════════════════════════════
+// HISTOGRAM ENGINE
+// ═══════════════════════════════════════════════════
+function getComputedColor(varName){
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+function buildHistBins(data, nBins){
+  var mn=Math.min.apply(null,data);
+  var mx=Math.max.apply(null,data);
+  var range=mx-mn;
+  var width=range/nBins;
+  var bins=[];
+  for(var i=0;i<nBins;i++){
+    var lo=mn+i*width;
+    var hi=lo+width;
+    var count=data.filter(function(v){ return i===nBins-1 ? v>=lo && v<=hi : v>=lo && v<hi; }).length;
+    bins.push({lo:lo,hi:hi,count:count});
+  }
+  return bins;
+}
+
+function drawHistogram(){
+  var canvas=document.getElementById('histCanvas');
+  if(!canvas) return;
+  var sc=SCENARIOS[LANG]||SCENARIOS.es;
+  var scenario=sc[currentScenario];
+  var bins=buildHistBins(scenario.data, binCount);
+  var maxCount=Math.max.apply(null,bins.map(function(b){return b.count;}));
+
+  var W=canvas.offsetWidth||700;
+  canvas.width=W; canvas.height=280;
+  var ctx=canvas.getContext('2d');
+  var dpr=window.devicePixelRatio||1;
+  canvas.width=W*dpr; canvas.height=280*dpr;
+  canvas.style.width=W+'px'; canvas.style.height='280px';
+  ctx.scale(dpr,dpr);
+
+  var pad={top:20,right:20,bottom:44,left:48};
+  var cw=W-pad.left-pad.right;
+  var ch=280-pad.top-pad.bottom;
+
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  var bg=isDark?'#242420':'#ffffff';
+  var textCol=isDark?'#b0aa9e':'#4a4640';
+  var barCol='#1a4a8a';
+  var barHov='#c9a84c';
+  var gridCol=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)';
+
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,280);
+
+  // grid
+  ctx.strokeStyle=gridCol; ctx.lineWidth=1;
+  for(var g=0;g<=5;g++){
+    var gy=pad.top+ch-(g/5)*ch;
+    ctx.beginPath(); ctx.moveTo(pad.left,gy); ctx.lineTo(pad.left+cw,gy); ctx.stroke();
+  }
+
+  // bars
+  var bw=cw/bins.length;
+  bins.forEach(function(bin,i){
+    var bh=(bin.count/maxCount)*ch;
+    var bx=pad.left+i*bw;
+    var by=pad.top+ch-bh;
+    ctx.fillStyle=barCol;
+    ctx.fillRect(bx+1,by,bw-2,bh);
+    // count label
+    if(bin.count>0){
+      ctx.fillStyle=textCol;
+      ctx.font='bold '+(bw>30?'11':'9')+'px IBM Plex Sans,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(bin.count, bx+bw/2, by-4);
+    }
+  });
+
+  // axes
+  ctx.strokeStyle=textCol; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(pad.left,pad.top); ctx.lineTo(pad.left,pad.top+ch); ctx.lineTo(pad.left+cw,pad.top+ch); ctx.stroke();
+
+  // x labels
+  ctx.fillStyle=textCol;
+  ctx.font='10px IBM Plex Mono,monospace';
+  ctx.textAlign='center';
+  bins.forEach(function(bin,i){
+    if(i%Math.ceil(bins.length/6)===0 || i===bins.length-1){
+      var lx=pad.left+i*bw;
+      ctx.fillText(Math.round(bin.lo), lx, pad.top+ch+14);
+    }
+  });
+  // last tick
+  ctx.fillText(Math.round(bins[bins.length-1].hi), pad.left+cw, pad.top+ch+14);
+
+  // y labels
+  ctx.textAlign='right';
+  for(var yi=0;yi<=5;yi++){
+    var yv=Math.round(maxCount*yi/5);
+    var yyy=pad.top+ch-(yi/5)*ch;
+    ctx.fillText(yv, pad.left-5, yyy+4);
+  }
+
+  // caption & interp
+  var cap=document.getElementById('hist-caption');
+  var interp=document.getElementById('hist-interp');
+  if(cap) cap.textContent=scenario.title+' — '+(LANG==='es'?'barras':'bars')+': '+binCount;
+  if(interp){
+    var sc2=(SCENARIOS[LANG]||SCENARIOS.es)[currentScenario];
+    interp.innerHTML='<strong>'+(LANG==='es'?'Interpretación:':'Interpretation:')+'</strong> '+sc2.interp;
+  }
+}
+
+function initHistogramScenario(){
+  var btnsDiv=document.getElementById('hist-scenario-btns');
+  if(!btnsDiv) return;
+  btnsDiv.innerHTML='';
+  var sc=SCENARIOS[LANG]||SCENARIOS.es;
+  sc.forEach(function(s,i){
+    var btn=document.createElement('button');
+    btn.className='scenario-btn'+(i===0?' active':'');
+    btn.textContent=s.label;
+    btn.id='sbtn'+i;
+    btn.onclick=function(){
+      currentScenario=i;
+      document.querySelectorAll('.scenario-btn').forEach(function(b){b.classList.remove('active');});
+      btn.classList.add('active');
+      drawHistogram();
+    };
+    btnsDiv.appendChild(btn);
+  });
+  drawHistogram();
+}
+
+function onBinChange(v){
+  binCount=parseInt(v);
+  document.getElementById('binVal').textContent=v;
+  drawHistogram();
+}
+
+// ── Mini shape canvases ──
+function drawMiniShape(canvasId, shapeKey, w, h){
+  var canvas=document.getElementById(canvasId);
+  if(!canvas) return;
+  canvas.width=w||canvas.offsetWidth||160;
+  canvas.height=h||60;
+  var ctx=canvas.getContext('2d');
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  var bg=isDark?'#2e2e28':'#f0ede6';
+  var bar='#1a4a8a';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  var W=canvas.width, H=canvas.height;
+  var heights;
+  if(shapeKey==='symmetric'){
+    heights=[1,2,4,7,10,12,10,7,4,2,1];
+  } else if(shapeKey==='right'){
+    heights=[10,12,9,7,5,3,2,1.5,1,0.5,0.3];
+  } else if(shapeKey==='left'){
+    heights=[0.3,0.5,1,1.5,2,3,5,7,9,12,10];
+  } else { // bimodal
+    heights=[2,5,9,12,7,3,2,7,11,8,2];
+  }
+  var maxH=Math.max.apply(null,heights);
+  var bw=W/heights.length;
+  var padT=4, padB=4;
+  heights.forEach(function(hv,i){
+    var bh=((hv/maxH)*(H-padT-padB));
+    ctx.fillStyle=bar;
+    ctx.fillRect(i*bw+1, H-padB-bh, bw-2, bh);
+  });
+}
+
+function drawMiniShapes(){
+  var shapes=['symmetric','right','left','bimodal'];
+  shapes.forEach(function(sh,idx){
+    drawMiniShape('smini'+idx, sh, 180, 60);
+  });
+}
+
+function drawChallengeShapes(){
+  var shapes=['symmetric','right','left','bimodal'];
+  var challenges=window._shapeChallenges||[];
+  challenges.forEach(function(ch,ci){
+    shapes.forEach(function(sh){
+      drawMiniShape('sch-'+ci+'-'+sh, sh, 140, 60);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// PIE DEMO ENGINE
+// ═══════════════════════════════════════════════════
+function initDemoPie(){
+  var pdata=LANG==='es'?PIE_DEMO_DATA.es:PIE_DEMO_DATA.en;
+  var titleEl=document.getElementById('pie-demo-title');
+  if(titleEl) titleEl.textContent=pdata.title;
+
+  var slidersDiv=document.getElementById('pie-sliders');
+  if(!slidersDiv) return;
+  slidersDiv.innerHTML='';
+  pdata.slices.forEach(function(sl,i){
+    var row=document.createElement('div');
+    row.className='pie-slider-row';
+    row.innerHTML=
+      '<label class="pie-slider-label" style="color:'+sl.color+'">'+sl.label+'</label>'+
+      '<input type="range" min="0" max="80" value="'+pieSliders[i]+'" id="psl'+i+'" oninput="onPieSlide('+i+',this.value)">'+
+      '<span class="pie-pct-display" id="pslv'+i+'">'+pieSliders[i]+'%</span>';
+    slidersDiv.appendChild(row);
+  });
+
+  var legend=document.getElementById('pie-legend');
+  if(legend){
+    legend.innerHTML='';
+    pdata.slices.forEach(function(sl,i){
+      var row=document.createElement('div');
+      row.className='pie-legend-row';
+      row.innerHTML='<span class="pie-swatch" style="background:'+sl.color+'"></span><span id="pleg'+i+'">'+sl.label+': '+pieSliders[i]+'%</span>';
+      legend.appendChild(row);
+    });
+  }
+  drawDemoPie();
+}
+
+function onPieSlide(idx, val){
+  pieSliders[idx]=parseInt(val);
+  var totalEl=document.getElementById('pie-total-val');
+  var total=pieSliders.reduce(function(a,b){return a+b;},0);
+  if(totalEl){
+    totalEl.textContent=total+'%';
+    totalEl.className='pie-total-val'+(total===100?' exact':total>100?' over':'');
+  }
+  var legEl=document.getElementById('pleg'+idx);
+  var pdata=LANG==='es'?PIE_DEMO_DATA.es:PIE_DEMO_DATA.en;
+  if(legEl) legEl.textContent=pdata.slices[idx].label+': '+val+'%';
+  document.getElementById('pslv'+idx).textContent=val+'%';
+  drawDemoPie();
+}
+
+function drawDemoPie(){
+  var canvas=document.getElementById('pieCanvas');
+  if(!canvas) return;
+  var pdata=LANG==='es'?PIE_DEMO_DATA.es:PIE_DEMO_DATA.en;
+  var ctx=canvas.getContext('2d');
+  var W=220, H=220;
+  canvas.width=W; canvas.height=H;
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  ctx.fillStyle=isDark?'#242420':'#ffffff';
+  ctx.fillRect(0,0,W,H);
+
+  var total=pieSliders.reduce(function(a,b){return a+b;},0);
+  if(total===0) return;
+  var cx=W/2, cy=H/2, r=90;
+  var startAngle=-Math.PI/2;
+  pdata.slices.forEach(function(sl,i){
+    var frac=pieSliders[i]/total;
+    var sweep=frac*2*Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,startAngle,startAngle+sweep);
+    ctx.closePath();
+    ctx.fillStyle=sl.color;
+    ctx.fill();
+    ctx.strokeStyle=isDark?'#242420':'#ffffff';
+    ctx.lineWidth=2;
+    ctx.stroke();
+    // label if big enough
+    if(frac>0.05){
+      var midAngle=startAngle+sweep/2;
+      var lx=cx+Math.cos(midAngle)*r*0.65;
+      var ly=cy+Math.sin(midAngle)*r*0.65;
+      ctx.fillStyle='#ffffff';
+      ctx.font='bold 11px IBM Plex Sans,sans-serif';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText(pieSliders[i]+'%',lx,ly);
+    }
+    startAngle+=sweep;
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// PIE ACTIVITY ENGINE — colorless base + fill on drop
+// ═══════════════════════════════════════════════════
+
+// Stores which labelIdx is in which sliceIdx: {sliceIdx: labelIdx}
+// labelAssignments already declared in state section above
+
+// Angles for each slice (computed once when step 2 opens)
+var pieSliceAngles=[];
+
+function computePieAngles(){
+  pieSliceAngles=[];
+  if(!pieActData||pieActData.length===0) return;
+  var total=pieActData.reduce(function(s,d){return s+d.n;},0);
+  var start=-Math.PI/2;
+  pieActData.forEach(function(d){
+    var sweep=(d.n/total)*2*Math.PI;
+    pieSliceAngles.push({start:start, sweep:sweep, end:start+sweep});
+    start+=sweep;
+  });
+}
+
+// Draw the base pie — gray segments with numbers, colored where assigned
+function drawActPie(){
+  var canvas=document.getElementById('actPieCanvas');
+  var overlay=document.getElementById('actPieOverlay');
+  if(!canvas) return;
+
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  var W=220, H=220, cx=110, cy=110, r=100;
+  var bgCol=isDark?'#242420':'#ffffff';
+  var graySlice=isDark?'#3a3830':'#ddd8cc';
+  var dividerCol=bgCol;
+  var textCol=isDark?'#b0aa9e':'#4a4640';
+
+  // Base canvas — slices (colored or gray)
+  canvas.width=W; canvas.height=H;
+  var ctx=canvas.getContext('2d');
+  ctx.fillStyle=bgCol; ctx.fillRect(0,0,W,H);
+
+  if(pieSliceAngles.length===0) computePieAngles();
+
+  pieSliceAngles.forEach(function(ang,i){
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,ang.start,ang.end);
+    ctx.closePath();
+    // If a label has been assigned to this slice, use that label's color
+    var assignedLabelIdx=labelAssignments[i];
+    ctx.fillStyle=(assignedLabelIdx!==undefined) ? pieActData[assignedLabelIdx].color : graySlice;
+    ctx.fill();
+    ctx.strokeStyle=dividerCol;
+    ctx.lineWidth=3;
+    ctx.stroke();
+  });
+
+  // Overlay canvas — numbers + text labels on top
+  if(!overlay) return;
+  overlay.width=W; overlay.height=H;
+  var octx=overlay.getContext('2d');
+  octx.clearRect(0,0,W,H);
+
+  pieSliceAngles.forEach(function(ang,i){
+    var midAngle=ang.start+ang.sweep/2;
+    var labelR=r*0.62;
+    var lx=cx+Math.cos(midAngle)*labelR;
+    var ly=cy+Math.sin(midAngle)*labelR;
+
+    var assignedLabelIdx=labelAssignments[i];
+    var hasColor=assignedLabelIdx!==undefined;
+
+    // Number badge
+    var numR=13;
+    octx.beginPath();
+    octx.arc(lx,ly,numR,0,2*Math.PI);
+    octx.fillStyle=hasColor?'rgba(255,255,255,0.85)':'rgba(255,255,255,0.7)';
+    octx.fill();
+    octx.strokeStyle=hasColor?'rgba(255,255,255,0.4)':'rgba(0,0,0,0.15)';
+    octx.lineWidth=1;
+    octx.stroke();
+
+    octx.fillStyle=hasColor?'#1a1a16':textCol;
+    octx.font='bold 11px IBM Plex Sans,sans-serif';
+    octx.textAlign='center';
+    octx.textBaseline='middle';
+    octx.fillText(i+1, lx, ly);
+
+    // If assigned: show percentage below number
+    if(hasColor){
+      var pctR=r*0.62+18;
+      var px=cx+Math.cos(midAngle)*pctR;
+      var py=cy+Math.sin(midAngle)*pctR;
+      octx.fillStyle='rgba(255,255,255,0.9)';
+      octx.font='bold 10px IBM Plex Sans,sans-serif';
+      octx.fillText(pieActData[i].pct+'%', px, py);
+    }
+  });
+}
+
+// ── Drag / Tap ──
+var draggingLabelIdx=null;
+var tappingLabelIdx=null;
+
+function labelDragStart(idx, el){
+  if(el.classList.contains('placed')) return;
+  draggingLabelIdx=idx;
+  el.style.opacity='.45';
+}
+function labelDragEnd(el){ el.style.opacity='1'; draggingLabelIdx=null; }
+
+function sliceDragOver(e, sliceIdx){
+  e.preventDefault();
+  var row=document.getElementById('sdr-'+sliceIdx);
+  if(row) row.classList.add('over');
+}
+function sliceDragLeave(sliceIdx){
+  var row=document.getElementById('sdr-'+sliceIdx);
+  if(row) row.classList.remove('over');
+}
+function sliceDrop(e, sliceIdx){
+  e.preventDefault();
+  var row=document.getElementById('sdr-'+sliceIdx);
+  if(row) row.classList.remove('over');
+  if(draggingLabelIdx===null) return;
+  placeLabel(draggingLabelIdx, sliceIdx);
+  draggingLabelIdx=null;
+}
+
+function labelTap(idx, el, e){
+  if(e) e.stopPropagation();
+  if(el.classList.contains('placed')) return;
+  if(tappingLabelIdx===idx){ tappingLabelIdx=null; el.style.outline=''; return; }
+  if(tappingLabelIdx!==null){
+    var prev=document.getElementById('lchip-'+tappingLabelIdx);
+    if(prev) prev.style.outline='';
+  }
+  tappingLabelIdx=idx;
+  el.style.outline='2px solid var(--gold)';
+}
+function sliceTap(sliceIdx, e){
+  if(e) e.stopPropagation();
+  if(tappingLabelIdx===null) return;
+  placeLabel(tappingLabelIdx, sliceIdx);
+  var chip=document.getElementById('lchip-'+tappingLabelIdx);
+  if(chip) chip.style.outline='';
+  tappingLabelIdx=null;
+}
+
+function placeLabel(labelIdx, sliceIdx){
+  var es=LANG==='es';
+
+  // If this label is already in another slot, unplace it there
+  Object.keys(labelAssignments).forEach(function(k){
+    if(labelAssignments[k]===labelIdx && parseInt(k)!==sliceIdx){
+      delete labelAssignments[k];
+      renderDropRow(parseInt(k), null);
+      document.getElementById('lchip-'+labelIdx).classList.remove('placed');
+    }
+  });
+
+  // If this slot already has a different label, return it to pool
+  if(labelAssignments[sliceIdx]!==undefined && labelAssignments[sliceIdx]!==labelIdx){
+    var oldLabel=labelAssignments[sliceIdx];
+    document.getElementById('lchip-'+oldLabel).classList.remove('placed');
+    document.getElementById('lchip-'+oldLabel).style.opacity='1';
+  }
+
+  // Assign
+  labelAssignments[sliceIdx]=labelIdx;
+  document.getElementById('lchip-'+labelIdx).classList.add('placed');
+
+  // Update the drop row UI
+  renderDropRow(sliceIdx, labelIdx);
+
+  // Redraw pie with new color
+  drawActPie();
+}
+
+function renderDropRow(sliceIdx, labelIdx){
+  var es=LANG==='es';
+  var content=document.getElementById('sdc-'+sliceIdx);
+  if(!content) return;
+  if(labelIdx===null||labelIdx===undefined){
+    content.innerHTML='<span style="font-size:.75rem;color:var(--text3)">'+(es?'Arrastra aquí':'Drop here')+'</span>';
+    var row=document.getElementById('sdr-'+sliceIdx);
+    if(row){ row.classList.remove('ok-slot','bad-slot'); }
+  } else {
+    var d=pieActData[labelIdx];
+    content.innerHTML=
+      '<span style="width:12px;height:12px;border-radius:3px;background:'+d.color+';flex-shrink:0;display:inline-block"></span>'+
+      '<span style="font-size:.82rem;font-weight:600">'+d.cat+'</span>'+
+      '<span style="font-size:.75rem;color:var(--text3);margin-left:.2rem">('+d.pct+'%)</span>'+
+      '<button onclick="removeLabelFromSlice('+sliceIdx+')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text3);font-size:.8rem;padding:.1rem .3rem">✕</button>';
+  }
+}
+
+function removeLabelFromSlice(sliceIdx){
+  var labelIdx=labelAssignments[sliceIdx];
+  if(labelIdx===undefined) return;
+  delete labelAssignments[sliceIdx];
+  var chip=document.getElementById('lchip-'+labelIdx);
+  if(chip){ chip.classList.remove('placed'); chip.style.opacity='1'; }
+  renderDropRow(sliceIdx, null);
+  drawActPie();
+}
+
+// ═══════════════════════════════════════════════════
+// ACTIVITY CHECKS
+// ═══════════════════════════════════════════════════
+
+// ── Activity 1: Frequency table ──
+function checkFreqTable(){
+  var es=LANG==='es';
+  var ans=window._freqAns;
+  if(!ans) return;
+  var allCorrect=true; var filled=0;
+
+  function checkCount(id, correctCount){
+    var el=document.getElementById(id);
+    if(!el) return true;
+    var v=parseInt(el.value);
+    if(isNaN(v)||el.value.trim()===''){allCorrect=false; return false;}
+    filled++;
+    if(v===correctCount){el.classList.add('ok-cell');el.classList.remove('bad-cell'); return true;}
+    else{el.classList.add('bad-cell');el.classList.remove('ok-cell');allCorrect=false; return false;}
+  }
+  function checkPct(id, correctPct){
+    var el=document.getElementById(id);
+    if(!el) return true;
+    var raw=el.value.trim().replace('%','').replace(',','.');
+    var v=parseInt(raw);
+    filled++;
+    // Accept correct value ±1 for rounding edge cases
+    if(!isNaN(v) && Math.abs(v-correctPct)<=1){el.classList.add('ok-cell');el.classList.remove('bad-cell'); return true;}
+    else{el.classList.add('bad-cell');el.classList.remove('ok-cell');allCorrect=false; return false;}
+  }
+
+  checkCount('fi-c0', ans.counts[0]);
+  checkPct('fi-p0',   ans.pcts[0]);
+  checkPct('fi-p1',   ans.pcts[1]);
+  checkCount('fi-c2', ans.counts[2]);
+
+  var fb=document.getElementById('fb-freq');
+  if(filled<4){ fb.className='dd-fb show part'; fb.textContent=es?'⚠ Llena todas las celdas antes de verificar.':'⚠ Fill all cells before checking.'; return; }
+  if(allCorrect){
+    fb.className='dd-fb show ok';
+    fb.textContent=es?'✓ ¡Correcto! La tabla de frecuencias está completa. Ahora puedes construir el histograma.':'✓ Correct! The frequency table is complete. Now you can build the histogram.';
+    activityScores.freq=1; updateProgress();
+    document.querySelector('#act-freq .dd-check').disabled=true;
+  } else {
+    fb.className='dd-fb show bad';
+    fb.textContent=es?'Hay errores. Revisa las celdas rojas y vuelve a contar los datos cuidadosamente.':'There are errors. Check the red cells and recount the data carefully.';
+  }
+}
+function resetFreqTable(){
+  ['fi-c0','fi-p0','fi-p1','fi-c2'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){el.value='';el.classList.remove('ok-cell','bad-cell');}
+  });
+  var fb=document.getElementById('fb-freq'); fb.className='dd-fb';
+  var btn=document.querySelector('#act-freq .dd-check'); if(btn) btn.disabled=false;
+  activityScores.freq=null; updateProgress();
+}
+
+// ── Activity 2: Histogram shape ──
+var shapeSelections={};
+function selectShape(challengeIdx, shapeKey){
+  var cards=document.querySelectorAll('#shape-grid-'+challengeIdx+' .shape-card');
+  cards.forEach(function(c){ c.classList.remove('selected'); });
+  document.getElementById('sc-'+challengeIdx+'-'+shapeKey).classList.add('selected');
+  shapeSelections[challengeIdx]=shapeKey;
+}
+function checkShapes(){
+  var es=LANG==='es';
+  var challenges=window._shapeChallenges||[];
+  var correct=0;
+  challenges.forEach(function(ch,i){
+    var sel=shapeSelections[i];
+    if(!sel) return;
+    var card=document.getElementById('sc-'+i+'-'+sel);
+    if(sel===ch.ans){ correct++; card.classList.add('correct'); card.classList.remove('selected','wrong'); }
+    else { card.classList.add('wrong'); card.classList.remove('selected','correct'); }
+  });
+  var fb=document.getElementById('fb-shapes');
+  var placed=Object.keys(shapeSelections).length;
+  if(placed<challenges.length){
+    fb.className='dd-fb show part';
+    fb.textContent=es?'⚠ Selecciona una forma para cada escenario.':'⚠ Select a shape for each scenario.';
+    return;
+  }
+  if(correct===challenges.length){
+    fb.className='dd-fb show ok';
+    fb.textContent=es?'✓ ¡Excelente! Identificaste correctamente las tres formas.':'✓ Excellent! You correctly identified all three shapes.';
+  } else {
+    fb.className='dd-fb show bad';
+    fb.textContent=(es?'Obtuviste '+correct+' de '+challenges.length+' correctos. Revisa los escenarios resaltados en rojo.':'You got '+correct+' out of '+challenges.length+' correct. Review the scenarios highlighted in red.');
+  }
+  activityScores.histShape=correct/challenges.length; updateProgress();
+  document.querySelector('#act-hist-shape .dd-check').disabled=true;
+}
+function resetShapes(){
+  shapeSelections={};
+  var challenges=window._shapeChallenges||[];
+  challenges.forEach(function(ch,i){
+    var cards=document.querySelectorAll('#shape-grid-'+i+' .shape-card');
+    cards.forEach(function(c){c.classList.remove('selected','correct','wrong');});
+  });
+  var fb=document.getElementById('fb-shapes'); fb.className='dd-fb';
+  var btn=document.querySelector('#act-hist-shape .dd-check'); if(btn) btn.disabled=false;
+  activityScores.histShape=null; updateProgress();
+}
+
+// ── Activity 3: Chart choice ──
+function checkChartChoice(){
+  var es=LANG==='es';
+  var items=window._chartItems||[];
+  var correct=0;
+  items.forEach(function(item,i){
+    var sel=document.getElementById('ccs'+i);
+    var row=document.getElementById('ccr'+i);
+    var icon=document.getElementById('cci'+i);
+    if(!sel.value){ row.className='match-row'; icon.textContent=''; return; }
+    sel.disabled=true;
+    if(sel.value===item.ans){ correct++; row.className='match-row ok'; icon.textContent='✓'; }
+    else { row.className='match-row bad'; icon.textContent='✗'; }
+  });
+  var detail=document.getElementById('chart-choice-detail');
+  if(detail){
+    detail.innerHTML=items.map(function(item,i){
+      return '<div style="font-size:.78rem;color:var(--text3);margin:.2rem 0">'+
+        '<strong>'+(i+1)+'.</strong> '+item.why+'</div>';
+    }).join('');
+  }
+  var fb=document.getElementById('fb-chart-choice');
+  if(correct===items.length){
+    fb.className='dd-fb show ok';
+    fb.textContent=es?'✓ ¡Perfecto! Elegiste correctamente el tipo de gráfica para cada variable.':'✓ Perfect! You correctly chose the chart type for each variable.';
+  } else {
+    fb.className='dd-fb show bad';
+    fb.textContent=(es?'Obtuviste '+correct+' de '+items.length+' correctos.':'You got '+correct+' out of '+items.length+' correct.');
+  }
+  activityScores.chartChoice=correct/items.length; updateProgress();
+  document.querySelector('#act-chart-choice .dd-check').disabled=true;
+  // Always reveal the defend question after checking
+  var defend=document.getElementById('chart-choice-defend');
+  if(defend) defend.style.display='block';
+}
+function resetChartChoice(){
+  var items=window._chartItems||[];
+  items.forEach(function(item,i){
+    var sel=document.getElementById('ccs'+i); var row=document.getElementById('ccr'+i); var icon=document.getElementById('cci'+i);
+    sel.value=''; sel.disabled=false; row.className='match-row'; icon.textContent='';
+  });
+  var fb=document.getElementById('fb-chart-choice'); fb.className='dd-fb';
+  var detail=document.getElementById('chart-choice-detail'); if(detail) detail.innerHTML='';
+  var defend=document.getElementById('chart-choice-defend'); if(defend) defend.style.display='none';
+  var dAnswer=document.getElementById('defend-answer'); if(dAnswer) dAnswer.classList.remove('show');
+  var dInput=document.getElementById('defend-input'); if(dInput) dInput.value='';
+  var btn=document.querySelector('#act-chart-choice .dd-check'); if(btn) btn.disabled=false;
+  activityScores.chartChoice=null; updateProgress();
+}
+
+// ── Activity 4: Pie step 1 — percentages ──
+function checkPctStep(){
+  var es=LANG==='es';
+  var allOk=true; var filled=0;
+  pieActData.forEach(function(d,i){
+    var inp=document.getElementById('pct'+i);
+    if(!inp) return;
+    var v=parseInt(inp.value);
+    if(isNaN(v)){ allOk=false; return; }
+    filled++;
+    if(v===d.pct){ inp.classList.add('ok-input'); inp.classList.remove('bad-input'); }
+    else { inp.classList.add('bad-input'); inp.classList.remove('ok-input'); allOk=false; }
+  });
+  var fb=document.getElementById('fb-pct');
+  if(filled<pieActData.length){ fb.className='dd-fb show part'; fb.textContent=es?'⚠ Ingresa todos los porcentajes.':'⚠ Enter all percentages.'; return; }
+  if(allOk){
+    fb.className='dd-fb show ok';
+    fb.textContent=es?'✓ ¡Porcentajes correctos! Ahora identifica los sectores.':'✓ Correct percentages! Now identify the sectors.';
+    pctVerified=true;
+    document.querySelector('#pie-step-1 .dd-check').disabled=true;
+    // Advance to step 2
+    setTimeout(function(){
+      document.getElementById('pie-step-1').style.opacity='.5';
+      document.getElementById('pie-step-2').style.display='block';
+      document.getElementById('pdot-0').className='step-dot done';
+      document.getElementById('pdot-1').className='step-dot active';
+      computePieAngles();
+      drawActPie();
+      document.getElementById('pie-step-2').scrollIntoView({behavior:'smooth',block:'start'});
+    }, 600);
+  } else {
+    fb.className='dd-fb show bad';
+    fb.textContent=es?'Revisa los porcentajes en rojo. Recuerda: (frecuencia ÷ 2400) × 100.':'Check the percentages in red. Remember: (frequency ÷ 2400) × 100.';
+  }
+}
+function resetPctStep(){
+  pieActData.forEach(function(d,i){
+    var inp=document.getElementById('pct'+i);
+    if(inp){inp.value='';inp.classList.remove('ok-input','bad-input');}
+  });
+  var fb=document.getElementById('fb-pct'); fb.className='dd-fb';
+  var btn=document.querySelector('#pie-step-1 .dd-check'); if(btn) btn.disabled=false;
+}
+
+// ── Activity 4: Pie step 2 — label drop ──
+function checkLabelDrop(){
+  var es=LANG==='es';
+  var placed=Object.keys(labelAssignments).length;
+  if(placed<pieActData.length){
+    var fb=document.getElementById('fb-labels');
+    fb.className='dd-fb show part';
+    fb.textContent=es?'⚠ Coloca una etiqueta en cada sector antes de verificar.':'⚠ Place a label on each sector before checking.';
+    return;
+  }
+  var correct=0;
+  pieActData.forEach(function(d,i){
+    var labelIdx=labelAssignments[i];
+    var row=document.getElementById('sdr-'+i);
+    // Slice i should contain labelIdx i (same position = same category)
+    var ok=(labelIdx===i);
+    if(ok){
+      correct++;
+      if(row){ row.classList.add('ok-slot'); row.classList.remove('bad-slot'); }
+    } else {
+      if(row){ row.classList.add('bad-slot'); row.classList.remove('ok-slot'); }
+    }
+  });
+  var fb=document.getElementById('fb-labels');
+  if(correct===pieActData.length){
+    fb.className='dd-fb show ok';
+    fb.textContent=es?
+      '✓ ¡Perfecto! Razonaste correctamente — el sector más grande es el mayor porcentaje.':
+      '✓ Perfect! You reasoned correctly — the largest sector is the highest percentage.';
+    labelsVerified=true;
+    activityScores.pieAct=1; updateProgress();
+    document.querySelector('#pie-step-2 .dd-check').disabled=true;
+    // Freeze drop rows
+    pieActData.forEach(function(d,i){
+      var row=document.getElementById('sdr-'+i);
+      if(row){ row.style.pointerEvents='none'; }
+    });
+    setTimeout(function(){
+      document.getElementById('pie-step-2').style.opacity='.5';
+      document.getElementById('pie-step-3').style.display='block';
+      document.getElementById('pdot-1').className='step-dot done';
+      document.getElementById('pdot-2').className='step-dot done active';
+      var finalMsg=document.getElementById('pie-final-msg');
+      if(finalMsg) finalMsg.textContent=es?
+        '✓ ¡Actividad completa! Calculaste los porcentajes y asignaste correctamente cada categoría a su sector usando el tamaño como pista.':
+        '✓ Activity complete! You calculated the percentages and correctly assigned each category to its sector using size as your clue.';
+      document.getElementById('pie-step-3').scrollIntoView({behavior:'smooth',block:'start'});
+    }, 700);
+  } else {
+    fb.className='dd-fb show bad';
+    fb.textContent=es?
+      'Obtuviste '+correct+' de '+pieActData.length+' correctos. Las filas en rojo tienen la categoría equivocada. Pista: compara el tamaño visual del sector con el porcentaje del chip.':
+      'You got '+correct+' out of '+pieActData.length+' correct. Red rows have the wrong category. Hint: compare the visual size of the sector with the chip\'s percentage.';
+  }
+}
+
+function resetLabelDrop(){
+  var es=LANG==='es';
+  labelAssignments={};
+  pieActData.forEach(function(d,i){
+    var row=document.getElementById('sdr-'+i);
+    if(row){
+      row.classList.remove('ok-slot','bad-slot');
+      row.style.pointerEvents='';
+    }
+    renderDropRow(i, null);
+    var chip=document.getElementById('lchip-'+i);
+    if(chip){ chip.classList.remove('placed'); chip.style.opacity='1'; chip.style.outline=''; }
+  });
+  drawActPie();
+  var fb=document.getElementById('fb-labels'); fb.className='dd-fb';
+  var btn=document.querySelector('#pie-step-2 .dd-check'); if(btn) btn.disabled=false;
+  tappingLabelIdx=null; draggingLabelIdx=null;
+}
+
+// ── Discovery section ──
+function revealDiscovery(){
+  var el=document.getElementById('disc-answer');
+  if(el) el.style.display='block';
+  var btn=document.getElementById('disc-reveal-btn');
+  if(btn) btn.style.display='none';
+}
+
+// ── Chart choice defend ──
+function revealDefend(){
+  var el=document.getElementById('defend-answer');
+  if(el) el.classList.add('show');
+}
+
+// ── Activity 5: Case ──
+var caseRevealCount=0;
+function revealCase(id){
+  var el=document.getElementById(id);
+  if(!el) return;
+  el.classList.add('show');
+  // Show self-reflection box after answer
+  var reflectId=id.replace('ca','ca')+'-reflect';
+  var reflectEl=document.getElementById(id+'-reflect');
+  if(reflectEl) reflectEl.style.display='block';
+  caseRevealCount++;
+  if(caseRevealCount>=4 && activityScores.caseAct===null){
+    activityScores.caseAct=1; updateProgress();
+    var fb=document.getElementById('fb-case');
+    fb.className='dd-fb show ok';
+    fb.textContent=LANG==='es'?
+      '✓ Informe completado. Has razonado como un analista: elegiste herramientas, interpretaste patrones y propusiste decisiones basadas en datos.':
+      '✓ Brief complete. You reasoned like an analyst: you chose tools, interpreted patterns, and proposed data-driven decisions.';
+  }
+}
+function resetCase(){
+  ['ca1','ca2','ca3','ca4'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.classList.remove('show');
+    var ref=document.getElementById(id+'-reflect');
+    if(ref) ref.style.display='none';
+  });
+  ['case1','case2','case3','case4'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.value='';
+  });
+  caseRevealCount=0;
+  var fb=document.getElementById('fb-case'); if(fb) fb.className='dd-fb';
+  activityScores.caseAct=null; updateProgress();
+}
+
+// ═══════════════════════════════════════════════════
+// PDF
+// ═══════════════════════════════════════════════════
+function generatePDF(){
+  var btn=document.getElementById('dlBtn');
+  var es=LANG==='es';
+  btn.textContent=es?'Generando PDF...':'Generating PDF...';
+  btn.disabled=true;
+  setTimeout(function(){
+    var jspdf=window.jspdf;
+    var doc=new jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
+    var PW=215.9,M=18,TW=PW-M*2,y=20;
+    var pBR=26,pBG=74,pBB=138;
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,16,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text((es?'Visualización de Datos · Semana 2':'Data Visualization · Week 2'),M,11);
+    y=24;
+    doc.setTextColor(20,24,32); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text((es?'Alumno: ':'Student: ')+studentName+'   '+(es?'Grupo: ':'Group: ')+studentGroup,M,y); y+=6;
+    doc.text(new Date().toLocaleDateString(es?'es-MX':'en-US'),M,y); y+=10;
+    // scores
+    function scoreStr(val, outOf){
+      if(val===null) return '-';
+      return Math.round(val*outOf)+'/'+outOf;
+    }
+    doc.setFillColor(232,237,245); doc.roundedRect(M,y,TW,34,3,3,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text(es?'RESULTADOS POR ACTIVIDAD':'ACTIVITY RESULTS',M+4,y+7);
+    doc.setTextColor(20,24,32); doc.setFont('helvetica','normal');
+    doc.text((es?'Act 1 – Tabla de frecuencias: ':'Act 1 – Frequency table: ')+scoreStr(activityScores.freq,4),M+4,y+14);
+    doc.text((es?'Act 2 – Forma del histograma: ':'Act 2 – Histogram shape: ')+scoreStr(activityScores.histShape,3),M+4,y+20);
+    doc.text((es?'Act 3 – Histograma o pastel: ':'Act 3 – Histogram or pie: ')+scoreStr(activityScores.chartChoice,6),M+4,y+26);
+    doc.text((es?'Act 4 – Construcción del pastel: ':'Act 4 – Pie chart construction: ')+(activityScores.pieAct!==null?'Completo':'—'),M+4,y+32);
+    doc.text((es?'Act 5 – Caso integrador: ':'Act 5 – Integrative case: ')+(activityScores.caseAct!==null?'Completo':'—'),M+110,y+14);
+    y+=40;
+    doc.setTextColor(130,140,160); doc.setFontSize(7);
+    doc.text('ALEXIS · liaxa.mx', PW/2, y, {align:'center'});
+    doc.save('visualizacion_datos_'+studentName.replace(/\s+/g,'_')+'.pdf');
+    btn.innerHTML='⬇ &nbsp;<span id="pdf-lbl">'+(es?'Descargar resultados en PDF':'Download results as PDF')+'</span>';
+    btn.disabled=false;
+  },200);
+}
+</script>
+</body>
+</html>
