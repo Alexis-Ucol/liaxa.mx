@@ -1056,30 +1056,85 @@ function buildPDFDoc(){
   var es=LANG==='es';
   var jspdf=window.jspdf;
   var doc=new jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'letter'});
-  var PW=215.9,M=18,TW=PW-M*2,y=20;
-  var pBR=26,pBG=74,pBB=138;
-  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,16,'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(11); doc.setFont('helvetica','bold');
-  doc.text((es?'Introduccion a la Estadistica - Semana 1':'Introduction to Statistics - Week 1'),M,11);
-  y=24;
-  doc.setTextColor(20,24,32); doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text((es?'Alumno: ':'Student: ')+studentName+'   '+(es?'Grupo: ':'Group: ')+studentGroup,M,y); y+=6;
-  doc.text(new Date().toLocaleDateString(es?'es-MX':'en-US'),M,y); y+=10;
+  var PW=215.9, M=18, TW=PW-M*2;
+  var PH=doc.internal.pageSize.height;
+  var name=studentName, group=studentGroup;
+  var pBR=26, pBG=74, pBB=138;
+  var pAR=201, pAG=168, pAB=76;
+
   var s1=activityScores.dd1!==null?Math.round(activityScores.dd1*6)+'/6':'-';
   var s2=activityScores.dd2!==null?Math.round(activityScores.dd2*8)+'/8':'-';
   var s3=activityScores.match1!==null?Math.round(activityScores.match1*6)+'/6':'-';
   var s4=activityScores.case1!==null?'3/3':'-';
-  doc.setFillColor(237,245,235); doc.roundedRect(M,y,TW,22,3,3,'F');
-  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(8); doc.setFont('helvetica','bold');
-  doc.text(es?'RESULTADOS POR ACTIVIDAD':'ACTIVITY RESULTS',M+4,y+7);
-  doc.setTextColor(20,24,32); doc.setFont('helvetica','normal');
-  doc.text((es?'Act 1 - Descriptiva/Inferencial: ':'Act 1 - Descriptive/Inferential: ')+s1,M+4,y+13);
-  doc.text((es?'Act 2 - Tipos de variables: ':'Act 2 - Variable types: ')+s2,M+80,y+13);
-  doc.text((es?'Act 3 - Niveles de medicion: ':'Act 3 - Levels of measurement: ')+s3,M+4,y+19);
-  doc.text((es?'Act 4 - Caso integrador: ':'Act 4 - Integrative case: ')+s4,M+80,y+19);
-  y+=28;
-  doc.setTextColor(130,140,160); doc.setFontSize(7);
-  doc.text('ALEXIS - liaxa.mx', PW/2, y, {align:'center'});
+  var correct=Math.round((activityScores.dd1||0)*6)+Math.round((activityScores.dd2||0)*8)+Math.round((activityScores.match1||0)*6)+(activityScores.case1!==null?3:0);
+  var total=23;
+  var pct=Math.round(correct/total*100);
+  var dateStr=new Date().toLocaleString(es?'es-MX':'en-US',{dateStyle:'long',timeStyle:'short'});
+
+  /* Verification code */
+  var raw=name+'|'+group+'|'+correct+'|'+total+'|'+new Date().toDateString();
+  var h=0;
+  for(var ci=0;ci<raw.length;ci++) h=(Math.imul(31,h)+raw.charCodeAt(ci))|0;
+  var code=Math.abs(h).toString(36).toUpperCase().slice(0,8);
+
+  /* ── Cover page stripes ── */
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');
+
+  /* LIAXA mark */
+  var lx=PW-M-36, ly=10;
+  doc.setDrawColor(26,74,138); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]],lx+1.03,ly+6.17);
+  doc.setFillColor(201,168,76); doc.circle(lx+5.66,ly+2.57,0.9,'F');
+  doc.setDrawColor(201,168,76); doc.setLineWidth(0.7);
+  doc.line(lx+8.23,ly+1.54,lx+8.23,ly+7.2);
+  doc.setTextColor(26,74,138); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA',lx+10,ly+6.8);
+
+  /* Title band */
+  doc.setTextColor(240,244,238); doc.setFontSize(15); doc.setFont('helvetica','bold');
+  doc.text(es?'Introduccion a la Estadistica - Semana 1':'Introduction to Statistics - Week 1',M,49);
+  doc.setTextColor(198,214,192); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr,M,59);
+
+  /* Student card */
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text(es?'ALUMNO':'STUDENT',M+4,79); doc.text(es?'GRUPO':'GROUP',130,79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name,M+4,87); doc.text(group,130,87);
+
+  /* Score box */
+  var sc=pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%',PW/2,124,{align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correct+' '+(es?'correcta(s) de':'correct out of')+' '+total+' '+(es?'preguntas':'questions'),PW/2,131,{align:'center'});
+
+  /* Activity results box */
+  var ry=142;
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,ry,TW,8,'F');
+  doc.text(es?'RESULTADOS POR ACTIVIDAD':'ACTIVITY RESULTS',M+4,ry+5.5);
+  ry+=12;
+  doc.setFillColor(237,240,245); doc.roundedRect(M,ry,TW,22,3,3,'F');
+  doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text((es?'Act 1 - Descriptiva/Inferencial: ':'Act 1 - Descriptive/Inferential: ')+s1,M+4,ry+8);
+  doc.text((es?'Act 2 - Tipos de variables: ':'Act 2 - Variable types: ')+s2,M+4,ry+14);
+  doc.text((es?'Act 3 - Niveles de medicion: ':'Act 3 - Levels of measurement: ')+s3,M+4,ry+20);
+  doc.text((es?'Act 4 - Caso integrador: ':'Act 4 - Integrative case: ')+s4,PW/2+4,ry+8);
+
+  /* Footer on cover */
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,PH-3,PW,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+  doc.text(name+'  ·  '+group+'  ·  '+(es?'Codigo: ':'Code: ')+code+'  ·  '+(es?'Pagina ':'Page ')+'1/1',PW/2,PH-5,{align:'center'});
+
   return doc;
 }
 
