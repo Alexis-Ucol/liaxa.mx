@@ -171,6 +171,27 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .pie-total-val.exact{color:var(--ok)}
 
 /* PIE ACTIVITY — compute + type + drag */
+/* BUILD ACTIVITIES (histogram + pie construction) */
+.bld-canvas-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem;margin:.6rem 0}
+.bld-bar-controls{display:grid;gap:.4rem;margin-top:.7rem}
+.bld-bar-row{display:flex;align-items:center;gap:.5rem;font-size:.8rem;flex-wrap:wrap}
+.bld-bar-row .bld-ivl{flex:0 0 78px;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:.74rem}
+.bld-step-btn{width:32px;height:32px;border:1.5px solid var(--border);background:var(--surface2);border-radius:7px;font-size:1.05rem;font-weight:700;color:var(--green-dark);cursor:pointer;line-height:1;flex-shrink:0}
+.bld-step-btn:hover{border-color:var(--green);background:var(--green-bg)}
+.bld-num{width:58px;padding:.4rem;border:1.5px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:.9rem;text-align:center;font-family:inherit}
+.bld-num.ok-input{border-color:var(--ok);background:var(--ok-bg)}
+.bld-num.bad-input{border-color:var(--bad);background:var(--bad-bg)}
+.bld-mc-grid{display:grid;gap:.5rem;margin:.5rem 0}
+.bld-mc-opt{text-align:left;padding:.7rem .9rem;border:1.5px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);font-size:.86rem;cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
+.bld-mc-opt:hover{border-color:var(--green)}
+.bld-mc-opt:disabled{cursor:default}
+.bld-mc-opt.correct{border-color:var(--ok);background:var(--ok-bg);font-weight:600}
+.bld-mc-opt.wrong{border-color:var(--bad);background:var(--bad-bg);opacity:.7}
+.bld-hint{font-size:.76rem;color:var(--text3);margin:.35rem 0}
+#histBuildCanvas{touch-action:none;cursor:ns-resize;display:block;width:100%;max-width:560px;margin:0 auto}
+.bld-sum{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.85rem;margin:.2rem 0;color:var(--text3)}
+.bld-sum.exact{color:var(--ok)}
+.bld-sum.over{color:var(--bad)}
 .pie-act-container{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.4rem;margin:1rem 0}
 .pie-data-table{width:100%;border-collapse:collapse;margin-bottom:1rem;font-size:.83rem}
 .pie-data-table th{background:var(--green);color:#fff;padding:.45rem .7rem;text-align:left;font-weight:600}
@@ -372,15 +393,15 @@ function toggleTheme(){
   var next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
   document.documentElement.setAttribute('data-theme',next);
   document.getElementById('themeBtn').textContent=next==='dark'?'☀️':'🌙';
-  if(lessonBuilt){ drawHistogram(); drawDemoPie(); if(pieSliceAngles.length===0) computePieAngles(); drawActPie(); }
+  if(lessonBuilt){ drawHistogram(); drawDemoPie(); if(pieSliceAngles.length===0) computePieAngles(); drawActPie(); if(typeof drawBuildHist==='function') drawBuildHist(); if(typeof drawBuildPie==='function' && document.getElementById('pieBuildCanvas')) drawBuildPie(); }
 }
 
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
 var studentName='', studentGroup='', lessonBuilt=false;
-var activityScores={freq:null, histShape:null, chartChoice:null, pieAct:null, caseAct:null};
-var totalActivities=5;
+var activityScores={freq:null, histBuild:null, histShape:null, chartChoice:null, pieAct:null, pieBuild:null, caseAct:null};
+var totalActivities=7;
 var currentScenario=0;
 var binCount=8;
 
@@ -441,7 +462,7 @@ function restoreSession(){
   buildLesson(_rng);
   lessonBuilt=true;
   // Restore scores
-  if(saved.scores) activityScores=saved.scores;
+  if(saved.scores){ var _def={freq:null,histBuild:null,histShape:null,chartChoice:null,pieAct:null,pieBuild:null,caseAct:null}; for(var _k in _def){ if(saved.scores[_k]===undefined) saved.scores[_k]=null; } activityScores=saved.scores; }
   updateProgress();
   document.getElementById('welcomeScreen').style.display='none';
   document.getElementById('lessonScreen').style.display='block';
@@ -596,9 +617,11 @@ function startLesson(){
 function rebuildLesson(){
   var lb=document.getElementById('lessonBody');
   lb.innerHTML='';
-  activityScores={freq:null,histShape:null,chartChoice:null,pieAct:null,caseAct:null};
+  activityScores={freq:null,histBuild:null,histShape:null,chartChoice:null,pieAct:null,pieBuild:null,caseAct:null};
   currentScenario=0; binCount=8; pieSliders=[35,20,30,15];
   labelAssignments={}; pctVerified=false; labelsVerified=false;
+  histBuild=null; histUserHeights=[0,0,0,0,0,0]; histDrawVerified=false; histComputeVerified=false; histMcDone=false;
+  pieBuildDeg=[0,0,0,0]; correctPieDeg=[0,0,0,0]; pieDrawVerified=false; pieAngleVerified=false; pieMcDone=false;
   // Language rebuild: recreate RNG with same attempt so numbers stay consistent
   var att=currentAttempt();
   _rng=makeRng(att);
@@ -652,7 +675,7 @@ function buildLesson(rng){
   var s1=document.createElement('div');
   s1.className='section';
   s1.innerHTML=
-    '<div class="stag">'+(es?'Parte 1 de 5':'Part 1 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Parte 1 de 7':'Part 1 of 7')+'</div>'+
     '<h2>'+(es?'Antes de la teoría: un experimento':'Before the theory: an experiment')+'</h2>'+
     '<p>'+(es?
       'Mira estos cuatro conjuntos de datos de negocios reales. No te decimos nada todavía sobre cómo graficarlos. Primero, obsérvalos y piensa en esta pregunta:':
@@ -716,7 +739,7 @@ function buildLesson(rng){
   var s2=document.createElement('div');
   s2.className='section';
   s2.innerHTML=
-    '<div class="stag">'+(es?'Parte 2 de 5':'Part 2 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Parte 2 de 7':'Part 2 of 7')+'</div>'+
     '<h2>'+(es?'La tabla de frecuencias: base del histograma':'The frequency table: histogram foundation')+'</h2>'+
     '<p>'+(es?
       'Un histograma no dibuja cada dato individualmente. Primero agrupa los datos en <strong>intervalos de clase</strong> y cuenta cuántos datos caen en cada uno. Esa tabla se llama tabla de frecuencias y es la base de cualquier histograma.':
@@ -819,7 +842,7 @@ function buildLesson(rng){
     rawData.join(', ');
 
   act1.innerHTML=
-    '<div class="stag">'+(es?'Actividad 1 de 5':'Activity 1 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Actividad 1 de 7':'Activity 1 of 7')+'</div>'+
     '<h2>'+(es?'Completa la tabla de frecuencias':'Complete the frequency table')+'</h2>'+
     '<p>'+(es?'Lee los datos y llena las celdas vacías. Cuenta cuidadosamente cuántos valores caen en cada intervalo.':'Read the data and fill in the empty cells. Count carefully how many values fall in each interval.')+'</p>'+
     '<div class="gcrd"><p style="font-size:.83rem;font-family:\'IBM Plex Mono\',monospace;line-height:1.8;color:var(--text2)">'+introText+'</p></div>'+
@@ -836,11 +859,14 @@ function buildLesson(rng){
     '<div class="dd-fb" id="fb-freq"></div>';
   lb.appendChild(act1);
 
+  // NEW: histogram construction (teach + build)
+  buildHistConstruction(lb, rng, es);
+
   // ── SECTION 3: Histogram interactive ──
   var s3=document.createElement('div');
   s3.className='section';
   s3.innerHTML=
-    '<div class="stag">'+(es?'Parte 3 de 5':'Part 3 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Parte 4 de 7':'Part 4 of 7')+'</div>'+
     '<h2>'+(es?'El histograma: forma y significado':'The histogram: shape and meaning')+'</h2>'+
     '<p>'+(es?
       'La <strong>forma</strong> de un histograma es la información más valiosa que contiene. Cuatro formas son esenciales en análisis de negocios. Cambia el escenario para ver cada una y luego ajusta el número de barras para ver cómo la amplitud de los intervalos afecta la imagen.':
@@ -958,7 +984,7 @@ function buildLesson(rng){
     '</div>';
   }).join('');
   act2.innerHTML=
-    '<div class="stag">'+(es?'Actividad 2 de 5':'Activity 2 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Actividad 3 de 7':'Activity 3 of 7')+'</div>'+
     '<h2>'+(es?'Identifica la forma del histograma':'Identify the histogram shape')+'</h2>'+
     '<p>'+(es?'Lee cada descripción de negocios y selecciona la forma del histograma que mejor la representa.':'Read each business description and select the histogram shape that best represents it.')+'</p>'+
     challengeHtml+
@@ -974,7 +1000,7 @@ function buildLesson(rng){
   var s4=document.createElement('div');
   s4.className='section';
   s4.innerHTML=
-    '<div class="stag">'+(es?'Parte 4 de 5':'Part 4 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Parte 5 de 7':'Part 5 of 7')+'</div>'+
     '<h2>'+(es?'La gráfica de pastel':'The pie chart')+'</h2>'+
     '<p>'+(es?
       'Una gráfica de pastel divide un círculo en sectores proporcionales a la frecuencia relativa de cada categoría. Es la herramienta correcta cuando tienes una <strong>variable cualitativa</strong> y quieres mostrar cómo se reparte un total entre sus partes.':
@@ -1052,7 +1078,7 @@ function buildLesson(rng){
     '</div>';
   }).join('');
   act3.innerHTML=
-    '<div class="stag">'+(es?'Actividad 3 de 5':'Activity 3 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Actividad 4 de 7':'Activity 4 of 7')+'</div>'+
     '<h2>'+(es?'¿Histograma o pastel?':'Histogram or pie chart?')+'</h2>'+
     '<p>'+(es?'Para cada variable, selecciona la gráfica correcta. Piensa en el tipo de variable y en qué pregunta quieres responder.':'For each variable, select the correct chart. Think about the variable type and what question you want to answer.')+'</p>'+
     '<div class="match-grid">'+chartRows+'</div>'+
@@ -1084,7 +1110,7 @@ function buildLesson(rng){
   var s5=document.createElement('div');
   s5.className='section';
   s5.innerHTML=
-    '<div class="stag">'+(es?'Parte 5 de 5':'Part 5 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Parte 6 de 7':'Part 6 of 7')+'</div>'+
     '<h2>'+(es?'Construyendo una gráfica de pastel paso a paso':'Building a pie chart step by step')+'</h2>'+
     '<p>'+(es?
       'Para construir una gráfica de pastel a partir de datos reales, sigues tres pasos: primero <strong>calculas el porcentaje</strong> de cada categoría, luego <strong>verificas</strong> que los porcentajes son correctos, y finalmente <strong>identificas</strong> qué sector corresponde a qué categoría.':
@@ -1173,7 +1199,7 @@ function buildLesson(rng){
     '</div>';
   }).join('');
   act4.innerHTML=
-    '<div class="stag">'+(es?'Actividad 4 de 5':'Activity 4 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Actividad 5 de 7':'Activity 5 of 7')+'</div>'+
     '<h2>'+(es?'Construye la gráfica paso a paso':'Build the chart step by step')+'</h2>'+
     '<div class="step-indicator" id="pie-steps">'+
       '<div class="step-dot active" id="pdot-0">1</div>'+
@@ -1249,12 +1275,15 @@ function buildLesson(rng){
     '</div>';
   lb.appendChild(act4);
 
+  // NEW: pie construction by angles (teach + build)
+  buildPieConstruction(lb, es);
+
   // ── ACTIVITY 5: Integrative case ──
   var act5=document.createElement('div');
   act5.className='section';
   act5.id='act-case';
   act5.innerHTML=
-    '<div class="stag">'+(es?'Actividad 5 de 5':'Activity 5 of 5')+'</div>'+
+    '<div class="stag">'+(es?'Actividad 7 de 7':'Activity 7 of 7')+'</div>'+
     '<h2>'+(es?'Informe para la gerencia':'Management brief')+'</h2>'+
     '<p>'+(es?
       'Eres analista de datos en una cadena de supermercados. La directora general te pide un informe visual de los datos del último año antes de la junta del lunes. Este es el encargo real:':
@@ -1363,6 +1392,8 @@ function buildLesson(rng){
     drawMiniShapes();
     drawChallengeShapes();
     drawActPie();
+    var hc=document.getElementById('histBuildCanvas');
+    if(hc){ hc.addEventListener('pointerdown',histPointerDown); hc.addEventListener('pointermove',histPointerMove); window.addEventListener('pointerup',histPointerUp); }
   }, 120);
 }
 
@@ -2191,6 +2222,701 @@ function resetCase(){
 }
 
 // ═══════════════════════════════════════════════════
+// BUILD ACTIVITIES — HISTOGRAM & PIE CONSTRUCTION
+// ═══════════════════════════════════════════════════
+
+// ---------- HISTOGRAM CONSTRUCTION ----------
+var histBuild=null;          // {shape,freq,raw,range,width,intervals,ctx,mc,maxY}
+var histUserHeights=[0,0,0,0,0,0];
+var histDrawVerified=false;
+var histComputeVerified=false;
+
+var HB_CTX={
+  symmetric:{
+    es:{topic:'unidades producidas por hora en una línea de ensamblaje',xlabel:'Unidades/hora',
+        mcq:'Tu histograma salió simétrico. ¿Qué puedes afirmar sobre estos datos?',
+        opts:['La media y la mediana casi coinciden, así que la media es una medida representativa.',
+              'La media está muy distorsionada y no sirve.',
+              'Los datos tienen dos grupos distintos.',
+              'La mayoría de los valores son extremos.'],
+        correct:0,
+        exp:'En una distribución simétrica la media y la mediana coinciden. La producción es estable y predecible, y la media describe bien al valor típico.'},
+    en:{topic:'units produced per hour on an assembly line',xlabel:'Units/hour',
+        mcq:'Your histogram came out symmetric. What can you claim about this data?',
+        opts:['The mean and median nearly coincide, so the mean is a representative measure.',
+              'The mean is badly distorted and useless.',
+              'The data has two distinct groups.',
+              'Most of the values are extreme.'],
+        correct:0,
+        exp:'In a symmetric distribution the mean and median coincide. Production is stable and predictable, and the mean describes the typical value well.'}
+  },
+  right:{
+    es:{topic:'tiempo de espera de clientes en atención (minutos)',xlabel:'Minutos',
+        mcq:'Tu histograma salió sesgado a la derecha (cola hacia los valores altos). ¿Qué medida describe mejor al cliente típico?',
+        opts:['La mediana, porque los pocos valores altos jalan la media hacia arriba.',
+              'La media, porque siempre es la mejor medida.',
+              'El valor más alto de la última barra.',
+              'Ninguna medida sirve con estos datos.'],
+        correct:0,
+        exp:'Con sesgo a la derecha, unos pocos tiempos muy largos jalan la media hacia arriba. La mediana resiste esos valores extremos y representa mejor al cliente típico.'},
+    en:{topic:'customer wait time at the service desk (minutes)',xlabel:'Minutes',
+        mcq:'Your histogram came out right-skewed (tail toward the high values). Which measure best describes the typical customer?',
+        opts:['The median, because the few high values pull the mean upward.',
+              'The mean, because it is always the best measure.',
+              'The highest value in the last bar.',
+              'No measure works with this data.'],
+        correct:0,
+        exp:'With right skew, a few very long times pull the mean upward. The median resists those extreme values and better represents the typical customer.'}
+  },
+  left:{
+    es:{topic:'puntaje de desempeño del equipo (0 a 60)',xlabel:'Puntaje',
+        mcq:'Tu histograma salió sesgado a la izquierda (cola hacia los valores bajos). ¿Qué indica sobre el desempeño del equipo?',
+        opts:['La mayoría tiene desempeño alto y solo unos pocos casos bajos jalan la media hacia abajo.',
+              'Casi todo el equipo tiene desempeño bajo.',
+              'El desempeño está repartido por igual en todos los niveles.',
+              'Hay dos equipos con desempeños opuestos.'],
+        correct:0,
+        exp:'Con sesgo a la izquierda, la mayoría de los puntajes son altos y unos pocos bajos jalan la media hacia abajo. La mediana sería más representativa que la media.'},
+    en:{topic:'team performance score (0 to 60)',xlabel:'Score',
+        mcq:'Your histogram came out left-skewed (tail toward the low values). What does it indicate about the team?',
+        opts:['Most of the team performs high, and only a few low cases pull the mean down.',
+              'Almost the whole team performs poorly.',
+              'Performance is spread evenly across all levels.',
+              'There are two teams with opposite performance.'],
+        correct:0,
+        exp:'With left skew, most scores are high and a few low ones pull the mean down. The median would be more representative than the mean.'}
+  },
+  bimodal:{
+    es:{topic:'edad de los clientes de una tienda (años)',xlabel:'Edad',
+        mcq:'Tu histograma salió bimodal (dos picos separados). ¿Qué sugiere para el negocio?',
+        opts:['Hay dos grupos de clientes distintos que conviene analizar por separado.',
+              'Todos los clientes tienen edades muy parecidas.',
+              'Los datos están mal medidos.',
+              'La edad no es una variable útil.'],
+        correct:0,
+        exp:'Dos picos separados revelan dos segmentos de clientes distintos. La empresa debería diseñar estrategias separadas para cada grupo en lugar de tratarlos como uno solo.'},
+    en:{topic:'ages of a store\'s customers (years)',xlabel:'Age',
+        mcq:'Your histogram came out bimodal (two separate peaks). What does it suggest for the business?',
+        opts:['There are two distinct customer groups that should be analyzed separately.',
+              'All customers are about the same age.',
+              'The data was measured incorrectly.',
+              'Age is not a useful variable.'],
+        correct:0,
+        exp:'Two separate peaks reveal two distinct customer segments. The company should design separate strategies for each group instead of treating them as one.'}
+  }
+};
+
+function initHistBuildData(rng){
+  var shapes=['symmetric','right','left','bimodal'];
+  var shape=shapes[Math.floor(rng()*shapes.length)];
+  var freqMap={
+    symmetric:[2,5,8,8,5,2],
+    right:[10,8,5,4,2,1],
+    left:[1,2,4,5,8,10],
+    bimodal:[9,4,2,2,4,9]
+  };
+  var freq=freqMap[shape].slice();
+  var raw=[];
+  for(var i=0;i<6;i++){
+    var lo=i*10, hi=lo+9;
+    for(var k=0;k<freq[i];k++) raw.push(rInt(rng,lo,hi));
+  }
+  raw[0]=0;                 // force min in bin 0
+  raw[raw.length-1]=60;     // force max in last bin [50,60]
+  var rawShuffled=shuffle(raw,rng);
+  var es=LANG==='es';
+  histBuild={
+    shape:shape, freq:freq, raw:rawShuffled,
+    range:60, width:10, k:6, n:raw.length,
+    intervals:[[0,10],[10,20],[20,30],[30,40],[40,50],[50,60]],
+    ctx:(es?HB_CTX[shape].es:HB_CTX[shape].en)
+  };
+  histBuild.maxY=Math.max.apply(null,freq)+1;
+  histUserHeights=[0,0,0,0,0,0];
+  histDrawVerified=false;
+  histComputeVerified=false;
+}
+
+function ivlLabel(i){
+  var iv=histBuild.intervals[i];
+  return i===5 ? (iv[0]+' – '+iv[1]) : (iv[0]+' – '+(iv[1]-1));
+}
+
+function buildHistConstruction(lb, rng, es){
+  initHistBuildData(rng);
+  var ctx=histBuild.ctx;
+
+  // ---- Teaching part ----
+  var sp=document.createElement('div');
+  sp.className='section';
+  sp.innerHTML=
+    '<div class="stag">'+(es?'Parte 3 de 7':'Part 3 of 7')+'</div>'+
+    '<h2>'+(es?'Cómo se construye un histograma':'How to build a histogram')+'</h2>'+
+    '<p>'+(es?
+      'Ya sabes leer la forma de un histograma. Ahora vas a construir uno desde cero. Todo histograma se arma con el mismo procedimiento de cinco pasos:':
+      'You already know how to read a histogram\'s shape. Now you will build one from scratch. Every histogram is assembled with the same five-step procedure:')+'</p>'+
+    '<div class="rules-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">'+
+      '<div class="rcard"><div class="rname">1. '+(es?'Rango':'Range')+'</div><div class="rnote">'+(es?'Resta el valor mínimo al máximo. Rango = máximo menos mínimo.':'Subtract the minimum from the maximum. Range = maximum minus minimum.')+'</div></div>'+
+      '<div class="rcard"><div class="rname">2. '+(es?'Número de clases':'Number of classes')+'</div><div class="rnote">'+(es?'Decide en cuántos intervalos agrupar. Una guía común es de 5 a 15 clases.':'Decide how many intervals to group into. A common guide is 5 to 15 classes.')+'</div></div>'+
+      '<div class="rcard"><div class="rname">3. '+(es?'Amplitud':'Class width')+'</div><div class="rnote">'+(es?'Amplitud = rango dividido entre el número de clases (se redondea hacia arriba).':'Width = range divided by number of classes (rounded up).')+'</div></div>'+
+      '<div class="rcard"><div class="rname">4. '+(es?'Conteo (tabulación)':'Tally')+'</div><div class="rnote">'+(es?'Cuenta cuántos datos caen en cada intervalo. Esa es la frecuencia de cada barra.':'Count how many values fall in each interval. That is each bar\'s frequency.')+'</div></div>'+
+      '<div class="rcard" style="border-top-color:var(--gold)"><div class="rname" style="color:var(--gold)">5. '+(es?'Dibujo':'Draw')+'</div><div class="rnote">'+(es?'Dibuja una barra por intervalo, con altura igual a su frecuencia. Las barras van pegadas, sin espacios.':'Draw one bar per interval, with height equal to its frequency. Bars sit adjacent, with no gaps.')+'</div></div>'+
+    '</div>'+
+    '<div class="callout">'+
+      '<strong>'+(es?'Ejemplo del cálculo:':'The calculation, worked out:')+'</strong>'+
+      '<p>'+(es?
+        ' Si los datos van de 0 a 60 y quieres 6 clases: Rango = 60 menos 0 = 60. Amplitud = 60 dividido entre 6 = 10. Los intervalos quedan 0 a 9, 10 a 19, 20 a 29, y así hasta 50 a 60.':
+        ' If the data ranges from 0 to 60 and you want 6 classes: Range = 60 minus 0 = 60. Width = 60 divided by 6 = 10. The intervals become 0 to 9, 10 to 19, 20 to 29, and so on up to 50 to 60.')+'</p>'+
+    '</div>'+
+    '<div class="callout" style="border-left-color:var(--gold)">'+
+      '<strong>'+(es?'Histograma vs. gráfica de barras:':'Histogram vs. bar chart:')+'</strong>'+
+      '<p>'+(es?
+        ' Un histograma es para datos numéricos y sus barras van pegadas porque el eje es continuo. Una gráfica de barras es para categorías y sus barras van separadas. Ese espacio (o su ausencia) no es decoración: comunica si la variable es numérica o categórica.':
+        ' A histogram is for numerical data and its bars sit together because the axis is continuous. A bar chart is for categories and its bars are separated. That gap (or its absence) is not decoration: it tells the reader whether the variable is numerical or categorical.')+'</p>'+
+    '</div>';
+  lb.appendChild(sp);
+
+  // ---- Build activity ----
+  var act=document.createElement('div');
+  act.className='section';
+  act.id='act-histbuild';
+
+  var rows=histBuild.raw.join(', ');
+  var tallyInputs='';
+  for(var i=0;i<6;i++){
+    tallyInputs+=
+      '<tr>'+
+        '<td style="font-family:\'IBM Plex Mono\',monospace">'+ivlLabel(i)+'</td>'+
+        '<td><input class="freq-input" id="hb-t'+i+'" type="number" min="0" max="30" placeholder="?"></td>'+
+      '</tr>';
+  }
+
+  // Draw-step controls
+  var barCtl='';
+  for(var i=0;i<6;i++){
+    barCtl+=
+      '<div class="bld-bar-row">'+
+        '<span class="bld-ivl">'+ivlLabel(i)+'</span>'+
+        '<button class="bld-step-btn" onclick="histBarStep('+i+',-1)">−</button>'+
+        '<input class="bld-num" id="hb-h'+i+'" type="number" min="0" max="'+histBuild.maxY+'" value="0" oninput="setHistBar('+i+',this.value)">'+
+        '<button class="bld-step-btn" onclick="histBarStep('+i+',1)">+</button>'+
+      '</div>';
+  }
+
+  // Interpret MC
+  var mcOpts='';
+  ctx.opts.forEach(function(o,oi){
+    mcOpts+='<button class="bld-mc-opt" id="hb-mc'+oi+'" onclick="answerHistMC('+oi+')">'+o+'</button>';
+  });
+
+  act.innerHTML=
+    '<div class="stag">'+(es?'Actividad 2 de 7':'Activity 2 of 7')+'</div>'+
+    '<h2>'+(es?'Construye el histograma':'Build the histogram')+'</h2>'+
+    '<div class="step-indicator">'+
+      '<div class="step-dot active" id="hbdot-0">1</div>'+
+      '<div class="step-dot" id="hbdot-1">2</div>'+
+      '<div class="step-dot" id="hbdot-2">3</div>'+
+    '</div>'+
+    '<div class="case-box" style="margin-bottom:.75rem"><div class="case-q">'+
+      (es?'Una empresa registró los '+ctx.topic+'. Estos son los '+histBuild.n+' valores recolectados:':
+          'A company recorded the '+ctx.topic+'. These are the '+histBuild.n+' collected values:')+
+      '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:.8rem;line-height:1.8;color:var(--text2);margin-top:.5rem">'+rows+'</p>'+
+    '</div></div>'+
+
+    // STEP 1: compute range/width/tally
+    '<div id="hb-step-1">'+
+      '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin-bottom:.4rem">'+
+        (es?'Paso 1 — Calcula el rango, la amplitud y el conteo de cada intervalo (usa 6 clases):':
+            'Step 1 — Compute the range, the width and the count for each interval (use 6 classes):')+'</p>'+
+      '<div class="bld-bar-row" style="margin-bottom:.5rem">'+
+        '<span class="bld-ivl" style="flex-basis:auto">'+(es?'Rango =':'Range =')+'</span>'+
+        '<input class="bld-num" id="hb-range" type="number" placeholder="?">'+
+        '<span class="bld-ivl" style="flex-basis:auto;margin-left:.8rem">'+(es?'Amplitud =':'Width =')+'</span>'+
+        '<input class="bld-num" id="hb-width" type="number" placeholder="?">'+
+      '</div>'+
+      '<p class="bld-hint">'+(es?'Pista: el mínimo es 0 y el máximo es 60. Amplitud = rango ÷ 6.':'Hint: the minimum is 0 and the maximum is 60. Width = range ÷ 6.')+'</p>'+
+      '<table class="freq-table"><thead><tr><th>'+ctx.xlabel+'</th><th>'+(es?'Conteo':'Count')+'</th></tr></thead><tbody>'+tallyInputs+'</tbody></table>'+
+      '<div class="dd-actions">'+
+        '<button class="dd-check" onclick="checkHistCompute()">'+(es?'✓ Verificar':'✓ Check')+'</button>'+
+        '<button class="dd-reset" onclick="resetHistCompute()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
+      '</div>'+
+      '<div class="dd-fb" id="fb-hbc"></div>'+
+    '</div>'+
+
+    // STEP 2: draw the bars
+    '<div id="hb-step-2" style="display:none">'+
+      '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin:.6rem 0 .4rem">'+
+        (es?'Paso 2 — Dibuja el histograma. Ajusta la altura de cada barra hasta igualar el conteo que obtuviste. Arrastra la barra hacia arriba o abajo, o usa los botones.':
+            'Step 2 — Draw the histogram. Set each bar\'s height to match the count you found. Drag the bar up or down, or use the buttons.')+'</p>'+
+      '<div class="bld-canvas-wrap">'+
+        '<canvas id="histBuildCanvas" height="300"></canvas>'+
+      '</div>'+
+      '<div class="bld-bar-controls">'+barCtl+'</div>'+
+      '<div class="dd-actions">'+
+        '<button class="dd-check" onclick="checkHistDraw()">'+(es?'✓ Verificar dibujo':'✓ Check drawing')+'</button>'+
+        '<button class="dd-reset" onclick="resetHistDraw()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
+      '</div>'+
+      '<div class="dd-fb" id="fb-hbd"></div>'+
+    '</div>'+
+
+    // STEP 3: interpret their own chart
+    '<div id="hb-step-3" style="display:none">'+
+      '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin:.6rem 0 .4rem">'+
+        (es?'Paso 3 — Lee tu propio histograma:':'Step 3 — Read your own histogram:')+'</p>'+
+      '<p style="font-size:.86rem;margin-bottom:.5rem">'+ctx.mcq+'</p>'+
+      '<div class="bld-mc-grid">'+mcOpts+'</div>'+
+      '<div class="dd-fb" id="fb-hbm"></div>'+
+    '</div>';
+  lb.appendChild(act);
+}
+
+function checkHistCompute(){
+  var es=LANG==='es';
+  var okAll=true, filled=0;
+  function chk(id,ans){
+    var el=document.getElementById(id);
+    if(!el) return;
+    var v=parseInt(el.value);
+    if(isNaN(v)){ okAll=false; return; }
+    filled++;
+    if(v===ans){ el.classList.add('ok-input'); el.classList.remove('bad-input'); }
+    else { el.classList.add('bad-input'); el.classList.remove('ok-input'); okAll=false; }
+  }
+  chk('hb-range', histBuild.range);
+  chk('hb-width', histBuild.width);
+  for(var i=0;i<6;i++) chk('hb-t'+i, histBuild.freq[i]);
+  var fb=document.getElementById('fb-hbc');
+  if(filled<8){ fb.className='dd-fb show part'; fb.textContent=es?'⚠ Llena todas las celdas antes de verificar.':'⚠ Fill every cell before checking.'; return; }
+  if(okAll){
+    histComputeVerified=true;
+    fb.className='dd-fb show ok';
+    fb.textContent=es?'✓ ¡Correcto! Ya tienes las frecuencias. Ahora dibuja las barras.':'✓ Correct! You have the frequencies. Now draw the bars.';
+    document.querySelector('#hb-step-1 .dd-check').disabled=true;
+    setTimeout(function(){
+      document.getElementById('hb-step-1').style.opacity='.55';
+      document.getElementById('hb-step-2').style.display='block';
+      document.getElementById('hbdot-0').className='step-dot done';
+      document.getElementById('hbdot-1').className='step-dot active';
+      drawBuildHist();
+      document.getElementById('hb-step-2').scrollIntoView({behavior:'smooth',block:'start'});
+    },500);
+  } else {
+    fb.className='dd-fb show bad';
+    fb.textContent=es?'Revisa las celdas en rojo. Recuenta con cuidado los datos de cada intervalo.':'Check the red cells. Recount the values in each interval carefully.';
+  }
+}
+function resetHistCompute(){
+  ['hb-range','hb-width','hb-t0','hb-t1','hb-t2','hb-t3','hb-t4','hb-t5'].forEach(function(id){
+    var el=document.getElementById(id); if(el){ el.value=''; el.classList.remove('ok-input','bad-input'); }
+  });
+  var fb=document.getElementById('fb-hbc'); if(fb) fb.className='dd-fb';
+  var b=document.querySelector('#hb-step-1 .dd-check'); if(b) b.disabled=false;
+  histComputeVerified=false;
+}
+
+function setHistBar(i,val){
+  var v=parseInt(val); if(isNaN(v)) v=0;
+  v=Math.max(0,Math.min(histBuild.maxY,v));
+  histUserHeights[i]=v;
+  var inp=document.getElementById('hb-h'+i); if(inp && parseInt(inp.value)!==v) inp.value=v;
+  histDrawVerified=false;
+  drawBuildHist();
+}
+function histBarStep(i,d){ setHistBar(i, (histUserHeights[i]||0)+d); }
+
+function drawBuildHist(){
+  var canvas=document.getElementById('histBuildCanvas');
+  if(!canvas || !histBuild) return;
+  var W=canvas.offsetWidth||560;
+  var H=300;
+  var dpr=window.devicePixelRatio||1;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  canvas.style.height=H+'px';
+  var ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  var bg=isDark?'#242420':'#ffffff';
+  var textCol=isDark?'#b0aa9e':'#4a4640';
+  var gridCol=isDark?'rgba(255,255,255,.07)':'rgba(0,0,0,.06)';
+  var okCol='#1e7d45', badCol='#c0321a', neutral='#1a4a8a';
+
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  var pad={top:22,right:16,bottom:40,left:40};
+  var cw=W-pad.left-pad.right, ch=H-pad.top-pad.bottom;
+  var maxY=histBuild.maxY;
+
+  ctx.strokeStyle=gridCol; ctx.lineWidth=1;
+  ctx.fillStyle=textCol; ctx.font='10px IBM Plex Mono,monospace'; ctx.textAlign='right';
+  for(var g=0;g<=maxY;g++){
+    var gy=pad.top+ch-(g/maxY)*ch;
+    ctx.beginPath(); ctx.moveTo(pad.left,gy); ctx.lineTo(pad.left+cw,gy); ctx.stroke();
+    ctx.fillText(g, pad.left-6, gy+3);
+  }
+
+  var bw=cw/6;
+  for(var i=0;i<6;i++){
+    var hv=histUserHeights[i]||0;
+    var bh=(hv/maxY)*ch;
+    var bx=pad.left+i*bw;
+    var by=pad.top+ch-bh;
+    var col=neutral;
+    if(histDrawVerified) col=(hv===histBuild.freq[i])?okCol:badCol;
+    ctx.fillStyle=col;
+    if(bh>0) ctx.fillRect(bx+1,by,bw-2,bh);
+    ctx.strokeStyle=isDark?'rgba(255,255,255,.12)':'rgba(0,0,0,.12)';
+    ctx.lineWidth=1;
+    ctx.strokeRect(bx+1,pad.top,bw-2,ch);
+    if(hv>0){
+      ctx.fillStyle=textCol; ctx.font='bold 11px IBM Plex Sans,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(hv, bx+bw/2, by-4);
+    }
+    ctx.fillStyle=textCol; ctx.font='9px IBM Plex Mono,monospace'; ctx.textAlign='center';
+    ctx.fillText(ivlLabel(i).replace(/\s/g,''), bx+bw/2, pad.top+ch+14);
+  }
+  ctx.strokeStyle=textCol; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(pad.left,pad.top); ctx.lineTo(pad.left,pad.top+ch); ctx.lineTo(pad.left+cw,pad.top+ch); ctx.stroke();
+
+  canvas._hbGeom={pad:pad, cw:cw, ch:ch, bw:bw, maxY:maxY};
+}
+
+// pointer drag on histogram bars
+var _hbDragging=false;
+function _hbSetFromEvent(canvas,e){
+  var g=canvas._hbGeom; if(!g) return;
+  var rect=canvas.getBoundingClientRect();
+  var px=(e.clientX!==undefined?e.clientX:e.touches[0].clientX)-rect.left;
+  var py=(e.clientY!==undefined?e.clientY:e.touches[0].clientY)-rect.top;
+  var i=Math.floor((px-g.pad.left)/g.bw);
+  if(i<0||i>5) return;
+  var frac=(g.pad.top+g.ch-py)/g.ch;
+  var val=Math.round(frac*g.maxY);
+  setHistBar(i, val);
+}
+function histPointerDown(e){ _hbDragging=true; _hbSetFromEvent(e.currentTarget,e); e.preventDefault(); }
+function histPointerMove(e){ if(_hbDragging){ _hbSetFromEvent(e.currentTarget,e); e.preventDefault(); } }
+function histPointerUp(){ _hbDragging=false; }
+
+function checkHistDraw(){
+  var es=LANG==='es';
+  histDrawVerified=true;
+  drawBuildHist();
+  var allOk=true;
+  for(var i=0;i<6;i++){ if(histUserHeights[i]!==histBuild.freq[i]) allOk=false; }
+  var fb=document.getElementById('fb-hbd');
+  if(allOk){
+    fb.className='dd-fb show ok';
+    fb.textContent=es?'✓ ¡Histograma construido! Cada barra iguala su frecuencia.':'✓ Histogram built! Each bar matches its frequency.';
+    document.querySelector('#hb-step-2 .dd-check').disabled=true;
+    setTimeout(function(){
+      document.getElementById('hb-step-2').style.opacity='.55';
+      document.getElementById('hb-step-3').style.display='block';
+      document.getElementById('hbdot-1').className='step-dot done';
+      document.getElementById('hbdot-2').className='step-dot done active';
+      document.getElementById('hb-step-3').scrollIntoView({behavior:'smooth',block:'start'});
+    },500);
+  } else {
+    fb.className='dd-fb show bad';
+    fb.textContent=es?'Algunas barras (en rojo) no coinciden con su frecuencia. Ajústalas y vuelve a verificar.':'Some bars (in red) do not match their frequency. Adjust them and check again.';
+  }
+}
+function resetHistDraw(){
+  histUserHeights=[0,0,0,0,0,0]; histDrawVerified=false;
+  for(var i=0;i<6;i++){ var el=document.getElementById('hb-h'+i); if(el) el.value=0; }
+  drawBuildHist();
+  var fb=document.getElementById('fb-hbd'); if(fb) fb.className='dd-fb';
+  var b=document.querySelector('#hb-step-2 .dd-check'); if(b) b.disabled=false;
+}
+
+var histMcDone=false;
+function answerHistMC(idx){
+  if(histMcDone) return;
+  var es=LANG==='es';
+  var ctx=histBuild.ctx;
+  var fb=document.getElementById('fb-hbm');
+  var btn=document.getElementById('hb-mc'+idx);
+  if(idx===ctx.correct){
+    histMcDone=true;
+    btn.classList.add('correct');
+    for(var k=0;k<ctx.opts.length;k++){ var b=document.getElementById('hb-mc'+k); if(b) b.disabled=true; }
+    fb.className='dd-fb show ok';
+    fb.innerHTML='<strong>'+(es?'✓ Correcto.':'✓ Correct.')+'</strong> '+ctx.exp;
+    activityScores.histBuild=1; updateProgress();
+  } else {
+    btn.classList.add('wrong'); btn.disabled=true;
+    fb.className='dd-fb show bad';
+    fb.textContent=es?'No es esa. Piensa hacia qué lado apunta la cola y qué le hace eso a la media. Intenta de nuevo.':'Not that one. Think about which way the tail points and what that does to the mean. Try again.';
+  }
+}
+
+// ---------- PIE CONSTRUCTION ----------
+var pieBuildDeg=[0,0,0,0];
+var correctPieDeg=[0,0,0,0];
+var pieDrawVerified=false;
+var pieAngleVerified=false;
+var pieMcDone=false;
+
+function initPieBuildData(){
+  correctPieDeg=[]; pieBuildDeg=[];
+  if(!pieActData||pieActData.length===0){ return; }
+  pieActData.forEach(function(d){
+    correctPieDeg.push(Math.round(d.pct*3.6));
+    pieBuildDeg.push(0);
+  });
+  pieDrawVerified=false; pieAngleVerified=false; pieMcDone=false;
+}
+
+function buildPieConstruction(lb, es){
+  initPieBuildData();
+
+  var sp=document.createElement('div');
+  sp.className='section';
+  sp.innerHTML=
+    '<div class="stag">'+(es?'Parte 7 de 7':'Part 7 of 7')+'</div>'+
+    '<h2>'+(es?'De porcentaje a ángulo: dibujar el pastel':'From percentage to angle: drawing the pie')+'</h2>'+
+    '<p>'+(es?
+      'En la actividad anterior calculaste los porcentajes y ubicaste cada sector por su tamaño. Pero, ¿cómo se dibuja realmente un pastel? Cada rebanada es un ángulo, y un círculo completo tiene 360 grados. Para convertir un porcentaje en su ángulo:':
+      'In the previous activity you computed the percentages and placed each sector by its size. But how is a pie actually drawn? Each slice is an angle, and a full circle has 360 degrees. To convert a percentage into its angle:')+'</p>'+
+    '<div class="gcrd">'+
+      '<div style="text-align:center;padding:.8rem;background:var(--surface2);border-radius:8px;margin:.5rem 0;font-family:\'IBM Plex Mono\',monospace;font-size:.92rem;color:var(--green-dark)">'+
+        (es?'Ángulo = (Porcentaje ÷ 100) × 360°':'Angle = (Percentage ÷ 100) × 360°')+
+      '</div>'+
+      '<p style="font-size:.84rem;color:var(--text3)">'+(es?
+        'Ejemplo: una categoría con 40% ocupa (40 ÷ 100) × 360 = 144°. Una regla rápida: cada 1% son 3.6°. Y todos los ángulos deben sumar exactamente 360°.':
+        'Example: a category with 40% takes up (40 ÷ 100) × 360 = 144°. A quick rule: every 1% is 3.6°. And all the angles must add up to exactly 360°.')+'</p>'+
+    '</div>';
+  lb.appendChild(sp);
+
+  var act=document.createElement('div');
+  act.className='section';
+  act.id='act-piebuild';
+
+  var angRows='', dgRows='';
+  pieActData.forEach(function(d,i){
+    angRows+=
+      '<tr>'+
+        '<td style="display:flex;align-items:center;gap:.4rem"><span style="width:12px;height:12px;border-radius:3px;background:'+d.color+';display:inline-block;flex-shrink:0"></span>'+d.cat+'</td>'+
+        '<td>'+d.pct+'%</td>'+
+        '<td><input class="bld-num" id="pb-a'+i+'" type="number" min="0" max="360" placeholder="?"></td>'+
+      '</tr>';
+    dgRows+=
+      '<div class="bld-bar-row">'+
+        '<span class="bld-ivl" style="flex:0 0 120px;color:'+d.color+';font-weight:600;font-family:inherit">'+d.cat+' ('+d.pct+'%)</span>'+
+        '<button class="bld-step-btn" onclick="pieDegStep('+i+',-3)">−</button>'+
+        '<input class="bld-num" id="pb-d'+i+'" type="number" min="0" max="360" value="0" oninput="setPieDeg('+i+',this.value)">'+
+        '<span style="font-size:.75rem;color:var(--text3)">°</span>'+
+        '<button class="bld-step-btn" onclick="pieDegStep('+i+',3)">+</button>'+
+      '</div>';
+  });
+
+  var mcOpts='';
+  pieActData.forEach(function(d,i){
+    mcOpts+='<button class="bld-mc-opt" id="pb-mc'+i+'" onclick="answerPieMC('+i+')">'+d.cat+'</button>';
+  });
+
+  act.innerHTML=
+    '<div class="stag">'+(es?'Actividad 6 de 7':'Activity 6 of 7')+'</div>'+
+    '<h2>'+(es?'Construye el pastel por ángulos':'Build the pie by angles')+'</h2>'+
+    '<div class="step-indicator">'+
+      '<div class="step-dot active" id="pbdot-0">1</div>'+
+      '<div class="step-dot" id="pbdot-1">2</div>'+
+      '<div class="step-dot" id="pbdot-2">3</div>'+
+    '</div>'+
+
+    // STEP 1: compute angles
+    '<div id="pb-step-1">'+
+      '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin-bottom:.4rem">'+
+        (es?'Paso 1 — Convierte cada porcentaje en su ángulo (Ángulo = % × 3.6):':'Step 1 — Convert each percentage into its angle (Angle = % × 3.6):')+'</p>'+
+      '<table class="pie-data-table"><thead><tr>'+
+        '<th>'+(es?'Categoría':'Category')+'</th><th>%</th><th>'+(es?'Ángulo (°)':'Angle (°)')+'</th>'+
+      '</tr></thead><tbody>'+angRows+'</tbody></table>'+
+      '<div class="bld-sum" id="pb-angsum"></div>'+
+      '<div class="dd-actions">'+
+        '<button class="dd-check" onclick="checkAngleStep()">'+(es?'✓ Verificar ángulos':'✓ Check angles')+'</button>'+
+        '<button class="dd-reset" onclick="resetAngleStep()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
+      '</div>'+
+      '<div class="dd-fb" id="fb-pba"></div>'+
+    '</div>'+
+
+    // STEP 2: draw the pie
+    '<div id="pb-step-2" style="display:none">'+
+      '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin:.6rem 0 .4rem">'+
+        (es?'Paso 2 — Dibuja el pastel. Ajusta el ángulo de cada rebanada hasta igualar el que calculaste. El pastel se redibuja al instante.':
+            'Step 2 — Draw the pie. Set each slice\'s angle to match the one you computed. The pie redraws instantly.')+'</p>'+
+      '<div style="display:grid;grid-template-columns:220px 1fr;gap:1.4rem;align-items:start">'+
+        '<div style="display:flex;flex-direction:column;align-items:center">'+
+          '<canvas id="pieBuildCanvas" width="220" height="220" style="display:block"></canvas>'+
+          '<div class="bld-sum" id="pb-degsum" style="margin-top:.5rem"></div>'+
+        '</div>'+
+        '<div class="bld-bar-controls" style="margin-top:0">'+dgRows+'</div>'+
+      '</div>'+
+      '<div class="dd-actions" style="margin-top:.8rem">'+
+        '<button class="dd-check" onclick="checkPieDraw()">'+(es?'✓ Verificar dibujo':'✓ Check drawing')+'</button>'+
+        '<button class="dd-reset" onclick="resetPieDraw()">'+(es?'↺ Reiniciar':'↺ Reset')+'</button>'+
+      '</div>'+
+      '<div class="dd-fb" id="fb-pbd"></div>'+
+    '</div>'+
+
+    // STEP 3: interpret
+    '<div id="pb-step-3" style="display:none">'+
+      '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin:.6rem 0 .4rem">'+
+        (es?'Paso 3 — Lee tu propio pastel:':'Step 3 — Read your own pie:')+'</p>'+
+      '<p style="font-size:.86rem;margin-bottom:.5rem">'+(es?'¿Cuál categoría ocupa la rebanada más grande (el mayor ángulo)?':'Which category takes up the largest slice (the biggest angle)?')+'</p>'+
+      '<div class="bld-mc-grid">'+mcOpts+'</div>'+
+      '<div class="dd-fb" id="fb-pbm"></div>'+
+    '</div>';
+  lb.appendChild(act);
+}
+
+function checkAngleStep(){
+  var es=LANG==='es';
+  var okAll=true, filled=0, sum=0;
+  pieActData.forEach(function(d,i){
+    var el=document.getElementById('pb-a'+i);
+    if(!el) return;
+    var v=parseInt(el.value);
+    if(isNaN(v)){ okAll=false; return; }
+    filled++; sum+=v;
+    if(v===correctPieDeg[i]){ el.classList.add('ok-input'); el.classList.remove('bad-input'); }
+    else { el.classList.add('bad-input'); el.classList.remove('ok-input'); okAll=false; }
+  });
+  var sumEl=document.getElementById('pb-angsum');
+  if(sumEl){ sumEl.textContent=(es?'Suma: ':'Sum: ')+sum+'° / 360°'; sumEl.className='bld-sum'+(sum===360?' exact':(sum>360?' over':'')); }
+  var fb=document.getElementById('fb-pba');
+  if(filled<pieActData.length){ fb.className='dd-fb show part'; fb.textContent=es?'⚠ Ingresa todos los ángulos.':'⚠ Enter every angle.'; return; }
+  if(okAll){
+    pieAngleVerified=true;
+    fb.className='dd-fb show ok';
+    fb.textContent=es?'✓ ¡Ángulos correctos y suman 360°! Ahora dibuja el pastel.':'✓ Correct angles, and they add to 360°! Now draw the pie.';
+    document.querySelector('#pb-step-1 .dd-check').disabled=true;
+    setTimeout(function(){
+      document.getElementById('pb-step-1').style.opacity='.55';
+      document.getElementById('pb-step-2').style.display='block';
+      document.getElementById('pbdot-0').className='step-dot done';
+      document.getElementById('pbdot-1').className='step-dot active';
+      drawBuildPie();
+      document.getElementById('pb-step-2').scrollIntoView({behavior:'smooth',block:'start'});
+    },500);
+  } else {
+    fb.className='dd-fb show bad';
+    fb.textContent=es?'Revisa los ángulos en rojo. Recuerda: ángulo = porcentaje × 3.6.':'Check the red angles. Remember: angle = percentage × 3.6.';
+  }
+}
+function resetAngleStep(){
+  pieActData.forEach(function(d,i){ var el=document.getElementById('pb-a'+i); if(el){ el.value=''; el.classList.remove('ok-input','bad-input'); } });
+  var fb=document.getElementById('fb-pba'); if(fb) fb.className='dd-fb';
+  var sumEl=document.getElementById('pb-angsum'); if(sumEl){ sumEl.textContent=''; sumEl.className='bld-sum'; }
+  var b=document.querySelector('#pb-step-1 .dd-check'); if(b) b.disabled=false;
+  pieAngleVerified=false;
+}
+
+function setPieDeg(i,val){
+  var v=parseInt(val); if(isNaN(v)) v=0;
+  v=Math.max(0,Math.min(360,v));
+  pieBuildDeg[i]=v;
+  var inp=document.getElementById('pb-d'+i); if(inp && parseInt(inp.value)!==v) inp.value=v;
+  pieDrawVerified=false;
+  drawBuildPie();
+}
+function pieDegStep(i,d){ setPieDeg(i,(pieBuildDeg[i]||0)+d); }
+
+function drawBuildPie(){
+  var canvas=document.getElementById('pieBuildCanvas');
+  if(!canvas) return;
+  var es=LANG==='es';
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  var W=220,H=220,cx=110,cy=110,r=100;
+  canvas.width=W; canvas.height=H;
+  var ctx=canvas.getContext('2d');
+  ctx.fillStyle=isDark?'#242420':'#ffffff'; ctx.fillRect(0,0,W,H);
+
+  var start=-Math.PI/2;
+  var sum=0;
+  pieActData.forEach(function(d,i){ sum+=(pieBuildDeg[i]||0); });
+
+  // guide circle
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI);
+  ctx.strokeStyle=isDark?'#3a3830':'#ddd8cc'; ctx.lineWidth=1; ctx.stroke();
+
+  pieActData.forEach(function(d,i){
+    var deg=pieBuildDeg[i]||0;
+    var sweep=deg*Math.PI/180;
+    if(sweep>0){
+      ctx.beginPath(); ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start,start+sweep); ctx.closePath();
+      ctx.fillStyle=d.color; ctx.fill();
+      ctx.strokeStyle=isDark?'#242420':'#ffffff'; ctx.lineWidth=2; ctx.stroke();
+      if(deg>18){
+        var mid=start+sweep/2;
+        var lx=cx+Math.cos(mid)*r*0.62, ly=cy+Math.sin(mid)*r*0.62;
+        ctx.fillStyle='#ffffff'; ctx.font='bold 11px IBM Plex Sans,sans-serif';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(deg+'°',lx,ly);
+      }
+    }
+    start+=sweep;
+  });
+
+  var sumEl=document.getElementById('pb-degsum');
+  if(sumEl){ sumEl.textContent=(es?'Suma: ':'Sum: ')+sum+'° / 360°'; sumEl.className='bld-sum'+(sum===360?' exact':(sum>360?' over':'')); }
+}
+
+function checkPieDraw(){
+  var es=LANG==='es';
+  var allOk=true;
+  pieActData.forEach(function(d,i){
+    if(Math.abs((pieBuildDeg[i]||0)-correctPieDeg[i])>2) allOk=false;
+  });
+  var fb=document.getElementById('fb-pbd');
+  if(allOk){
+    pieDrawVerified=true;
+    fb.className='dd-fb show ok';
+    fb.textContent=es?'✓ ¡Pastel construido! Cada rebanada tiene el ángulo correcto.':'✓ Pie built! Every slice has the right angle.';
+    document.querySelector('#pb-step-2 .dd-check').disabled=true;
+    setTimeout(function(){
+      document.getElementById('pb-step-2').style.opacity='.55';
+      document.getElementById('pb-step-3').style.display='block';
+      document.getElementById('pbdot-1').className='step-dot done';
+      document.getElementById('pbdot-2').className='step-dot done active';
+      document.getElementById('pb-step-3').scrollIntoView({behavior:'smooth',block:'start'});
+    },500);
+  } else {
+    fb.className='dd-fb show bad';
+    fb.textContent=es?'Aún no coincide. Ajusta las rebanadas hasta que cada ángulo iguale el que calculaste y la suma sea 360°.':'Not matching yet. Adjust the slices until each angle equals the one you computed and the sum is 360°.';
+  }
+}
+function resetPieDraw(){
+  pieActData.forEach(function(d,i){ pieBuildDeg[i]=0; var el=document.getElementById('pb-d'+i); if(el) el.value=0; });
+  pieDrawVerified=false; drawBuildPie();
+  var fb=document.getElementById('fb-pbd'); if(fb) fb.className='dd-fb';
+  var b=document.querySelector('#pb-step-2 .dd-check'); if(b) b.disabled=false;
+}
+
+function answerPieMC(idx){
+  if(pieMcDone) return;
+  var es=LANG==='es';
+  var maxIdx=0, maxPct=-1;
+  pieActData.forEach(function(d,i){ if(d.pct>maxPct){ maxPct=d.pct; maxIdx=i; } });
+  var fb=document.getElementById('fb-pbm');
+  var btn=document.getElementById('pb-mc'+idx);
+  if(idx===maxIdx){
+    pieMcDone=true;
+    btn.classList.add('correct');
+    pieActData.forEach(function(d,i){ var b=document.getElementById('pb-mc'+i); if(b) b.disabled=true; });
+    fb.className='dd-fb show ok';
+    fb.innerHTML='<strong>'+(es?'✓ Correcto.':'✓ Correct.')+'</strong> '+(es?
+      pieActData[maxIdx].cat+' tiene el mayor porcentaje ('+pieActData[maxIdx].pct+'%), así que ocupa el mayor ángulo ('+correctPieDeg[maxIdx]+'°). El tamaño de la rebanada es proporcional a su porcentaje.':
+      pieActData[maxIdx].cat+' has the highest percentage ('+pieActData[maxIdx].pct+'%), so it takes the largest angle ('+correctPieDeg[maxIdx]+'°). The slice size is proportional to its percentage.');
+    activityScores.pieBuild=1; updateProgress();
+  } else {
+    btn.classList.add('wrong'); btn.disabled=true;
+    fb.className='dd-fb show bad';
+    fb.textContent=es?'Esa no es la mayor. Compara los porcentajes: la rebanada más grande es la del porcentaje más alto.':'That is not the largest. Compare the percentages: the biggest slice has the highest percentage.';
+  }
+}
+
+// ═══════════════════════════════════════════════════
 // PDF
 // ═══════════════════════════════════════════════════
 function generatePDF(){
@@ -2214,16 +2940,18 @@ function generatePDF(){
       if(val===null) return '-';
       return Math.round(val*outOf)+'/'+outOf;
     }
-    doc.setFillColor(232,237,245); doc.roundedRect(M,y,TW,34,3,3,'F');
+    doc.setFillColor(232,237,245); doc.roundedRect(M,y,TW,46,3,3,'F');
     doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(8); doc.setFont('helvetica','bold');
     doc.text(es?'RESULTADOS POR ACTIVIDAD':'ACTIVITY RESULTS',M+4,y+7);
     doc.setTextColor(20,24,32); doc.setFont('helvetica','normal');
     doc.text((es?'Act 1 – Tabla de frecuencias: ':'Act 1 – Frequency table: ')+scoreStr(activityScores.freq,4),M+4,y+14);
-    doc.text((es?'Act 2 – Forma del histograma: ':'Act 2 – Histogram shape: ')+scoreStr(activityScores.histShape,3),M+4,y+20);
-    doc.text((es?'Act 3 – Histograma o pastel: ':'Act 3 – Histogram or pie: ')+scoreStr(activityScores.chartChoice,6),M+4,y+26);
-    doc.text((es?'Act 4 – Construcción del pastel: ':'Act 4 – Pie chart construction: ')+(activityScores.pieAct!==null?'Completo':'—'),M+4,y+32);
-    doc.text((es?'Act 5 – Caso integrador: ':'Act 5 – Integrative case: ')+(activityScores.caseAct!==null?'Completo':'—'),M+110,y+14);
-    y+=40;
+    doc.text((es?'Act 3 – Forma del histograma: ':'Act 3 – Histogram shape: ')+scoreStr(activityScores.histShape,3),M+4,y+20);
+    doc.text((es?'Act 2 – Construir histograma: ':'Act 2 – Build histogram: ')+(activityScores.histBuild!==null?(es?'Completo':'Complete'):'—'),M+110,y+14);
+    doc.text((es?'Act 4 – Histograma o pastel: ':'Act 4 – Histogram or pie: ')+scoreStr(activityScores.chartChoice,6),M+4,y+26);
+    doc.text((es?'Act 5 – Etiquetar el pastel: ':'Act 5 – Label the pie: ')+(activityScores.pieAct!==null?(es?'Completo':'Complete'):'—'),M+4,y+32);
+    doc.text((es?'Act 6 – Construir pastel: ':'Act 6 – Build pie: ')+(activityScores.pieBuild!==null?(es?'Completo':'Complete'):'—'),M+110,y+20);
+    doc.text((es?'Act 7 – Caso integrador: ':'Act 7 – Integrative case: ')+(activityScores.caseAct!==null?(es?'Completo':'Complete'):'—'),M+110,y+26);
+    y+=52;
     doc.setTextColor(130,140,160); doc.setFontSize(7);
     doc.text('ALEXIS · liaxa.mx', PW/2, y, {align:'center'});
     doc.save('visualizacion_datos_'+studentName.replace(/\s+/g,'_')+'.pdf');
