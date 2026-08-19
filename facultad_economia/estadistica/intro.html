@@ -284,6 +284,13 @@ function toggleTheme(){
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
+/* ── Score reporting ─────────────────────────────────────────────────────────
+   Sends grade silently to Google Sheet when student finishes.
+   Set SCORE_ENDPOINT = '' to disable without breaking anything.
+   ──────────────────────────────────────────────────────────────────────────── */
+var SCORE_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIje7cRD7iI77G2-t6LMJEHtvjnwrFOJXsbbLe_4phhI7h9AhjL2HoIil1C-IoEn8T/exec';
+/* ──────────────────────────────────────────────────────────────────────────── */
+
 var studentName='', studentGroup='', lessonBuilt=false;
 var activityScores={dd1:null, dd2:null, match1:null, case1:null};
 var totalActivities=4;
@@ -292,6 +299,27 @@ function updateProgress(){
   var done=Object.values(activityScores).filter(function(v){return v!==null;}).length;
   document.getElementById('progFill').style.width=Math.round(done/totalActivities*100)+'%';
   if(done===totalActivities){
+    /* ── Silent score reporting to Google Sheet ── */
+    if(SCORE_ENDPOINT){
+      try{
+        var correct=Math.round((activityScores.dd1||0)*6)+Math.round((activityScores.dd2||0)*8)+Math.round((activityScores.match1||0)*6)+(activityScores.case1!==null?3:0);
+        var total=23;
+        fetch(SCORE_ENDPOINT,{
+          method:'POST',
+          mode:'no-cors',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            name:      studentName,
+            group:     studentGroup,
+            correct:   correct,
+            score:     Math.round(correct/total*100),
+            timestamp: new Date().toLocaleString('es-MX'),
+            guide:     'Introducción a la Estadística - Semana 1'
+          })
+        });
+      }catch(e){}
+    }
+    /* ─────────────────────────────────────────── */
     document.getElementById('s_results').style.display='block';
     document.getElementById('s_results').classList.add('vis');
   }
