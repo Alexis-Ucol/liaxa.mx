@@ -52,6 +52,14 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .serr{min-height:1.2rem;font-size:.82rem;color:var(--bad);margin-top:.4rem}
 .wfoot{margin-top:1rem;font-size:.75rem;color:var(--text3)}
 
+/* RESTORE BAR */
+#restoreBar{display:none;margin-top:.9rem;background:var(--gold-bg);border:1.5px solid rgba(201,168,76,.4);border-radius:10px;padding:.85rem 1rem;text-align:left;font-size:.82rem}
+#restoreBar strong{color:#7a5800}
+.rbar-btns{display:flex;gap:.5rem;margin-top:.6rem}
+.rbtn{padding:.4rem .9rem;border-radius:7px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;border:none}
+.rbtn-yes{background:var(--green);color:#fff}
+.rbtn-no{background:none;border:1.5px solid var(--border)!important;color:var(--text2)}
+
 /* LESSON */
 #lessonScreen{display:none}
 .stickybar{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:.55rem 1.2rem;display:flex;align-items:center;gap:.7rem;box-shadow:0 2px 8px rgba(0,0,0,.06)}
@@ -251,19 +259,19 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
     <div class="wtitle" id="w-title">Visualización de Datos</div>
     <div class="wcourse" id="w-course">Estadística · Semana 2</div>
     <label class="flabel" for="sName" id="lbl-name">Nombre completo</label>
-    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name">
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
     <label class="flabel" for="sGroup" id="lbl-group">Grupo</label>
-    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off">
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
     <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar</button>
-    <div class="serr" id="startErr">
-    <div id="restoreBar">
-      <strong id="restoreMsg">📂 Saved session found</strong><br>
-      <span id="restoreSub">Would you like to continue where you left off?</span>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar" style="display:none">
+      <strong id="restoreMsg">📂 Sesión guardada encontrada</strong><br>
+      <span id="restoreSub">¿Deseas continuar donde la dejaste?</span>
       <div class="rbar-btns">
-        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
-        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Retomar sesión</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Empezar de nuevo</button>
       </div>
-    </div></div>
+    </div>
     <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
       <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
         <style>
@@ -401,6 +409,46 @@ function nextAttempt(){
 }
 function makeRng(att){ return seededRng(studentName+studentGroup+'v2_'+att); }
 
+// ── Session save/load ──
+function saveSession(){
+  if(!studentName) return;
+  var state={ name:studentName, group:studentGroup, scores:activityScores };
+  try{ localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e){}
+}
+function loadSession(name, group){
+  var key=LS_PREFIX+'__'+(name+'__'+group).replace(/\s+/g,'_');
+  try{ var r=localStorage.getItem(key); return r?JSON.parse(r):null; } catch(e){ return null; }
+}
+function checkForSavedSession(){
+  var name=document.getElementById('sName').value.trim();
+  var group=document.getElementById('sGroup').value.trim();
+  var bar=document.getElementById('restoreBar');
+  if(!name||!group){ bar.style.display='none'; return; }
+  var saved=loadSession(name,group);
+  bar.style.display=(saved&&saved.scores)?'block':'none';
+}
+function dismissRestore(){ document.getElementById('restoreBar').style.display='none'; }
+function restoreSession(){
+  var name=document.getElementById('sName').value.trim();
+  var group=document.getElementById('sGroup').value.trim();
+  var saved=loadSession(name,group);
+  if(!saved) return;
+  document.getElementById('restoreBar').style.display='none';
+  studentName=name; studentGroup=group;
+  // Restore with same attempt so numbers match
+  var att=currentAttempt();
+  _rng=makeRng(att||1);
+  buildLesson(_rng);
+  lessonBuilt=true;
+  // Restore scores
+  if(saved.scores) activityScores=saved.scores;
+  updateProgress();
+  document.getElementById('welcomeScreen').style.display='none';
+  document.getElementById('lessonScreen').style.display='block';
+  document.getElementById('studentChip').textContent=studentName+' · '+studentGroup;
+  observeSections();
+}
+
 function updateProgress(){
   var done=Object.values(activityScores).filter(function(v){return v!==null;}).length;
   document.getElementById('progFill').style.width=Math.round(done/totalActivities*100)+'%';
@@ -524,8 +572,6 @@ var PIE_DEMO_DATA = {
 
 var pieSliders=[35,20,30,15]; // live demo values
 
-// PIE_ACT_SCENARIOS and CHART_ITEMS are now generated dynamically inside buildLesson via RNG
-
 // ═══════════════════════════════════════════════════
 // START / REBUILD
 // ═══════════════════════════════════════════════════
@@ -591,16 +637,12 @@ function buildLesson(rng){
   var es=LANG==='es';
 
   // ── SECTION 1: Discovery first — randomized numbers ──
-  // Generate 10 random income values
   var incomes=[];
   for(var i=0;i<10;i++) incomes.push('$'+rInt(rng,8,24)*100+','+rInt(rng,0,9)+'00');
-  // Generate 10 wait times
   var waits=[];
   for(var i=0;i<10;i++) waits.push(rFloat(rng,2.1,14.8,1));
-  // Generate 10 complaint counts
   var comps=[];
   for(var i=0;i<10;i++) comps.push(rInt(rng,1,14));
-  // Regions — always categorical
   var regsEs=['Norte','Sur','Centro','Oeste','Este'];
   var regsEn=['North','South','Center','West','East'];
   var regPool=es?regsEs:regsEn;
@@ -706,7 +748,6 @@ function buildLesson(rng){
   act1.className='section';
   act1.id='act-freq';
 
-  // Pick a business context from a pool
   var freqContexts={
     es:[
       {topic:'montos de compra ($) de clientes en una tienda de ropa',unit:'$',lo:200,hi:1800,width:400,label:'Monto ($)'},
@@ -724,17 +765,13 @@ function buildLesson(rng){
   var ctxPool=es?freqContexts.es:freqContexts.en;
   var ctx=ctxPool[Math.floor(rng()*ctxPool.length)];
 
-  // Generate exactly 24 data points across 3 intervals
-  // Counts: pick c0 (6-10), c2 (4-8), c1 = 24 - c0 - c2
   var c0=rInt(rng,6,10);
   var c2=rInt(rng,4,8);
   var c1=24-c0-c2;
-  // Make sure c1 is reasonable (at least 6)
   if(c1<6){ c2=c2-(6-c1); c1=6; }
   var counts=[c0,c1,c2];
   var total=24;
 
-  // Build intervals
   var lo=ctx.lo, w=ctx.width;
   var intervals=[
     ctx.unit==='$'?
@@ -748,7 +785,6 @@ function buildLesson(rng){
       ((lo+2*w)+' – '+(lo+3*w-1)+' '+ctx.unit)
   ];
 
-  // Generate raw data list in sorted-then-shuffled order for display
   var rawData=[];
   counts.forEach(function(cnt,bi){
     for(var k=0;k<cnt;k++){
@@ -758,14 +794,11 @@ function buildLesson(rng){
   });
   rawData=shuffle(rawData,rng);
 
-  // Compute percentages (integer, may not sum to 100 due to rounding — force last one)
   var pcts=counts.map(function(c){ return Math.round(c/total*100); });
   pcts[2]=100-pcts[0]-pcts[1];
 
-  // Store answers globally for checker
   window._freqAns={counts:counts, pcts:pcts, total:total};
 
-  // Table rows: row 0 → count+pct hidden; row 1 → pct hidden; row 2 → count hidden
   var tableRows=intervals.map(function(intv,i){
     if(i===0){
       return '<tr><td>'+intv+'</td>'+
@@ -825,7 +858,6 @@ function buildLesson(rng){
     '</div>';
   lb.appendChild(s3);
 
-  // Build shape cards below histogram for conceptual reference
   var s3b=document.createElement('div');
   s3b.className='section';
   var shapeData=[
@@ -852,7 +884,6 @@ function buildLesson(rng){
   var act2=document.createElement('div');
   act2.className='section';
   act2.id='act-hist-shape';
-  // Large pool — 3 drawn per shape type, shuffle pick 1 of each + 1 random extra
   var shapePools={
     es:{
       symmetric:[
@@ -900,7 +931,6 @@ function buildLesson(rng){
     }
   };
 
-  // Pick one challenge per shape, shuffled
   var pool=es?shapePools.es:shapePools.en;
   var shapes=['symmetric','right','left','bimodal'];
   var allChallenges=shapes.map(function(sh){
@@ -908,7 +938,6 @@ function buildLesson(rng){
     var picked=items[Math.floor(rng()*items.length)];
     return {desc:picked.desc, ans:sh, hint:picked.hint};
   });
-  // Shuffle and pick 3
   allChallenges=shuffle(allChallenges,rng).slice(0,3);
   var challenges=allChallenges;
   var shapeNames=es?
@@ -981,7 +1010,6 @@ function buildLesson(rng){
   var act3=document.createElement('div');
   act3.className='section';
   act3.id='act-chart-choice';
-  // Expanded chart items pool — shuffle and pick 6
   var CHART_POOL={
     es:[
       {v:'Ingresos anuales por empleado ($)',         ans:'hist', why:'Variable cuantitativa continua → histograma para ver la distribución de salarios.'},
@@ -1009,7 +1037,6 @@ function buildLesson(rng){
     ]
   };
   var fullPool=es?CHART_POOL.es:CHART_POOL.en;
-  // Ensure at least 3 hist and 3 pie in the 6 selected
   var histItems=shuffle(fullPool.filter(function(x){return x.ans==='hist';}),rng);
   var pieItems=shuffle(fullPool.filter(function(x){return x.ans==='pie';}),rng);
   var chartItems=shuffle(histItems.slice(0,3).concat(pieItems.slice(0,3)),rng);
@@ -1077,7 +1104,6 @@ function buildLesson(rng){
   var act4=document.createElement('div');
   act4.className='section';
   act4.id='act-pie';
-  // Randomized pie scenarios — pick context, generate percentages that sum to 100
   var pieContextPool={
     es:[
       {scenario:'Una empresa de tecnología registró las ventas de sus cuatro líneas de productos en el último trimestre.',
@@ -1103,8 +1129,6 @@ function buildLesson(rng){
   var piePool=es?pieContextPool.es:pieContextPool.en;
   var pieCtx=piePool[Math.floor(rng()*piePool.length)];
 
-  // Generate 4 percentages that sum to 100, all multiples of 5, between 10–45
-  // Strategy: pick 3 from [10,15,20,25,30,35,40], fourth = 100-sum
   function genPiePcts(rng){
     var attempts=0;
     while(attempts<100){
@@ -1117,19 +1141,17 @@ function buildLesson(rng){
       var last=100-p[0]-p[1]-p[2];
       if(last>=10 && last<=45){
         p.push(last);
-        // Sort descending so biggest slice is always first (clockwise from 12)
         p.sort(function(a,b){return b-a;});
         return p;
       }
     }
-    return [40,25,20,15]; // fallback
+    return [40,25,20,15];
   }
   var pcts=genPiePcts(rng);
-  var pieTotalN=2000+rInt(rng,0,8)*100; // realistic total between 2000-2800
+  var pieTotalN=2000+rInt(rng,0,8)*100;
   pieActData=pieCtx.cats.map(function(cat,i){
     return {cat:cat, n:Math.round(pcts[i]/100*pieTotalN), pct:pcts[i], color:pieActColors[i]};
   });
-  // Store scenario text and total for HTML display
   window._pieScenario=pieCtx.scenario;
   window._pieTotalN=pieTotalN;
   var tableHtml=pieActData.map(function(d,i){
@@ -1142,14 +1164,6 @@ function buildLesson(rng){
       '<td>'+window._pieTotalN+'</td>'+
       '<td><input class="pct-input" id="pct'+i+'" type="number" min="0" max="100" placeholder="?" data-ans="'+d.pct+'"></td>'+
     '</tr>';
-  }).join('');
-  var sliceTargetsHtml=pieActData.map(function(d,i){
-    return '<div class="slice-target" id="slice-target-'+i+'"'+
-      ' ondragover="sliceDragOver(event,'+i+')" ondragleave="sliceDragLeave('+i+')" ondrop="sliceDrop(event,'+i+')"'+
-      ' onclick="sliceTap('+i+',event)">'+
-      '<span class="swatch" style="background:'+d.color+'"></span>'+
-      '<span style="font-size:.7rem;color:var(--text3)">'+(es?'Sector ':'Sector ')+(i+1)+'</span>'+
-    '</div>';
   }).join('');
   var labelChipsHtml=pieActData.map(function(d,i){
     return '<div class="label-chip" id="lchip-'+i+'" draggable="true"'+
@@ -1167,7 +1181,6 @@ function buildLesson(rng){
       '<div class="step-dot" id="pdot-2">3</div>'+
     '</div>'+
     '<div class="case-box" style="margin-bottom:.75rem"><div class="case-q">'+window._pieScenario+'</div></div>'+
-
     '<div id="pie-step-1">'+
       '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin-bottom:.4rem">'+
         (es?'Paso 1 — Calcula el porcentaje de cada categoría (Total = '+window._pieTotalN.toLocaleString()+'):':'Step 1 — Calculate the percentage for each category (Total = '+window._pieTotalN.toLocaleString()+'):')+
@@ -1187,7 +1200,6 @@ function buildLesson(rng){
       '</div>'+
       '<div class="dd-fb" id="fb-pct"></div>'+
     '</div>'+
-
     '<div id="pie-step-2" style="display:none">'+
       '<p style="font-size:.85rem;font-weight:600;color:var(--green-dark);margin-bottom:.4rem">'+
         (es?'Paso 2 — Identifica cada sector por su tamaño':'Step 2 — Identify each sector by its size')+
@@ -1232,13 +1244,12 @@ function buildLesson(rng){
       '</div>'+
       '<div class="dd-fb" id="fb-labels"></div>'+
     '</div>'+
-
     '<div id="pie-step-3" style="display:none">'+
       '<div class="dd-fb show ok" id="pie-final-msg"></div>'+
     '</div>';
   lb.appendChild(act4);
 
-  // ── ACTIVITY 5: Integrative case — manager brief ──
+  // ── ACTIVITY 5: Integrative case ──
   var act5=document.createElement('div');
   act5.className='section';
   act5.id='act-case';
@@ -1261,7 +1272,6 @@ function buildLesson(rng){
         '</p>'+
       '</div>'+
     '</div>'+
-
     '<div class="case-box">'+
       '<div class="case-q"><strong>1. </strong>'+
         (es?'¿Qué gráfica usarías para mostrar la distribución de ventas por sucursal? Elige la gráfica Y justifica por qué es la mejor opción para este objetivo específico.':
@@ -1275,16 +1285,10 @@ function buildLesson(rng){
           '"Branch" is a qualitative nominal variable — the branches are categories, not numbers. The CEO\'s question is about proportions ("how sales are distributed"), and the pie chart is the right instrument to show how a total divides among its parts. If the CEO wanted to compare exact sales in dollars between branches, a bar chart would be more precise; but to see internal market share, the pie chart is ideal.')+
       '</div>'+
       '<div id="ca1-reflect" style="display:none;margin-top:.6rem;background:var(--surface2);border-radius:8px;padding:.75rem 1rem">'+
-        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+
-          (es?'Compara con tu respuesta:':'Compare with your answer:')+
-        '</p>'+
-        '<p style="font-size:.8rem;color:var(--text3)">'+
-          (es?'¿Mencionaste el tipo de variable Y el objetivo de la pregunta? ¿Consideraste cuándo el pastel podría no ser la mejor opción? Esas dos ideas son las que distinguen a un analista que aplica reglas de uno que razona.':
-              'Did you mention the variable type AND the objective of the question? Did you consider when the pie chart might not be the best option? Those two ideas distinguish an analyst who applies rules from one who reasons.')+
-        '</p>'+
+        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+(es?'Compara con tu respuesta:':'Compare with your answer:')+'</p>'+
+        '<p style="font-size:.8rem;color:var(--text3)">'+(es?'¿Mencionaste el tipo de variable Y el objetivo de la pregunta? ¿Consideraste cuándo el pastel podría no ser la mejor opción? Esas dos ideas son las que distinguen a un analista que aplica reglas de uno que razona.':'Did you mention the variable type AND the objective of the question? Did you consider when the pie chart might not be the best option? Those two ideas distinguish an analyst who applies rules from one who reasons.')+'</p>'+
       '</div>'+
     '</div>'+
-
     '<div class="case-box">'+
       '<div class="case-q"><strong>2. </strong>'+
         (es?'El histograma de montos de ticket es sesgado a la derecha. Escribe dos oraciones para el informe de la directora: (a) qué significa esto para el negocio, y (b) qué decisión de negocio podría tomar con esta información.':
@@ -1301,16 +1305,10 @@ function buildLesson(rng){
           'The company could segment its customers into two groups: regular low-ticket buyers and high-value customers. Designing differentiated loyalty programs or upselling strategies for each segment would maximize revenue per customer.')+
       '</div>'+
       '<div id="ca2-reflect" style="display:none;margin-top:.6rem;background:var(--surface2);border-radius:8px;padding:.75rem 1rem">'+
-        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+
-          (es?'Compara con tu respuesta:':'Compare with your answer:')+
-        '</p>'+
-        '<p style="font-size:.8rem;color:var(--text3)">'+
-          (es?'¿Mencionaste que la media es engañosa con sesgos? ¿Tu decisión de negocio fue concreta y accionable, o general? Un buen informe de analista conecta el patrón estadístico con una acción específica.':
-              'Did you mention that the mean is misleading with skew? Was your business decision concrete and actionable, or general? A good analyst report connects the statistical pattern to a specific action.')+
-        '</p>'+
+        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+(es?'Compara con tu respuesta:':'Compare with your answer:')+'</p>'+
+        '<p style="font-size:.8rem;color:var(--text3)">'+(es?'¿Mencionaste que la media es engañosa con sesgos? ¿Tu decisión de negocio fue concreta y accionable, o general? Un buen informe de analista conecta el patrón estadístico con una acción específica.':'Did you mention that the mean is misleading with skew? Was your business decision concrete and actionable, or general? A good analyst report connects the statistical pattern to a specific action.')+'</p>'+
       '</div>'+
     '</div>'+
-
     '<div class="case-box">'+
       '<div class="case-q"><strong>3. </strong>'+
         (es?'El histograma de tiempos de espera es bimodal (picos a los 3 y 12 minutos). Escribe dos oraciones: (a) una hipótesis de negocio que explique este patrón, y (b) qué variable adicional investigarías para confirmarla.':
@@ -1327,16 +1325,10 @@ function buildLesson(rng){
           'I would investigate "lane type" (express vs. regular) or "number of items per ticket". If separating the data by lane type makes the two peaks disappear and each group shows a symmetric distribution, the hypothesis is confirmed.')+
       '</div>'+
       '<div id="ca3-reflect" style="display:none;margin-top:.6rem;background:var(--surface2);border-radius:8px;padding:.75rem 1rem">'+
-        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+
-          (es?'Compara con tu respuesta:':'Compare with your answer:')+
-        '</p>'+
-        '<p style="font-size:.8rem;color:var(--text3)">'+
-          (es?'¿Tu hipótesis explicó por qué hay DOS grupos, no solo uno? ¿Tu variable adicional es verificable con los datos existentes o requiere nuevos datos? Pensar en cómo confirmar una hipótesis es el inicio del método científico aplicado a negocios.':
-              'Did your hypothesis explain why there are TWO groups, not just one? Is your additional variable verifiable with existing data or does it require new data? Thinking about how to confirm a hypothesis is the beginning of the scientific method applied to business.')+
-        '</p>'+
+        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+(es?'Compara con tu respuesta:':'Compare with your answer:')+'</p>'+
+        '<p style="font-size:.8rem;color:var(--text3)">'+(es?'¿Tu hipótesis explicó por qué hay DOS grupos, no solo uno? ¿Tu variable adicional es verificable con los datos existentes o requiere nuevos datos? Pensar en cómo confirmar una hipótesis es el inicio del método científico aplicado a negocios.':'Did your hypothesis explain why there are TWO groups, not just one? Is your additional variable verifiable with existing data or does it require new data? Thinking about how to confirm a hypothesis is the beginning of the scientific method applied to business.')+'</p>'+
       '</div>'+
     '</div>'+
-
     '<div class="case-box">'+
       '<div class="case-q"><strong>4. </strong>'+
         (es?'De las tres variables, ¿cuál merece mayor atención inmediata de la directora y por qué?':
@@ -1355,23 +1347,16 @@ function buildLesson(rng){
           '<strong>Most important:</strong> An analyst who can justify their choice with data and arguments is more valuable than one who gives the "correct" answer without reasoning.')+
       '</div>'+
       '<div id="ca4-reflect" style="display:none;margin-top:.6rem;background:var(--surface2);border-radius:8px;padding:.75rem 1rem">'+
-        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+
-          (es?'Compara con tu respuesta:':'Compare with your answer:')+
-        '</p>'+
-        '<p style="font-size:.8rem;color:var(--text3)">'+
-          (es?'¿Tu justificación fue basada en datos o fue una opinión? ¿Consideraste el impacto en el negocio, no solo la rareza estadística? Esta pregunta no tiene respuesta única — lo que importa es la calidad del argumento.':
-              'Was your justification data-based or was it an opinion? Did you consider the business impact, not just the statistical rarity? This question has no single answer — what matters is the quality of the argument.')+
-        '</p>'+
+        '<p style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.3rem">'+(es?'Compara con tu respuesta:':'Compare with your answer:')+'</p>'+
+        '<p style="font-size:.8rem;color:var(--text3)">'+(es?'¿Tu justificación fue basada en datos o fue una opinión? ¿Consideraste el impacto en el negocio, no solo la rareza estadística? Esta pregunta no tiene respuesta única — lo que importa es la calidad del argumento.':'Was your justification data-based or was it an opinion? Did you consider the business impact, not just the statistical rarity? This question has no single answer — what matters is the quality of the argument.')+'</p>'+
       '</div>'+
     '</div>'+
-
     '<div class="dd-actions">'+
       '<button class="dd-reset" onclick="resetCase()">'+(es?'↺ Reiniciar respuestas':'↺ Reset answers')+'</button>'+
     '</div>'+
     '<div class="dd-fb" id="fb-case"></div>';
   lb.appendChild(act5);
 
-  // Initialize all canvases after DOM is ready
   setTimeout(function(){
     initHistogramScenario();
     initDemoPie();
@@ -1427,19 +1412,16 @@ function drawHistogram(){
   var bg=isDark?'#242420':'#ffffff';
   var textCol=isDark?'#b0aa9e':'#4a4640';
   var barCol='#1a4a8a';
-  var barHov='#c9a84c';
   var gridCol=isDark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)';
 
   ctx.fillStyle=bg; ctx.fillRect(0,0,W,280);
 
-  // grid
   ctx.strokeStyle=gridCol; ctx.lineWidth=1;
   for(var g=0;g<=5;g++){
     var gy=pad.top+ch-(g/5)*ch;
     ctx.beginPath(); ctx.moveTo(pad.left,gy); ctx.lineTo(pad.left+cw,gy); ctx.stroke();
   }
 
-  // bars
   var bw=cw/bins.length;
   bins.forEach(function(bin,i){
     var bh=(bin.count/maxCount)*ch;
@@ -1447,7 +1429,6 @@ function drawHistogram(){
     var by=pad.top+ch-bh;
     ctx.fillStyle=barCol;
     ctx.fillRect(bx+1,by,bw-2,bh);
-    // count label
     if(bin.count>0){
       ctx.fillStyle=textCol;
       ctx.font='bold '+(bw>30?'11':'9')+'px IBM Plex Sans,sans-serif';
@@ -1456,11 +1437,9 @@ function drawHistogram(){
     }
   });
 
-  // axes
   ctx.strokeStyle=textCol; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(pad.left,pad.top); ctx.lineTo(pad.left,pad.top+ch); ctx.lineTo(pad.left+cw,pad.top+ch); ctx.stroke();
 
-  // x labels
   ctx.fillStyle=textCol;
   ctx.font='10px IBM Plex Mono,monospace';
   ctx.textAlign='center';
@@ -1470,10 +1449,8 @@ function drawHistogram(){
       ctx.fillText(Math.round(bin.lo), lx, pad.top+ch+14);
     }
   });
-  // last tick
   ctx.fillText(Math.round(bins[bins.length-1].hi), pad.left+cw, pad.top+ch+14);
 
-  // y labels
   ctx.textAlign='right';
   for(var yi=0;yi<=5;yi++){
     var yv=Math.round(maxCount*yi/5);
@@ -1481,7 +1458,6 @@ function drawHistogram(){
     ctx.fillText(yv, pad.left-5, yyy+4);
   }
 
-  // caption & interp
   var cap=document.getElementById('hist-caption');
   var interp=document.getElementById('hist-interp');
   if(cap) cap.textContent=scenario.title+' — '+(LANG==='es'?'barras':'bars')+': '+binCount;
@@ -1518,7 +1494,6 @@ function onBinChange(v){
   drawHistogram();
 }
 
-// ── Mini shape canvases ──
 function drawMiniShape(canvasId, shapeKey, w, h){
   var canvas=document.getElementById(canvasId);
   if(!canvas) return;
@@ -1538,7 +1513,7 @@ function drawMiniShape(canvasId, shapeKey, w, h){
     heights=[10,12,9,7,5,3,2,1.5,1,0.5,0.3];
   } else if(shapeKey==='left'){
     heights=[0.3,0.5,1,1.5,2,3,5,7,9,12,10];
-  } else { // bimodal
+  } else {
     heights=[2,5,9,12,7,3,2,7,11,8,2];
   }
   var maxH=Math.max.apply(null,heights);
@@ -1644,7 +1619,6 @@ function drawDemoPie(){
     ctx.strokeStyle=isDark?'#242420':'#ffffff';
     ctx.lineWidth=2;
     ctx.stroke();
-    // label if big enough
     if(frac>0.05){
       var midAngle=startAngle+sweep/2;
       var lx=cx+Math.cos(midAngle)*r*0.65;
@@ -1660,13 +1634,8 @@ function drawDemoPie(){
 }
 
 // ═══════════════════════════════════════════════════
-// PIE ACTIVITY ENGINE — colorless base + fill on drop
+// PIE ACTIVITY ENGINE
 // ═══════════════════════════════════════════════════
-
-// Stores which labelIdx is in which sliceIdx: {sliceIdx: labelIdx}
-// labelAssignments already declared in state section above
-
-// Angles for each slice (computed once when step 2 opens)
 var pieSliceAngles=[];
 
 function computePieAngles(){
@@ -1681,7 +1650,6 @@ function computePieAngles(){
   });
 }
 
-// Draw the base pie — gray segments with numbers, colored where assigned
 function drawActPie(){
   var canvas=document.getElementById('actPieCanvas');
   var overlay=document.getElementById('actPieOverlay');
@@ -1694,7 +1662,6 @@ function drawActPie(){
   var dividerCol=bgCol;
   var textCol=isDark?'#b0aa9e':'#4a4640';
 
-  // Base canvas — slices (colored or gray)
   canvas.width=W; canvas.height=H;
   var ctx=canvas.getContext('2d');
   ctx.fillStyle=bgCol; ctx.fillRect(0,0,W,H);
@@ -1706,7 +1673,6 @@ function drawActPie(){
     ctx.moveTo(cx,cy);
     ctx.arc(cx,cy,r,ang.start,ang.end);
     ctx.closePath();
-    // If a label has been assigned to this slice, use that label's color
     var assignedLabelIdx=labelAssignments[i];
     ctx.fillStyle=(assignedLabelIdx!==undefined) ? pieActData[assignedLabelIdx].color : graySlice;
     ctx.fill();
@@ -1715,7 +1681,6 @@ function drawActPie(){
     ctx.stroke();
   });
 
-  // Overlay canvas — numbers + text labels on top
   if(!overlay) return;
   overlay.width=W; overlay.height=H;
   var octx=overlay.getContext('2d');
@@ -1730,7 +1695,6 @@ function drawActPie(){
     var assignedLabelIdx=labelAssignments[i];
     var hasColor=assignedLabelIdx!==undefined;
 
-    // Number badge
     var numR=13;
     octx.beginPath();
     octx.arc(lx,ly,numR,0,2*Math.PI);
@@ -1746,7 +1710,6 @@ function drawActPie(){
     octx.textBaseline='middle';
     octx.fillText(i+1, lx, ly);
 
-    // If assigned: show percentage below number
     if(hasColor){
       var pctR=r*0.62+18;
       var px=cx+Math.cos(midAngle)*pctR;
@@ -1809,8 +1772,6 @@ function sliceTap(sliceIdx, e){
 
 function placeLabel(labelIdx, sliceIdx){
   var es=LANG==='es';
-
-  // If this label is already in another slot, unplace it there
   Object.keys(labelAssignments).forEach(function(k){
     if(labelAssignments[k]===labelIdx && parseInt(k)!==sliceIdx){
       delete labelAssignments[k];
@@ -1818,22 +1779,14 @@ function placeLabel(labelIdx, sliceIdx){
       document.getElementById('lchip-'+labelIdx).classList.remove('placed');
     }
   });
-
-  // If this slot already has a different label, return it to pool
   if(labelAssignments[sliceIdx]!==undefined && labelAssignments[sliceIdx]!==labelIdx){
     var oldLabel=labelAssignments[sliceIdx];
     document.getElementById('lchip-'+oldLabel).classList.remove('placed');
     document.getElementById('lchip-'+oldLabel).style.opacity='1';
   }
-
-  // Assign
   labelAssignments[sliceIdx]=labelIdx;
   document.getElementById('lchip-'+labelIdx).classList.add('placed');
-
-  // Update the drop row UI
   renderDropRow(sliceIdx, labelIdx);
-
-  // Redraw pie with new color
   drawActPie();
 }
 
@@ -1869,7 +1822,6 @@ function removeLabelFromSlice(sliceIdx){
 // ACTIVITY CHECKS
 // ═══════════════════════════════════════════════════
 
-// ── Activity 1: Frequency table ──
 function checkFreqTable(){
   var es=LANG==='es';
   var ans=window._freqAns;
@@ -1891,7 +1843,6 @@ function checkFreqTable(){
     var raw=el.value.trim().replace('%','').replace(',','.');
     var v=parseInt(raw);
     filled++;
-    // Accept correct value ±1 for rounding edge cases
     if(!isNaN(v) && Math.abs(v-correctPct)<=1){el.classList.add('ok-cell');el.classList.remove('bad-cell'); return true;}
     else{el.classList.add('bad-cell');el.classList.remove('ok-cell');allCorrect=false; return false;}
   }
@@ -1923,7 +1874,6 @@ function resetFreqTable(){
   activityScores.freq=null; updateProgress();
 }
 
-// ── Activity 2: Histogram shape ──
 var shapeSelections={};
 function selectShape(challengeIdx, shapeKey){
   var cards=document.querySelectorAll('#shape-grid-'+challengeIdx+' .shape-card');
@@ -1971,7 +1921,6 @@ function resetShapes(){
   activityScores.histShape=null; updateProgress();
 }
 
-// ── Activity 3: Chart choice ──
 function checkChartChoice(){
   var es=LANG==='es';
   var items=window._chartItems||[];
@@ -2002,7 +1951,6 @@ function checkChartChoice(){
   }
   activityScores.chartChoice=correct/items.length; updateProgress();
   document.querySelector('#act-chart-choice .dd-check').disabled=true;
-  // Always reveal the defend question after checking
   var defend=document.getElementById('chart-choice-defend');
   if(defend) defend.style.display='block';
 }
@@ -2021,7 +1969,6 @@ function resetChartChoice(){
   activityScores.chartChoice=null; updateProgress();
 }
 
-// ── Activity 4: Pie step 1 — percentages ──
 function checkPctStep(){
   var es=LANG==='es';
   var allOk=true; var filled=0;
@@ -2041,7 +1988,6 @@ function checkPctStep(){
     fb.textContent=es?'✓ ¡Porcentajes correctos! Ahora identifica los sectores.':'✓ Correct percentages! Now identify the sectors.';
     pctVerified=true;
     document.querySelector('#pie-step-1 .dd-check').disabled=true;
-    // Advance to step 2
     setTimeout(function(){
       document.getElementById('pie-step-1').style.opacity='.5';
       document.getElementById('pie-step-2').style.display='block';
@@ -2053,7 +1999,7 @@ function checkPctStep(){
     }, 600);
   } else {
     fb.className='dd-fb show bad';
-    fb.textContent=es?'Revisa los porcentajes en rojo. Recuerda: (frecuencia ÷ 2400) × 100.':'Check the percentages in red. Remember: (frequency ÷ 2400) × 100.';
+    fb.textContent=es?'Revisa los porcentajes en rojo. Recuerda: (frecuencia ÷ total) × 100.':'Check the percentages in red. Remember: (frequency ÷ total) × 100.';
   }
 }
 function resetPctStep(){
@@ -2065,7 +2011,6 @@ function resetPctStep(){
   var btn=document.querySelector('#pie-step-1 .dd-check'); if(btn) btn.disabled=false;
 }
 
-// ── Activity 4: Pie step 2 — label drop ──
 function checkLabelDrop(){
   var es=LANG==='es';
   var placed=Object.keys(labelAssignments).length;
@@ -2079,7 +2024,6 @@ function checkLabelDrop(){
   pieActData.forEach(function(d,i){
     var labelIdx=labelAssignments[i];
     var row=document.getElementById('sdr-'+i);
-    // Slice i should contain labelIdx i (same position = same category)
     var ok=(labelIdx===i);
     if(ok){
       correct++;
@@ -2097,7 +2041,6 @@ function checkLabelDrop(){
     labelsVerified=true;
     activityScores.pieAct=1; updateProgress();
     document.querySelector('#pie-step-2 .dd-check').disabled=true;
-    // Freeze drop rows
     pieActData.forEach(function(d,i){
       var row=document.getElementById('sdr-'+i);
       if(row){ row.style.pointerEvents='none'; }
@@ -2140,7 +2083,6 @@ function resetLabelDrop(){
   tappingLabelIdx=null; draggingLabelIdx=null;
 }
 
-// ── Discovery section ──
 function revealDiscovery(){
   var el=document.getElementById('disc-answer');
   if(el) el.style.display='block';
@@ -2148,20 +2090,72 @@ function revealDiscovery(){
   if(btn) btn.style.display='none';
 }
 
-// ── Chart choice defend ──
+var MIN_WORDS=15;
+function countWords(str){ return str.trim().split(/\s+/).filter(function(w){return w.length>0;}).length; }
+
 function revealDefend(){
+  var inp=document.getElementById('defend-input');
+  var wc=inp?countWords(inp.value):0;
+  var fb=document.getElementById('fb-case');
+  if(wc<MIN_WORDS){
+    if(fb){
+      fb.className='dd-fb show part';
+      fb.textContent=LANG==='es'?
+        '⚠ Escribe tu argumento primero (mínimo '+MIN_WORDS+' palabras). Llevas '+wc+'.':
+        '⚠ Write your argument first (minimum '+MIN_WORDS+' words). You have '+wc+'.';
+    }
+    if(inp){ inp.style.borderColor='var(--gold)'; inp.focus(); }
+    return;
+  }
+  if(inp) inp.style.borderColor='';
+  if(fb) fb.className='dd-fb';
   var el=document.getElementById('defend-answer');
   if(el) el.classList.add('show');
 }
 
-// ── Activity 5: Case ──
+// Map answer id → textarea id
+var CASE_INPUTS={'ca1':'case1','ca2':'case2','ca3':'case3','ca4':'case4'};
+
 var caseRevealCount=0;
 function revealCase(id){
+  var textareaId=CASE_INPUTS[id];
+  var inp=textareaId?document.getElementById(textareaId):null;
+  var wc=inp?countWords(inp.value):0;
+  var es=LANG==='es';
+
+  // Find the warning element closest to this question's button
+  // Each case-box has its own inline warning span we inject next to the button
+  var warnId='warn-'+id;
+  var warn=document.getElementById(warnId);
+  if(!warn){
+    // Create it once, insert after the reveal button
+    var btn=document.querySelector('[onclick="revealCase(\''+id+'\')"]');
+    if(btn){
+      warn=document.createElement('span');
+      warn.id=warnId;
+      warn.style.cssText='display:inline-block;margin-left:.6rem;font-size:.8rem;color:#7a5800;background:var(--gold-bg);border-radius:6px;padding:.25rem .65rem;vertical-align:middle;';
+      btn.parentNode.insertBefore(warn, btn.nextSibling);
+    }
+  }
+
+  if(wc<MIN_WORDS){
+    if(warn){
+      warn.textContent=es?
+        '⚠ Responde primero (mínimo '+MIN_WORDS+' palabras — llevas '+wc+').':
+        '⚠ Answer first (minimum '+MIN_WORDS+' words — you have '+wc+').';
+      warn.style.display='inline-block';
+    }
+    if(inp){ inp.style.borderColor='var(--gold)'; inp.focus(); }
+    return;
+  }
+
+  // Enough words — clear warning and proceed
+  if(warn) warn.style.display='none';
+  if(inp) inp.style.borderColor='';
+
   var el=document.getElementById(id);
   if(!el) return;
   el.classList.add('show');
-  // Show self-reflection box after answer
-  var reflectId=id.replace('ca','ca')+'-reflect';
   var reflectEl=document.getElementById(id+'-reflect');
   if(reflectEl) reflectEl.style.display='block';
   caseRevealCount++;
@@ -2180,11 +2174,17 @@ function resetCase(){
     if(el) el.classList.remove('show');
     var ref=document.getElementById(id+'-reflect');
     if(ref) ref.style.display='none';
+    var warn=document.getElementById('warn-'+id);
+    if(warn) warn.style.display='none';
   });
   ['case1','case2','case3','case4'].forEach(function(id){
     var el=document.getElementById(id);
-    if(el) el.value='';
+    if(el){ el.value=''; el.style.borderColor=''; }
   });
+  var di=document.getElementById('defend-input');
+  if(di){ di.value=''; di.style.borderColor=''; }
+  var da=document.getElementById('defend-answer');
+  if(da) da.classList.remove('show');
   caseRevealCount=0;
   var fb=document.getElementById('fb-case'); if(fb) fb.className='dd-fb';
   activityScores.caseAct=null; updateProgress();
@@ -2210,7 +2210,6 @@ function generatePDF(){
     doc.setTextColor(20,24,32); doc.setFontSize(9); doc.setFont('helvetica','normal');
     doc.text((es?'Alumno: ':'Student: ')+studentName+'   '+(es?'Grupo: ':'Group: ')+studentGroup,M,y); y+=6;
     doc.text(new Date().toLocaleDateString(es?'es-MX':'en-US'),M,y); y+=10;
-    // scores
     function scoreStr(val, outOf){
       if(val===null) return '-';
       return Math.round(val*outOf)+'/'+outOf;
