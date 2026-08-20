@@ -1083,17 +1083,46 @@ async function generatePDF() {
       PW/2, PH-5, {align:'center'});
   }
 
-  var _fn = 'mat3_t04_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
+    // ── SAVE / SHARE — iOS-safe download (LIAXA iOS PDF fix, Rule 12) ─────────
+  //   iOS Safari ignores the <a download> attribute, so a plain download fails
+  //   silently on iPhone/iPad. iOS -> native share sheet (-> "Save to Files"),
+  //   with an inline-open fallback; everything else -> <a download> click.
+  //   Runs synchronously off the tap so iOS accepts navigator.share().
+  var _fname   = 'mat3_t04_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
   var _pdfBlob = doc.output('blob');
-  var _blobUrl = URL.createObjectURL(_pdfBlob);
-  var _a = document.createElement('a');
-  _a.href = _blobUrl;
-  _a.download = _fn;
-  document.body.appendChild(_a);
-  _a.click();
-  setTimeout(function(){ document.body.removeChild(_a); URL.revokeObjectURL(_blobUrl); }, 200);
-  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
-  btn.disabled  = false;
+
+  function _restorePdfBtn(){ btn.innerHTML = '\u2b07 &nbsp;' + t('btn-pdf'); btn.disabled = false; }
+  function _openPdfInline(b){
+    var u = URL.createObjectURL(b);
+    var w = window.open(u, '_blank');
+    if (!w) { window.location.href = u; }
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
+  }
+
+  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (_isIOS) {
+    var _pdfFile = new File([_pdfBlob], _fname, { type:'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files:[_pdfFile] })) {
+      navigator.share({ files:[_pdfFile], title:_fname })
+        .then(_restorePdfBtn)
+        .catch(function(e){
+          if (e && e.name === 'AbortError') { _restorePdfBtn(); return; }
+          _openPdfInline(_pdfBlob); _restorePdfBtn();
+        });
+      return;
+    }
+    _openPdfInline(_pdfBlob); _restorePdfBtn();
+    return;
+  }
+
+  var _dlUrl = URL.createObjectURL(_pdfBlob);
+  var _dlA   = document.createElement('a');
+  _dlA.href  = _dlUrl; _dlA.download = _fname;
+  document.body.appendChild(_dlA); _dlA.click();
+  setTimeout(function(){ document.body.removeChild(_dlA); URL.revokeObjectURL(_dlUrl); }, 200);
+  _restorePdfBtn();
 }
 
 /* ================================================

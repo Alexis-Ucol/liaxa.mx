@@ -393,6 +393,7 @@ function setLang(l){
     document.getElementById('lessonBody').innerHTML = '';
     var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
     buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    patchProblemTotals();
     var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
     document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
     prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
@@ -459,6 +460,7 @@ function restoreSession() {
   answeredCount = 0; correctCount = 0;
   var att = currentAttempt(name, group);
   buildLesson(seededRng(name + group + att));
+  patchProblemTotals();
   document.getElementById('welcomeScreen').style.display = 'none';
   document.getElementById('lessonScreen').style.display  = 'block';
   document.getElementById('studentChip').textContent = name + ' · ' + group;
@@ -487,7 +489,7 @@ function restoreSession() {
       saved.texts.forEach(function(text, i) {
         if (!text) return;
         var ta = document.getElementById('ta' + i);
-        if (ta) ta.value = text;
+        if (ta) { ta.value = text; checkTextGate(i); }
       });
     }
     if (saved.photos) {
@@ -582,6 +584,7 @@ function startLesson() {
   correctCount  = 0;
   var att = nextAttempt(name, group);
   buildLesson(seededRng(name + group + att));
+  patchProblemTotals();
   document.getElementById('welcomeScreen').style.display = 'none';
   document.getElementById('lessonScreen').style.display  = 'block';
   document.getElementById('studentChip').textContent = name + ' · ' + group;
@@ -589,6 +592,22 @@ function startLesson() {
     entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
   }, { threshold: 0.05 });
   document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+function patchProblemTotals() {
+  var total = problems.length;
+  for (var k = 0; k < total; k++) {
+    var pnum = document.querySelector('#pc' + k + ' .pnum');
+    if (pnum) pnum.title = L({ es:'Pregunta ' + (k+1) + ' de ' + total, en:'Question ' + (k+1) + ' of ' + total });
+    var phdr = document.querySelector('#pc' + k + ' .phdr');
+    if (phdr && !phdr.querySelector('.ptotal')) {
+      var span = document.createElement('span');
+      span.className = 'ptotal';
+      span.style.cssText = 'margin-left:auto;font-size:.68rem;color:var(--text3);font-family:"IBM Plex Mono",monospace;white-space:nowrap;';
+      span.textContent = L({ es:(k+1) + ' / ' + total, en:(k+1) + ' / ' + total });
+      phdr.appendChild(span);
+    }
+  }
 }
 
 /* ================================================
@@ -674,6 +693,28 @@ function handlePhoto(idx, input) {
     saveSession();
   };
   reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   TEXT GATE — unlocks MC options after 120 chars in textarea
+   Only applies to showWork cards (those that have a mcgate element).
+   ================================================ */
+function checkTextGate(idx) {
+  var ta  = document.getElementById('ta' + idx);
+  var lock = document.getElementById('mclock' + idx);
+  var ctr  = document.getElementById('tac' + idx);
+  if (!ta || !lock) return;
+  var len = ta.value.trim().length;
+  var MIN = 120;
+  if (ctr) {
+    ctr.textContent = len + ' / ' + MIN;
+    ctr.style.color = len >= MIN ? 'var(--ok)' : 'var(--text3)';
+  }
+  if (len >= MIN) {
+    lock.style.display = 'none';
+  } else {
+    lock.style.display = 'flex';
+  }
 }
 
 /* ================================================
@@ -805,7 +846,8 @@ function buildOneCard(prob, globalIdx) {
           '</div>' +
         '</div>' +
         '<div class="wpanel" id="wp_' + i + '_type">' +
-          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession();checkTextGate(' + i + ')"></textarea>' +
+          '<div class="ta-counter" id="tac' + i + '" style="font-size:.7rem;color:var(--text3);text-align:right;margin-top:.2rem">0 / 120</div>' +
         '</div>' +
         '<div class="wpanel" id="wp_' + i + '_photo">' +
           '<div class="pzone" id="pz' + i + '">' +
@@ -828,11 +870,23 @@ function buildOneCard(prob, globalIdx) {
       workArea +
       '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
       '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
-      '<div style="margin-top:.7rem">' +
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
-        '<div class="mcopts">' + opts + '</div>' +
-        '<div class="mcfb" id="fb' + i + '"></div>' +
-      '</div>' +
+      (prob.showWork ?
+        '<div id="mcgate' + i + '" style="margin-top:.7rem;position:relative;">' +
+          '<div id="mclock' + i + '" style="position:absolute;inset:0;z-index:5;background:rgba(var(--bg-rgb,248,246,241),.88);backdrop-filter:blur(2px);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;padding:.8rem;text-align:center;">' +
+            '<span style="font-size:1.1rem">🔒</span>' +
+            '<span style="font-size:.78rem;color:var(--text3);">' + L({ es:'Escribe al menos 120 caracteres antes de responder', en:'Write at least 120 characters before answering' }) + '</span>' +
+          '</div>' +
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+          '<div class="mcopts">' + opts + '</div>' +
+          '<div class="mcfb" id="fb' + i + '"></div>' +
+        '</div>'
+      :
+        '<div style="margin-top:.7rem">' +
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+          '<div class="mcopts">' + opts + '</div>' +
+          '<div class="mcfb" id="fb' + i + '"></div>' +
+        '</div>'
+      ) +
     '</div>';
   document.getElementById('lessonBody').appendChild(card);
 
@@ -1059,17 +1113,46 @@ async function generatePDF() {
       PW/2, PH-5, {align:'center'});
   }
 
-  var _fn = 'geo1_t04_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
+    // ── SAVE / SHARE — iOS-safe download (LIAXA iOS PDF fix, Rule 12) ─────────
+  //   iOS Safari ignores the <a download> attribute, so a plain download fails
+  //   silently on iPhone/iPad. iOS -> native share sheet (-> "Save to Files"),
+  //   with an inline-open fallback; everything else -> <a download> click.
+  //   Runs synchronously off the tap so iOS accepts navigator.share().
+  var _fname   = 'geo1_t04_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
   var _pdfBlob = doc.output('blob');
-  var _blobUrl = URL.createObjectURL(_pdfBlob);
-  var _a = document.createElement('a');
-  _a.href = _blobUrl;
-  _a.download = _fn;
-  document.body.appendChild(_a);
-  _a.click();
-  setTimeout(function(){ document.body.removeChild(_a); URL.revokeObjectURL(_blobUrl); }, 200);
-  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
-  btn.disabled  = false;
+
+  function _restorePdfBtn(){ btn.innerHTML = '\u2b07 &nbsp;' + t('btn-pdf'); btn.disabled = false; }
+  function _openPdfInline(b){
+    var u = URL.createObjectURL(b);
+    var w = window.open(u, '_blank');
+    if (!w) { window.location.href = u; }
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
+  }
+
+  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (_isIOS) {
+    var _pdfFile = new File([_pdfBlob], _fname, { type:'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files:[_pdfFile] })) {
+      navigator.share({ files:[_pdfFile], title:_fname })
+        .then(_restorePdfBtn)
+        .catch(function(e){
+          if (e && e.name === 'AbortError') { _restorePdfBtn(); return; }
+          _openPdfInline(_pdfBlob); _restorePdfBtn();
+        });
+      return;
+    }
+    _openPdfInline(_pdfBlob); _restorePdfBtn();
+    return;
+  }
+
+  var _dlUrl = URL.createObjectURL(_pdfBlob);
+  var _dlA   = document.createElement('a');
+  _dlA.href  = _dlUrl; _dlA.download = _fname;
+  document.body.appendChild(_dlA); _dlA.click();
+  setTimeout(function(){ document.body.removeChild(_dlA); URL.revokeObjectURL(_dlUrl); }, 200);
+  _restorePdfBtn();
 }
 
 /* ================================================
@@ -1199,10 +1282,10 @@ function injectGuideCSS(){
     '.ec-probe span{position:absolute;right:6px;top:-9px;font-size:.64rem;background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:4px;padding:0 .3rem;}',
     '.pl{position:relative;height:132px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);overflow:hidden;margin:.5rem 0 .2rem;}',
     '.pl-sky{position:absolute;left:0;right:0;top:0;height:46px;background:var(--surface);}',
-    '.pl-b{position:absolute;top:46px;height:52px;width:46%;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:600;border-radius:5px;transition:transform .32s;}',
+    '.pl-b{position:absolute;top:46px;height:56px;width:46%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.72rem;font-weight:600;border-radius:5px;transition:transform .32s;text-align:center;line-height:1.2;}',
     '.pl-b.b1{left:1%;background:var(--green);color:#fff;}',
     '.pl-b.b2{right:1%;background:var(--gold);color:var(--text);}',
-    '.pl-astn{position:absolute;left:0;right:0;top:98px;bottom:0;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:.62rem;color:var(--text3);}',
+    '.pl-astn{position:absolute;left:0;right:0;top:102px;bottom:0;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:.62rem;color:var(--text3);}',
     '.pl-out{font-size:.8rem;color:var(--text2);text-align:center;margin-top:.15rem;}',
     '.pl-out b{color:var(--green);}',
     '.ch-item{display:flex;gap:.55rem;align-items:center;padding:.5rem .6rem;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);margin-bottom:.35rem;cursor:pointer;font-size:.79rem;min-height:44px;transition:all .14s;}',
@@ -1559,7 +1642,7 @@ function w2(rng, host){
   host.innerHTML =
     '<div class="gw-h">' + L({ es:'Mesa de límites: mueve las placas', en:'Boundary table: move the plates' }) + '</div>' +
     '<div class="gw-q" data-r="q"></div>' +
-    '<div class="gw-mini">' + L({ es:'Elige de qué está hecha cada placa y hacia dónde se mueve. El corte del terreno responde al instante.', en:'Choose what each plate is made of and where it moves. The cross section responds instantly.' }) + '</div>' +
+    '<div class="gw-mini">' + L({ es:'Elige el tipo de cada placa (Oceánica o Continental) y su dirección (◀ aleja = se separan, ▶ acerca = se juntan, ↔ de lado = rozan). El corte del terreno se actualiza al instante.', en:'Choose each plate\'s type (Oceanic or Continental) and its direction (◀ away = separating, ▶ toward = converging, ↔ sideways = scraping). The cross-section updates instantly.' }) + '</div>' +
     '<div class="pl">' +
       '<div class="pl-sky"></div>' +
       '<div class="pl-b b1" data-r="b1"></div>' +
@@ -1567,21 +1650,21 @@ function w2(rng, host){
       '<div class="pl-astn">' + L({ es:'astenosfera', en:'asthenosphere' }) + '</div>' +
     '</div>' +
     '<div class="pl-out" data-r="out"></div>' +
-    '<div class="gw-lbl">' + L({ es:'Placa izquierda', en:'Left plate' }) + '</div>' +
+    '<div class="gw-lbl">' + L({ es:'Placa izquierda — tipo y dirección de movimiento', en:'Left plate — type and direction of movement' }) + '</div>' +
     '<div class="gw-row" data-r="c1">' +
-      '<button class="gw-btn" data-t="o">' + L({ es:'Oceánica', en:'Oceanic' }) + '</button>' +
-      '<button class="gw-btn" data-t="c">' + L({ es:'Continental', en:'Continental' }) + '</button>' +
-      '<button class="gw-btn" data-d="izq">◀</button>' +
-      '<button class="gw-btn" data-d="der">▶</button>' +
-      '<button class="gw-btn" data-d="lado">' + L({ es:'de lado', en:'sideways' }) + '</button>' +
+      '<button class="gw-btn" data-t="o" title="' + L({ es:'Tipo: Oceánica', en:'Type: Oceanic' }) + '">' + L({ es:'Oceánica', en:'Oceanic' }) + '</button>' +
+      '<button class="gw-btn" data-t="c" title="' + L({ es:'Tipo: Continental', en:'Type: Continental' }) + '">' + L({ es:'Continental', en:'Continental' }) + '</button>' +
+      '<button class="gw-btn" data-d="izq" title="' + L({ es:'Se aleja (hacia la izquierda)', en:'Moves away (leftward)' }) + '">◀ ' + L({ es:'aleja', en:'away' }) + '</button>' +
+      '<button class="gw-btn" data-d="der" title="' + L({ es:'Se acerca (hacia la derecha)', en:'Moves toward (rightward)' }) + '">▶ ' + L({ es:'acerca', en:'toward' }) + '</button>' +
+      '<button class="gw-btn" data-d="lado">' + L({ es:'↔ de lado', en:'↔ sideways' }) + '</button>' +
     '</div>' +
-    '<div class="gw-lbl">' + L({ es:'Placa derecha', en:'Right plate' }) + '</div>' +
+    '<div class="gw-lbl">' + L({ es:'Placa derecha — tipo y dirección de movimiento', en:'Right plate — type and direction of movement' }) + '</div>' +
     '<div class="gw-row" data-r="c2">' +
-      '<button class="gw-btn" data-t="o">' + L({ es:'Oceánica', en:'Oceanic' }) + '</button>' +
-      '<button class="gw-btn" data-t="c">' + L({ es:'Continental', en:'Continental' }) + '</button>' +
-      '<button class="gw-btn" data-d="izq">◀</button>' +
-      '<button class="gw-btn" data-d="der">▶</button>' +
-      '<button class="gw-btn" data-d="lado">' + L({ es:'de lado', en:'sideways' }) + '</button>' +
+      '<button class="gw-btn" data-t="o" title="' + L({ es:'Tipo: Oceánica', en:'Type: Oceanic' }) + '">' + L({ es:'Oceánica', en:'Oceanic' }) + '</button>' +
+      '<button class="gw-btn" data-t="c" title="' + L({ es:'Tipo: Continental', en:'Type: Continental' }) + '">' + L({ es:'Continental', en:'Continental' }) + '</button>' +
+      '<button class="gw-btn" data-d="izq" title="' + L({ es:'Se aleja (hacia la izquierda)', en:'Moves away (leftward)' }) + '">◀ ' + L({ es:'aleja', en:'away' }) + '</button>' +
+      '<button class="gw-btn" data-d="der" title="' + L({ es:'Se acerca (hacia la derecha)', en:'Moves toward (rightward)' }) + '">▶ ' + L({ es:'acerca', en:'toward' }) + '</button>' +
+      '<button class="gw-btn" data-d="lado">' + L({ es:'↔ de lado', en:'↔ sideways' }) + '</button>' +
     '</div>' +
     '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
     '<div class="gw-fb"></div>';
@@ -1613,14 +1696,35 @@ function w2(rng, host){
   function label(t){ return t === 'o' ? L({ es:'placa oceánica', en:'oceanic plate' }) : L({ es:'placa continental', en:'continental plate' }); }
   function draw(){
     elQ.innerHTML = L(R[rd].q);
-    b1.textContent = label(tp1);
-    b2.textContent = label(tp2);
+    // Build label: add ⊙ (toward viewer) / ⊗ (away from viewer) for lateral motion
+    function plateLabel(tp, dir) {
+      var base = label(tp);
+      if (dir === 'lado') {
+        // left plate comes toward viewer (⊙), right plate goes away (⊗)
+        return base;
+      }
+      return base;
+    }
+    b1.textContent = plateLabel(tp1, dir1);
+    b2.textContent = plateLabel(tp2, dir2);
+    // Horizontal shift for convergent/divergent; NO vertical shift for lateral
     var x1 = dir1 === 'der' ? 16 : (dir1 === 'izq' ? -16 : 0);
     var x2 = dir2 === 'der' ? 16 : (dir2 === 'izq' ? -16 : 0);
-    var y1 = dir1 === 'lado' ? -9 : 0;
-    var y2 = dir2 === 'lado' ? 9 : 0;
-    b1.style.transform = 'translate(' + x1 + 'px,' + y1 + 'px)';
-    b2.style.transform = 'translate(' + x2 + 'px,' + y2 + 'px)';
+    // For lateral (de lado): both plates stay at y=0, use skewY to suggest depth motion
+    var skew1 = dir1 === 'lado' ? 'skewY(-6deg)' : '';
+    var skew2 = dir2 === 'lado' ? 'skewY(6deg)' : '';
+    b1.style.transform = 'translate(' + x1 + 'px, 0px) ' + skew1;
+    b2.style.transform = 'translate(' + x2 + 'px, 0px) ' + skew2;
+
+    // Overlay lateral-motion arrows on the plates
+    var m = motion();
+    if (m === 'lat') {
+      b1.innerHTML = label(tp1) + '<span style="display:block;font-size:.85rem;margin-top:.1rem;letter-spacing:.05em">⊙ ' + L({ es:'sale', en:'out' }) + '</span>';
+      b2.innerHTML = label(tp2) + '<span style="display:block;font-size:.85rem;margin-top:.1rem;letter-spacing:.05em">⊗ ' + L({ es:'entra', en:'in' }) + '</span>';
+    } else {
+      b1.textContent = label(tp1);
+      b2.textContent = label(tp2);
+    }
     elO.innerHTML = '<b>' + L(RES[result()]) + '</b>';
     [[c1, tp1, dir1], [c2, tp2, dir2]].forEach(function(g){
       g[0].querySelectorAll('.gw-btn').forEach(function(b){
@@ -1733,7 +1837,7 @@ function w3(rng, host){
   host.innerHTML =
     '<div class="gw-h">' + L({ es:'El rompecabezas mexicano', en:'The Mexican jigsaw' }) + '</div>' +
     '<div class="gw-q">' + L({ es:'¿Qué dos placas se encuentran en cada tramo del territorio?', en:'Which two plates meet along each stretch of the territory?' }) + '</div>' +
-    '<div class="gw-mini">' + L({ es:'Toca un tramo para cambiar el par de placas. Cuando los cuatro te convenzan, comprueba.', en:'Tap a stretch to change the pair of plates. When all four convince you, check.' }) + '</div>' +
+    '<div class="gw-mini">' + L({ es:'Toca un tramo varias veces para recorrer las opciones de pares de placas (↻ cicla entre 4 opciones). Cuando los cuatro tramos te convenzan, presiona Comprobar.', en:'Tap a stretch repeatedly to cycle through the plate-pair options (↻ cycles through 4 choices). When all four stretches look right, press Check.' }) + '</div>' +
     '<div class="gw-grid" data-r="tiles"></div>' +
     '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
     '<div class="gw-fb"></div>';
@@ -1747,7 +1851,7 @@ function w3(rng, host){
       var cls = 'gw-tile ' + ['vA', 'vB', 'vC', ''][cur[j]];
       if (done && cur[j] === Z[j].v) cls += ' good';
       h += '<button class="' + cls + '" data-i="' + j + '"' + (done ? ' disabled' : '') + '>' +
-             '<span class="gw-key">' + L(Z[j].n) + '</span>' +
+             '<span class="gw-key">' + L(Z[j].n) + (done ? '' : ' <span style="font-size:.6rem;opacity:.55;font-weight:400">↻ ' + (cur[j]+1) + '/4</span>') + '</span>' +
              '<span class="gw-sub">' + L(PAR[cur[j]]) + '</span>' +
            '</button>';
     }
@@ -2078,7 +2182,7 @@ function w6(rng, host){
   host.innerHTML =
     '<div class="gw-h">' + L({ es:'Modela el relieve', en:'Shape the relief' }) + '</div>' +
     '<div class="gw-q" data-r="q"></div>' +
-    '<div class="gw-mini">' + L({ es:'La barra levanta el terreno desde dentro; los botones encienden los agentes que lo desgastan desde fuera.', en:'The bar lifts the ground from within; the buttons switch on the agents that wear it down from outside.' }) + '</div>' +
+    '<div class="gw-mini">' + L({ es:'La barra levanta el terreno desde dentro; los botones encienden los agentes externos que lo desgastan. Pista: levantamiento alto + pocos agentes = sierra alta y recortada; levantamiento bajo + varios agentes = llanura suave.', en:'The bar lifts the ground from within; the buttons switch on the external agents that wear it down. Hint: high uplift + few agents = high jagged range; low uplift + several agents = smooth plain.' }) + '</div>' +
     '<div class="rp" data-r="prof"></div>' +
     '<div class="rp-lbl"><span>' + L({ es:'nivel del mar', en:'sea level' }) + '</span><span data-r="tag"></span></div>' +
     '<div class="gw-lbl">' + L({ es:'Fuerzas internas: levantamiento', en:'Internal forces: uplift' }) + '</div>' +
