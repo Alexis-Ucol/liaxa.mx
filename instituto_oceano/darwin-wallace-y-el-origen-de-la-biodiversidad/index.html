@@ -1380,10 +1380,9 @@ function buildLesson(rng){
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MANIPULATIVO 1 :: los dos viajes
-   Cinco momentos revueltos por la semilla. El alumno toca una ficha y luego
-   otra para intercambiarlas; al comprobar recibe una pista sobre la primera
-   ficha mal colocada. A la tercera falla se acomoda el orden real (Rule 8).
+   MANIPULATIVO 1 :: los dos viajes  (drag-and-drop, sin números)
+   Seis fichas revueltas; el alumno las arrastra hasta el orden correcto.
+   Sin números de posición: sólo el texto. Comprobar + 3 fallas = reveal.
    ══════════════════════════════════════════════════════════════════════════ */
 function wVoyages(rng, host){
   var EV = [
@@ -1404,35 +1403,125 @@ function wVoyages(rng, host){
   var ok0 = true;
   for (var z = 0; z < order.length; z++) if (order[z] !== z) ok0 = false;
   if (ok0) order = [2,0,5,1,3,4];
-  var sel = -1, tries = 0, done = false;
+  var tries = 0, done = false;
+
+  /* inject drag-and-drop CSS once */
+  if (!document.getElementById('voyagesDragCSS')) {
+    var ds = document.createElement('style');
+    ds.id = 'voyagesDragCSS';
+    ds.textContent = [
+      '.voy-list{display:flex;flex-direction:column;gap:.35rem;margin:.55rem 0 .1rem;user-select:none;}',
+      '.voy-chip{border:1.5px solid var(--border);border-radius:9px;padding:.55rem .75rem;',
+        'background:var(--surface2);font-size:.82rem;color:var(--text);cursor:grab;',
+        'display:flex;gap:.5rem;align-items:flex-start;text-align:left;width:100%;',
+        'min-height:44px;transition:box-shadow .12s,opacity .12s;line-height:1.35;}',
+      '.voy-chip:active{cursor:grabbing;}',
+      '.voy-chip.dragging{opacity:.45;box-shadow:none;}',
+      '.voy-chip.drag-over{border-color:var(--gold);background:var(--gold-bg);box-shadow:0 0 0 2px var(--gold);}',
+      '.voy-chip.locked{cursor:default;border-color:var(--ok);background:var(--ok-bg);color:var(--ok);}',
+      '.voy-drag-handle{font-size:.85rem;color:var(--text3);flex-shrink:0;margin-top:.05rem;}',
+    ].join('');
+    document.head.appendChild(ds);
+  }
 
   host.innerHTML =
     '<div class="gw-h">' + L({ es:'La línea de los dos viajes', en:'The line of the two voyages' }) + '</div>' +
-    '<div class="gw-q">' + L({ es:'Ordena los seis momentos, del primero al último.', en:'Put the six moments in order, first to last.' }) + '</div>' +
+    '<div class="gw-q">' + L({ es:'Arrastra las fichas hasta ordenarlas del primer al último momento.', en:'Drag the cards to put them in order from first to last.' }) + '</div>' +
     '<div class="gw-mini">' + L({
-      es:'Toca una ficha y luego otra para intercambiarlas. Puedes reacomodarlas cuantas veces quieras antes de comprobar.',
-      en:'Tap one chip and then another to swap them. You can rearrange as many times as you like before checking.'
+      es:'Agarra una ficha por el ícono ⠿ y suéltala en la posición que crees correcta.',
+      en:'Grab a card by the ⠿ icon and drop it in the position you think is correct.'
     }) + '</div>' +
-    '<div class="tl-list" data-r="list"></div>' +
+    '<div class="voy-list" id="voyList_' + host.id + '"></div>' +
     '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
     '<div class="gw-fb"></div>';
 
-  var elL = host.querySelector('[data-r="list"]'), elK = host.querySelector('[data-r="chk"]');
+  var elL = document.getElementById('voyList_' + host.id);
+  var elK = host.querySelector('[data-r="chk"]');
+  var dragSrc = null;
 
   function render(){
     elL.innerHTML = order.map(function(ei, pos){
-      var cls = 'tl-chip' + (sel === pos ? ' sel' : '') + (done ? ' locked' : '');
-      return '<button class="' + cls + '" data-p="' + pos + '"' + (done ? ' disabled' : '') + '><span class="tl-num">' + (pos + 1) + '</span><span>' + L(EV[ei]) + '</span></button>';
+      var cls = 'voy-chip' + (done ? ' locked' : '');
+      var draggable = done ? '' : ' draggable="true"';
+      return '<div class="' + cls + '" data-p="' + pos + '"' + draggable + '>' +
+        (!done ? '<span class="voy-drag-handle">⠿</span>' : '<span class="voy-drag-handle">✓</span>') +
+        '<span>' + L(EV[ei]) + '</span></div>';
     }).join('');
-    elL.querySelectorAll('.tl-chip').forEach(function(b){
-      b.addEventListener('click', function(){
-        if (done) return;
-        var p = parseInt(b.getAttribute('data-p'), 10);
-        if (sel < 0) sel = p;
-        else if (sel === p) sel = -1;
-        else { var tmp = order[sel]; order[sel] = order[p]; order[p] = tmp; sel = -1; }
+
+    if (!done) attachDrag();
+  }
+
+  function attachDrag(){
+    var chips = elL.querySelectorAll('.voy-chip');
+    chips.forEach(function(chip){
+      chip.addEventListener('dragstart', function(e){
+        dragSrc = chip;
+        chip.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', chip.getAttribute('data-p'));
+      });
+      chip.addEventListener('dragend', function(){
+        chip.classList.remove('dragging');
+        elL.querySelectorAll('.voy-chip').forEach(function(c){ c.classList.remove('drag-over'); });
+      });
+      chip.addEventListener('dragover', function(e){
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (chip !== dragSrc) chip.classList.add('drag-over');
+      });
+      chip.addEventListener('dragleave', function(){
+        chip.classList.remove('drag-over');
+      });
+      chip.addEventListener('drop', function(e){
+        e.preventDefault();
+        chip.classList.remove('drag-over');
+        if (!dragSrc || dragSrc === chip) return;
+        var fromPos = parseInt(dragSrc.getAttribute('data-p'), 10);
+        var toPos   = parseInt(chip.getAttribute('data-p'), 10);
+        /* insert fromPos before/after toPos */
+        var moved = order.splice(fromPos, 1)[0];
+        var newTo = toPos > fromPos ? toPos - 1 : toPos;
+        order.splice(newTo, 0, moved);
         render();
       });
+    });
+
+    /* touch drag for mobile */
+    var touchItem = null, touchClone = null, touchFromPos = -1;
+    chips.forEach(function(chip){
+      chip.addEventListener('touchstart', function(e){
+        touchFromPos = parseInt(chip.getAttribute('data-p'), 10);
+        touchItem = chip;
+        var rect = chip.getBoundingClientRect();
+        touchClone = chip.cloneNode(true);
+        touchClone.style.cssText = 'position:fixed;left:' + rect.left + 'px;top:' + rect.top + 'px;width:' + rect.width + 'px;opacity:.7;pointer-events:none;z-index:9999;border-color:var(--gold);';
+        document.body.appendChild(touchClone);
+        chip.style.opacity = '0.35';
+      }, { passive: true });
+      chip.addEventListener('touchmove', function(e){
+        if (!touchClone) return;
+        var t = e.touches[0];
+        touchClone.style.left = (t.clientX - 20) + 'px';
+        touchClone.style.top  = (t.clientY - 22) + 'px';
+        elL.querySelectorAll('.voy-chip').forEach(function(c){ c.classList.remove('drag-over'); });
+        var el = document.elementFromPoint(t.clientX, t.clientY);
+        var target = el ? el.closest('.voy-chip') : null;
+        if (target && target !== touchItem) target.classList.add('drag-over');
+      }, { passive: true });
+      chip.addEventListener('touchend', function(e){
+        if (touchClone){ document.body.removeChild(touchClone); touchClone = null; }
+        if (touchItem) { touchItem.style.opacity = ''; touchItem = null; }
+        elL.querySelectorAll('.voy-chip').forEach(function(c){ c.classList.remove('drag-over'); });
+        var t = e.changedTouches[0];
+        var el = document.elementFromPoint(t.clientX, t.clientY);
+        var target = el ? el.closest('.voy-chip') : null;
+        if (!target || target === chip) return;
+        var toPos = parseInt(target.getAttribute('data-p'), 10);
+        var moved = order.splice(touchFromPos, 1)[0];
+        var newTo = toPos > touchFromPos ? toPos - 1 : toPos;
+        order.splice(newTo, 0, moved);
+        render();
+      }, { passive: true });
     });
   }
 
@@ -1441,7 +1530,7 @@ function wVoyages(rng, host){
     var bad = -1;
     for (var i = 0; i < order.length; i++) if (order[i] !== i){ bad = i; break; }
     if (bad < 0){
-      done = true; sel = -1; render();
+      done = true; render();
       elK.textContent = L({ es:'Completado', en:'Completed' });
       elK.className = 'gw-btn solved'; elK.disabled = true;
       say(host, 'good', L({
@@ -1452,7 +1541,7 @@ function wVoyages(rng, host){
     }
     tries++;
     if (tries >= 3){
-      order = [0,1,2,3,4,5]; done = true; sel = -1; render();
+      order = [0,1,2,3,4,5]; done = true; render();
       elK.textContent = L({ es:'Completado', en:'Completed' });
       elK.className = 'gw-btn solved'; elK.disabled = true;
       say(host, 'miss', L({
@@ -1461,10 +1550,9 @@ function wVoyages(rng, host){
       }));
       return;
     }
-    var actual = order.indexOf(bad);
     say(host, 'warm', L({
-      es:'Todavía no. La ficha que está en el lugar ' + (bad + 1) + ' debería ser otra: lo que ahí dice ocurrió ' + (actual > bad ? 'más tarde' : 'antes') + ' de lo que le toca. Muévela y vuelve a comprobar.',
-      en:'Not yet. The chip sitting in place ' + (bad + 1) + ' should be another one: what it says happened ' + (actual > bad ? 'later' : 'earlier') + ' than the slot it is in. Move it and check again.'
+      es:'Todavía no está en el orden correcto. Intenta mover alguna ficha y vuelve a comprobar.',
+      en:'Not in the right order yet. Try moving a card and check again.'
     }));
   });
 
@@ -1476,157 +1564,272 @@ function wVoyages(rng, host){
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MANIPULATIVO 2 :: el muestreo de picos
-   Ocho aves con el pico tapado. Al tocar una se destapa su medida y las
-   lecturas del panel se actualizan al instante. El alumno propone de cuánto
-   es la variación con un contador; la respuesta empuja hacia arriba o hacia
-   abajo. Tres muestreos, reveal a la tercera falla (Rule 8).
+   MANIPULATIVO 2 :: el muestreo de picos  (rediseño)
+   Ocho fichas boca abajo. El alumno las voltea para ver la medida, luego
+   arrastra la que considera el pico más largo a un bloque "Más largo" y la
+   más corta a "Más corto", y finalmente escribe la diferencia.
+   El widget nunca revela cuál es el más largo/corto hasta que el alumno lo
+   determina. Tres muestreos (Rule 8).
    ══════════════════════════════════════════════════════════════════════════ */
 function wMeasure(rng, host){
-  var round = 0, tries = 0, revealed = false, done = false, guess = 1, shown = [], data = null;
+  var round = 0, tries = 0, done = false, data = null;
+  var placedLong = null, placedShort = null, diffInput = null;
+
+  /* inject CSS once */
+  if (!document.getElementById('measureCSS')) {
+    var ms = document.createElement('style');
+    ms.id = 'measureCSS';
+    ms.textContent = [
+      '.ms-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.35rem;margin:.55rem 0;}',
+      '@media(max-width:500px){.ms-grid{grid-template-columns:repeat(3,1fr);}}',
+      '.ms-tile{min-height:56px;padding:.35rem .25rem;border:1.5px solid var(--border);border-radius:8px;',
+        'background:var(--surface2);color:var(--text2);font-family:inherit;font-size:.72rem;',
+        'line-height:1.25;cursor:pointer;display:flex;flex-direction:column;align-items:center;',
+        'justify-content:center;text-align:center;transition:all .14s;user-select:none;}',
+      '.ms-tile:hover:not(.flipped):not(.locked){border-color:var(--green);background:var(--green-bg);}',
+      '.ms-tile.flipped{background:var(--surface);color:var(--text);cursor:grab;border-color:var(--border);}',
+      '.ms-tile.flipped:active{cursor:grabbing;}',
+      '.ms-tile.locked{cursor:default;opacity:.55;}',
+      '.ms-tile b{display:block;font-family:"IBM Plex Mono",monospace;font-size:.92rem;font-weight:700;}',
+      '.ms-zones{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin:.7rem 0;}',
+      '.ms-zone{min-height:62px;border:2px dashed var(--border);border-radius:10px;',
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;',
+        'padding:.45rem;text-align:center;transition:border-color .15s,background .15s;',
+        'background:var(--surface2);}',
+      '.ms-zone.hover-target{border-color:var(--gold);background:var(--gold-bg);}',
+      '.ms-zone.filled{border-style:solid;border-color:var(--ok);background:var(--ok-bg);}',
+      '.ms-zone-lbl{font-size:.65rem;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);margin-bottom:.25rem;}',
+      '.ms-zone-val{font-family:"IBM Plex Mono",monospace;font-size:1rem;font-weight:700;color:var(--ok);}',
+      '.ms-diff-row{display:flex;align-items:center;gap:.5rem;margin:.5rem 0;}',
+      '.ms-diff-in{width:5ch;padding:.4rem .5rem;border:1.5px solid var(--border);border-radius:7px;',
+        'background:var(--surface);color:var(--text);font-family:"IBM Plex Mono",monospace;',
+        'font-size:1rem;font-weight:700;text-align:center;}',
+      '.ms-diff-in:focus{outline:none;border-color:var(--green);}',
+    ].join('');
+    document.head.appendChild(ms);
+  }
 
   function buildRound(){
     var base = ri(rng, 8, 11);
     var spread = ri(rng, 4, 7);
     var v = [base, base + spread];
     for (var i = 0; i < 6; i++) v.push(ri(rng, base, base + spread));
-    return { base:base, spread:spread, v:shuffle(v, rng) };
+    return { base:base, spread:spread, v:shuffle(v, rng), flipped:[], longPlaced:null, shortPlaced:null };
   }
 
-  host.innerHTML =
-    '<div class="gw-h">' + L({ es:'El muestreo', en:'The sample' }) + '</div>' +
-    '<div class="gw-q" data-r="q"></div>' +
-    '<div class="gw-mini">' + L({
-      es:'Toca cada ave para destapar la medida de su pico. Puedes volver a taparla y ajustar tu número las veces que quieras antes de comprobar.',
-      en:'Tap each bird to uncover its beak measurement. You can cover it again and adjust your number as often as you like before checking.'
-    }) + '</div>' +
-    '<div class="spgrid" data-r="grid"></div>' +
-    '<div class="gw-read" data-r="read"></div>' +
-    '<div class="step">' +
-      '<span class="steplbl">' + L({ es:'Diferencia que propones', en:'Difference you propose' }) + '</span>' +
-      '<button class="gw-btn" data-r="minus">−</button>' +
-      '<span class="stepv" data-r="val">1</span>' +
-      '<button class="gw-btn" data-r="plus">+</button>' +
-      '<span class="steplbl">mm</span>' +
-    '</div>' +
-    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
-    '<div class="gw-fb"></div>';
+  function buildUI(){
+    host.innerHTML =
+      '<div class="gw-h">' + L({ es:'El muestreo', en:'The sample' }) + '</div>' +
+      '<div class="gw-q" data-r="q"></div>' +
+      '<div class="gw-mini">' + L({
+        es:'1 · Toca cada ficha para ver la medida del pico. &nbsp;2 · Arrastra la ficha del pico más largo al bloque "Más largo" y la del más corto a "Más corto". &nbsp;3 · Escribe la diferencia.',
+        en:'1 · Tap each card to reveal the beak measurement. &nbsp;2 · Drag the card with the longest beak to the "Longest" block and the shortest to "Shortest". &nbsp;3 · Enter the difference.'
+      }) + '</div>' +
+      '<div class="ms-grid" data-r="grid"></div>' +
+      '<div class="ms-zones">' +
+        '<div class="ms-zone" id="ms_zone_long_' + host.id + '">' +
+          '<div class="ms-zone-lbl">' + L({ es:'Más largo', en:'Longest' }) + '</div>' +
+          '<div class="ms-zone-val" data-r="zlong">–</div>' +
+        '</div>' +
+        '<div class="ms-zone" id="ms_zone_short_' + host.id + '">' +
+          '<div class="ms-zone-lbl">' + L({ es:'Más corto', en:'Shortest' }) + '</div>' +
+          '<div class="ms-zone-val" data-r="zshort">–</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ms-diff-row">' +
+        '<span class="steplbl">' + L({ es:'Diferencia:', en:'Difference:' }) + '</span>' +
+        '<input class="ms-diff-in" data-r="diffin" type="number" min="0" max="20" placeholder="?">' +
+        '<span class="steplbl">mm</span>' +
+      '</div>' +
+      '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
+      '<div class="gw-fb"></div>';
 
-  var elQ = host.querySelector('[data-r="q"]'),
-      elG = host.querySelector('[data-r="grid"]'),
-      elR = host.querySelector('[data-r="read"]'),
-      elV = host.querySelector('[data-r="val"]'),
-      elK = host.querySelector('[data-r="chk"]');
+    var elQ = host.querySelector('[data-r="q"]'),
+        elG = host.querySelector('[data-r="grid"]'),
+        elZL = host.querySelector('[data-r="zlong"]'),
+        elZS = host.querySelector('[data-r="zshort"]'),
+        elDI = host.querySelector('[data-r="diffin"]'),
+        elK  = host.querySelector('[data-r="chk"]');
 
-  function render(){
+    var zoneL = document.getElementById('ms_zone_long_'  + host.id);
+    var zoneS = document.getElementById('ms_zone_short_' + host.id);
+
     elQ.textContent = L({
-      es:'Muestreo ' + (round + 1) + ' de 3: ¿cuántos milímetros hay entre el pico más largo y el más corto?',
-      en:'Sample ' + (round + 1) + ' of 3: how many millimetres are there between the longest beak and the shortest?'
+      es:'Muestreo ' + (round + 1) + ' de 3',
+      en:'Sample ' + (round + 1) + ' of 3'
     });
-    elG.innerHTML = data.v.map(function(mm, i){
-      var open = shown[i] || revealed || done;
-      return '<button class="sp' + (open ? ' on' : '') + '" data-i="' + i + '"' + ((revealed || done) ? ' disabled' : '') + '>' +
-        L({ es:'ave', en:'bird' }) + ' ' + (i + 1) + '<b>' + (open ? mm + ' mm' : '?') + '</b></button>';
-    }).join('');
-    elG.querySelectorAll('.sp').forEach(function(b){
-      b.addEventListener('click', function(){
-        var i = parseInt(b.getAttribute('data-i'), 10);
-        shown[i] = !shown[i];
-        render();
+
+    var dragSrcIdx = null;
+
+    function renderGrid(){
+      elG.innerHTML = data.v.map(function(mm, i){
+        var flipped = data.flipped[i] || data.longPlaced === i || data.shortPlaced === i;
+        var locked  = data.longPlaced === i || data.shortPlaced === i;
+        var cls = 'ms-tile' + (flipped ? ' flipped' : '') + (locked ? ' locked' : '');
+        return '<div class="' + cls + '" data-i="' + i + '" ' +
+          (flipped && !locked ? 'draggable="true"' : '') + '>' +
+          (flipped ? L({ es:'ave', en:'bird' }) + ' ' + (i+1) + '<b>' + mm + ' mm</b>' :
+                     L({ es:'ave', en:'bird' }) + ' ' + (i+1) + '<b>?</b>') +
+          '</div>';
+      }).join('');
+
+      elG.querySelectorAll('.ms-tile').forEach(function(tile){
+        var i = parseInt(tile.getAttribute('data-i'), 10);
+        /* flip on click */
+        if (!data.flipped[i] && data.longPlaced !== i && data.shortPlaced !== i){
+          tile.addEventListener('click', function(){
+            data.flipped[i] = true; renderGrid();
+          });
+        }
+        /* drag start */
+        if (data.flipped[i] && data.longPlaced !== i && data.shortPlaced !== i){
+          tile.addEventListener('dragstart', function(e){
+            dragSrcIdx = i;
+            tile.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+          });
+          tile.addEventListener('dragend', function(){ tile.classList.remove('dragging'); });
+        }
+        /* touch drag for mobile */
+        if (data.flipped[i] && data.longPlaced !== i && data.shortPlaced !== i){
+          var clone = null;
+          tile.addEventListener('touchstart', function(){
+            dragSrcIdx = i;
+            clone = tile.cloneNode(true);
+            var r = tile.getBoundingClientRect();
+            clone.style.cssText='position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;opacity:.65;pointer-events:none;z-index:9999;';
+            document.body.appendChild(clone);
+            tile.style.opacity = '0.35';
+          }, { passive:true });
+          tile.addEventListener('touchmove', function(e){
+            if (!clone) return;
+            var t = e.touches[0];
+            clone.style.left = (t.clientX - 30) + 'px';
+            clone.style.top  = (t.clientY - 28) + 'px';
+            [zoneL, zoneS].forEach(function(z){ z.classList.remove('hover-target'); });
+            var el = document.elementFromPoint(t.clientX, t.clientY);
+            if (el && el.closest('#ms_zone_long_' + host.id))  zoneL.classList.add('hover-target');
+            if (el && el.closest('#ms_zone_short_' + host.id)) zoneS.classList.add('hover-target');
+          }, { passive:true });
+          tile.addEventListener('touchend', function(e){
+            if (clone){ document.body.removeChild(clone); clone = null; }
+            tile.style.opacity = '';
+            [zoneL, zoneS].forEach(function(z){ z.classList.remove('hover-target'); });
+            var t = e.changedTouches[0];
+            var el = document.elementFromPoint(t.clientX, t.clientY);
+            if (el && el.closest('#ms_zone_long_' + host.id))  placeInZone('long',  dragSrcIdx);
+            if (el && el.closest('#ms_zone_short_' + host.id)) placeInZone('short', dragSrcIdx);
+          }, { passive:true });
+        }
       });
-    });
-    var open = data.v.filter(function(_, i){ return shown[i] || revealed || done; });
-    var pills = '<span class="gw-pill">' + L({ es:'Destapadas', en:'Uncovered' }) + ': <b>' + open.length + '</b> ' + L({ es:'de 8', en:'of 8' }) + '</span>';
-    if (open.length){
-      pills += '<span class="gw-pill">' + L({ es:'La mayor que ves', en:'Largest you see' }) + ': <b>' + Math.max.apply(null, open) + '</b> mm</span>';
-      pills += '<span class="gw-pill">' + L({ es:'La menor que ves', en:'Smallest you see' }) + ': <b>' + Math.min.apply(null, open) + '</b> mm</span>';
+
+      /* zone drag events */
+      [zoneL, zoneS].forEach(function(zone, zi){
+        zone.addEventListener('dragover', function(e){
+          e.preventDefault(); zone.classList.add('hover-target');
+        });
+        zone.addEventListener('dragleave', function(){ zone.classList.remove('hover-target'); });
+        zone.addEventListener('drop', function(e){
+          e.preventDefault(); zone.classList.remove('hover-target');
+          placeInZone(zi === 0 ? 'long' : 'short', dragSrcIdx);
+        });
+      });
     }
-    elR.innerHTML = pills;
-    elV.textContent = String(guess);
+
+    function placeInZone(which, idx){
+      if (idx === null || idx === undefined) return;
+      var mm = data.v[idx];
+      if (which === 'long'){
+        if (data.longPlaced !== null){ data.flipped[data.longPlaced] = true; }
+        data.longPlaced = idx;
+        elZL.textContent = mm + ' mm';
+        zoneL.classList.add('filled');
+      } else {
+        if (data.shortPlaced !== null){ data.flipped[data.shortPlaced] = true; }
+        data.shortPlaced = idx;
+        elZS.textContent = mm + ' mm';
+        zoneS.classList.add('filled');
+      }
+      renderGrid();
+    }
+
+    elK.addEventListener('click', function(){
+      if (done) return;
+      var realMax = Math.max.apply(null, data.v);
+      var realMin = Math.min.apply(null, data.v);
+      var allFlipped = data.v.every(function(_, i){ return data.flipped[i] || data.longPlaced === i || data.shortPlaced === i; });
+      if (!allFlipped){
+        say(host, 'warm', L({ es:'Aún tienes fichas sin voltear. Destápalas todas para poder identificar los extremos.', en:'You still have unflipped cards. Turn them all over before identifying the extremes.' }));
+        return;
+      }
+      if (data.longPlaced === null || data.shortPlaced === null){
+        say(host, 'warm', L({ es:'Arrastra la ficha del pico más largo al bloque "Más largo" y la del más corto a "Más corto".', en:'Drag the longest beak card to "Longest" and the shortest to "Shortest".' }));
+        return;
+      }
+      var placedMax = data.v[data.longPlaced];
+      var placedMin = data.v[data.shortPlaced];
+      var diffVal   = parseInt(elDI.value, 10);
+      var longOk    = placedMax === realMax;
+      var shortOk   = placedMin === realMin;
+      var diffOk    = diffVal === data.spread;
+      if (longOk && shortOk && diffOk){
+        elK.textContent = L({ es:'Completado', en:'Completed' });
+        elK.className = 'gw-btn solved'; elK.disabled = true;
+        say(host, 'good', L({
+          es:'Correcto. El pico más largo medía ' + realMax + ' mm y el más corto ' + realMin + ' mm, con ' + data.spread + ' mm de diferencia.',
+          en:'Correct. The longest beak was ' + realMax + ' mm and the shortest ' + realMin + ' mm, a difference of ' + data.spread + ' mm.'
+        }));
+        setTimeout(nextRound, 900);
+        return;
+      }
+      tries++;
+      if (tries >= 3){
+        data.longPlaced  = data.v.indexOf(realMax);
+        data.shortPlaced = data.v.indexOf(realMin);
+        data.v.forEach(function(_, i){ data.flipped[i] = true; });
+        elZL.textContent = realMax + ' mm'; zoneL.classList.add('filled');
+        elZS.textContent = realMin + ' mm'; zoneS.classList.add('filled');
+        elDI.value = String(data.spread);
+        renderGrid();
+        elK.textContent = L({ es:'Siguiente', en:'Next' });
+        say(host, 'miss', L({
+          es:'El pico más largo era ' + realMax + ' mm y el más corto ' + realMin + ' mm, diferencia de ' + data.spread + ' mm. Ninguna de las ocho aves medía igual.',
+          en:'The longest beak was ' + realMax + ' mm, the shortest ' + realMin + ' mm, a difference of ' + data.spread + ' mm. None of the eight birds measured the same.'
+        }));
+        elK.onclick = function(){ nextRound(); };
+        return;
+      }
+      var msg = '';
+      if (!longOk)  msg += L({ es:'La ficha que pusiste en "Más largo" no es la mayor. ', en:'The card in "Longest" is not the largest. ' });
+      if (!shortOk) msg += L({ es:'La ficha que pusiste en "Más corto" no es la menor. ', en:'The card in "Shortest" is not the smallest. ' });
+      if (longOk && shortOk && !diffOk) msg += L({ es:'Los extremos son correctos, pero revisa el cálculo de la diferencia.', en:'The extremes are right, but check the difference calculation.' });
+      say(host, 'warm', msg);
+    });
+
+    data.flipped = new Array(data.v.length).fill(false);
+    renderGrid();
+    say(host, '', L({
+      es:'Voltea todas las fichas primero; sólo cuando las veas todas podrás identificar los extremos.',
+      en:'Flip all cards first; only when you can see all of them can you identify the extremes.'
+    }));
   }
 
   function nextRound(){
     round++;
     if (round >= 3){
       done = true;
-      elK.textContent = L({ es:'Completado', en:'Completed' });
-      elK.className = 'gw-btn solved'; elK.disabled = true;
-      render();
       say(host, 'good', L({
-        es:'En los tres muestreos, aves de la misma especie y del mismo sitio dieron ocho medidas distintas. Eso es la variación, y es el primer eslabón: sin ella no habría nada sobre lo que la selección natural pudiera actuar.',
-        en:'In all three samples, birds of the same species from the same place gave eight different measurements. That is variation, and it is the first link: without it there would be nothing for natural selection to act on.'
+        es:'En los tres muestreos, aves de la misma especie y del mismo sitio dieron ocho medidas distintas. Eso es la variación: sin ella no habría nada sobre lo que la selección natural pudiera actuar.',
+        en:'In all three samples, birds of the same species from the same place gave eight different measurements. That is variation: without it there would be nothing for natural selection to act on.'
       }));
       return;
     }
-    data = buildRound(); guess = 1; shown = []; tries = 0; revealed = false;
-    elK.textContent = L({ es:'Comprobar', en:'Check' });
-    elK.className = 'gw-btn';
-    render();
-    say(host, '', L({
-      es:'Otro muestreo, otras ocho aves del mismo sitio. Empieza destapando picos.',
-      en:'Another sample, another eight birds from the same place. Start by uncovering beaks.'
-    }));
+    data = buildRound(); tries = 0; placedLong = null; placedShort = null;
+    buildUI();
   }
 
-  host.querySelector('[data-r="minus"]').addEventListener('click', function(){
-    if (revealed || done) return;
-    if (guess > 1) guess--;
-    render();
-  });
-  host.querySelector('[data-r="plus"]').addEventListener('click', function(){
-    if (revealed || done) return;
-    if (guess < 14) guess++;
-    render();
-  });
-
-  elK.addEventListener('click', function(){
-    if (done) return;
-    if (revealed){ nextRound(); return; }
-    var openCount = data.v.filter(function(_, i){ return shown[i]; }).length;
-    if (guess === data.spread){
-      say(host, 'good', L({
-        es:'Correcto: entre el pico más largo y el más corto hay ' + data.spread + ' mm de diferencia.',
-        en:'Correct: there are ' + data.spread + ' mm between the longest beak and the shortest.'
-      }));
-      setTimeout(nextRound, 900);
-      return;
-    }
-    tries++;
-    if (tries >= 3){
-      revealed = true; guess = data.spread; render();
-      elK.textContent = L({ es:'Siguiente', en:'Next' });
-      say(host, 'miss', L({
-        es:'La medida mayor era ' + (data.base + data.spread) + ' mm y la menor ' + data.base + ' mm, así que la variación era de ' + data.spread + ' mm. Ninguna de las ocho aves era idéntica a otra.',
-        en:'The largest measurement was ' + (data.base + data.spread) + ' mm and the smallest ' + data.base + ' mm, so the variation was ' + data.spread + ' mm. None of the eight birds was identical to another.'
-      }));
-      return;
-    }
-    if (openCount < 8){
-      say(host, 'warm', L({
-        es:'Todavía no. Te quedan ' + (8 - openCount) + ' picos tapados, y cualquiera de ellos podría ser el más largo o el más corto. Destápalos antes de decidir.',
-        en:'Not yet. You still have ' + (8 - openCount) + ' beaks covered, and any of them could be the longest or the shortest. Uncover them before deciding.'
-      }));
-      return;
-    }
-    if (guess > data.spread){
-      say(host, 'warm', L({
-        es:'Te pasaste: la diferencia real es menor que la que propones. Vuelve a mirar la mayor y la menor del panel.',
-        en:'Too high: the real difference is smaller than the one you propose. Look again at the largest and the smallest on the panel.'
-      }));
-    } else {
-      say(host, 'warm', L({
-        es:'Te quedaste corto: la diferencia real es mayor que la que propones. Vuelve a mirar la mayor y la menor del panel.',
-        en:'Too low: the real difference is larger than the one you propose. Look again at the largest and the smallest on the panel.'
-      }));
-    }
-  });
-
   data = buildRound();
-  render();
-  say(host, '', L({
-    es:'Destapa los ocho picos y compara los extremos antes de proponer un número.',
-    en:'Uncover the eight beaks and compare the extremes before proposing a number.'
-  }));
+  buildUI();
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1685,28 +1888,53 @@ function wInherit(rng, host){
       '</div>' +
       '<div class="gw-fb"></div>';
     host.querySelectorAll('.bin').forEach(function(btn){
-      btn.addEventListener('click', function(){ answer(parseInt(btn.getAttribute('data-b'), 10)); });
+      btn.addEventListener('click', function(){
+        if (waitingNext) return;
+        answer(parseInt(btn.getAttribute('data-b'), 10));
+      });
     });
   }
 
+  var waitingNext = false;
+
   function advance(){
-    i++; tries = 0;
+    i++; tries = 0; waitingNext = false;
     if (i >= ITEMS.length) done = true;
     render();
   }
 
   function answer(bi){
+    if (waitingNext) return;
     var it = ITEMS[seq[i]];
     if (bi === it.bin){
       hits++;
-      say(host, 'good', L(it.why));
-      setTimeout(advance, 1100);
+      waitingNext = true;
+      /* show answer + Next button, stay until student is ready */
+      var fb = host.querySelector('.gw-fb');
+      if (fb){
+        fb.className = 'gw-fb good';
+        fb.innerHTML = L(it.why) +
+          '<br><button class="gw-btn" style="margin-top:.55rem" onclick="(function(){' +
+            'var h=document.getElementById(\'' + host.id + '\');' +
+            'var e=h.__inheritAdvance;if(e)e();' +
+          '})()">' + L({ es:'Siguiente →', en:'Next →' }) + '</button>';
+      }
+      host.__inheritAdvance = advance;
       return;
     }
     tries++;
     if (tries >= 3){
-      say(host, 'miss', L({ es:'Iba en: ', en:'It belonged in: ' }) + '<b>' + L(BINS[it.bin]) + '</b>. ' + L(it.why));
-      setTimeout(advance, 1800);
+      waitingNext = true;
+      var fb2 = host.querySelector('.gw-fb');
+      if (fb2){
+        fb2.className = 'gw-fb miss';
+        fb2.innerHTML = L({ es:'Iba en: ', en:'It belonged in: ' }) + '<b>' + L(BINS[it.bin]) + '</b>. ' + L(it.why) +
+          '<br><button class="gw-btn" style="margin-top:.55rem" onclick="(function(){' +
+            'var h=document.getElementById(\'' + host.id + '\');' +
+            'var e=h.__inheritAdvance;if(e)e();' +
+          '})()">' + L({ es:'Siguiente →', en:'Next →' }) + '</button>';
+      }
+      host.__inheritAdvance = advance;
       return;
     }
     say(host, 'warm', L({
@@ -1719,303 +1947,584 @@ function wInherit(rng, host){
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MANIPULATIVO 4 :: más semillas que huecos
-   Un cursor suelta semillas sobre un terreno con un número fijo de huecos con
-   luz. Los puntos se llenan en tiempo real: los que encuentran hueco se
-   marcan, los demás quedan apagados. El reto pide dejar fuera un número
-   exacto. Tres terrenos, reveal a la tercera falla (Rule 8).
+   MANIPULATIVO 4 :: más semillas que huecos  (animación de caída)
+   El terreno se dibuja en canvas: huecos iluminados fijos, tierra oscura.
+   Cada clic en "Soltar semilla" lanza UNA semilla que cae animada desde
+   arriba, aterriza en un hueco (verde, brilla) o en tierra seca (marrón,
+   se apaga). Contadores en tiempo real. Cuando todos los huecos están llenos
+   el alumno ve claramente que la gran mayoría de semillas quedó fuera.
+   Tres terrenos. Sin slider, sin matemáticas — pura visualización.
    ══════════════════════════════════════════════════════════════════════════ */
 function wSeeds(rng, host){
-  var round = 0, tries = 0, revealed = false, done = false, n = 20, data = null;
+  var round = 0, done = false;
+
+  /* inject CSS once */
+  if (!document.getElementById('seedsAnimCSS')){
+    var sc = document.createElement('style');
+    sc.id = 'seedsAnimCSS';
+    sc.textContent = [
+      '.sd-canvas{display:block;width:100%;height:180px;border-radius:10px;border:1px solid var(--border);cursor:pointer;}',
+      '.sd-counter{display:flex;gap:.6rem;flex-wrap:wrap;margin:.5rem 0;}',
+      '.sd-pill{padding:.3rem .7rem;border-radius:20px;font-size:.78rem;font-weight:600;}',
+      '.sd-pill-in{background:var(--ok-bg);color:var(--ok);}',
+      '.sd-pill-out{background:var(--bad-bg);color:var(--bad);}',
+      '.sd-pill-hole{background:var(--gold-bg);color:var(--text2);}',
+    ].join('');
+    document.head.appendChild(sc);
+  }
 
   function buildRound(){
-    var holes = ri(rng, 4, 9);
-    var target = ri(rng, 16, 34);
-    return { holes:holes, target:target, need:holes + target };
+    var holes = ri(rng, 5, 9);
+    var totalSeeds = holes + ri(rng, 14, 28); /* many more seeds than holes */
+    return { holes: holes, totalSeeds: totalSeeds };
   }
 
-  host.innerHTML =
-    '<div class="gw-h">' + L({ es:'El terreno', en:'The ground' }) + '</div>' +
-    '<div class="gw-q" data-r="q"></div>' +
-    '<div class="gw-mini">' + L({
-      es:'Mueve el cursor para soltar más o menos semillas. Los puntos marcados son las que encuentran un hueco con luz; los apagados, las que se quedan fuera.',
-      en:'Move the slider to drop more or fewer seeds. The marked dots are the ones that find a gap with light; the dim ones are those left out.'
-    }) + '</div>' +
-    '<input class="sl" type="range" min="5" max="60" step="1" value="20" data-r="sl">' +
-    '<div class="gw-read" data-r="read"></div>' +
-    '<div class="seeds" data-r="field"></div>' +
-    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
-    '<div class="gw-fb"></div>';
+  function runRound(){
+    var data = buildRound();
+    var CV_W = 0, CV_H = 180;
+    var HOLE_R = 14; /* hole radius px (logical) */
+    var SEED_R = 6;
 
-  var elQ = host.querySelector('[data-r="q"]'),
-      elS = host.querySelector('[data-r="sl"]'),
-      elR = host.querySelector('[data-r="read"]'),
-      elF = host.querySelector('[data-r="field"]'),
-      elK = host.querySelector('[data-r="chk"]');
+    /* place holes randomly, no overlap */
+    var holePositions = [];
+    var attempts = 0;
+    while (holePositions.length < data.holes && attempts < 2000){
+      attempts++;
+      var hx = HOLE_R + 10 + Math.floor(rng() * (300 - 2*(HOLE_R+10)));
+      var hy = CV_H - HOLE_R - 8 - Math.floor(rng() * 60);
+      var ok2 = true;
+      for (var hi = 0; hi < holePositions.length; hi++){
+        var dx = holePositions[hi].x - hx, dy = holePositions[hi].y - hy;
+        if (Math.sqrt(dx*dx+dy*dy) < HOLE_R*2+6){ ok2 = false; break; }
+      }
+      if (ok2) holePositions.push({ x:hx, y:hy, filled:false });
+    }
 
-  function render(){
-    elQ.textContent = L({
-      es:'Terreno ' + (round + 1) + ' de 3: deja fuera exactamente ' + data.target + ' semillas.',
-      en:'Ground ' + (round + 1) + ' of 3: leave exactly ' + data.target + ' seeds out.'
+    /* state */
+    var seedsDropped = 0, seedsIn = 0, seedsOut = 0;
+    var animating = false;
+    var landedSeeds = []; /* {x,y,in:bool} for redraw */
+
+    /* build UI */
+    host.innerHTML =
+      '<div class="gw-h">' + L({ es:'El terreno', en:'The ground' }) + '</div>' +
+      '<div class="gw-q">' + L({
+        es:'Terreno ' + (round+1) + ' de 3 — este suelo tiene <b>' + data.holes + '</b> huecos con luz donde puede germinar una semilla. Las demás caen en tierra seca y no llegan a planta. Suelta semillas una a una y observa qué pasa.',
+        en:'Ground ' + (round+1) + ' of 3 — this soil has <b>' + data.holes + '</b> light gaps where a seed can germinate. The rest land on dry ground and never become plants. Drop seeds one by one and watch what happens.'
+      }) + '</div>' +
+      '<canvas class="sd-canvas" id="sdcv_' + host.id + '"></canvas>' +
+      '<div class="sd-counter">' +
+        '<span class="sd-pill sd-pill-hole" id="sd_holes_' + host.id + '">⬡ ' + L({es:'Huecos',en:'Gaps'}) + ': ' + data.holes + '</span>' +
+        '<span class="sd-pill sd-pill-in"  id="sd_in_'    + host.id + '">↓ ' + L({es:'Adentro',en:'Inside'}) + ': 0</span>' +
+        '<span class="sd-pill sd-pill-out" id="sd_out_'   + host.id + '">✗ ' + L({es:'Fuera',en:'Outside'}) + ': 0</span>' +
+      '</div>' +
+      '<div class="gw-row">' +
+        '<button class="gw-btn" id="sd_drop_' + host.id + '">' + L({es:'Soltar una semilla',en:'Drop one seed'}) + '</button>' +
+        '<button class="gw-btn" id="sd_many_' + host.id + '">' + L({es:'Soltar 5 de un golpe',en:'Drop 5 at once'}) + '</button>' +
+      '</div>' +
+      '<div class="gw-fb" id="sd_fb_' + host.id + '"></div>';
+
+    var canvas  = document.getElementById('sdcv_'   + host.id);
+    var btnDrop = document.getElementById('sd_drop_' + host.id);
+    var btnMany = document.getElementById('sd_many_' + host.id);
+    var elIn    = document.getElementById('sd_in_'   + host.id);
+    var elOut   = document.getElementById('sd_out_'  + host.id);
+    var elFb    = document.getElementById('sd_fb_'   + host.id);
+
+    /* size canvas */
+    function sizeCanvas(){
+      CV_W = canvas.offsetWidth || 400;
+      canvas.width  = CV_W;
+      canvas.height = CV_H;
+      /* rescale hole x positions to actual width */
+      holePositions.forEach(function(h){ h.x = Math.round(h.x / 300 * CV_W); });
+    }
+    sizeCanvas();
+
+    var ctx = canvas.getContext('2d');
+
+    function drawGround(){
+      /* soil background */
+      ctx.clearRect(0,0,CV_W,CV_H);
+      var grad = ctx.createLinearGradient(0,0,0,CV_H);
+      grad.addColorStop(0, '#c8a97a');
+      grad.addColorStop(1, '#8b6340');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,0,CV_W,CV_H);
+
+      /* texture lines */
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 1;
+      for (var yy=12; yy<CV_H; yy+=18){
+        ctx.beginPath();
+        ctx.moveTo(0,yy); ctx.lineTo(CV_W,yy);
+        ctx.stroke();
+      }
+
+      /* holes */
+      holePositions.forEach(function(h){
+        /* dark pit */
+        ctx.beginPath();
+        ctx.ellipse(h.x, h.y, HOLE_R, HOLE_R*0.55, 0, 0, Math.PI*2);
+        ctx.fillStyle = h.filled ? 'rgba(45,106,79,0.35)' : '#1a1206';
+        ctx.fill();
+        /* light glow if not filled */
+        if (!h.filled){
+          var glow = ctx.createRadialGradient(h.x, h.y-4, 0, h.x, h.y-4, HOLE_R*0.9);
+          glow.addColorStop(0, 'rgba(255,240,160,0.55)');
+          glow.addColorStop(1, 'rgba(255,240,160,0)');
+          ctx.beginPath();
+          ctx.ellipse(h.x, h.y, HOLE_R, HOLE_R*0.55, 0, 0, Math.PI*2);
+          ctx.fillStyle = glow;
+          ctx.fill();
+        }
+        /* label */
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = h.filled ? 'rgba(45,106,79,0.9)' : 'rgba(255,240,160,0.85)';
+        ctx.fillText(h.filled ? '🌱' : '☀', h.x, h.y+3);
+      });
+
+      /* landed seeds */
+      landedSeeds.forEach(function(s){
+        ctx.beginPath();
+        ctx.ellipse(s.x, s.y, SEED_R, SEED_R*0.65, 0, 0, Math.PI*2);
+        ctx.fillStyle = s.in ? '#2d6a4f' : '#5a3e1b';
+        ctx.fill();
+        ctx.strokeStyle = s.in ? '#1a4a2f' : '#3a2810';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+    }
+
+    /* find next unfilled hole near x, or null */
+    function nearestHole(sx){
+      var best = null, bestD = HOLE_R + 12;
+      holePositions.forEach(function(h){
+        if (h.filled) return;
+        var d = Math.abs(h.x - sx);
+        if (d < bestD){ bestD = d; best = h; }
+      });
+      return best;
+    }
+
+    function updateCounters(){
+      elIn.innerHTML  = '↓ ' + L({es:'Adentro',en:'Inside'})  + ': <b>' + seedsIn + '</b>';
+      elOut.innerHTML = '✗ ' + L({es:'Fuera',en:'Outside'}) + ': <b>' + seedsOut + '</b>';
+    }
+
+    function checkComplete(){
+      var allFull = holePositions.every(function(h){ return h.filled; });
+      if (!allFull && seedsDropped < data.totalSeeds) return;
+
+      btnDrop.disabled = true; btnMany.disabled = true;
+      var msg = L({
+        es: 'Se soltaron <b>' + seedsDropped + '</b> semillas. Solo <b>' + seedsIn + '</b> encontraron un hueco con luz — las otras <b>' + seedsOut + '</b> cayeron en tierra seca y no llegarán a planta. Eso ocurre cada temporada en casi cualquier especie: nacen muchos más de los que el terreno puede sostener.',
+        en: '<b>' + seedsDropped + '</b> seeds dropped. Only <b>' + seedsIn + '</b> found a gap with light — the other <b>' + seedsOut + '</b> landed on dry ground and will never become plants. That happens every season in almost any species: far more are born than the ground can support.'
+      });
+      elFb.className = 'gw-fb good';
+      elFb.innerHTML = msg;
+
+      if (round + 1 < 3){
+        var nextBtn = document.createElement('button');
+        nextBtn.className = 'gw-btn';
+        nextBtn.style.marginTop = '.6rem';
+        nextBtn.textContent = L({es:'Siguiente terreno →', en:'Next ground →'});
+        nextBtn.onclick = function(){
+          round++;
+          runRound();
+        };
+        elFb.appendChild(document.createElement('br'));
+        elFb.appendChild(nextBtn);
+      } else {
+        done = true;
+        var doneMsg = document.createElement('p');
+        doneMsg.style.marginTop = '.5rem';
+        doneMsg.style.fontWeight = '600';
+        doneMsg.textContent = L({es:'Tres terrenos, mismo resultado: los huecos son siempre muchos menos que las semillas. Esa escasez de lugar es el motor del tercer eslabón.', en:'Three grounds, same result: gaps are always far fewer than seeds. That scarcity of space is the engine of the third link.'});
+        elFb.appendChild(doneMsg);
+      }
+    }
+
+    /* animate ONE seed drop */
+    function dropOneSeed(callback){
+      if (animating){ if(callback) callback(); return; }
+      animating = true;
+      seedsDropped++;
+
+      /* random x start */
+      var sx = SEED_R + Math.floor(rng() * (CV_W - SEED_R*2));
+      var targetHole = nearestHole(sx);
+      var ty, tx, landed = false, inHole = false;
+      if (targetHole && Math.abs(targetHole.x - sx) < HOLE_R + 10){
+        tx = targetHole.x;
+        ty = targetHole.y;
+        inHole = true;
+      } else {
+        tx = sx;
+        ty = CV_H - SEED_R - Math.floor(rng() * 20) - 2;
+        inHole = false;
+      }
+
+      var sy = -SEED_R;
+      var speed = 6;
+      var wobble = (rng()-0.5)*0.5;
+
+      function frame(){
+        sy += speed; sx += wobble; speed += 0.4;
+        var arrivedY = sy >= ty - SEED_R;
+        if (arrivedY && !landed){
+          landed = true;
+          if (inHole){
+            targetHole.filled = true;
+            seedsIn++;
+          } else {
+            seedsOut++;
+          }
+          landedSeeds.push({x: inHole ? tx : sx, y: ty, in: inHole});
+          updateCounters();
+        }
+        drawGround();
+        if (!arrived){
+          /* draw falling seed */
+          var curX = inHole ? (sx + (tx - sx) * Math.min(1, sy/ty)) : sx;
+          var curY = Math.min(sy, ty);
+          ctx.beginPath();
+          ctx.ellipse(curX, curY, SEED_R, SEED_R*0.65, 0, 0, Math.PI*2);
+          ctx.fillStyle = '#c9a84c';
+          ctx.fill();
+          ctx.strokeStyle = '#8b6300';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        var arrived = sy > ty + 8;
+        if (!arrived){
+          requestAnimationFrame(frame);
+        } else {
+          animating = false;
+          checkComplete();
+          if (callback) callback();
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+
+    btnDrop.addEventListener('click', function(){
+      if (done || animating) return;
+      if (seedsDropped >= data.totalSeeds){ checkComplete(); return; }
+      dropOneSeed(null);
     });
-    var dots = '';
-    for (var k = 0; k < n; k++) dots += '<span class="sd' + (k < data.holes ? ' in' : '') + '"></span>';
-    elF.innerHTML = dots;
-    elR.innerHTML =
-      '<span class="gw-pill">' + L({ es:'Semillas que caen', en:'Seeds falling' }) + ': <b>' + n + '</b></span>' +
-      '<span class="gw-pill">' + L({ es:'Huecos con luz', en:'Gaps with light' }) + ': <b>' + Math.min(data.holes, n) + '</b></span>' +
-      '<span class="gw-pill">' + L({ es:'Meta', en:'Target' }) + ': <b>' + data.target + '</b> ' + L({ es:'fuera', en:'left out' }) + '</span>';
-    elS.value = String(n);
+
+    btnMany.addEventListener('click', function(){
+      if (done || animating) return;
+      var count = 0;
+      function dropNext(){
+        if (count >= 5 || seedsDropped >= data.totalSeeds){ checkComplete(); return; }
+        count++;
+        dropOneSeed(function(){ setTimeout(dropNext, 80); });
+      }
+      dropNext();
+    });
+
+    drawGround();
+    updateCounters();
   }
 
-  function nextRound(){
-    round++;
-    if (round >= 3){
-      done = true;
-      elK.textContent = L({ es:'Completado', en:'Completed' });
-      elK.className = 'gw-btn solved'; elK.disabled = true;
-      elS.disabled = true;
-      say(host, 'good', L({
-        es:'En los tres terrenos el número de huecos era pequeño y el de semillas enorme. Ese desajuste ocurre en cada temporada y en casi cualquier especie: por eso la mayoría de los descendientes no llega a reproducirse.',
-        en:'On all three grounds the number of gaps was small and the number of seeds huge. That mismatch happens every season in almost any species: that is why most offspring never get to reproduce.'
-      }));
-      return;
-    }
-    data = buildRound(); n = 20; tries = 0; revealed = false;
-    elK.textContent = L({ es:'Comprobar', en:'Check' });
-    elK.className = 'gw-btn';
-    render();
-    say(host, '', L({
-      es:'Otro terreno, otro número de huecos. Cuenta los puntos apagados antes de comprobar.',
-      en:'Another ground, another number of gaps. Count the dim dots before checking.'
-    }));
-  }
-
-  elS.addEventListener('input', function(){
-    if (revealed || done) return;
-    n = parseInt(elS.value, 10);
-    render();
-  });
-
-  elK.addEventListener('click', function(){
-    if (done) return;
-    if (revealed){ nextRound(); return; }
-    var out = Math.max(0, n - data.holes);
-    if (out === data.target){
-      say(host, 'good', L({
-        es:'Ahí está: con ' + n + ' semillas y ' + data.holes + ' huecos, ' + data.target + ' se quedan sin lugar.',
-        en:'There it is: with ' + n + ' seeds and ' + data.holes + ' gaps, ' + data.target + ' are left with no place.'
-      }));
-      setTimeout(nextRound, 900);
-      return;
-    }
-    tries++;
-    if (tries >= 3){
-      revealed = true; n = data.need; render(); elS.value = String(n);
-      elK.textContent = L({ es:'Siguiente', en:'Next' });
-      say(host, 'miss', L({
-        es:'Con ' + data.holes + ' huecos hacían falta ' + data.need + ' semillas para dejar ' + data.target + ' fuera: los huecos se llenan primero y todo lo que sobra queda apagado.',
-        en:'With ' + data.holes + ' gaps you needed ' + data.need + ' seeds to leave ' + data.target + ' out: the gaps fill first and everything left over stays dim.'
-      }));
-      return;
-    }
-    if (out > data.target){
-      say(host, 'warm', L({
-        es:'Están quedando fuera ' + out + ', más de las que pide la meta. Baja el cursor.',
-        en:'You are leaving ' + out + ' out, more than the target asks for. Move the slider down.'
-      }));
-    } else {
-      say(host, 'warm', L({
-        es:'Están quedando fuera ' + out + ', menos de las que pide la meta. Sube el cursor.',
-        en:'You are leaving ' + out + ' out, fewer than the target asks for. Move the slider up.'
-      }));
-    }
-  });
-
-  data = buildRound();
-  render();
-  say(host, '', L({
-    es:'Los huecos son los mismos sueltes las semillas que sueltes: lo único que cambia es cuántas se quedan fuera.',
-    en:'The gaps stay the same however many seeds you drop: the only thing that changes is how many are left out.'
-  }));
+  runRound();
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MANIPULATIVO 5 :: generaciones en la isla
-   El alumno predice qué le pasará al pico promedio en el ambiente de la
-   ronda y después hace pasar generaciones una por una: las barras se
-   redibujan y el promedio se mueve. Puede reiniciar y volver a intentar; a la
-   tercera predicción fallida se explica el resultado (Rule 8).
+   MANIPULATIVO 5 :: generaciones en la isla  (rediseño)
+   Flujo claro en 3 fases:
+     FASE 1 — ambiente visible, barras de la población visible desde el inicio
+     FASE 2 — el alumno elige su predicción
+     FASE 3 — corre generaciones una a una; barras se actualizan en vivo
+   Al terminar compara predicción con resultado. Puede reiniciar.
+   Dos islas con ambientes opuestos. Reveal a la tercera falla (Rule 8).
    ══════════════════════════════════════════════════════════════════════════ */
 function wIsland(rng, host){
+
+  /* inject CSS once */
+  if (!document.getElementById('islandCSS')){
+    var ic = document.createElement('style');
+    ic.id = 'islandCSS';
+    ic.textContent = [
+      '.isl-env{background:var(--green-bg);border-left:4px solid var(--green);border-radius:0 10px 10px 0;',
+        'padding:.75rem 1rem;margin:.6rem 0;}',
+      '.isl-env-title{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--green-dark);',
+        'font-weight:700;margin-bottom:.25rem;}',
+      '.isl-env-body{font-size:.88rem;color:var(--text2);}',
+      '.isl-phase{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);',
+        'font-weight:600;margin:.8rem 0 .3rem;}',
+      '.isl-bars{margin:.5rem 0;}',
+      '.isl-bar-row{display:flex;align-items:center;gap:.5rem;margin:.18rem 0;transition:all .35s;}',
+      '.isl-bar-lbl{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--text3);',
+        'min-width:4.5ch;text-align:right;flex-shrink:0;}',
+      '.isl-bar-track{flex:1;height:14px;background:var(--surface2);border-radius:7px;overflow:hidden;}',
+      '.isl-bar-fill{height:100%;background:var(--green);border-radius:7px;transition:width .4s;}',
+      '.isl-bar-fill.hi{background:var(--gold);}',
+      '.isl-avg-line{border-top:2px dashed var(--gold);margin:.4rem 0 .1rem;position:relative;}',
+      '.isl-avg-lbl{position:absolute;right:0;top:-1.1rem;font-size:.68rem;color:var(--gold);',
+        'font-weight:600;font-family:"IBM Plex Mono",monospace;}',
+      '.isl-pred-row{display:flex;gap:.4rem;flex-wrap:wrap;margin:.35rem 0;}',
+      '.isl-stats{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0;}',
+      '.isl-stat{background:var(--surface2);border-radius:8px;padding:.35rem .7rem;font-size:.78rem;}',
+      '.isl-stat b{font-family:"IBM Plex Mono",monospace;color:var(--green);}',
+      '.isl-note{font-size:.76rem;color:var(--text3);font-style:italic;margin-bottom:.4rem;}',
+    ].join('');
+    document.head.appendChild(ic);
+  }
+
   var ENV = [
     { key:'dura', big:true,
-      name:{ es:'sequía: solo quedan semillas grandes y duras', en:'drought: only large hard seeds are left' },
-      note:{ es:'Abrir una semilla dura pide un pico grande.', en:'Cracking a hard seed calls for a large beak.' } },
+      name:{ es:'Sequía — solo quedan semillas grandes y duras', en:'Drought — only large hard seeds remain' },
+      why:{  es:'Abrir una semilla dura exige un pico robusto. Las aves de pico pequeño no logran abrirlas y no se reproducen.',
+             en:'Cracking a hard seed needs a powerful beak. Birds with small beaks cannot open them and do not reproduce.' },
+      keep: { es:'Los 6 picos más grandes consiguen comer y dejan crías.', en:'The 6 largest beaks get food and leave offspring.' }
+    },
     { key:'blanda', big:false,
-      name:{ es:'lluvias: el suelo se llena de semillas pequeñas y blandas', en:'rains: the ground fills with small soft seeds' },
-      note:{ es:'Recoger semillas pequeñas se le da mejor a un pico chico.', en:'Picking up small seeds suits a small beak better.' } }
+      name:{ es:'Temporada de lluvias — el suelo se llena de semillas pequeñas', en:'Rainy season — the ground fills with tiny seeds' },
+      why:{  es:'Las semillas pequeñas son difíciles de recoger con un pico grande. Las aves de pico chico las recogen mejor.',
+             en:'Tiny seeds are hard to pick up with a large beak. Small-beaked birds handle them better.' },
+      keep: { es:'Los 6 picos más chicos consiguen comer y dejan crías.', en:'The 6 smallest beaks get food and leave offspring.' }
+    }
   ];
+
   var first = Math.floor(rng() * 2);
-  var envSeq = [ENV[first], ENV[1 - first]];
+  var envSeq = [ENV[first], ENV[1-first]];
   var round = 0, gen = 0, tries = 0, done = false, guessed = -1, settled = false;
-  var pop = [], start = [], startMean = 0;
+  var pop = [], start = [], startMean = 0, startPop = [];
 
   function newPop(){
     var a = [];
     for (var i = 0; i < 10; i++) a.push(ri(rng, 8, 16));
     return a;
   }
-  function mean(a){
-    var s = 0;
-    for (var i = 0; i < a.length; i++) s += a[i];
-    return s / a.length;
-  }
+  function mean(a){ var s=0; for(var i=0;i<a.length;i++) s+=a[i]; return s/a.length; }
 
-  host.innerHTML =
-    '<div class="gw-h">' + L({ es:'Generaciones en la isla', en:'Generations on the island' }) + '</div>' +
-    '<div class="gw-q" data-r="q"></div>' +
-    '<div class="gw-mini" data-r="note"></div>' +
-    '<div class="gw-row" data-r="pred"></div>' +
-    '<div class="gw-read" data-r="read"></div>' +
-    '<div class="birds" data-r="field"></div>' +
-    '<div class="gw-row">' +
-      '<button class="gw-btn" data-r="step">' + L({ es:'Pasa una generación', en:'Run one generation' }) + '</button>' +
-      '<button class="gw-btn" data-r="rst">' + L({ es:'Volver al inicio', en:'Back to the start' }) + '</button>' +
-    '</div>' +
-    '<div class="gw-fb"></div>';
+  /* ── build the full island UI once per round ── */
+  function buildUI(){
+    host.innerHTML =
+      '<div class="gw-h">' + L({es:'Generaciones en la isla', en:'Generations on the island'}) + '</div>';
 
-  var elQ = host.querySelector('[data-r="q"]'),
-      elN = host.querySelector('[data-r="note"]'),
-      elP = host.querySelector('[data-r="pred"]'),
-      elR = host.querySelector('[data-r="read"]'),
-      elF = host.querySelector('[data-r="field"]'),
-      elS = host.querySelector('[data-r="step"]'),
-      elX = host.querySelector('[data-r="rst"]');
+    /* step labels */
+    var phEnv  = document.createElement('div'); phEnv.className  = 'isl-phase';
+    phEnv.textContent = L({es:'① El ambiente de esta isla', en:'① The environment on this island'});
+    host.appendChild(phEnv);
 
-  var LBL = [
-    { es:'El promedio sube', en:'The average goes up' },
-    { es:'El promedio baja', en:'The average goes down' },
-    { es:'El promedio no cambia', en:'The average stays the same' }
-  ];
+    /* environment card */
+    var envCard = document.createElement('div'); envCard.className = 'isl-env';
+    envCard.innerHTML =
+      '<div class="isl-env-title">' + L({es:'Isla', en:'Island'}) + ' ' + (round+1) + ' de 2</div>' +
+      '<div class="isl-env-body"><strong>' + L(envSeq[round].name) + '</strong><br>' +
+      L(envSeq[round].why) + '</div>';
+    host.appendChild(envCard);
 
-  function render(){
-    var env = envSeq[round];
-    elQ.textContent = L({
-      es:'Isla ' + (round + 1) + ' de 2. Ambiente de esta ronda, ' + L(env.name) + '. ¿Qué le pasará al pico promedio de la población después de tres generaciones?',
-      en:'Island ' + (round + 1) + ' of 2. Environment this round, ' + L(env.name) + '. What will happen to the average beak of the population after three generations?'
-    });
-    elN.textContent = L(env.note);
-    elP.innerHTML = LBL.map(function(o, k){
-      return '<button class="gw-btn' + (guessed === k ? ' on' : '') + '" data-k="' + k + '"' + (settled ? ' disabled' : '') + '>' + L(o) + '</button>';
-    }).join('');
-    elP.querySelectorAll('.gw-btn').forEach(function(b){
+    /* note about who survives */
+    var note = document.createElement('div'); note.className = 'isl-note';
+    note.textContent = L(envSeq[round].keep);
+    host.appendChild(note);
+
+    /* step 2 label */
+    var phPred = document.createElement('div'); phPred.className = 'isl-phase';
+    phPred.textContent = L({es:'② Tu predicción — ¿qué le pasa al tamaño promedio del pico después de 3 generaciones?', en:'② Your prediction — what happens to the average beak size after 3 generations?'});
+    host.appendChild(phPred);
+
+    /* prediction buttons */
+    var predRow = document.createElement('div'); predRow.className = 'isl-pred-row'; predRow.id = 'isl_pred_'+host.id;
+    var LBL = [
+      {es:'Sube (picos más grandes)',      en:'Goes up (larger beaks)'},
+      {es:'Baja (picos más chicos)',       en:'Goes down (smaller beaks)'},
+      {es:'No cambia',                     en:'Stays the same'}
+    ];
+    LBL.forEach(function(lbl, k){
+      var b = document.createElement('button');
+      b.className = 'gw-btn' + (guessed===k ? ' on' : '');
+      b.textContent = L(lbl);
+      b.setAttribute('data-k', k);
+      if (settled) b.disabled = true;
       b.addEventListener('click', function(){
         if (settled) return;
-        guessed = parseInt(b.getAttribute('data-k'), 10);
-        render();
-        say(host, '', L({
-          es:'Predicción tomada. Ahora haz pasar las generaciones y compruébalo.',
-          en:'Prediction taken. Now run the generations and check it.'
-        }));
+        guessed = k;
+        predRow.querySelectorAll('.gw-btn').forEach(function(x){ x.classList.remove('on'); });
+        b.classList.add('on');
+        fbEl.className = 'gw-fb';
+        fbEl.innerHTML = L({es:'Predicción guardada. Ahora usa el botón de abajo para correr las generaciones una a una.', en:'Prediction saved. Now use the button below to run generations one by one.'});
       });
+      predRow.appendChild(b);
     });
-    elR.innerHTML =
-      '<span class="gw-pill">' + L({ es:'Generación', en:'Generation' }) + ': <b>' + gen + '</b> ' + L({ es:'de 3', en:'of 3' }) + '</span>' +
-      '<span class="gw-pill">' + L({ es:'Pico promedio', en:'Average beak' }) + ': <b>' + mean(pop).toFixed(1) + '</b> mm</span>' +
-      '<span class="gw-pill">' + L({ es:'Al inicio', en:'At the start' }) + ': <b>' + startMean.toFixed(1) + '</b> mm</span>';
-    elF.innerHTML = pop.slice().sort(function(a, b){ return a - b; }).map(function(mm){
-      return '<div class="bd"><span class="bdnum">' + mm + '</span><span class="bdbar" style="width:' + (mm * 5) + '%"></span></div>';
-    }).join('');
-  }
+    host.appendChild(predRow);
 
-  function loadRound(){
-    pop = newPop(); start = pop.slice(); startMean = mean(pop);
-    gen = 0; guessed = -1; settled = false;
-    elS.disabled = false; elS.className = 'gw-btn';
-    render();
-    say(host, '', L({
-      es:'Primero elige qué le va a pasar al promedio y después haz pasar las generaciones.',
-      en:'First choose what will happen to the average and then run the generations.'
-    }));
-  }
+    /* step 3 label */
+    var phRun = document.createElement('div'); phRun.className = 'isl-phase';
+    phRun.textContent = L({es:'③ Corre las generaciones y observa cómo cambia la población', en:'③ Run the generations and watch how the population changes'});
+    host.appendChild(phRun);
 
-  elX.addEventListener('click', function(){
-    if (done) return;
-    pop = start.slice(); gen = 0; settled = false;
-    elS.disabled = false; elS.className = 'gw-btn';
-    render();
-    say(host, '', L({
-      es:'Población de vuelta a como estaba. Puedes cambiar tu predicción y volver a correrla.',
-      en:'Population back as it was. You can change your prediction and run it again.'
-    }));
-  });
+    /* stats bar */
+    var statsRow = document.createElement('div'); statsRow.className = 'isl-stats'; statsRow.id = 'isl_stats_'+host.id;
+    host.appendChild(statsRow);
 
-  elS.addEventListener('click', function(){
-    if (done || settled) return;
-    if (guessed < 0){
-      say(host, 'warm', L({
-        es:'Antes de correrla, elige qué le va a pasar al promedio. La gracia está en comprometerte con una respuesta.',
-        en:'Before running it, choose what will happen to the average. The point is committing to an answer.'
-      }));
-      return;
+    /* bars legend */
+    var legend = document.createElement('div');
+    legend.className = 'gw-mini';
+    legend.style.marginBottom = '.2rem';
+    legend.textContent = L({
+      es:'Cada fila = un ave. La barra muestra el tamaño de su pico (más larga = pico más grande). La línea dorada punteada es el promedio actual.',
+      en:'Each row = one bird. The bar shows its beak size (longer bar = bigger beak). The dashed gold line is the current average.'
+    });
+    host.appendChild(legend);
+
+    /* bars container */
+    var barsDiv = document.createElement('div'); barsDiv.className = 'isl-bars'; barsDiv.id = 'isl_bars_'+host.id;
+    host.appendChild(barsDiv);
+
+    /* run / reset buttons */
+    var btnRow = document.createElement('div'); btnRow.className = 'gw-row';
+    var stepBtn = document.createElement('button');
+    stepBtn.className = 'gw-btn'; stepBtn.id = 'isl_step_'+host.id;
+    stepBtn.textContent = L({es:'Pasa una generación (0/3)', en:'Run one generation (0/3)'});
+    var rstBtn = document.createElement('button');
+    rstBtn.className = 'gw-btn'; rstBtn.id = 'isl_rst_'+host.id;
+    rstBtn.textContent = L({es:'Volver al inicio', en:'Back to the start'});
+    btnRow.appendChild(stepBtn);
+    btnRow.appendChild(rstBtn);
+    host.appendChild(btnRow);
+
+    /* feedback */
+    var fbEl = document.createElement('div'); fbEl.className = 'gw-fb'; fbEl.id = 'isl_fb_'+host.id;
+    host.appendChild(fbEl);
+
+    /* ── render bars ── */
+    function renderBars(){
+      var statsEl = document.getElementById('isl_stats_'+host.id);
+      var barsEl  = document.getElementById('isl_bars_'+host.id);
+      var stepEl  = document.getElementById('isl_step_'+host.id);
+      if (!statsEl || !barsEl) return;
+      var cur = mean(pop);
+      var MAX_MM = 18;
+      statsEl.innerHTML =
+        '<div class="isl-stat">' + L({es:'Generación',en:'Generation'}) + ': <b>' + gen + '/3</b></div>' +
+        '<div class="isl-stat">' + L({es:'Promedio ahora',en:'Average now'}) + ': <b>' + cur.toFixed(1) + ' mm</b></div>' +
+        '<div class="isl-stat">' + L({es:'Al inicio',en:'At start'}) + ': <b>' + startMean.toFixed(1) + ' mm</b></div>';
+      if (stepEl) stepEl.textContent = L({es:'Pasa una generación',en:'Run one generation'}) + ' (' + gen + '/3)';
+
+      var sorted = pop.slice().sort(function(a,b){return a-b;});
+      var avgPct = cur / MAX_MM * 100;
+      barsEl.innerHTML =
+        sorted.map(function(mm, i){
+          var pct = mm / MAX_MM * 100;
+          var hi  = envSeq[round].big ? (i >= sorted.length - 6) : (i < 6);
+          return '<div class="isl-bar-row">' +
+            '<div class="isl-bar-lbl">' + mm + ' mm</div>' +
+            '<div class="isl-bar-track">' +
+              '<div class="isl-bar-fill' + (hi ? ' hi' : '') + '" style="width:' + pct.toFixed(1) + '%"></div>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+        '<div class="isl-avg-line"><span class="isl-avg-lbl">&#x2014; ' + L({es:'promedio',en:'avg'}) + ' ' + cur.toFixed(1) + ' mm</span></div>';
     }
-    var env = envSeq[round];
-    var sorted = pop.slice().sort(function(a, b){ return a - b; });
-    var keep = env.big ? sorted.slice(4) : sorted.slice(0, 6);
-    var kids = [];
-    for (var i = 0; i < 4; i++){
-      var p = keep[ri(rng, 0, keep.length - 1)] + ri(rng, -1, 1);
-      kids.push(Math.max(6, Math.min(18, p)));
-    }
-    pop = keep.concat(kids);
-    gen++;
-    render();
-    if (gen < 3){
-      say(host, '', L({
-        es:'Los seis picos que consiguieron comida dejaron crías parecidas a ellos. Mira el promedio y sigue.',
-        en:'The six beaks that got food left young similar to themselves. Look at the average and carry on.'
-      }));
-      return;
-    }
-    settled = true;
-    elS.disabled = true; elS.className = 'gw-btn';
-    var d = mean(pop) - startMean;
-    var real = d > 0.3 ? 0 : (d < -0.3 ? 1 : 2);
-    render();
-    if (guessed === real){
-      say(host, 'good', L({
-        es:'Le atinaste. El promedio pasó de ' + startMean.toFixed(1) + ' a ' + mean(pop).toFixed(1) + ' mm, y ningún ave de la isla cambió su propio pico: lo que cambió fue quiénes dejaron crías.',
-        en:'You got it. The average went from ' + startMean.toFixed(1) + ' to ' + mean(pop).toFixed(1) + ' mm, and no bird on the island changed its own beak: what changed was who left young.'
-      }) + ' ' + (round === 0 ? L({ es:'Toca "Volver al inicio" y luego pasa a la otra isla.', en:'Tap "Back to the start" and then move on to the other island.' }) : ''));
-      if (round === 0) setTimeout(function(){ round = 1; loadRound(); }, 2200);
-      else { done = true; elX.disabled = true;
-        setTimeout(function(){
-          say(host, 'good', L({
-            es:'Dos islas, dos ambientes, dos resultados opuestos con el mismo mecanismo. La misma población habría cambiado en otra dirección si el ambiente hubiera sido otro.',
-            en:'Two islands, two environments, two opposite results from the same mechanism. The same population would have changed in the other direction if the environment had been different.'
-          }));
-        }, 1800);
+
+    /* ── step one generation ── */
+    function stepGen(){
+      var fbEl2 = document.getElementById('isl_fb_'+host.id);
+      var stepEl = document.getElementById('isl_step_'+host.id);
+      if (!fbEl2) return;
+      if (guessed < 0){
+        fbEl2.className = 'gw-fb warm';
+        fbEl2.textContent = L({es:'Primero elige tu predicción (② arriba), luego corre las generaciones.', en:'First choose your prediction (② above), then run the generations.'});
+        return;
       }
-      return;
-    }
-    tries++;
-    if (tries >= 3){
-      say(host, 'miss', L({
-        es:'El promedio pasó de ' + startMean.toFixed(1) + ' a ' + mean(pop).toFixed(1) + ' mm. En este ambiente las aves favorecidas son las de pico ' + (env.big ? 'grande' : 'chico') + ', y como el tamaño del pico se hereda, sus crías empujan el promedio en esa dirección generación tras generación.',
-        en:'The average went from ' + startMean.toFixed(1) + ' to ' + mean(pop).toFixed(1) + ' mm. In this environment the favoured birds are the ' + (env.big ? 'large' : 'small') + ' beaked ones, and since beak size is inherited, their young push the average in that direction generation after generation.'
-      }));
-      if (round === 0) setTimeout(function(){ round = 1; tries = 0; loadRound(); }, 2600);
-      else { done = true; elX.disabled = true; }
-      return;
-    }
-    say(host, 'warm', L({
-      es:'No era eso. Vuelve al inicio, fíjate en qué picos se quedan cuando el alimento es el de esta isla y prueba otra predicción.',
-      en:'Not that. Go back to the start, look at which beaks stay when the food is the one on this island, and try another prediction.'
-    }));
-  });
+      if (settled || gen >= 3) return;
+      var env = envSeq[round];
+      var sorted2 = pop.slice().sort(function(a,b){return a-b;});
+      var keep = env.big ? sorted2.slice(4) : sorted2.slice(0,6);
+      var kids = [];
+      for (var i=0; i<4; i++){
+        var p = keep[ri(rng,0,keep.length-1)] + ri(rng,-1,1);
+        kids.push(Math.max(6, Math.min(18, p)));
+      }
+      pop = keep.concat(kids);
+      gen++;
+      renderBars();
+      if (gen < 3){
+        fbEl2.className = 'gw-fb';
+        fbEl2.textContent = L({
+          es:'Generación ' + gen + '/3 completada. Las aves de color dorado fueron las que comieron y dejaron crías. Mira cómo se mueve el promedio.',
+          en:'Generation ' + gen + '/3 done. Gold-coloured bars are the birds that ate and left offspring. Watch the average shift.'
+        });
+        return;
+      }
+      /* all 3 generations done */
+      settled = true;
+      if (stepEl) { stepEl.disabled = true; }
+      var d = mean(pop) - startMean;
+      var real = d > 0.3 ? 0 : (d < -0.3 ? 1 : 2);
 
-  loadRound();
+      if (guessed === real){
+        fbEl2.className = 'gw-fb good';
+        fbEl2.innerHTML = L({
+          es:'<strong>Correcto.</strong> El promedio pasó de ' + startMean.toFixed(1) + ' a ' + mean(pop).toFixed(1) + ' mm. Ningún ave alargó ni acortó su pico durante su vida: lo que cambió fue quiénes sobrevivieron y dejaron crías heredando ese tamaño.',
+          en:'<strong>Correct.</strong> The average went from ' + startMean.toFixed(1) + ' to ' + mean(pop).toFixed(1) + ' mm. No bird lengthened or shortened its beak during its lifetime: what changed was who survived and passed on that size.'
+        });
+        if (round === 0){
+          setTimeout(function(){ round=1; gen=0; guessed=-1; settled=false; tries=0; pop=newPop(); start=pop.slice(); startMean=mean(pop); buildUI(); }, 2600);
+        } else {
+          done=true;
+          var doneP = document.createElement('p');
+          doneP.style.marginTop='.5rem'; doneP.style.fontWeight='600';
+          doneP.textContent = L({es:'Dos islas, dos ambientes, dos resultados opuestos con exactamente el mismo mecanismo. La selección actúa sobre la variación que ya existe.', en:'Two islands, two environments, two opposite results with exactly the same mechanism. Selection acts on existing variation.'});
+          fbEl2.appendChild(doneP);
+        }
+        return;
+      }
+      tries++;
+      if (tries >= 3){
+        fbEl2.className = 'gw-fb miss';
+        fbEl2.innerHTML = L({
+          es:'El promedio pasó de ' + startMean.toFixed(1) + ' a ' + mean(pop).toFixed(1) + ' mm — ' + (envSeq[round].big ? 'subió' : 'bajó') + '. Las aves de pico ' + (envSeq[round].big ? 'grande' : 'chico') + ' (en dorado) comieron más y dejaron crías con picos parecidos, empujando el promedio en esa dirección cada generación.',
+          en:'The average went from ' + startMean.toFixed(1) + ' to ' + mean(pop).toFixed(1) + ' mm — it ' + (envSeq[round].big ? 'rose' : 'fell') + '. The ' + (envSeq[round].big ? 'large' : 'small') + '-beaked birds (in gold) ate more and left similar offspring, pushing the average that way each generation.'
+        });
+        if (round === 0){
+          setTimeout(function(){ round=1; gen=0; guessed=-1; settled=false; tries=0; pop=newPop(); start=pop.slice(); startMean=mean(pop); buildUI(); }, 3000);
+        } else { done=true; }
+        return;
+      }
+      fbEl2.className = 'gw-fb warm';
+      fbEl2.innerHTML = L({
+        es:'No era esa. Pulsa "Volver al inicio" para reiniciar la misma isla con la misma población, piensa en qué picos dominaron y prueba otra predicción.',
+        en:'Not that one. Press "Back to the start" to reset this island with the same population, think about which beaks dominated, and try another prediction.'
+      });
+    }
+
+    /* ── reset ── */
+    function resetRound(){
+      pop = start.slice(); gen = 0; settled = false;
+      var stepEl2 = document.getElementById('isl_step_'+host.id);
+      if (stepEl2) stepEl2.disabled = false;
+      var fbEl3 = document.getElementById('isl_fb_'+host.id);
+      if (fbEl3){ fbEl3.className='gw-fb'; fbEl3.textContent=''; }
+      renderBars();
+    }
+
+    /* wire buttons */
+    document.getElementById('isl_step_'+host.id).addEventListener('click', stepGen);
+    document.getElementById('isl_rst_'+host.id).addEventListener('click', function(){
+      if (done) return;
+      resetRound();
+    });
+
+    /* initial render */
+    renderBars();
+    fbEl.className = 'gw-fb';
+    fbEl.textContent = L({
+      es:'Lee el ambiente (①), elige tu predicción (②) y luego corre las generaciones (③) una a una.',
+      en:'Read the environment (①), choose your prediction (②), then run the generations (③) one by one.'
+    });
+  }
+
+  /* start */
+  pop = newPop(); start = pop.slice(); startMean = mean(pop);
+  buildUI();
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

@@ -1218,9 +1218,9 @@ function injectGuideCSS(){
     '.gw-btn.pickd{background:var(--gold-bg);border-color:var(--gold);}',
     '.gw-btn[disabled]{opacity:.45;cursor:default;}',
     '.gw-fb{font-size:.84rem;padding:.6rem .8rem;border-radius:8px;margin-top:.65rem;background:var(--surface2);color:var(--text2);}',
-    '.gw-fb.warm{background:var(--gold-bg);color:var(--text2);border-left:3px solid var(--gold);}',
-    '.gw-fb.good{background:var(--ok-bg);color:var(--ok);border-left:3px solid var(--ok);}',
-    '.gw-fb.miss{background:var(--bad-bg);color:var(--bad);border-left:3px solid var(--bad);}',
+    '.gw-fb.warm{background:var(--gold-bg)!important;color:var(--text2)!important;border-left:3px solid var(--gold)!important;}',
+    '.gw-fb.good{background:var(--ok-bg)!important;color:var(--ok)!important;border-left:3px solid var(--ok)!important;}',
+    '.gw-fb.miss{background:var(--bad-bg)!important;color:var(--bad)!important;border-left:3px solid var(--bad)!important;}',
     '.gw-range{width:100%;accent-color:var(--green);height:34px;}',
     '.gw-num{text-align:center;font-family:"IBM Plex Mono",monospace;font-weight:700;color:var(--green);font-size:1.05rem;margin:.2rem 0;}',
     '.gw-note{font-size:.78rem;color:var(--text2);margin-top:.4rem;}',
@@ -1546,7 +1546,7 @@ function w1(rng, host){
 
 /* ══════════════════════════════════════════════════════════════════════════
    MANIPULATIVO 2 :: mesa de nutrición, quién fabrica y quién toma
-   Una sola mesa, reveal a la tercera falla (Rule 8, patrón A)
+   Drag-and-drop (mouse + touch) + tap-to-remove from tray. 3 tries max.
    ══════════════════════════════════════════════════════════════════════════ */
 function w2(rng, host){
   var POOL = [
@@ -1561,57 +1561,159 @@ function w2(rng, host){
     { n:{ es:'moho del pan', en:'bread mould' }, a:false, q:{ es:'absorbe la materia del pan, que salió del trigo', en:'it absorbs matter from the bread, which came from wheat' } }
   ];
   var ORG = shuffle(POOL, rng).slice(0, 6);
-  var side = [-1, -1, -1, -1, -1, -1];
+  var side = [-1, -1, -1, -1, -1, -1]; /* -1=pool, 0=tA, 1=tB */
   var tries = 0, done = false;
 
   host.innerHTML =
     '<div class="gw-h">' + L({ es:'Mesa de nutrición', en:'Nutrition table' }) + '</div>' +
     '<div class="gw-q">' + L({
-      es:'Toca cada organismo para moverlo de charola. ¿Fabrica su propio alimento o toma materia que otro ser vivo ya formó?',
-      en:'Tap each organism to move it between trays. Does it make its own food or take matter another living thing already formed?'
+      es:'Arrastra cada organismo a la charola correcta (o tócalo para moverlo). Para devolverlo a la mesa, tócalo en su charola.',
+      en:'Drag each organism to the correct tray (or tap it to move it). To return it to the table, tap it in its tray.'
     }) + '</div>' +
     '<div class="gw-mini">' + L({
-      es:'Cada toque lo pasa a la siguiente charola y de ahí regresa a la fila de arriba. Acomódalos como quieras antes de comprobar.',
-      en:'Each tap moves it to the next tray and from there it returns to the top row. Arrange them however you like before checking.'
+      es:'Acomódalos como quieras antes de comprobar. Puedes quitarlos de la charola tocándolos.',
+      en:'Arrange them however you like before checking. You can remove them from a tray by tapping them.'
     }) + '</div>' +
     '<div class="gw-lbl">' + L({ es:'Todavía en la mesa', en:'Still on the table' }) + '</div>' +
-    '<div class="tray-b" data-r="pool"></div>' +
-    '<div class="tray">' +
-      '<div class="tray-b hotA"><div class="tray-t">' + L({ es:'Fabrica su alimento', en:'Makes its own food' }) + '</div><div data-r="tA"></div></div>' +
-      '<div class="tray-b hotB"><div class="tray-t">' + L({ es:'Toma alimento ya hecho', en:'Takes food ready made' }) + '</div><div data-r="tB"></div></div>' +
+    '<div class="tray-b w2-pool" data-zone="-1" style="min-height:52px;display:flex;flex-wrap:wrap;gap:.3rem;padding:.5rem;align-items:flex-start;"></div>' +
+    '<div class="tray" style="margin-top:.5rem;">' +
+      '<div class="tray-b hotA" data-zone="0" style="min-height:70px;">' +
+        '<div class="tray-t">' + L({ es:'Fabrica su alimento', en:'Makes its own food' }) + '</div>' +
+        '<div class="w2-tray-inner" data-zone="0" style="display:flex;flex-wrap:wrap;gap:.3rem;padding:.3rem;min-height:44px;"></div>' +
+      '</div>' +
+      '<div class="tray-b hotB" data-zone="1" style="min-height:70px;">' +
+        '<div class="tray-t">' + L({ es:'Toma alimento ya hecho', en:'Takes food ready made' }) + '</div>' +
+        '<div class="w2-tray-inner" data-zone="1" style="display:flex;flex-wrap:wrap;gap:.3rem;padding:.3rem;min-height:44px;"></div>' +
+      '</div>' +
     '</div>' +
-    '<div class="gw-note" data-r="cnt"></div>' +
+    '<div class="gw-note" data-r="cnt" style="margin-top:.4rem;"></div>' +
     '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
     '<div class="gw-fb"></div>';
 
-  var elP = host.querySelector('[data-r="pool"]'),
-      elA = host.querySelector('[data-r="tA"]'),
-      elB = host.querySelector('[data-r="tB"]'),
-      elC = host.querySelector('[data-r="cnt"]'),
-      elK = host.querySelector('[data-r="chk"]');
+  var elPool = host.querySelector('.w2-pool'),
+      elA    = host.querySelector('[data-zone="0"].w2-tray-inner'),
+      elB    = host.querySelector('[data-zone="1"].w2-tray-inner'),
+      elC    = host.querySelector('[data-r="cnt"]'),
+      elK    = host.querySelector('[data-r="chk"]');
 
-  function btn(i){
-    return '<button class="gw-btn" style="padding:.38rem .6rem;font-size:.78rem;min-height:38px;margin:.15rem" data-i="' + i + '"' + (done ? ' disabled' : '') + '>' + L(ORG[i].n) + '</button>';
-  }
-  function render(){
-    var p = '', a = '', b = '';
-    ORG.forEach(function(o, i){
-      if (side[i] === 0) a += btn(i); else if (side[i] === 1) b += btn(i); else p += btn(i);
+  /* ── ghost element for drag ── */
+  var ghost = null, dragIdx = -1;
+
+  function makePill(i){
+    var btn = document.createElement('button');
+    btn.className = 'gw-btn';
+    btn.setAttribute('data-i', String(i));
+    btn.style.cssText = 'padding:.38rem .65rem;font-size:.82rem;min-height:38px;margin:0;cursor:grab;touch-action:none;user-select:none;';
+    btn.textContent = L(ORG[i].n);
+    if (done) { btn.disabled = true; return btn; }
+
+    /* ── click / tap: cycle pool→tA→tB→pool or remove from tray ── */
+    btn.addEventListener('click', function(e){
+      if (dragWasDrag) { dragWasDrag = false; return; }
+      var cur = side[i];
+      if (cur === -1) {
+        /* pool → pick first empty tray or tA */
+        side[i] = 0;
+      } else {
+        /* tray → back to pool (remove) */
+        side[i] = -1;
+      }
+      render();
     });
-    elP.innerHTML = p || '<span class="chip">' + L({ es:'la mesa quedó vacía', en:'the table is empty now' }) + '</span>';
-    elA.innerHTML = a; elB.innerHTML = b;
+
+    /* ── mouse drag ── */
+    btn.addEventListener('mousedown', function(e){
+      if (done) return;
+      e.preventDefault();
+      startDrag(i, e.clientX, e.clientY, btn.getBoundingClientRect());
+    });
+
+    /* ── touch drag ── */
+    btn.addEventListener('touchstart', function(e){
+      if (done) return;
+      e.preventDefault();
+      var t = e.touches[0];
+      startDrag(i, t.clientX, t.clientY, btn.getBoundingClientRect());
+    }, { passive: false });
+
+    return btn;
+  }
+
+  var dragWasDrag = false;
+
+  function startDrag(i, cx, cy, rect){
+    dragIdx = i;
+    dragWasDrag = false;
+    ghost = document.createElement('div');
+    ghost.textContent = L(ORG[i].n);
+    ghost.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;background:var(--green);color:#fff;border-radius:8px;padding:.38rem .7rem;font-size:.82rem;opacity:.88;white-space:nowrap;';
+    ghost.style.left = (cx - rect.width / 2) + 'px';
+    ghost.style.top  = (cy - rect.height / 2) + 'px';
+    document.body.appendChild(ghost);
+
+    function onMove(ex, ey){
+      dragWasDrag = true;
+      ghost.style.left = (ex - ghost.offsetWidth / 2) + 'px';
+      ghost.style.top  = (ey - ghost.offsetHeight / 2) + 'px';
+      /* highlight drop targets */
+      [elPool, elA, elB].forEach(function(el){
+        var r = el.getBoundingClientRect();
+        var hit = ex >= r.left && ex <= r.right && ey >= r.top && ey <= r.bottom;
+        el.style.outline = hit ? '2px dashed var(--green)' : '';
+      });
+    }
+    function onUp(ex, ey){
+      document.removeEventListener('mousemove', mMove);
+      document.removeEventListener('mouseup', mUp);
+      document.removeEventListener('touchmove', tMove);
+      document.removeEventListener('touchend', tUp);
+      if (ghost) { document.body.removeChild(ghost); ghost = null; }
+      [elPool, elA, elB].forEach(function(el){ el.style.outline = ''; });
+      if (!dragWasDrag) return;
+      var zones = [{el: elPool, z:-1}, {el: elA, z:0}, {el: elB, z:1}];
+      var dropped = false;
+      zones.forEach(function(zn){
+        var r = zn.el.getBoundingClientRect();
+        if (ex >= r.left && ex <= r.right && ey >= r.top && ey <= r.bottom){
+          side[dragIdx] = zn.z;
+          dropped = true;
+        }
+      });
+      dragIdx = -1;
+      render();
+    }
+    function mMove(e){ onMove(e.clientX, e.clientY); }
+    function mUp(e)  { onUp(e.clientX, e.clientY); }
+    function tMove(e){ e.preventDefault(); var t=e.touches[0]; onMove(t.clientX, t.clientY); }
+    function tUp(e)  { var t=e.changedTouches[0]; onUp(t.clientX, t.clientY); }
+    document.addEventListener('mousemove', mMove);
+    document.addEventListener('mouseup',   mUp);
+    document.addEventListener('touchmove', tMove, { passive:false });
+    document.addEventListener('touchend',  tUp);
+  }
+
+  function render(){
+    elPool.innerHTML = '';
+    elA.innerHTML = '';
+    elB.innerHTML = '';
+    var hasPool = false;
+    ORG.forEach(function(o, i){
+      var pill = makePill(i);
+      if (side[i] === 0)       { elA.appendChild(pill); }
+      else if (side[i] === 1)  { elB.appendChild(pill); }
+      else                     { elPool.appendChild(pill); hasPool = true; }
+    });
+    if (!hasPool) {
+      var empty = document.createElement('span');
+      empty.className = 'chip';
+      empty.textContent = L({ es:'la mesa quedó vacía', en:'the table is empty now' });
+      elPool.appendChild(empty);
+    }
     var na = side.filter(function(s){ return s === 0; }).length;
     var nb = side.filter(function(s){ return s === 1; }).length;
     elC.textContent = L({
       es:'Fabrican su alimento: ' + na + '. Toman alimento ya hecho: ' + nb + '. Sin decidir: ' + (6 - na - nb) + '.',
       en:'Make their own food: ' + na + '. Take food ready made: ' + nb + '. Undecided: ' + (6 - na - nb) + '.'
-    });
-    host.querySelectorAll('[data-i]').forEach(function(bt){
-      bt.addEventListener('click', function(){
-        var i = parseInt(bt.getAttribute('data-i'), 10);
-        side[i] = side[i] >= 1 ? -1 : side[i] + 1;
-        render();
-      });
     });
   }
 
@@ -1619,7 +1721,7 @@ function w2(rng, host){
     if (done) return;
     var pend = side.indexOf(-1);
     if (pend >= 0){
-      say(host, 'warm', L({ es:'Todavía hay organismos en la mesa. Tócalos para llevarlos a una charola.', en:'There are still organisms on the table. Tap them to move them into a tray.' }));
+      say(host, 'warm', L({ es:'Todavía hay organismos en la mesa. Arrástralos o tócalos para llevarlos a una charola.', en:'There are still organisms on the table. Drag or tap them to move them into a tray.' }));
       return;
     }
     var wrong = [];
@@ -1660,51 +1762,106 @@ function w2(rng, host){
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MANIPULATIVO 3 :: la lámpara y el tallo (respuesta a un estímulo)
-   El tallo se inclina en tiempo real al mover la lámpara. 3 rondas.
+   MANIPULATIVO 3 :: la lámpara y el tallo — lámpara arrastrable. 3 rondas.
    ══════════════════════════════════════════════════════════════════════════ */
 function w3(rng, host){
   var GOALS = shuffle([
-    { k:'left',  t:{ es:'que el tallo crezca inclinado hacia la izquierda', en:'the stem to grow leaning to the left' },
-      ok:function(v){ return v <= 22; },
-      dir:{ es:'la lámpara todavía está muy a la derecha para eso', en:'the lamp is still too far right for that' } },
-    { k:'right', t:{ es:'que el tallo crezca inclinado hacia la derecha', en:'the stem to grow leaning to the right' },
-      ok:function(v){ return v >= 78; },
-      dir:{ es:'la lámpara todavía está muy a la izquierda para eso', en:'the lamp is still too far left for that' } },
-    { k:'up',    t:{ es:'que el tallo crezca derecho hacia arriba', en:'the stem to grow straight upwards' },
-      ok:function(v){ return v >= 45 && v <= 55; },
-      dir:{ es:'mientras la lámpara quede de un lado, el tallo se va de ese lado', en:'while the lamp stays off to one side, the stem goes to that side' } }
+    { k:'left',
+      t:{ es:'que el tallo esté inclinado hacia la izquierda', en:'the stem leaning to the left' },
+      ok:function(v){ return v <= 35; },
+      hint:{ es:'Arrastra la lámpara hacia la izquierda.', en:'Drag the lamp to the left.' } },
+    { k:'right',
+      t:{ es:'que el tallo esté inclinado hacia la derecha', en:'the stem leaning to the right' },
+      ok:function(v){ return v >= 65; },
+      hint:{ es:'Arrastra la lámpara hacia la derecha.', en:'Drag the lamp to the right.' } },
+    { k:'up',
+      t:{ es:'que el tallo crezca derecho hacia arriba', en:'the stem growing straight upwards' },
+      ok:function(v){ return v >= 40 && v <= 60; },
+      hint:{ es:'Coloca la lámpara justo encima de la planta, al centro.', en:'Place the lamp directly above the plant, centred.' } }
   ], rng);
   var rd = 0, tries = 0, done = false, revealed = false;
   var v = ri(rng, 30, 70);
+
+  /* qualitative description — no numbers, no percentages */
+  function stemLabel(ang){
+    if (ang === 0) return L({ es:'El tallo está derecho hacia arriba.', en:'The stem is straight up.' });
+    var side = ang < 0
+      ? L({ es:'a la izquierda', en:'to the left' })
+      : L({ es:'a la derecha', en:'to the right' });
+    var deg = Math.abs(ang);
+    var strength = deg < 8
+      ? L({ es:'muy ligeramente inclinado ', en:'very slightly leaning ' })
+      : deg < 18
+        ? L({ es:'ligeramente inclinado ', en:'slightly leaning ' })
+        : deg < 26
+          ? L({ es:'bastante inclinado ', en:'noticeably leaning ' })
+          : L({ es:'fuertemente inclinado ', en:'strongly leaning ' });
+    return L({ es:'El tallo está ', en:'The stem is ' }) + strength + side + '.';
+  }
 
   host.innerHTML =
     '<div class="gw-h">' + L({ es:'La lámpara y el tallo', en:'The lamp and the stem' }) + '</div>' +
     '<div class="gw-q" data-r="q"></div>' +
     '<div class="gw-mini">' + L({
-      es:'Mueve la lámpara y observa lo que hace el tallo mientras la mueves. Déjala donde consigas lo que se pide y comprueba.',
-      en:'Move the lamp and watch what the stem does while you move it. Leave it where you get what is asked and check.'
+      es:'Arrastra la lámpara 💡 con el dedo o el ratón. El tallo siempre crece hacia donde está la luz. Cuando el tallo quede como se pide, presiona Comprobar.',
+      en:'Drag the 💡 lamp with your finger or mouse. The stem always grows toward the light. When the stem looks as asked, press Check.'
     }) + '</div>' +
-    '<div class="stage">' +
-      '<div class="lamp" data-r="lamp">💡</div>' +
+    '<div class="stage" data-r="stage" style="cursor:grab;touch-action:none;user-select:none;">' +
+      '<div class="lamp" data-r="lamp" style="cursor:grab;">💡</div>' +
       '<div class="ray" data-r="ray"></div>' +
       '<div class="stem" data-r="stem"><div class="leafL"></div><div class="leafR"></div><div class="bud"></div></div>' +
       '<div class="soil"></div>' +
     '</div>' +
-    '<input class="gw-range" type="range" min="0" max="100" step="1" value="' + v + '" data-r="sl">' +
-    '<div class="gw-num" data-r="num"></div>' +
-    '<div class="gw-note" data-r="verd"></div>' +
+    '<div class="gw-num" data-r="num" style="margin:.5rem 0 .15rem;font-size:.9rem;font-weight:600;min-height:1.4em;"></div>' +
+    '<div class="gw-note" data-r="verd" style="font-size:.76rem;color:var(--text3);margin-bottom:.35rem;"></div>' +
     '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button></div>' +
     '<div class="gw-fb"></div>';
 
-  var elL = host.querySelector('[data-r="lamp"]'),
-      elR = host.querySelector('[data-r="ray"]'),
-      elS = host.querySelector('[data-r="stem"]'),
-      elI = host.querySelector('[data-r="sl"]'),
-      elN = host.querySelector('[data-r="num"]'),
-      elV = host.querySelector('[data-r="verd"]'),
-      elQ = host.querySelector('[data-r="q"]'),
-      elK = host.querySelector('[data-r="chk"]');
+  var elStage = host.querySelector('[data-r="stage"]'),
+      elL     = host.querySelector('[data-r="lamp"]'),
+      elR     = host.querySelector('[data-r="ray"]'),
+      elS     = host.querySelector('[data-r="stem"]'),
+      elN     = host.querySelector('[data-r="num"]'),
+      elV     = host.querySelector('[data-r="verd"]'),
+      elQ     = host.querySelector('[data-r="q"]'),
+      elK     = host.querySelector('[data-r="chk"]');
+
+  function setV(clientX){
+    var r = elStage.getBoundingClientRect();
+    var raw = (clientX - r.left) / r.width * 100;
+    v = Math.max(3, Math.min(97, Math.round(raw)));
+    render();
+  }
+
+  function onDragStart(e){
+    if (done || revealed) return;
+    e.preventDefault();
+    elStage.style.cursor = 'grabbing';
+    elL.style.cursor = 'grabbing';
+    function onMove(ev){
+      var cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      setV(cx);
+    }
+    function onUp(){
+      elStage.style.cursor = 'grab';
+      elL.style.cursor = 'grab';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, { passive:false });
+    document.addEventListener('touchend', onUp);
+    var cx0 = e.touches ? e.touches[0].clientX : e.clientX;
+    setV(cx0);
+  }
+
+  elL.addEventListener('mousedown', onDragStart);
+  elL.addEventListener('touchstart', onDragStart, { passive:false });
+  elStage.addEventListener('mousedown', onDragStart);
+  elStage.addEventListener('touchstart', onDragStart, { passive:false });
 
   function render(){
     var ang = Math.round((v - 50) * 0.62);
@@ -1713,21 +1870,15 @@ function w3(rng, host){
     elR.style.height = '58px';
     elS.style.transform = 'rotate(' + ang + 'deg)';
     elQ.innerHTML = L({
-      es:'Ronda ' + (rd + 1) + ' de 3: consigue ' + L(GOALS[rd].t) + '.',
-      en:'Round ' + (rd + 1) + ' of 3: get ' + L(GOALS[rd].t) + '.'
+      es:'Ronda ' + (rd + 1) + ' de 3 — consigue ' + L(GOALS[rd].t) + '.',
+      en:'Round ' + (rd + 1) + ' of 3 — get ' + L(GOALS[rd].t) + '.'
     });
-    elN.textContent = L({
-      es:'Inclinación del tallo: ' + Math.abs(ang) + ' grados ' + (ang === 0 ? 'hacia arriba' : (ang < 0 ? 'hacia la izquierda' : 'hacia la derecha')),
-      en:'Stem tilt: ' + Math.abs(ang) + ' degrees ' + (ang === 0 ? 'upwards' : (ang < 0 ? 'to the left' : 'to the right'))
-    });
+    elN.textContent = stemLabel(ang);
     elV.textContent = L({
-      es:'El tallo crece más despacio del lado iluminado y más rápido del lado sombreado, y por eso se dobla hacia la luz.',
-      en:'The stem grows more slowly on the lit side and faster on the shaded side, and that is why it bends towards the light.'
+      es:'El tallo crece más despacio del lado iluminado y más rápido del lado sombreado: por eso se dobla hacia la luz.',
+      en:'The stem grows more slowly on the lit side and faster on the shaded side: that is why it bends toward the light.'
     });
-    elI.disabled = done || revealed;
   }
-
-  elI.addEventListener('input', function(){ v = parseInt(elI.value, 10); render(); });
 
   function advance(){
     rd++; tries = 0; revealed = false;
@@ -1744,335 +1895,455 @@ function w3(rng, host){
       return;
     }
     v = ri(rng, 35, 65);
-    elI.value = String(v);
     elK.textContent = L({ es:'Comprobar', en:'Check' });
     elK.className = 'gw-btn';
     render();
-    say(host, '', L({ es:'Nueva instrucción. Vuelve a mover la lámpara.', en:'New instruction. Move the lamp again.' }));
+    say(host, '', L({ es:'Nueva instrucción. Arrastra la lámpara.', en:'New instruction. Drag the lamp.' }));
   }
 
   elK.addEventListener('click', function(){
     if (done) return;
     if (revealed){ advance(); return; }
     if (GOALS[rd].ok(v)){
-      say(host, 'good', L({ es:'Eso es: el tallo terminó como se pedía.', en:'That is it: the stem ended up as asked.' }));
-      setTimeout(advance, 700);
-      return;
-    }
-    tries++;
-    if (tries >= 3){
-      revealed = true;
-      v = GOALS[rd].k === 'left' ? 8 : GOALS[rd].k === 'right' ? 92 : 50;
-      elI.value = String(v);
-      render();
-      elK.textContent = L({ es:'Siguiente', en:'Next' });
-      say(host, 'miss', L({
-        es:'Mira dónde quedó la lámpara: el tallo se inclina hacia donde llega la luz, y queda derecho solo cuando la luz cae desde arriba, pareja de los dos lados.',
-        en:'Look where the lamp ended up: the stem leans towards where the light comes from, and stays straight only when the light falls from above, even on both sides.'
-      }));
-      return;
-    }
-    say(host, 'warm', L({
-      es:'Todavía no: ' + L(GOALS[rd].dir) + '. Mueve la lámpara y observa hacia dónde se va el tallo.',
-      en:'Not yet: ' + L(GOALS[rd].dir) + '. Move the lamp and watch which way the stem goes.'
-    }));
-  });
-
-  render();
-  say(host, '', L({ es:'Mueve la lámpara de un extremo al otro y observa.', en:'Move the lamp from one end to the other and watch.' }));
-}
-/* ══════════════════════════════════════════════════════════════════════════
-   MANIPULATIVO 4 :: la parcela y la plaga (descendientes idénticos o variados)
-   El sembrado se redibuja al mover la barra. 3 rondas con exigencia distinta.
-   ══════════════════════════════════════════════════════════════════════════ */
-function w4(rng, host){
-  var ROUNDS = [
-    { need:5, t:{ es:'que queden en pie al menos 5 plantas', en:'at least 5 plants left standing' } },
-    { need:8, t:{ es:'que queden en pie al menos 8 plantas', en:'at least 8 plants left standing' } },
-    { need:9, t:{ es:'que queden en pie al menos 9 plantas', en:'at least 9 plants left standing' } }
-  ];
-  var rd = 0, tries = 0, done = false, revealed = false, hit = false;
-  var v = 1, plaga = ri(rng, 0, 5);
-
-  host.innerHTML =
-    '<div class="gw-h">' + L({ es:'La parcela antes de la plaga', en:'The plot before the pest' }) + '</div>' +
-    '<div class="gw-q" data-r="q"></div>' +
-    '<div class="gw-mini">' + L({
-      es:'Cada color es una variedad distinta de la misma planta. Con una sola variedad todas las plantas salen idénticas, como las que se sacan de esquejes de una misma madre. Mueve la barra, siembra y suelta la plaga.',
-      en:'Each colour is a different variety of the same plant. With a single variety every plant comes out identical, like the ones taken from cuttings of one same mother. Move the bar, sow and release the pest.'
-    }) + '</div>' +
-    '<div class="plot" data-r="plot"></div>' +
-    '<div class="gw-lbl">' + L({ es:'Variedades distintas que siembras', en:'Different varieties you sow' }) + '</div>' +
-    '<input class="gw-range" type="range" min="1" max="6" step="1" value="1" data-r="sl">' +
-    '<div class="gw-num" data-r="num"></div>' +
-    '<div class="gw-note" data-r="verd"></div>' +
-    '<div class="gw-row">' +
-      '<button class="gw-btn" data-r="go">' + L({ es:'Soltar la plaga', en:'Release the pest' }) + '</button>' +
-      '<button class="gw-btn" data-r="chk">' + L({ es:'Comprobar', en:'Check' }) + '</button>' +
-    '</div>' +
-    '<div class="gw-fb"></div>';
-
-  var elP = host.querySelector('[data-r="plot"]'),
-      elS = host.querySelector('[data-r="sl"]'),
-      elN = host.querySelector('[data-r="num"]'),
-      elV = host.querySelector('[data-r="verd"]'),
-      elQ = host.querySelector('[data-r="q"]'),
-      elG = host.querySelector('[data-r="go"]'),
-      elK = host.querySelector('[data-r="chk"]');
-
-  function target(){ return plaga % v; }
-  function survivors(){
-    var c = 0;
-    for (var i = 0; i < 12; i++) if (i % v !== target()) c++;
-    return c;
-  }
-  function render(){
-    var html = '';
-    for (var i = 0; i < 12; i++){
-      var vv = i % v;
-      var dead = hit && vv === target();
-      html += '<div class="plant pv' + vv + (dead ? ' dead' : '') + '">🌱</div>';
-    }
-    elP.innerHTML = html;
-    elQ.innerHTML = L({
-      es:'Ronda ' + (rd + 1) + ' de 3: la plaga ataca a una sola variedad. Consigue ' + L(ROUNDS[rd].t) + '.',
-      en:'Round ' + (rd + 1) + ' of 3: the pest attacks one single variety. Get ' + L(ROUNDS[rd].t) + '.'
-    });
-    elN.textContent = L({
-      es:'Siembras ' + v + ' variedad' + (v > 1 ? 'es' : '') + ' en 12 plantas' + (hit ? '. Quedan en pie: ' + survivors() : ''),
-      en:'You sow ' + v + ' variet' + (v > 1 ? 'ies' : 'y') + ' in 12 plants' + (hit ? '. Left standing: ' + survivors() : '')
-    });
-    elV.textContent = v === 1
-      ? L({ es:'Todas las plantas son iguales entre sí: lo que afecte a una afecta a todas.', en:'Every plant is the same as the rest: whatever hits one hits them all.' })
-      : L({ es:'Hay plantas distintas entre sí: lo que afecte a una variedad deja en pie a las demás.', en:'There are plants that differ from one another: whatever hits one variety leaves the rest standing.' });
-    elS.disabled = done;
-    elG.disabled = done;
-  }
-
-  elS.addEventListener('input', function(){
-    v = parseInt(elS.value, 10); hit = false;
-    elG.textContent = L({ es:'Soltar la plaga', en:'Release the pest' });
-    render();
-  });
-  elG.addEventListener('click', function(){
-    if (done) return;
-    hit = true;
-    elG.textContent = L({ es:'Sembrar de nuevo', en:'Sow again' });
-    render();
-    say(host, survivors() >= ROUNDS[rd].need ? 'good' : 'warm', L({
-      es:'La plaga se llevó a una variedad completa. Quedan en pie ' + survivors() + ' de 12.',
-      en:'The pest took one whole variety. ' + survivors() + ' of 12 are left standing.'
-    }));
-  });
-
-  function advance(){
-    rd++; tries = 0; revealed = false; hit = false;
-    if (rd >= 3){
-      done = true;
-      elK.textContent = L({ es:'Completado', en:'Completed' });
-      elK.className = 'gw-btn solved';
-      elK.disabled = true;
-      render();
-      say(host, 'good', L({
-        es:'La parcela de una sola variedad quedó vacía y la variada aguantó. Los descendientes idénticos comparten hasta las debilidades; los descendientes distintos entre sí reparten el riesgo, y por eso la mezcla de dos progenitores le sirve tanto a una especie.',
-        en:'The single variety plot ended up empty and the varied one held. Identical descendants share even their weaknesses; descendants that differ from one another spread the risk, and that is why the mixture of two parents is worth so much to a species.'
-      }));
-      return;
-    }
-    plaga = ri(rng, 0, 5);
-    v = 1; elS.value = '1';
-    elG.textContent = L({ es:'Soltar la plaga', en:'Release the pest' });
-    elK.textContent = L({ es:'Comprobar', en:'Check' });
-    elK.className = 'gw-btn';
-    render();
-    say(host, '', L({ es:'Otra plaga, otra exigencia. Vuelve a decidir cuántas variedades siembras.', en:'Another pest, another requirement. Decide again how many varieties you sow.' }));
-  }
-
-  elK.addEventListener('click', function(){
-    if (done) return;
-    if (revealed){ advance(); return; }
-    if (!hit){
-      say(host, 'warm', L({ es:'Primero suelta la plaga para ver qué pasa con lo que sembraste.', en:'Release the pest first to see what happens to what you sowed.' }));
-      return;
-    }
-    if (survivors() >= ROUNDS[rd].need){
-      say(host, 'good', L({ es:'Lo lograste: la parcela resistió.', en:'You did it: the plot held.' }));
+      say(host, 'good', L({ es:'Eso es: el tallo quedó como se pedía.', en:'That is it: the stem ended up as asked.' }));
       setTimeout(advance, 800);
       return;
     }
     tries++;
     if (tries >= 3){
       revealed = true;
-      v = ROUNDS[rd].need >= 9 ? 4 : ROUNDS[rd].need >= 8 ? 3 : 2;
-      elS.value = String(v); hit = true; render();
+      v = GOALS[rd].k === 'left' ? 10 : GOALS[rd].k === 'right' ? 90 : 50;
+      render();
       elK.textContent = L({ es:'Siguiente', en:'Next' });
       say(host, 'miss', L({
-        es:'Con ' + v + ' variedades la plaga solo se lleva una parte y quedan ' + survivors() + ' plantas. Mientras menos parecidas sean entre sí las plantas, menos alcanza a llevarse un mismo problema.',
-        en:'With ' + v + ' varieties the pest only takes a part and ' + survivors() + ' plants remain. The less alike the plants are to one another, the less one same problem can take.'
+        es:'Mira dónde quedó la lámpara: el tallo se inclina hacia donde llega la luz, y queda derecho solo cuando la luz cae desde arriba, centrada sobre la planta.',
+        en:'Look where the lamp ended up: the stem leans toward where the light comes from, and stays straight only when the light falls from above, centred over the plant.'
       }));
       return;
     }
     say(host, 'warm', L({
-      es:'Quedaron ' + survivors() + ' y hacen falta ' + ROUNDS[rd].need + '. Siembra más variedades distintas: la plaga solo reconoce a una.',
-      en:'You were left with ' + survivors() + ' and ' + ROUNDS[rd].need + ' are needed. Sow more different varieties: the pest only recognises one.'
+      es:'Todavía no. ' + L(GOALS[rd].hint) + ' Observa cómo cambia el tallo.',
+      en:'Not yet. ' + L(GOALS[rd].hint) + ' Watch how the stem changes.'
     }));
   });
 
   render();
-  say(host, '', L({ es:'Empieza con una sola variedad y mira qué ocurre.', en:'Start with a single variety and see what happens.' }));
+  say(host, '', L({ es:'Arrastra la lámpara de un lado al otro y observa cómo reacciona el tallo.', en:'Drag the lamp from side to side and watch how the stem reacts.' }));
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MANIPULATIVO 5 :: elige el criterio y mira cómo se parten los grupos
-   Los seis organismos se reacomodan al instante con cada criterio. 3 rondas.
+   MANIPULATIVO 4 :: la parcela y la plaga — rediseñado.
+   Flujo: (1) siembra 1 variedad → suelta plaga → escribe cuántas quedan
+   (2) siembra N variedades → suelta plaga → escribe cuántas quedan
+   (3) compara los dos resultados y concluye.
    ══════════════════════════════════════════════════════════════════════════ */
-function w5(rng, host){
-  var ORG = [
-    { n:{ es:'maíz', en:'maize' } },
-    { n:{ es:'pino', en:'pine tree' } },
-    { n:{ es:'hongo del tronco', en:'log fungus' } },
-    { n:{ es:'gato', en:'cat' } },
-    { n:{ es:'alga del arrecife', en:'reef alga' } },
-    { n:{ es:'pez', en:'fish' } }
-  ];
-  var CRIT = [
-    { q:{ es:'¿Fabrica su propio alimento?', en:'Does it make its own food?' }, y:[1,1,0,0,1,0] },
-    { q:{ es:'¿Se desplaza de un lugar a otro?', en:'Does it travel from place to place?' }, y:[0,0,0,1,0,1] },
-    { q:{ es:'¿Se reproduce por semillas?', en:'Does it reproduce by seeds?' }, y:[1,1,0,0,0,0] },
-    { q:{ es:'¿Vive dentro del agua?', en:'Does it live in the water?' }, y:[0,0,0,0,1,1] }
-  ];
-  var GOALS = shuffle([
-    { c:2, t:{ es:'un grupo formado solo por el maíz y el pino', en:'a group made up only of the maize and the pine' } },
-    { c:1, t:{ es:'un grupo formado solo por el gato y el pez', en:'a group made up only of the cat and the fish' } },
-    { c:3, t:{ es:'un grupo formado solo por el alga y el pez', en:'a group made up only of the alga and the fish' } },
-    { c:0, t:{ es:'un grupo que deje juntos al maíz, al pino y al alga', en:'a group that leaves the maize, the pine and the alga together' } }
-  ], rng).slice(0, 3);
-  var rd = 0, sel = -1, tries = 0, done = false, revealed = false;
+function w4(rng, host){
+  /* Each experiment: choose varieties, release pest, fill in survivor count */
+  var plaga = ri(rng, 0, 5);
+  var phase = 0; /* 0=setup1var, 1=afterPest1, 2=inputCount1, 3=setup multi, 4=afterPestMulti, 5=inputCountMulti, 6=done */
+  var multiV = 4; /* number of varieties for second run, chosen by student via slider */
+  var hit = false;
 
-  host.innerHTML =
-    '<div class="gw-h">' + L({ es:'Arma los grupos', en:'Build the groups' }) + '</div>' +
-    '<div class="gw-q" data-r="q"></div>' +
-    '<div class="gw-mini">' + L({
-      es:'Toca un criterio y mira cómo se reparten los seis organismos. Cambia de criterio las veces que quieras: el reparto se rehace al instante.',
-      en:'Tap a criterion and watch the six organisms split. Change criterion as often as you like: the arrangement is redone instantly.'
-    }) + '</div>' +
-    '<div class="gw-grid" data-r="crit"></div>' +
-    '<div class="tray">' +
-      '<div class="tray-b hotA"><div class="tray-t" data-r="ttA">' + L({ es:'Sí', en:'Yes' }) + '</div><div data-r="gA"></div></div>' +
-      '<div class="tray-b hotB"><div class="tray-t" data-r="ttB">' + L({ es:'No', en:'No' }) + '</div><div data-r="gB"></div></div>' +
-    '</div>' +
-    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Es este criterio', en:'This is the criterion' }) + '</button></div>' +
-    '<div class="gw-fb"></div>';
-
-  var elC = host.querySelector('[data-r="crit"]'),
-      elA = host.querySelector('[data-r="gA"]'),
-      elB = host.querySelector('[data-r="gB"]'),
-      elQ = host.querySelector('[data-r="q"]'),
-      elK = host.querySelector('[data-r="chk"]');
-
-  function render(){
-    elQ.innerHTML = L({
-      es:'Ronda ' + (rd + 1) + ' de 3: encuentra el criterio que deja ' + L(GOALS[rd].t) + '.',
-      en:'Round ' + (rd + 1) + ' of 3: find the criterion that leaves ' + L(GOALS[rd].t) + '.'
-    });
-    elC.innerHTML = CRIT.map(function(c, i){
-      return '<button class="gw-tile' + (sel === i ? ' on' : '') + '" data-c="' + i + '"' + (done ? ' disabled' : '') + '>' +
-        '<span class="gw-key">' + L(c.q) + '</span></button>';
-    }).join('');
-    elC.querySelectorAll('[data-c]').forEach(function(b){
-      b.addEventListener('click', function(){
-        sel = parseInt(b.getAttribute('data-c'), 10);
-        render();
-        say(host, '', L({
-          es:'Con ese criterio los grupos quedan como los ves abajo. ¿Es el reparto que se pide?',
-          en:'With that criterion the groups look like what you see below. Is that the arrangement being asked for?'
-        }));
-      });
-    });
-    var a = '', b = '';
-    if (sel < 0){
-      elA.innerHTML = '<span class="chip">' + L({ es:'elige un criterio', en:'choose a criterion' }) + '</span>';
-      elB.innerHTML = '<span class="chip">' + L({ es:'elige un criterio', en:'choose a criterion' }) + '</span>';
-      return;
-    }
-    ORG.forEach(function(o, i){
-      var chip = '<span class="chip">' + L(o.n) + '</span>';
-      if (CRIT[sel].y[i]) a += chip; else b += chip;
-    });
-    elA.innerHTML = a || '<span class="chip">' + L({ es:'ninguno', en:'none' }) + '</span>';
-    elB.innerHTML = b || '<span class="chip">' + L({ es:'ninguno', en:'none' }) + '</span>';
+  function countSurvivors(v){
+    var c = 0;
+    for (var i = 0; i < 12; i++) if (i % v !== plaga % v) c++;
+    return c;
   }
 
-  function groupNames(ci, val){
-    return ORG.filter(function(o, i){ return !!CRIT[ci].y[i] === val; }).map(function(o){ return L(o.n); }).join(', ');
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'La parcela antes de la plaga', en:'The plot before the pest' }) + '</div>' +
+    '<div class="gw-q" data-r="q" style="margin-bottom:.4rem;"></div>' +
+    '<div class="gw-mini" data-r="mini" style="margin-bottom:.6rem;"></div>' +
+    '<div class="plot" data-r="plot" style="margin-bottom:.5rem;"></div>' +
+    '<div data-r="controls"></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elQ    = host.querySelector('[data-r="q"]'),
+      elMini = host.querySelector('[data-r="mini"]'),
+      elPlot = host.querySelector('[data-r="plot"]'),
+      elCtrl = host.querySelector('[data-r="controls"]');
+
+  function drawPlot(v, deadMask){
+    var html = '';
+    for (var i = 0; i < 12; i++){
+      var vv = i % v;
+      var dead = deadMask && (i % v === plaga % v);
+      html += '<div class="plant pv' + vv + (dead ? ' dead' : '') + '">🌱</div>';
+    }
+    elPlot.innerHTML = html;
+  }
+
+  function phase0(){
+    /* First run: 1 variety, forced */
+    phase = 0; hit = false;
+    elQ.innerHTML = L({
+      es:'<strong>Experimento 1 de 2:</strong> siembras solo 1 variedad. Todas las plantas son idénticas.',
+      en:'<strong>Experiment 1 of 2:</strong> you sow only 1 variety. Every plant is identical.'
+    });
+    elMini.textContent = L({
+      es:'Observa el campo: una sola variedad. Ahora suelta la plaga y ve qué pasa.',
+      en:'Look at the field: one single variety. Now release the pest and see what happens.'
+    });
+    drawPlot(1, false);
+    elCtrl.innerHTML =
+      '<div class="gw-row"><button class="gw-btn" data-r="go">' +
+        L({ es:'🐛 Soltar la plaga', en:'🐛 Release the pest' }) +
+      '</button></div>';
+    host.querySelector('[data-r="go"]').addEventListener('click', function(){
+      hit = true;
+      drawPlot(1, true);
+      phase1();
+    });
+  }
+
+  function phase1(){
+    /* After pest on 1 variety: all dead → show dramatic message → ask student to count */
+    phase = 1;
+    var surv = countSurvivors(1); /* always 0 */
+    say(host, 'miss', L({
+      es:'¡La plaga atacó a la única variedad! Todas las plantas murieron.',
+      en:'The pest attacked the only variety! Every plant died.'
+    }));
+    setTimeout(function(){
+      phase = 2;
+      elQ.innerHTML = L({
+        es:'¿Cuántas plantas quedaron en pie después de la plaga?',
+        en:'How many plants are left standing after the pest?'
+      });
+      elMini.textContent = L({
+        es:'Mira el campo y escribe el número en el recuadro.',
+        en:'Look at the field and write the number in the box.'
+      });
+      elCtrl.innerHTML =
+        '<div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0;">' +
+          '<input type="number" id="w4in1" min="0" max="12" style="width:70px;padding:.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:1.1rem;text-align:center;background:var(--surface);color:var(--text);" placeholder="?">' +
+          '<span style="font-size:.88rem;color:var(--text2);">' + L({ es:'plantas de 12', en:'plants out of 12' }) + '</span>' +
+        '</div>' +
+        '<div class="gw-row"><button class="gw-btn" data-r="chk1">' + L({ es:'Confirmar', en:'Confirm' }) + '</button></div>';
+      host.querySelector('[data-r="chk1"]').addEventListener('click', function(){
+        var val = parseInt(document.getElementById('w4in1').value, 10);
+        if (isNaN(val)){
+          say(host, 'warm', L({ es:'Escribe un número antes de confirmar.', en:'Write a number before confirming.' })); return;
+        }
+        if (val === surv){
+          say(host, 'good', L({
+            es:'Correcto: quedaron ' + surv + ' plantas. Con una sola variedad, la plaga destruye todo el campo.',
+            en:'Correct: ' + surv + ' plants remained. With only one variety, the pest destroys the whole field.'
+          }));
+          setTimeout(phase3, 1200);
+        } else {
+          say(host, 'warm', L({
+            es:'Mira el campo otra vez. ¿Cuántas plantas siguen verdes?',
+            en:'Look at the field again. How many plants are still green?'
+          }));
+        }
+      });
+    }, 1000);
+  }
+
+  function phase3(){
+    /* Second run: student picks varieties with slider */
+    phase = 3; hit = false; plaga = ri(rng, 0, 5);
+    multiV = 3;
+    elQ.innerHTML = L({
+      es:'<strong>Experimento 2 de 2:</strong> ahora elige cuántas variedades distintas siembras.',
+      en:'<strong>Experiment 2 of 2:</strong> now choose how many different varieties you sow.'
+    });
+    elMini.innerHTML = L({
+      es:'Cada color es una variedad distinta. La plaga solo ataca a <em>una</em> variedad. Mueve el deslizador, mira el campo y luego suelta la plaga.',
+      en:'Each colour is a different variety. The pest attacks only <em>one</em> variety. Move the slider, watch the field, then release the pest.'
+    });
+    drawPlot(multiV, false);
+    elCtrl.innerHTML =
+      '<div class="gw-lbl">' + L({ es:'Variedades que siembras', en:'Varieties you sow' }) + '</div>' +
+      '<input class="gw-range" type="range" min="2" max="6" step="1" value="3" data-r="sl2">' +
+      '<div class="gw-num" data-r="num2" style="font-size:.85rem;margin:.2rem 0;"></div>' +
+      '<div class="gw-row"><button class="gw-btn" data-r="go2">' +
+        L({ es:'🐛 Soltar la plaga', en:'🐛 Release the pest' }) +
+      '</button></div>';
+    var elSl2  = host.querySelector('[data-r="sl2"]'),
+        elNum2 = host.querySelector('[data-r="num2"]'),
+        elGo2  = host.querySelector('[data-r="go2"]');
+
+    function updateSlider(){
+      multiV = parseInt(elSl2.value, 10);
+      elNum2.textContent = multiV + ' ' + L({ es:'variedades → colores distintos en el campo', en:'varieties → different colours in the field' });
+      drawPlot(multiV, false);
+      say(host, '', '');
+    }
+    elSl2.addEventListener('input', updateSlider);
+    updateSlider();
+
+    elGo2.addEventListener('click', function(){
+      hit = true;
+      drawPlot(multiV, true);
+      phase4();
+    });
+  }
+
+  function phase4(){
+    phase = 4;
+    var surv = countSurvivors(multiV);
+    say(host, surv >= 6 ? 'good' : 'warm', L({
+      es:'La plaga atacó a una de las ' + multiV + ' variedades. Mira el campo.',
+      en:'The pest attacked one of the ' + multiV + ' varieties. Look at the field.'
+    }));
+    setTimeout(function(){
+      phase = 5;
+      elQ.innerHTML = L({
+        es:'¿Cuántas plantas quedaron en pie esta vez?',
+        en:'How many plants are left standing this time?'
+      });
+      elMini.textContent = L({
+        es:'Mira el campo, cuenta las que siguen verdes y escribe el número.',
+        en:'Look at the field, count the ones still green and write the number.'
+      });
+      elCtrl.innerHTML =
+        '<div style="display:flex;align-items:center;gap:.6rem;margin:.4rem 0;">' +
+          '<input type="number" id="w4in2" min="0" max="12" style="width:70px;padding:.5rem;border:1.5px solid var(--border);border-radius:8px;font-size:1.1rem;text-align:center;background:var(--surface);color:var(--text);" placeholder="?">' +
+          '<span style="font-size:.88rem;color:var(--text2);">' + L({ es:'plantas de 12', en:'plants out of 12' }) + '</span>' +
+        '</div>' +
+        '<div class="gw-row"><button class="gw-btn" data-r="chk2">' + L({ es:'Confirmar', en:'Confirm' }) + '</button></div>';
+      host.querySelector('[data-r="chk2"]').addEventListener('click', function(){
+        var val = parseInt(document.getElementById('w4in2').value, 10);
+        if (isNaN(val)){
+          say(host, 'warm', L({ es:'Escribe un número antes de confirmar.', en:'Write a number before confirming.' })); return;
+        }
+        if (val === surv){
+          phase = 6;
+          /* done — show comparison */
+          elCtrl.innerHTML = '';
+          say(host, 'good', L({
+            es:'¡Correcto! Con ' + multiV + ' variedades quedaron ' + surv + ' plantas. Con 1 variedad quedaron 0. ' +
+               'La diferencia: la plaga solo reconoce una variedad. Cuantas más variedades distintas hay en el campo, menos daño puede hacer el mismo ataque.',
+            en:'Correct! With ' + multiV + ' varieties, ' + surv + ' plants remained. With 1 variety, 0 remained. ' +
+               'The difference: the pest recognises only one variety. The more different varieties in the field, the less damage one attack can do.'
+          }));
+        } else {
+          say(host, 'warm', L({
+            es:'Cuenta de nuevo: ¿cuántas plantas siguen verdes en el campo?',
+            en:'Count again: how many plants are still green in the field?'
+          }));
+        }
+      });
+    }, 1000);
+  }
+
+  /* kick off */
+  phase0();
+  say(host, '', L({ es:'Vamos a hacer dos experimentos para ver qué pasa cuando llega una plaga.', en:'We will run two experiments to see what happens when a pest arrives.' }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MANIPULATIVO 5 :: Arma los grupos — rediseñado.
+   El estudiante decide SÍ/NO para cada organismo y criterio; al verificar
+   ve si su clasificación coincide con la correcta y por qué.
+   Tres criterios, tres rondas de clasificación.
+   ══════════════════════════════════════════════════════════════════════════ */
+function w5(rng, host){
+  /* Organisms with known traits for each criterion */
+  var ORG = [
+    { n:{ es:'Maíz',            en:'Maize' },          icon:'🌽' },
+    { n:{ es:'Pino',            en:'Pine tree' },       icon:'🌲' },
+    { n:{ es:'Hongo del tronco',en:'Log fungus' },      icon:'🍄' },
+    { n:{ es:'Gato',            en:'Cat' },             icon:'🐱' },
+    { n:{ es:'Alga del arrecife',en:'Reef alga' },      icon:'🌿' },
+    { n:{ es:'Pez',             en:'Fish' },            icon:'🐟' }
+  ];
+  /* Criteria: question, correct yes/no for each organism, explanation */
+  var CRIT = [
+    {
+      q:{ es:'¿Fabrica su propio alimento con la luz?', en:'Does it make its own food using light?' },
+      y:[1,1,0,0,1,0],
+      exp:{ es:'El maíz, el pino y el alga tienen estructuras que captan la luz (hojas, agujas, células verdes) y con ella forman su alimento. El hongo, el gato y el pez no: toman materia que otros organismos ya formaron.', en:'Maize, pine and alga have structures that catch light (leaves, needles, green cells) and use it to form food. The fungus, cat and fish do not: they take matter already formed by other organisms.' }
+    },
+    {
+      q:{ es:'¿Se desplaza de un lugar a otro por sí solo?', en:'Does it move from place to place on its own?' },
+      y:[0,0,0,1,0,1],
+      exp:{ es:'El gato y el pez tienen estructuras locomotoras (patas, aletas) que les permiten cambiar de lugar. El maíz, el pino, el hongo y el alga crecen fijos en un punto.', en:'The cat and fish have locomotor structures (legs, fins) that let them change location. Maize, pine, fungus and alga grow fixed in one spot.' }
+    },
+    {
+      q:{ es:'¿Vive dentro del agua?', en:'Does it live in the water?' },
+      y:[0,0,0,0,1,1],
+      exp:{ es:'El alga del arrecife y el pez viven sumergidos en agua. El maíz, el pino, el hongo y el gato viven en tierra.', en:'The reef alga and fish live submerged in water. Maize, pine, fungus and cat live on land.' }
+    },
+    {
+      q:{ es:'¿Se reproduce por semillas?', en:'Does it reproduce by seeds?' },
+      y:[1,1,0,0,0,0],
+      exp:{ es:'El maíz y el pino producen semillas. El hongo usa esporas, el pez pone huevos, el gato pare crías y el alga se reproduce por división.', en:'Maize and pine produce seeds. The fungus uses spores, the fish lays eggs, the cat gives birth and the alga reproduces by division.' }
+    }
+  ];
+
+  /* Pick 3 criteria for 3 rounds */
+  var RD_CRIT = shuffle([0,1,2,3], rng).slice(0,3);
+  var rd = 0, tries = 0, done = false;
+  /* studentAns[orgIdx] = true/false/null for current criterion */
+  var studentAns;
+
+  function initAns(){ studentAns = new Array(6).fill(null); }
+
+  host.innerHTML =
+    '<div class="gw-h">' + L({ es:'Clasifica los organismos', en:'Classify the organisms' }) + '</div>' +
+    '<div class="gw-q" data-r="q"></div>' +
+    '<div class="gw-mini">' + L({
+      es:'Para cada organismo, responde SÍ o NO a la pregunta. Cuando hayas respondido los seis, presiona Verificar para ver si tu clasificación es correcta.',
+      en:'For each organism, answer YES or NO to the question. When you have answered all six, press Verify to see if your classification is correct.'
+    }) + '</div>' +
+    '<div data-r="cards" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.6rem 0;"></div>' +
+    '<div data-r="result" style="margin:.5rem 0;"></div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Verificar', en:'Verify' }) + '</button></div>' +
+    '<div class="gw-fb"></div>';
+
+  var elQ    = host.querySelector('[data-r="q"]'),
+      elCards= host.querySelector('[data-r="cards"]'),
+      elRes  = host.querySelector('[data-r="result"]'),
+      elK    = host.querySelector('[data-r="chk"]');
+
+  /* Event delegation: yes/no buttons inside cards */
+  elCards.addEventListener('click', function(e){
+    if (done) return;
+    var btn = e.target.closest('[data-org][data-val]');
+    if (!btn) return;
+    var idx = parseInt(btn.getAttribute('data-org'), 10);
+    var val = btn.getAttribute('data-val') === '1';
+    studentAns[idx] = val;
+    renderCards();
+  });
+
+  function renderCards(){
+    var crit = CRIT[RD_CRIT[rd]];
+    elCards.innerHTML = ORG.map(function(o, i){
+      var ans = studentAns[i];
+      var yBtn = '<button data-org="' + i + '" data-val="1" style="flex:1;padding:.3rem;border:1.5px solid ' +
+        (ans === true ? 'var(--ok)' : 'var(--border)') + ';border-radius:6px;background:' +
+        (ans === true ? 'var(--ok-bg)' : 'var(--surface2)') + ';color:' +
+        (ans === true ? 'var(--ok)' : 'var(--text2)') + ';font-weight:' + (ans === true ? '700' : '400') +
+        ';cursor:pointer;font-size:.8rem;font-family:inherit;">SÍ</button>';
+      var nBtn = '<button data-org="' + i + '" data-val="0" style="flex:1;padding:.3rem;border:1.5px solid ' +
+        (ans === false ? 'var(--bad)' : 'var(--border)') + ';border-radius:6px;background:' +
+        (ans === false ? 'var(--bad-bg)' : 'var(--surface2)') + ';color:' +
+        (ans === false ? 'var(--bad)' : 'var(--text2)') + ';font-weight:' + (ans === false ? '700' : '400') +
+        ';cursor:pointer;font-size:.8rem;font-family:inherit;">NO</button>';
+      var border = ans === null ? 'var(--border)' : ans ? 'var(--ok)' : 'var(--bad)';
+      return '<div style="border:1.5px solid ' + border + ';border-radius:10px;padding:.55rem .65rem;background:var(--surface);">' +
+        '<div style="font-size:1.4rem;text-align:center;">' + o.icon + '</div>' +
+        '<div style="font-size:.78rem;font-weight:600;text-align:center;margin:.2rem 0;">' + L(o.n) + '</div>' +
+        '<div style="display:flex;gap:.3rem;margin-top:.3rem;">' + yBtn + nBtn + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderResult(correct, crit){
+    /* show two columns: Grupo SÍ / Grupo NO based on CORRECT answers */
+    var yOrgs = ORG.filter(function(o,i){ return crit.y[i]; }).map(function(o){ return o.icon + ' ' + L(o.n); });
+    var nOrgs = ORG.filter(function(o,i){ return !crit.y[i]; }).map(function(o){ return o.icon + ' ' + L(o.n); });
+    elRes.innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.3rem 0;">' +
+        '<div style="background:var(--ok-bg);border:1.5px solid var(--ok);border-radius:8px;padding:.5rem;">' +
+          '<div style="font-size:.68rem;font-weight:700;color:var(--ok);text-transform:uppercase;margin-bottom:.3rem;">' + L({ es:'Grupo SÍ', en:'Group YES' }) + '</div>' +
+          yOrgs.map(function(s){ return '<div style="font-size:.8rem;">' + s + '</div>'; }).join('') +
+        '</div>' +
+        '<div style="background:var(--bad-bg);border:1.5px solid var(--bad);border-radius:8px;padding:.5rem;">' +
+          '<div style="font-size:.68rem;font-weight:700;color:var(--bad);text-transform:uppercase;margin-bottom:.3rem;">' + L({ es:'Grupo NO', en:'Group NO' }) + '</div>' +
+          nOrgs.map(function(s){ return '<div style="font-size:.8rem;">' + s + '</div>'; }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:.79rem;color:var(--text2);margin-top:.3rem;padding:.55rem .7rem;background:var(--surface2);border-radius:8px;">' +
+        L(crit.exp) +
+      '</div>';
+  }
+
+  function render(){
+    var crit = CRIT[RD_CRIT[rd]];
+    elQ.innerHTML = L({
+      es:'Ronda ' + (rd+1) + ' de 3 — <strong>' + L(crit.q) + '</strong>',
+      en:'Round ' + (rd+1) + ' of 3 — <strong>' + L(crit.q) + '</strong>'
+    });
+    elRes.innerHTML = '';
+    renderCards();
   }
 
   function advance(){
-    rd++; sel = -1; tries = 0; revealed = false;
+    rd++; tries = 0;
     if (rd >= 3){
       done = true;
       elK.textContent = L({ es:'Completado', en:'Completed' });
       elK.className = 'gw-btn solved';
       elK.disabled = true;
-      render();
       say(host, 'good', L({
-        es:'Los mismos seis organismos y tres repartos distintos, todos correctos. Eso es lo que hace un criterio: decide cuál característica cuenta y cuál no. Por eso una clasificación sirve para unas preguntas y no para otras.',
-        en:'The same six organisms and three different arrangements, all correct. That is what a criterion does: it decides which characteristic counts and which does not. That is why a classification works for some questions and not for others.'
+        es:'Los mismos seis organismos, tres criterios distintos, tres repartos distintos — todos correctos. Un criterio es una pregunta sobre una característica concreta: la respuesta a esa pregunta decide los grupos, y cada criterio sirve para preguntas distintas.',
+        en:'The same six organisms, three different criteria, three different arrangements — all correct. A criterion is a question about one concrete characteristic: the answer decides the groups, and each criterion serves different questions.'
       }));
       return;
     }
-    elK.textContent = L({ es:'Es este criterio', en:'This is the criterion' });
+    initAns();
+    elK.textContent = L({ es:'Verificar', en:'Verify' });
     elK.className = 'gw-btn';
     render();
-    say(host, '', L({ es:'Otro reparto por encontrar. Prueba criterios hasta dar con el que lo produce.', en:'Another arrangement to find. Try criteria until you hit the one that produces it.' }));
+    say(host, '', L({ es:'Nueva pregunta. Responde SÍ o NO para cada organismo antes de verificar.', en:'New question. Answer YES or NO for each organism before verifying.' }));
   }
 
   elK.addEventListener('click', function(){
     if (done) return;
-    if (revealed){ advance(); return; }
-    if (sel < 0){
-      say(host, 'warm', L({ es:'Todavía no eliges criterio. Toca uno y observa el reparto.', en:'You have not chosen a criterion yet. Tap one and watch the arrangement.' }));
-      return;
-    }
-    if (sel === GOALS[rd].c){
-      say(host, 'good', L({ es:'Ese es: el reparto salió exactamente como se pedía.', en:'That is the one: the arrangement came out exactly as asked.' }));
-      setTimeout(advance, 700);
-      return;
-    }
-    tries++;
-    if (tries >= 3){
-      revealed = true;
-      sel = GOALS[rd].c;
-      render();
-      elK.textContent = L({ es:'Siguiente', en:'Next' });
-      say(host, 'miss', L({
-        es:'El criterio que lo consigue es este. De un lado quedan ' + groupNames(sel, true) + ' y del otro ' + groupNames(sel, false) + '.',
-        en:'The criterion that gets it is this one. On one side are ' + groupNames(sel, true) + ' and on the other ' + groupNames(sel, false) + '.'
+    /* check all answered */
+    if (studentAns.indexOf(null) >= 0){
+      say(host, 'warm', L({
+        es:'Todavía hay organismos sin respuesta. Toca SÍ o NO en cada tarjeta.',
+        en:'Some organisms still have no answer. Tap YES or NO on each card.'
       }));
       return;
     }
+    var crit = CRIT[RD_CRIT[rd]];
+    var wrong = ORG.filter(function(o,i){ return !!studentAns[i] !== !!crit.y[i]; });
+    if (wrong.length === 0){
+      renderResult(true, crit);
+      say(host, 'good', L({
+        es:'¡Correcto! Todos los organismos quedaron en el grupo correcto.',
+        en:'Correct! Every organism ended up in the right group.'
+      }));
+      setTimeout(advance, 1600);
+      return;
+    }
+    tries++;
+    var wrongNames = wrong.map(function(o){ return o.icon + ' ' + L(o.n); }).join(', ');
+    if (tries >= 3){
+      /* show correct grouping */
+      ORG.forEach(function(o,i){ studentAns[i] = !!crit.y[i]; });
+      renderCards();
+      renderResult(false, crit);
+      elK.textContent = L({ es:'Siguiente', en:'Next' });
+      say(host, 'miss', L({
+        es:'Estos no coincidían: ' + wrongNames + '. Lee la explicación y luego continúa.',
+        en:'These did not match: ' + wrongNames + '. Read the explanation and then continue.'
+      }));
+      elK.onclick = function(){ if (!done){ tries = 99; advance(); } };
+      return;
+    }
     say(host, 'warm', L({
-      es:'Con ese criterio quedaron juntos ' + groupNames(sel, true) + ', y no es el grupo que se pide. Prueba otro criterio y compara.',
-      en:'With that criterion ' + groupNames(sel, true) + ' ended up together, and that is not the group being asked for. Try another criterion and compare.'
+      es:wrong.length + ' organismo(s) mal clasificado(s): ' + wrongNames + '. Piensa en la pregunta y ajusta tu respuesta.',
+      en:wrong.length + ' organism(s) misclassified: ' + wrongNames + '. Think about the question and adjust your answer.'
     }));
   });
 
+  initAns();
   render();
-  say(host, '', L({ es:'Toca un criterio para ver el primer reparto.', en:'Tap a criterion to see the first arrangement.' }));
+  say(host, '', L({ es:'Lee la pregunta y responde SÍ o NO para cada organismo.', en:'Read the question and answer YES or NO for each organism.' }));
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   MANIPULATIVO 6 :: tabla de rasgos, propón quién es pariente de quién
-   Al tocar un candidato se marca su columna y se cuenta lo que comparte.
+   MANIPULATIVO 6 :: tabla de rasgos — el estudiante llena los ✓ de los
+   candidatos y luego decide quién comparte más con el organismo focal.
+   Rediseñado: celdas interactivas, conteo visual en tiempo real.
    ══════════════════════════════════════════════════════════════════════════ */
 function w6(rng, host){
+  /* Deep-copy pool entries so shuffling doesn't mutate originals */
   var POOL = [
     {
       focal:{ es:'delfín', en:'dolphin' },
       tr:[
         { es:'respira aire con pulmones', en:'breathes air with lungs' },
         { es:'alimenta a sus crías con leche', en:'feeds its young with milk' },
-        { es:'la cría se desarrolla dentro de la madre', en:'the young develops inside the mother' },
+        { es:'la cría nace viva (no de huevo)', en:'the young is born live (not from an egg)' },
         { es:'tiene el cuerpo cubierto de plumas', en:'has a body covered in feathers' },
         { es:'tiene cuerpo alargado y aletas para nadar', en:'has a long body and fins for swimming' }
       ],
@@ -2083,8 +2354,8 @@ function w6(rng, host){
         { n:{ es:'pingüino', en:'penguin' }, v:[1,0,0,1,1] }
       ],
       ok:1,
-      why:{ es:'nadar en el mar es algo que el ambiente exige a cualquiera que viva ahí, y por eso aparece en animales muy lejanos entre sí',
-            en:'swimming in the sea is something the environment demands of anyone living there, and that is why it appears in animals very distant from one another' }
+      why:{ es:'nadar en el mar lo exige el ambiente, y por eso aparece en animales muy lejanos entre sí',
+            en:'swimming in the sea is what the environment demands, so it appears in very distant animals' }
     },
     {
       focal:{ es:'murciélago', en:'bat' },
@@ -2102,15 +2373,15 @@ function w6(rng, host){
         { n:{ es:'mariposa', en:'butterfly' }, v:[1,0,0,1,0] }
       ],
       ok:1,
-      why:{ es:'volar es una forma de moverse que apareció por separado en grupos distintos, así que compartirla no basta para proponer parentesco',
-            en:'flying is a way of moving that appeared separately in different groups, so sharing it is not enough to propose kinship' }
+      why:{ es:'volar apareció por separado en grupos muy distintos, así que compartirlo no basta para proponer parentesco',
+            en:'flying appeared separately in very different groups, so sharing it is not enough to propose kinship' }
     },
     {
       focal:{ es:'pingüino', en:'penguin' },
       tr:[
         { es:'tiene el cuerpo cubierto de plumas', en:'has a body covered in feathers' },
         { es:'pone huevos con cascarón', en:'lays eggs with a shell' },
-        { es:'pasa gran parte del tiempo nadando en el mar', en:'spends much of its time swimming in the sea' },
+        { es:'pasa gran parte del tiempo nadando', en:'spends much of its time swimming' },
         { es:'alimenta a sus crías con leche', en:'feeds its young with milk' },
         { es:'respira aire con pulmones', en:'breathes air with lungs' }
       ],
@@ -2121,8 +2392,8 @@ function w6(rng, host){
         { n:{ es:'atún', en:'tuna' }, v:[0,0,1,0,0] }
       ],
       ok:0,
-      why:{ es:'nadar en agua fría lo hacen los tres, porque los tres viven ahí, y ese rasgo no distingue quién viene de quién',
-            en:'all three swim in cold water because all three live there, and that trait does not tell who comes from whom' }
+      why:{ es:'los tres nadan en agua fría porque los tres viven ahí, y ese rasgo no distingue quién viene de quién',
+            en:'all three swim in cold water because they all live there, and that trait does not tell who comes from whom' }
     },
     {
       focal:{ es:'maíz', en:'maize' },
@@ -2131,7 +2402,7 @@ function w6(rng, host){
         { es:'se reproduce por semillas', en:'reproduces by seeds' },
         { es:'tiene raíz, tallo y hojas', en:'has root, stem and leaves' },
         { es:'se reproduce por esporas', en:'reproduces by spores' },
-        { es:'absorbe materia que otro ser vivo ya formó', en:'absorbs matter another living thing already formed' }
+        { es:'absorbe materia de otro ser vivo ya formada', en:'absorbs matter another living thing already formed' }
       ],
       f:[1,1,1,0,0],
       c:[
@@ -2140,132 +2411,226 @@ function w6(rng, host){
         { n:{ es:'hongo del tronco', en:'log fungus' }, v:[0,0,0,1,1] }
       ],
       ok:0,
-      why:{ es:'ser verde y vivir plantado en la tierra los junta a varios, pero la forma de reproducirse separa a unos de otros',
-            en:'being green and living rooted in the ground puts several of them together, but the way of reproducing separates some from others' }
+      why:{ es:'ser verde y vivir plantado los junta, pero la forma de reproducirse separa a unos de otros',
+            en:'being green and living rooted puts them together, but the way of reproducing separates them' }
     }
   ];
-  var RD = shuffle(POOL, rng).slice(0, 3);
-  RD.forEach(function(r){
+
+  /* Deep-copy each pool entry so mutations don't bleed across rounds */
+  var RD = shuffle(POOL, rng).slice(0, 3).map(function(r){
     var order = shuffle([0, 1, 2], rng);
-    var nc = order.map(function(k){ return r.c[k]; });
-    r.ok = order.indexOf(r.ok);
-    r.c = nc;
+    var nc = order.map(function(k){ return { n: r.c[k].n, v: r.c[k].v.slice() }; });
+    return {
+      focal: r.focal,
+      tr: r.tr,
+      f: r.f.slice(),
+      c: nc,
+      ok: order.indexOf(r.ok),
+      why: r.why
+    };
   });
-  var rd = 0, sel = -1, tries = 0, done = false, revealed = false;
+
+  var rd = 0, tries = 0, done = false, revealed = false;
+  /* studentV[cIdx][trIdx] = true/false — what the student filled in */
+  var studentV;
+
+  function initStudentV(){
+    var r = RD[rd];
+    studentV = r.c.map(function(){ return new Array(r.tr.length).fill(false); });
+  }
+
+  function countShared(r, cIdx, useStudent){
+    var n = 0;
+    for (var i = 0; i < r.tr.length; i++){
+      var cHas = useStudent ? studentV[cIdx][i] : r.c[cIdx].v[i];
+      if (r.f[i] && cHas) n++;
+    }
+    return n;
+  }
 
   host.innerHTML =
     '<div class="gw-h">' + L({ es:'Tabla de rasgos', en:'Trait table' }) + '</div>' +
     '<div class="gw-q" data-r="q"></div>' +
-    '<div class="gw-mini">' + L({
-      es:'Toca un candidato para marcar su columna y ver qué rasgos comparte. Puedes cambiar de candidato antes de proponer tu hipótesis.',
-      en:'Tap a candidate to mark its column and see which traits it shares. You can change candidate before proposing your hypothesis.'
-    }) + '</div>' +
-    '<div style="overflow-x:auto"><table class="ttab" data-r="tab"></table></div>' +
-    '<div class="gw-grid3" data-r="cands"></div>' +
-    '<div class="gw-note" data-r="cnt"></div>' +
-    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Proponer esta hipótesis', en:'Propose this hypothesis' }) + '</button></div>' +
+    '<div class="gw-mini" data-r="mini"></div>' +
+    '<div style="overflow-x:auto"><table class="ttab" data-r="tab" style="font-size:.74rem;"></table></div>' +
+    '<div class="gw-note" data-r="cnt" style="margin:.4rem 0;font-weight:600;"></div>' +
+    '<div class="gw-grid3" data-r="cands" style="margin:.3rem 0;"></div>' +
+    '<div class="gw-row"><button class="gw-btn" data-r="chk">' + L({ es:'Proponer mi hipótesis', en:'Propose my hypothesis' }) + '</button></div>' +
     '<div class="gw-fb"></div>';
 
   var elT = host.querySelector('[data-r="tab"]'),
       elD = host.querySelector('[data-r="cands"]'),
       elN = host.querySelector('[data-r="cnt"]'),
       elQ = host.querySelector('[data-r="q"]'),
+      elM = host.querySelector('[data-r="mini"]'),
       elK = host.querySelector('[data-r="chk"]');
 
-  function shared(k){
-    var r = RD[rd], n = 0;
-    for (var i = 0; i < r.tr.length; i++) if (r.f[i] && r.c[k].v[i]) n++;
-    return n;
-  }
-  function render(){
+  /* Event delegation on the table for cell clicks */
+  elT.addEventListener('click', function(e){
+    if (done || revealed) return;
+    var td = e.target.closest('td[data-ci][data-ri]');
+    if (!td) return;
+    var ci = parseInt(td.getAttribute('data-ci'), 10);
+    var ri = parseInt(td.getAttribute('data-ri'), 10);
+    studentV[ci][ri] = !studentV[ci][ri];
+    renderTable();
+    renderCount();
+  });
+
+  /* Event delegation on candidate buttons */
+  elD.addEventListener('click', function(e){
+    if (done) return;
+    var btn = e.target.closest('[data-k]');
+    if (!btn) return;
+    /* candidate buttons are now used to confirm hypothesis */
+    /* they just highlight; actual proposal via chk button */
+  });
+
+  function renderTable(){
     var r = RD[rd];
-    elQ.innerHTML = L({
-      es:'Ronda ' + (rd + 1) + ' de 3: ¿con cuál de los tres candidatos está más emparentado ' + L(r.focal) + '?',
-      en:'Round ' + (rd + 1) + ' of 3: which of the three candidates is ' + L(r.focal) + ' most closely related to?'
-    });
-    var head = '<tr><th>' + L({ es:'Característica', en:'Characteristic' }) + '</th><th class="focal">' + L(r.focal) + '</th>' +
-      r.c.map(function(c, k){ return '<th' + (sel === k ? ' style="background:var(--gold-bg)"' : '') + '>' + L(c.n) + '</th>'; }).join('') + '</tr>';
+    var candidateHeaders = r.c.map(function(c, k){
+      return '<th style="background:var(--surface2);min-width:70px;">' + L(c.n) + '</th>';
+    }).join('');
+    var head = '<tr>' +
+      '<th style="text-align:left;background:var(--green-bg);color:var(--green-dark);">' + L({ es:'Característica', en:'Characteristic' }) + '</th>' +
+      '<th style="background:var(--green-bg);color:var(--green-dark);">' + L(r.focal) + '</th>' +
+      candidateHeaders +
+      '</tr>';
     var rows = r.tr.map(function(tn, i){
-      var cells = r.c.map(function(c, k){
-        return '<td' + (sel === k ? ' style="background:var(--gold-bg)"' : '') + '>' + (c.v[i] ? '<span class="yes">✓</span>' : '<span class="no">·</span>') + '</td>';
+      var focalCell = r.f[i]
+        ? '<span class="yes">✓</span>'
+        : '<span class="no">·</span>';
+      var candCells = r.c.map(function(c, k){
+        var stVal = studentV[k][i];
+        var ansVal = c.v[i];
+        var cellStyle = 'cursor:pointer;min-width:70px;';
+        if (revealed){
+          /* Show correct answer with student comparison */
+          if (ansVal && stVal) cellStyle += 'background:var(--ok-bg);';
+          else if (ansVal && !stVal) cellStyle += 'background:var(--bad-bg);'; /* missed a ✓ */
+          else if (!ansVal && stVal) cellStyle += 'background:var(--gold-bg);'; /* added wrong ✓ */
+          return '<td data-ci="' + k + '" data-ri="' + i + '" style="text-align:center;' + cellStyle + '">' +
+            (ansVal ? '<span class="yes">✓</span>' : '<span class="no">·</span>') + '</td>';
+        }
+        return '<td data-ci="' + k + '" data-ri="' + i + '" style="text-align:center;' + cellStyle + '">' +
+          (stVal ? '<span class="yes" style="font-size:1.1rem;">✓</span>' : '<span class="no" style="font-size:1rem;">□</span>') + '</td>';
       }).join('');
-      return '<tr><td class="rn">' + L(tn) + '</td><td>' + (r.f[i] ? '<span class="yes">✓</span>' : '<span class="no">·</span>') + '</td>' + cells + '</tr>';
+      return '<tr><td class="rn">' + L(tn) + '</td><td style="text-align:center;">' + focalCell + '</td>' + candCells + '</tr>';
     }).join('');
     elT.innerHTML = head + rows;
-    elD.innerHTML = r.c.map(function(c, k){
-      return '<button class="gw-tile' + (sel === k ? ' on' : '') + '" data-k="' + k + '"' + (done ? ' disabled' : '') + '>' +
-        '<span class="gw-key">' + L(c.n) + '</span><span class="gw-sub">' + L({ es:'ver qué comparte', en:'see what it shares' }) + '</span></button>';
-    }).join('');
-    elD.querySelectorAll('[data-k]').forEach(function(b){
-      b.addEventListener('click', function(){
-        sel = parseInt(b.getAttribute('data-k'), 10);
-        render();
-      });
-    });
-    elN.textContent = sel < 0
-      ? L({ es:'Todavía no marcas ningún candidato.', en:'You have not marked any candidate yet.' })
-      : L({
-          es:L(r.c[sel].n) + ' comparte ' + shared(sel) + ' de ' + r.tr.length + ' características con ' + L(r.focal) + '.',
-          en:L(r.c[sel].n) + ' shares ' + shared(sel) + ' of ' + r.tr.length + ' characteristics with ' + L(r.focal) + '.'
-        });
   }
 
+  function renderCount(){
+    var r = RD[rd];
+    if (revealed) { elN.textContent = ''; return; }
+    var parts = r.c.map(function(c, k){
+      var n = countShared(r, k, true);
+      return L(c.n) + ': ' + n + '/' + r.f.filter(function(x){ return x; }).length;
+    });
+    elN.textContent = L({ es:'Rasgos en común con ', en:'Traits shared with ' }) + L(r.focal) + ': ' + parts.join('  |  ');
+  }
+
+  function renderCands(sel){
+    var r = RD[rd];
+    elD.innerHTML = r.c.map(function(c, k){
+      var sh = countShared(r, k, true);
+      return '<button class="gw-tile' + (sel === k ? ' on' : '') + '" data-k="' + k + '"' + (done ? ' disabled' : '') + '>' +
+        '<span class="gw-key">' + L(c.n) + '</span>' +
+        '<span class="gw-sub">' + L({ es:'Compartes que marcaste: ', en:'Shared traits you marked: ' }) + sh + '</span>' +
+        '</button>';
+    }).join('');
+  }
+
+  function render(selOverride){
+    var r = RD[rd];
+    elQ.innerHTML = L({
+      es:'Ronda ' + (rd + 1) + ' de 3: ¿con cuál candidato está más emparentado el ' + L(r.focal) + '?',
+      en:'Round ' + (rd + 1) + ' of 3: which candidate is ' + L(r.focal) + ' most closely related to?'
+    });
+    elM.innerHTML = L({
+      es:'Llena los cuadros (□) de la tabla: marca ✓ en cada rasgo que <em>tú creas</em> que tiene cada candidato. Compara cuántos rasgos comparten con ' + L(r.focal) + ' y luego selecciona tu hipótesis abajo.',
+      en:'Fill in the boxes (□) in the table: tick ✓ for each trait you <em>think</em> each candidate has. Compare how many traits they share with ' + L(r.focal) + ', then select your hypothesis below.'
+    });
+    renderTable();
+    renderCount();
+    renderCands(selOverride !== undefined ? selOverride : -1);
+  }
+
+  var selectedHyp = -1;
+  /* candidate tile click → set hypothesis candidate */
+  elD.addEventListener('click', function(e){
+    if (done) return;
+    var btn = e.target.closest('[data-k]');
+    if (!btn) return;
+    selectedHyp = parseInt(btn.getAttribute('data-k'), 10);
+    renderCands(selectedHyp);
+    say(host, '', L({
+      es:'Hipótesis provisional: el pariente más cercano del ' + L(RD[rd].focal) + ' es ' + L(RD[rd].c[selectedHyp].n) + '. Presiona "Proponer" cuando estés seguro.',
+      en:'Provisional hypothesis: the closest relative of ' + L(RD[rd].focal) + ' is ' + L(RD[rd].c[selectedHyp].n) + '. Press "Propose" when you are sure.'
+    }));
+  });
+
   function advance(){
-    rd++; sel = -1; tries = 0; revealed = false;
+    rd++; tries = 0; revealed = false; selectedHyp = -1;
     if (rd >= 3){
       done = true;
       elK.textContent = L({ es:'Completado', en:'Completed' });
       elK.className = 'gw-btn solved';
       elK.disabled = true;
-      render();
       say(host, 'good', L({
-        es:'En los tres casos el parecido de la silueta apuntaba a un candidato y las características de la nutrición, la reproducción y la estructura apuntaban a otro. Una hipótesis de parentesco se sostiene con las segundas, y aun así hay que contrastarla con fuentes confiables.',
-        en:'In all three cases the resemblance of the silhouette pointed to one candidate and the characteristics of nutrition, reproduction and structure pointed to another. A kinship hypothesis rests on the second kind, and even so it has to be checked against reliable sources.'
+        es:'En los tres casos, comparar los rasgos heredables (nutrición, reproducción, estructura) llevó a un parentesco diferente del que sugería el parecido visual. Una buena hipótesis de parentesco se apoya en esos rasgos, no en la silueta.',
+        en:'In all three cases, comparing inherited traits (nutrition, reproduction, structure) led to a different kinship than visual resemblance suggested. A good kinship hypothesis rests on those traits, not on the silhouette.'
       }));
       return;
     }
-    elK.textContent = L({ es:'Proponer esta hipótesis', en:'Propose this hypothesis' });
+    initStudentV();
+    elK.textContent = L({ es:'Proponer mi hipótesis', en:'Propose my hypothesis' });
     elK.className = 'gw-btn';
     render();
-    say(host, '', L({ es:'Otra tabla. Lee las filas antes de decidir.', en:'Another table. Read the rows before deciding.' }));
+    say(host, '', L({ es:'Nueva tabla. Empieza llenando los cuadros antes de decidir.', en:'New table. Start by filling in the boxes before deciding.' }));
   }
 
   elK.addEventListener('click', function(){
     if (done) return;
     if (revealed){ advance(); return; }
     var r = RD[rd];
-    if (sel < 0){
-      say(host, 'warm', L({ es:'Marca primero un candidato para comparar sus rasgos.', en:'Mark a candidate first to compare its traits.' }));
+    if (selectedHyp < 0){
+      say(host, 'warm', L({ es:'Selecciona primero un candidato tocando uno de los botones de abajo.', en:'First select a candidate by tapping one of the buttons below.' }));
       return;
     }
-    if (sel === r.ok){
+    if (selectedHyp === r.ok){
+      revealed = true;
+      renderTable();
       say(host, 'good', L({
-        es:'Bien sostenida: ' + L(r.c[sel].n) + ' comparte con ' + L(r.focal) + ' los rasgos que se heredan, no solo la forma del cuerpo.',
-        en:'Well supported: ' + L(r.c[sel].n) + ' shares with ' + L(r.focal) + ' the traits that get inherited, not just the shape of the body.'
+        es:'Correcto: ' + L(r.c[selectedHyp].n) + ' comparte con ' + L(r.focal) + ' los rasgos que se heredan. Las celdas verdes muestran los rasgos en común; el fondo rojo indica los que te faltó marcar.',
+        en:'Correct: ' + L(r.c[selectedHyp].n) + ' shares with ' + L(r.focal) + ' the inherited traits. Green cells show matching traits; red background shows ones you missed.'
       }));
-      setTimeout(advance, 900);
+      setTimeout(advance, 1500);
       return;
     }
     tries++;
     if (tries >= 3){
       revealed = true;
-      sel = r.ok;
-      render();
+      selectedHyp = r.ok;
+      renderTable();
+      renderCands(r.ok);
       elK.textContent = L({ es:'Siguiente', en:'Next' });
+      var sh = countShared(r, r.ok, false);
       say(host, 'miss', L({
-        es:'La hipótesis mejor sostenida es ' + L(r.c[r.ok].n) + ': comparte ' + shared(r.ok) + ' características con ' + L(r.focal) + ', y son de las que pasan de una generación a otra. Lo que confundía es que ' + L(r.why) + '.',
-        en:'The best supported hypothesis is ' + L(r.c[r.ok].n) + ': it shares ' + shared(r.ok) + ' characteristics with ' + L(r.focal) + ', and they are of the kind that pass from one generation to the next. What confused things is that ' + L(r.why) + '.'
+        es:'El pariente más cercano es ' + L(r.c[r.ok].n) + ' (' + sh + ' rasgos heredables en común). Lo que confundía: ' + L(r.why) + '. Las celdas de la tabla ahora muestran las respuestas correctas.',
+        en:'The closest relative is ' + L(r.c[r.ok].n) + ' (' + sh + ' shared inherited traits). What confused things: ' + L(r.why) + '. The table cells now show the correct answers.'
       }));
       return;
     }
     say(host, 'warm', L({
-      es:'Comparten ' + shared(sel) + ' de ' + r.tr.length + '. Fíjate en qué se parecen: ' + L(r.why) + '. Revisa las filas que hablan de cómo se alimenta y cómo se reproduce.',
-      en:'They share ' + shared(sel) + ' of ' + r.tr.length + '. Look at what they resemble each other in: ' + L(r.why) + '. Check the rows about how it feeds and how it reproduces.'
+      es:'No es el más cercano. Fíjate en los rasgos de cómo se alimenta y se reproduce. ' + L(r.why) + '. Prueba con otro candidato.',
+      en:'That is not the closest. Look at feeding and reproduction traits. ' + L(r.why) + '. Try another candidate.'
     }));
   });
 
+  initStudentV();
   render();
-  say(host, '', L({ es:'Compara las columnas antes de proponer.', en:'Compare the columns before proposing.' }));
+  say(host, '', L({ es:'Toca los cuadros □ en la tabla para marcar los rasgos de cada candidato. Luego selecciona tu hipótesis.', en:'Tap the □ boxes in the table to mark each candidate\'s traits. Then select your hypothesis.' }));
 }
 /* ══════════════════════════════════════════════════════════════════════════
    PROBLEMAS GRADUADOS :: 10 slots, cada uno con variantes por semilla (Rule 4)

@@ -1207,6 +1207,8 @@ function injectGuideCSS(){
     '.nc-item{text-align:left;padding:.5rem .55rem;border:1.5px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);font-family:inherit;font-size:.8rem;cursor:pointer;transition:all .14s;}',
     '.nc-item:hover{border-color:var(--green);}',
     '.nc-item.mine{background:var(--green-bg);border-color:var(--green);color:var(--green-dark);font-weight:600;}',
+    '.nc-item.theirs{background:#e6f4f1;border-color:#2a9d8f;color:#1a6b62;font-weight:600;}',
+    '[data-theme="dark"] .nc-item.theirs{background:#0d2e2b;border-color:#3abcad;color:#3abcad;}',
     '.nc-item.both{background:var(--gold-bg);border-color:var(--gold);color:var(--text);font-weight:600;}',
     '.nc-tag{display:block;font-size:.66rem;color:var(--text3);margin-top:.15rem;}',
     '.nc-live{font-size:.84rem;color:var(--text2);margin-top:.5rem;}',
@@ -1254,8 +1256,8 @@ function wReparto(rng, host){
     '<div class="gw-h">' + L({ es:'El reparto del recurso', en:'Sharing out the resource' }) + '</div>' +
     '<div class="gw-q" data-r="q"></div>' +
     '<div class="gw-mini">' + L({
-      es:'Sube y baja la población con los botones y mira cuánto pide frente a lo que hay. Busca la población más grande que el lugar alcanza a mantener, y cuando la tengas usa el botón de comprobar.',
-      en:'Raise and lower the population with the buttons and watch how much it asks for against what there is. Look for the largest population the place manages to keep, and when you have it use the check button.'
+      es:'Sube y baja la población con los botones. Busca la población más grande que el lugar alcanza a mantener y presiona Comprobar cuando la tengas.',
+      en:'Raise and lower the population with the buttons. Find the largest population the place can keep and press Check when you have it.'
     }) + '</div>' +
     '<div class="rp-data">' +
       '<div class="rp-box"><div class="rp-lbl" data-r="lb1"></div><div class="rp-val" data-r="v1"></div></div>' +
@@ -1295,8 +1297,10 @@ function wReparto(rng, host){
     elN.textContent = count;
     fill.style.width = Math.min(100, Math.round(demand / d.total * 100)) + '%';
     fill.className = 'rp-fill' + (demand > d.total ? ' over' : '');
-    elD.textContent = L({ es:'La población pide ' + demand, en:'The population asks for ' + demand });
-    elH.textContent = L({ es:'Hay ' + d.total + ' ' + L(sc.unidad), en:'There is ' + d.total + ' ' + L(sc.unidad) });
+    /* Only show numeric scale labels after Comprobar so students
+       cannot trivially back-calculate the answer from (total / need). */
+    elD.textContent = revealed ? L({ es:'La población pide ' + demand, en:'The population asks for ' + demand }) : '';
+    elH.textContent = revealed ? L({ es:'Hay ' + d.total + ' ' + L(sc.unidad), en:'There is ' + d.total + ' ' + L(sc.unidad) }) : '';
     bMin.disabled = (count <= 1 || revealed || done);
     bPlus.disabled = (count >= 30 || revealed || done);
     bChk.disabled = (revealed || done);
@@ -1304,39 +1308,44 @@ function wReparto(rng, host){
   }
 
   function live(){
+    /* Directional hints only — no numbers that reveal the answer */
     var sc = rounds[round], d = data[round], demand = count * d.need;
     if (demand < d.total){
       say(host, '', L({
-        es:'Con ' + count + ' ' + L(sc.animales) + ' la población pide ' + demand + ' y todavía sobran ' + (d.total - demand) + '. Cabe más gente en el lugar.',
-        en:'With ' + count + ' ' + L(sc.animales) + ' the population asks for ' + demand + ' and ' + (d.total - demand) + ' is still left over. The place has room for more.'
+        es:'Todavía sobra ' + L(sc.recurso) + '. El lugar puede mantener más ' + L(sc.animales) + '.',
+        en:'There is still ' + L(sc.recurso) + ' left over. The place can support more ' + L(sc.animales) + '.'
       }));
     } else if (demand === d.total){
       say(host, 'warm', L({
-        es:'Con ' + count + ' ' + L(sc.animales) + ' se pide justo lo que hay: no sobra ni falta nada.',
-        en:'With ' + count + ' ' + L(sc.animales) + ' the demand is exactly what there is: nothing left over, nothing missing.'
+        es:'El recurso alcanza justo para esta cantidad. ¿Es realmente el máximo que el lugar puede sostener?',
+        en:'The resource covers exactly this many. Is this really the maximum the place can support?'
       }));
     } else {
       say(host, 'warm', L({
-        es:'Con ' + count + ' ' + L(sc.animales) + ' la población pide ' + demand + ' y faltan ' + (demand - d.total) + '. Algunos se quedarían sin su parte.',
-        en:'With ' + count + ' ' + L(sc.animales) + ' the population asks for ' + demand + ' and ' + (demand - d.total) + ' is missing. Some would be left without their share.'
+        es:'Con esta cantidad de ' + L(sc.animales) + ' ya falta ' + L(sc.recurso) + '. Algunos se quedarían sin su parte.',
+        en:'With this many ' + L(sc.animales) + ' there is not enough ' + L(sc.recurso) + '. Some would be left without their share.'
       }));
     }
   }
 
   function newRound(){
-    tries = 0; count = 1; revealed = false;
+    tries = 0; revealed = false;
+    /* Start from a random point between 1 and cap+2 so students can't
+       assume "keep pressing + until the bar turns red" is the strategy. */
+    var d = data[round];
+    count = ri(rng, 1, Math.max(1, d.cap + 2));
+    count = Math.min(count, 30);
+    /* Clear any feedback from previous round, then render silently */
+    var fb = host.querySelector('.gw-fb');
+    if (fb) { fb.className = 'gw-fb'; fb.innerHTML = ''; }
     render();
-    say(host, '', L({
-      es:'Nuevo lugar. Empieza por uno y ve subiendo mientras alcance para todos.',
-      en:'New place. Start with one and keep going up while there is enough for everybody.'
-    }));
   }
 
   function step(delta){
     if (revealed || done) return;
     count = Math.max(1, Math.min(30, count + delta));
     render();
-    live();
+    /* No live feedback before Comprobar — silence here is intentional */
   }
 
   bMin.addEventListener('click', function(){ step(-1); });
@@ -1348,8 +1357,8 @@ function wReparto(rng, host){
     if (count === d.cap){
       revealed = true; render();
       say(host, 'good', L({
-        es:'🎉 Esa es la población más grande que ' + L(sc.lugar) + ' mantiene: ' + d.cap + ' ' + L(sc.animales) + '. Con uno más, el ' + L(sc.recurso) + ' ya no alcanza para todos.',
-        en:'🎉 That is the largest population ' + L(sc.lugar) + ' keeps: ' + d.cap + ' ' + L(sc.animales) + '. With one more, the ' + L(sc.recurso) + ' no longer covers everybody.'
+        es:'✓ Esa es la población más grande que ' + L(sc.lugar) + ' mantiene: ' + d.cap + ' ' + L(sc.animales) + '. Con uno más, el ' + L(sc.recurso) + ' ya no alcanza para todos.',
+        en:'✓ That is the largest population ' + L(sc.lugar) + ' keeps: ' + d.cap + ' ' + L(sc.animales) + '. With one more, the ' + L(sc.recurso) + ' no longer covers everybody.'
       }));
       return;
     }
@@ -1425,7 +1434,7 @@ function wSignos(rng, host){
             en:'the squirrel feeds on acorns and the ones it buries and forgets sprout far from the parent tree' } }
   ];
   var rounds = shuffle(PAIRS, rng).slice(0, 4);
-  var SIGNS = ['+', '-', '0'];
+  var SIGNS = ['-', '0', '+'];
   var idx = 0, chosen = [null, null], tries = 0, revealed = false, done = false;
 
   host.innerHTML =
@@ -1436,11 +1445,11 @@ function wSignos(rng, host){
       en:'Mark what happens to each one: + if it gains, &#8722; if it is harmed and 0 if it neither gains nor loses. You can change the marks as often as you like.'
     }) + '</div>' +
     '<div class="sg-card" data-r="card"></div>' +
-    '<div class="sg-live" data-r="live"></div>' +
     '<div class="gw-row">' +
       '<button class="gw-btn" data-r="check">' + L({ es:'Comprobar', en:'Check' }) + '</button>' +
       '<button class="gw-btn" data-r="next" style="display:none">' + L({ es:'Siguiente pareja', en:'Next pair' }) + '</button>' +
     '</div>' +
+    '<div class="sg-live" data-r="live" style="display:none"></div>' +
     '<div class="gw-fb"></div>';
 
   var elQ = host.querySelector('[data-r="q"]'),
@@ -1478,17 +1487,20 @@ function wSignos(rng, host){
     var p = rounds[idx];
     elQ.textContent = L({ es:'Pareja ' + (idx + 1) + ' de 4', en:'Pair ' + (idx + 1) + ' of 4' });
     card.innerHTML = rowHTML(0, L(p.a), chosen[0]) + rowHTML(1, L(p.b), chosen[1]);
-    liveEl.innerHTML = relLive();
+    /* sg-live only shown after Comprobar — hidden while student is choosing */
+    if (revealed) {
+      liveEl.style.display = 'block';
+      liveEl.innerHTML = relLive();
+    } else {
+      liveEl.style.display = 'none';
+      liveEl.innerHTML = '';
+    }
     card.querySelectorAll('.sg-btn').forEach(function(b){
       b.addEventListener('click', function(){
         if (revealed || done) return;
         chosen[parseInt(b.getAttribute('data-who'), 10)] = b.getAttribute('data-s');
         render();
-        var t0 = chosen[0], t1 = chosen[1];
-        say(host, '', L({
-          es:'Según tus marcas, ' + L(p.a).toLowerCase() + ' ' + sname(t0) + ' y ' + L(p.b).toLowerCase() + ' ' + sname(t1) + '.',
-          en:'According to your marks, ' + L(p.a).toLowerCase() + ' ' + sname(t0) + ' and ' + L(p.b).toLowerCase() + ' ' + sname(t1) + '.'
-        }));
+        /* No say() here — feedback box stays silent until Comprobar */
       });
     });
     bChk.disabled = (revealed || done);
@@ -1497,11 +1509,9 @@ function wSignos(rng, host){
 
   function newRound(){
     chosen = [null, null]; tries = 0; revealed = false;
+    var fb = host.querySelector('.gw-fb');
+    if (fb) { fb.className = 'gw-fb'; fb.innerHTML = ''; }
     render();
-    say(host, '', L({
-      es:'Pregúntate primero qué se lleva cada uno de esta relación.',
-      en:'Ask yourself first what each one takes from this relationship.'
-    }));
   }
 
   bChk.addEventListener('click', function(){
@@ -1514,8 +1524,8 @@ function wSignos(rng, host){
     if (chosen[0] === p.sa && chosen[1] === p.sb){
       revealed = true; render();
       say(host, 'good', L({
-        es:'🎉 Así es: esto es ' + L(p.rel) + ', porque ' + L(p.why) + '.',
-        en:'🎉 That is it: this is ' + L(p.rel) + ', because ' + L(p.why) + '.'
+        es:'✓ Así es: esto es ' + L(p.rel) + ', porque ' + L(p.why) + '.',
+        en:'✓ That is it: this is ' + L(p.rel) + ', because ' + L(p.why) + '.'
       }));
       return;
     }
@@ -1615,7 +1625,9 @@ function wNicho(rng, host){
     });
     grid.innerHTML = sc.foods.map(function(f, i){
       var inA = dietA.indexOf(i) !== -1, inB = sel.indexOf(i) !== -1;
-      var cls = 'nc-item' + (inA && inB ? ' both' : ((inA || inB) ? ' mine' : ''));
+      /* three distinct color states:
+         both → gold  |  only A → green (mine)  |  only B → teal (theirs)  |  unused → plain */
+      var cls = 'nc-item' + (inA && inB ? ' both' : inA ? ' mine' : inB ? ' theirs' : '');
       var tag = (inA && inB) ? L({ es:'los dos', en:'both of them' })
               : inA ? L(sc.a) : inB ? L(sc.b) : L({ es:'sin usar', en:'unused' });
       return '<button class="' + cls + '" data-i="' + i + '">' + L(f) + '<span class="nc-tag">' + tag + '</span></button>';
@@ -1701,8 +1713,8 @@ function wNicho(rng, host){
     if (k === 1){
       revealed = true; render();
       say(host, 'good', L({
-        es:'🎉 Con un solo alimento compartido el traslape es pequeño: los dos animales caben en el mismo lugar porque el resto del alimento se lo reparten.',
-        en:'🎉 With a single shared food the overlap is small: both animals fit in the same place because they divide up the rest of the food.'
+        es:'✓ Con un solo alimento compartido el traslape es pequeño: los dos animales caben en el mismo lugar porque el resto del alimento se lo reparten.',
+        en:'✓ With a single shared food the overlap is small: both animals fit in the same place because they divide up the rest of the food.'
       }));
       return;
     }
