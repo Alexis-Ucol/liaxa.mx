@@ -929,17 +929,9 @@ async function generatePDF() {
   doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
   doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
 
-  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
-  //   When injecting logos, replace the two placeholder lines below with:
-  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //   Then uncomment the two doc.addImage() calls.
-  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
-  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
-  // var logoLeftB64  = '';
-  // var logoRightB64 = '';
-  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
-  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────
+  if (SCHOOL.logoLeftB64)  { try { doc.addImage(SCHOOL.logoLeftB64,  'PNG', M,   4, 48, 22); } catch(e){} }
+  if (SCHOOL.logoRightB64) { try { doc.addImage(SCHOOL.logoRightB64, 'PNG', 130, 4, 48, 22); } catch(e){} }
   // ─────────────────────────────────────────────────────────────────────────
 
   // LIAXA logo — right side of white strip
@@ -1886,34 +1878,32 @@ function buildLesson(rng) {
         '<div class="cls-bins">' + BINS.map(function(b, bi){ return '<button class="cls-bin" onclick="wCapPick(' + bi + ')">' + b + '</button>'; }).join('') + '</div>' +
         '<div class="rfb" id="wCapFb"></div>';
     }
-    window.wCapPick = function(bi) {
-      if (st.done) return;
-      var it = IT[st.seq[st.i]];
-      var fb = document.getElementById('wCapFb');
-      if (bi === it.bin) {
-        st.hits++; st.tries = 0; st.i++; st.lastWhy = Lg(it.why);
-        if (st.i >= IT.length) st.done = true;
-        render();
-        if (!st.done) document.getElementById('wCapFb').innerHTML =
-          '<span class="rok">✓ ' + L('Correcto.', 'Correct.') + '</span> ' + Lg(it.why);
-        return;
-      }
-      st.tries++;
-      if (st.tries >= 3) {
-        fb.innerHTML = '<b>' + BINS[it.bin] + '.</b> ' + Lg(it.why);
-        st.tries = 0; st.i++;
-        if (st.i >= IT.length) st.done = true;
-        setTimeout(render, 1700);
-        return;
-      }
-      fb.textContent = (it.bin === 0)
-        ? L('Todavía no. Pregúntate si el enunciado remite a un documento o a un trabajo que otra persona podría revisar aparte.',
-            'Not yet. Ask yourself whether the statement points to a document or to work that someone else could check separately.')
-        : (it.bin === 1)
-          ? L('Todavía no. Busca la marca que dice de quién procede la afirmación: si la hay, la voz no es la del reportaje.',
-              'Not yet. Look for the marker saying where the claim comes from: if it is there, the voice is not that of the report.')
-          : L('Todavía no. Fíjate si el enunciado reúne varios hechos y les da un sentido que ningún registro contiene por sí solo.',
-              'Not yet. Notice whether the statement gathers several facts and gives them a meaning that no record holds on its own.');
+    window.wCapPick = function(bi){
+      if (st.done || st.locked) return;
+      st.locked = true;
+      var _seq = st.seq || null;
+      var _it = (typeof ITEMS !== 'undefined' ? ITEMS : IT)[_seq ? _seq[st.i] : st.i];
+      var _correct = _it.bin !== undefined ? _it.bin : _it.correct;
+      var _isOk = (bi === _correct);
+      var _label = typeof BINS !== 'undefined' ? (BINS[_correct] || '') : '';
+      var _why = _it.why ? (typeof _it.why === 'object' ? (_it.why[LANG] || '') : _it.why) : '';
+      var _msg = _isOk
+        ? '<b style="color:var(--ok)">\u2713 ' + _label + '.</b> ' + _why
+        : '<b style="color:var(--bad)">\u2717 ' + (LANG===\'es\'?\'Era \':\'It was \') + _label + \'.</b> \' + _why;
+      var _fe = document.getElementById('wCapFb');
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="wCapSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.cls-bin');
+      if (_bs) _bs.forEach(function(b, _i){
+        b.style.pointerEvents = 'none';
+        b.style.opacity = (_i === bi) ? '1' : '0.35';
+        if (_i === bi) b.style.borderColor = _isOk ? 'var(--ok)' : 'var(--bad)';
+      });
+    };
+    window.wCapSig = function(){
+      st.i++;
+      st.locked = false;
+      if (st.i >= (typeof ITEMS !== 'undefined' ? ITEMS : IT).length) st.done = true;
+      paint();
     };
     render();
   }
@@ -2130,27 +2120,32 @@ function buildLesson(rng) {
       if (st.r >= RD.length) st.done = true;
       render();
     }
-    window.wBriPick = function(oi) {
-      if (st.done) return;
-      var rd = RD[st.r];
-      var fb = document.getElementById('wBriFb');
-      if (oi === rd.ok) {
-        var why = Lg(rd.why);
-        st.lastWhy = why;
-        advance();
-        var nf = document.getElementById('wBriFb');
-        if (nf) nf.innerHTML = '<span class="rok">✓ ' + L('Ese es el puente.', 'That is the bridge.') + '</span> ' + why;
-        return;
-      }
-      st.tries++;
-      if (st.tries >= 3) {
-        var raw = rd.opts[LANG] || rd.opts.es;
-        fb.innerHTML = '<b>' + raw[rd.ok] + '</b> ' + Lg(rd.why);
-        setTimeout(advance, 2000);
-        return;
-      }
-      fb.textContent = L('Todavía no. Descarta la frase que solo repite el dato, la que afirma más de lo que las fuentes sostienen y la que dice qué preferiría quien escribe.',
-                         'Not yet. Rule out the sentence that only repeats the fact, the one that claims more than the sources support and the one that says what the writer would prefer.');
+    window.wBriPick = function(oi){
+      if (st.done || st.locked) return;
+      st.locked = true;
+      var _seq = st.seq || null;
+      var _it = (typeof ITEMS !== 'undefined' ? ITEMS : IT)[_seq ? _seq[st.i] : st.i];
+      var _correct = _it.bin !== undefined ? _it.bin : _it.correct;
+      var _isOk = (oi === _correct);
+      var _label = typeof BINS !== 'undefined' ? (BINS[_correct] || '') : '';
+      var _why = _it.why ? (typeof _it.why === 'object' ? (_it.why[LANG] || '') : _it.why) : '';
+      var _msg = _isOk
+        ? '<b style="color:var(--ok)">\u2713 ' + _label + '.</b> ' + _why
+        : '<b style="color:var(--bad)">\u2717 ' + (LANG===\'es\'?\'Era \':\'It was \') + _label + \'.</b> \' + _why;
+      var _fe = document.getElementById('wBriFb');
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="wBriSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.cls-bin');
+      if (_bs) _bs.forEach(function(b, _i){
+        b.style.pointerEvents = 'none';
+        b.style.opacity = (_i === oi) ? '1' : '0.35';
+        if (_i === oi) b.style.borderColor = _isOk ? 'var(--ok)' : 'var(--bad)';
+      });
+    };
+    window.wBriSig = function(){
+      st.i++;
+      st.locked = false;
+      if (st.i >= (typeof ITEMS !== 'undefined' ? ITEMS : IT).length) st.done = true;
+      paint();
     };
     render();
   }
@@ -2190,27 +2185,32 @@ function buildLesson(rng) {
       if (st.r >= RD.length) st.done = true;
       render();
     }
-    window.wSrcPick = function(oi) {
-      if (st.done) return;
-      var rd = RD[st.r];
-      var fb = document.getElementById('wSrcFb');
-      if (oi === rd.ok) {
-        var why = Lg(rd.why);
-        st.lastWhy = why;
-        advance();
-        var nf = document.getElementById('wSrcFb');
-        if (nf) nf.innerHTML = '<span class="rok">✓ ' + L('Buena elección.', 'Good choice.') + '</span> ' + why;
-        return;
-      }
-      st.tries++;
-      if (st.tries >= 3) {
-        var raw = rd.opts[LANG] || rd.opts.es;
-        fb.innerHTML = '<b>' + raw[rd.ok] + '.</b> ' + Lg(rd.why);
-        setTimeout(advance, 1900);
-        return;
-      }
-      fb.textContent = L('Todavía no. Pregúntate quién anotó ese dato mientras ocurría o quién lo vivió: la fuente correcta es la que estuvo más cerca del suceso.',
-                         'Not yet. Ask yourself who wrote that down while it happened or who lived it: the right source is the one that was closest to the event.');
+    window.wSrcPick = function(oi){
+      if (st.done || st.locked) return;
+      st.locked = true;
+      var _seq = st.seq || null;
+      var _it = (typeof ITEMS !== 'undefined' ? ITEMS : IT)[_seq ? _seq[st.i] : st.i];
+      var _correct = _it.bin !== undefined ? _it.bin : _it.correct;
+      var _isOk = (oi === _correct);
+      var _label = typeof BINS !== 'undefined' ? (BINS[_correct] || '') : '';
+      var _why = _it.why ? (typeof _it.why === 'object' ? (_it.why[LANG] || '') : _it.why) : '';
+      var _msg = _isOk
+        ? '<b style="color:var(--ok)">\u2713 ' + _label + '.</b> ' + _why
+        : '<b style="color:var(--bad)">\u2717 ' + (LANG===\'es\'?\'Era \':\'It was \') + _label + \'.</b> \' + _why;
+      var _fe = document.getElementById('wSrcFb');
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="wSrcSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.cls-bin');
+      if (_bs) _bs.forEach(function(b, _i){
+        b.style.pointerEvents = 'none';
+        b.style.opacity = (_i === oi) ? '1' : '0.35';
+        if (_i === oi) b.style.borderColor = _isOk ? 'var(--ok)' : 'var(--bad)';
+      });
+    };
+    window.wSrcSig = function(){
+      st.i++;
+      st.locked = false;
+      if (st.i >= (typeof ITEMS !== 'undefined' ? ITEMS : IT).length) st.done = true;
+      paint();
     };
     render();
   }

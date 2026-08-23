@@ -929,17 +929,9 @@ async function generatePDF() {
   doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
   doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
 
-  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
-  //   When injecting logos, replace the two placeholder lines below with:
-  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //   Then uncomment the two doc.addImage() calls.
-  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
-  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
-  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
-  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
-  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
-  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────
+  if (SCHOOL.logoLeftB64)  { try { doc.addImage(SCHOOL.logoLeftB64,  'PNG', M,   4, 48, 22); } catch(e){} }
+  if (SCHOOL.logoRightB64) { try { doc.addImage(SCHOOL.logoRightB64, 'PNG', 130, 4, 48, 22); } catch(e){} }
   // ─────────────────────────────────────────────────────────────────────────
 
   // LIAXA logo — right side of white strip
@@ -1913,6 +1905,7 @@ function buildLesson(rng) {
         '<div class="iw-fb" id="psFb">' + (fb || '') + '</div>';
     }
     window.psPick = function (bi) {
+      if (st.done || st.locked) return;
       if (st.done) return;
       var it = items[st.i], key = PKEYS[bi];
       if (key === it.b) {
@@ -1935,6 +1928,11 @@ function buildLesson(rng) {
         T('Todavía no. Una medida de ', 'Not yet. A measure of ') + L(POST[key].n).toLowerCase() +
         T(' ', ' ') + L(POST[key].d) + T(', y esta no hace eso. Pregúntate en qué lugar quedaría la lengua el lunes siguiente.',
                                           ', and this one does not do that. Ask yourself where the language would be left the following Monday.');
+    };
+
+    window.psSig = function(){
+      st.locked = false;
+      (typeof paint !== 'undefined' ? paint : render)('');
     };
     paint('');
   }
@@ -1965,7 +1963,12 @@ function buildLesson(rng) {
     function advance(fb) {
       st.r++; st.tries = 0; st.marks = {};
       if (st.r >= order.length) st.done = true;
-      paint(fb);
+      if (st.done) { paint(''); return; }
+      st.locked = true;
+      var _fe = document.getElementById('psFb');
+      if (_fe) _fe.innerHTML = (fb || '') + '<br><button onclick="psSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.binbtn');
+      if (_bs) _bs.forEach(function(b){ b.style.opacity='0.35'; b.style.pointerEvents='none'; });
     }
     window.anTap = function (k) {
       if (st.done) return;
@@ -2157,13 +2160,24 @@ function buildLesson(rng) {
     function nextRound(fb) {
       st.r++; st.d = null; st.a = null; st.c = null; st.tries = 0; st.ajuste = '· · ·';
       if (st.r >= ronda.length) st.done = true;
-      paint(fb);
+      if (st.done) { paint(''); return; }
+      st.locked = true;
+      var _fe = document.getElementById('msFb');
+      if (_fe) _fe.innerHTML = (fb || '') + '<br><button onclick="msSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.binbtn');
+      if (_bs) _bs.forEach(function(b){ b.style.opacity='0.35'; b.style.pointerEvents='none'; });
     }
     window.msPick = function (dim, val) {
+      if (st.done || st.locked) return;
       if (st.done) return;
       st[dim] = (st[dim] === val) ? null : val;
       st.ajuste = '· · ·';
       paint('');
+    };
+
+    window.msSig = function(){
+      st.locked = false;
+      (typeof paint !== 'undefined' ? paint : render)('');
     };
     window.msCheck = function () {
       if (st.done) return;

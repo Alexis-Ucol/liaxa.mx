@@ -929,17 +929,9 @@ async function generatePDF() {
   doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
   doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
 
-  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
-  //   When injecting logos, replace the two placeholder lines below with:
-  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //   Then uncomment the two doc.addImage() calls.
-  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
-  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
-  // var logoLeftB64  = '';
-  // var logoRightB64 = '';
-  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
-  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────
+  if (SCHOOL.logoLeftB64)  { try { doc.addImage(SCHOOL.logoLeftB64,  'PNG', M,   4, 48, 22); } catch(e){} }
+  if (SCHOOL.logoRightB64) { try { doc.addImage(SCHOOL.logoRightB64, 'PNG', 130, 4, 48, 22); } catch(e){} }
   // ─────────────────────────────────────────────────────────────────────────
 
   // LIAXA logo — right side of white strip
@@ -1627,26 +1619,30 @@ function buildLesson(rng) {
         '<div class="rfb" id="veFb">' + st.msg + '</div>';
     }
     window.vePick = function(bi){
-      if (st.done) return;
-      var it = ITEMS[st.seq[st.i]];
-      if (bi === it.bin) {
-        st.msg = '<b>' + BINS[it.bin] + '.</b> ' + it.why[LANG];
-        st.tries = 0; st.i++;
-        if (st.i >= ITEMS.length) { st.done = true; st.msg += ' ' + L('Ya distingues cuándo el lenguaje solo informa y cuándo además construye.','You can now tell when language only informs and when it also builds.'); }
-        paint(); return;
-      }
-      st.tries++;
-      if (st.tries >= 3) {
-        st.msg = L('Era ','It was ') + '<b>' + BINS[it.bin] + '</b>. ' + it.why[LANG];
-        st.tries = 0; st.i++;
-        if (st.i >= ITEMS.length) st.done = true;
-        paint(); return;
-      }
-      st.msg = (bi === 0)
-        ? L('Todavía no. Busca si alguna palabra le presta a la cosa algo que en la realidad no podría hacer.',
-            'Not yet. Check whether some word lends the thing something it could not really do.')
-        : L('Todavía no. Pregúntate si podrías decir lo mismo con otras palabras sin perder nada.',
-            'Not yet. Ask yourself whether you could say the same with other words and lose nothing.');
+      if (st.done || st.locked) return;
+      st.locked = true;
+      var _seq = st.seq || null;
+      var _it = (typeof ITEMS !== 'undefined' ? ITEMS : IT)[_seq ? _seq[st.i] : st.i];
+      var _correct = _it.bin !== undefined ? _it.bin : _it.correct;
+      var _isOk = (bi === _correct);
+      var _label = typeof BINS !== 'undefined' ? (BINS[_correct] || '') : '';
+      var _why = _it.why ? (typeof _it.why === 'object' ? (_it.why[LANG] || '') : _it.why) : '';
+      var _msg = _isOk
+        ? '<b style="color:var(--ok)">\u2713 ' + _label + '.</b> ' + _why
+        : '<b style="color:var(--bad)">\u2717 ' + (LANG===\'es\'?\'Era \':\'It was \') + _label + \'.</b> \' + _why;
+      var _fe = document.getElementById('veFb');
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="veSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.cls-bin');
+      if (_bs) _bs.forEach(function(b, _i){
+        b.style.pointerEvents = 'none';
+        b.style.opacity = (_i === bi) ? '1' : '0.35';
+        if (_i === bi) b.style.borderColor = _isOk ? 'var(--ok)' : 'var(--bad)';
+      });
+    };
+    window.veSig = function(){
+      st.i++;
+      st.locked = false;
+      if (st.i >= (typeof ITEMS !== 'undefined' ? ITEMS : IT).length) st.done = true;
       paint();
     };
     paint();
@@ -1763,29 +1759,30 @@ function buildLesson(rng) {
         '<div class="rfb" id="genFb">' + st.msg + '</div>';
     }
     window.genPick = function(bi){
-      if (st.done) return;
-      var it = G[st.seq[st.i]];
-      if (bi === it.bin) {
-        st.msg = '<b>' + BINS[it.bin] + '.</b> ' + it.why[LANG];
-        st.tries = 0; st.i++;
-        if (st.i >= G.length) { st.done = true; st.msg += ' ' + L('Los tres géneros hablaron del mismo lugar y ninguno se parece al otro.','The three genres spoke of the same place and none of them resembles another.'); }
-        paint(); return;
-      }
-      st.tries++;
-      if (st.tries >= 3) {
-        st.msg = L('Era ','It was ') + '<b>' + BINS[it.bin] + '</b>. ' + it.why[LANG];
-        st.tries = 0; st.i++;
-        if (st.i >= G.length) st.done = true;
-        paint(); return;
-      }
-      st.msg = (bi === 0)
-        ? L('Todavía no. Pregúntate si aquí alguien cuenta desde fuera lo que ocurrió, o si el texto está hecho de otra cosa.',
-            'Not yet. Ask whether someone here tells from outside what happened, or whether the text is made of something else.')
-        : (bi === 1)
-          ? L('Todavía no. Revisa si el fragmento está cortado en versos y si hay una voz que dice lo que siente.',
-              'Not yet. Check whether the fragment is cut into verse lines and whether a voice says what it feels.')
-          : L('Todavía no. Busca el nombre de un personaje delante de sus palabras o una indicación para el escenario.',
-              'Not yet. Look for a character name in front of the words or an indication for the stage.');
+      if (st.done || st.locked) return;
+      st.locked = true;
+      var _seq = st.seq || null;
+      var _it = (typeof ITEMS !== 'undefined' ? ITEMS : IT)[_seq ? _seq[st.i] : st.i];
+      var _correct = _it.bin !== undefined ? _it.bin : _it.correct;
+      var _isOk = (bi === _correct);
+      var _label = typeof BINS !== 'undefined' ? (BINS[_correct] || '') : '';
+      var _why = _it.why ? (typeof _it.why === 'object' ? (_it.why[LANG] || '') : _it.why) : '';
+      var _msg = _isOk
+        ? '<b style="color:var(--ok)">\u2713 ' + _label + '.</b> ' + _why
+        : '<b style="color:var(--bad)">\u2717 ' + (LANG===\'es\'?\'Era \':\'It was \') + _label + \'.</b> \' + _why;
+      var _fe = document.getElementById('genFb');
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="genSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.cls-bin');
+      if (_bs) _bs.forEach(function(b, _i){
+        b.style.pointerEvents = 'none';
+        b.style.opacity = (_i === bi) ? '1' : '0.35';
+        if (_i === bi) b.style.borderColor = _isOk ? 'var(--ok)' : 'var(--bad)';
+      });
+    };
+    window.genSig = function(){
+      st.i++;
+      st.locked = false;
+      if (st.i >= (typeof ITEMS !== 'undefined' ? ITEMS : IT).length) st.done = true;
       paint();
     };
     paint();
@@ -2026,26 +2023,30 @@ function buildLesson(rng) {
         '<div class="rfb" id="opiFb">' + st.msg + '</div>';
     }
     window.opiPick = function(bi){
-      if (st.done) return;
-      var it = O[st.seq[st.i]];
-      if (bi === it.bin) {
-        st.msg = '<b>' + BINS[it.bin] + '.</b> ' + it.why[LANG];
-        st.tries = 0; st.i++;
-        if (st.i >= O.length) { st.done = true; st.msg += ' ' + L('Ya reconoces cuándo una recomendación se sostiene sola.','You can now recognize when a recommendation stands on its own.'); }
-        paint(); return;
-      }
-      st.tries++;
-      if (st.tries >= 3) {
-        st.msg = L('Era ','It was ') + '<b>' + BINS[it.bin] + '</b>. ' + it.why[LANG];
-        st.tries = 0; st.i++;
-        if (st.i >= O.length) st.done = true;
-        paint(); return;
-      }
-      st.msg = (bi === 0)
-        ? L('Todavía no. Pregúntate qué fragmento tendría que abrir otro lector para comprobar esta frase.',
-            'Not yet. Ask which fragment another reader would have to open to check this sentence.')
-        : L('Todavía no. Cámbiale el título por el de otro libro: si la frase sigue funcionando, no habla de este texto.',
-            'Not yet. Swap the title for another book: if the sentence still works, it is not about this text.');
+      if (st.done || st.locked) return;
+      st.locked = true;
+      var _seq = st.seq || null;
+      var _it = (typeof ITEMS !== 'undefined' ? ITEMS : IT)[_seq ? _seq[st.i] : st.i];
+      var _correct = _it.bin !== undefined ? _it.bin : _it.correct;
+      var _isOk = (bi === _correct);
+      var _label = typeof BINS !== 'undefined' ? (BINS[_correct] || '') : '';
+      var _why = _it.why ? (typeof _it.why === 'object' ? (_it.why[LANG] || '') : _it.why) : '';
+      var _msg = _isOk
+        ? '<b style="color:var(--ok)">\u2713 ' + _label + '.</b> ' + _why
+        : '<b style="color:var(--bad)">\u2717 ' + (LANG===\'es\'?\'Era \':\'It was \') + _label + \'.</b> \' + _why;
+      var _fe = document.getElementById('opiFb');
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="opiSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.cls-bin');
+      if (_bs) _bs.forEach(function(b, _i){
+        b.style.pointerEvents = 'none';
+        b.style.opacity = (_i === bi) ? '1' : '0.35';
+        if (_i === bi) b.style.borderColor = _isOk ? 'var(--ok)' : 'var(--bad)';
+      });
+    };
+    window.opiSig = function(){
+      st.i++;
+      st.locked = false;
+      if (st.i >= (typeof ITEMS !== 'undefined' ? ITEMS : IT).length) st.done = true;
       paint();
     };
     paint();

@@ -929,17 +929,9 @@ async function generatePDF() {
   doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
   doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
 
-  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
-  //   When injecting logos, replace the two placeholder lines below with:
-  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //   Then uncomment the two doc.addImage() calls.
-  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
-  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
-  // var logoLeftB64  = '';
-  // var logoRightB64 = '';
-  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
-  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────
+  if (SCHOOL.logoLeftB64)  { try { doc.addImage(SCHOOL.logoLeftB64,  'PNG', M,   4, 48, 22); } catch(e){} }
+  if (SCHOOL.logoRightB64) { try { doc.addImage(SCHOOL.logoRightB64, 'PNG', 130, 4, 48, 22); } catch(e){} }
   // ─────────────────────────────────────────────────────────────────────────
 
   // LIAXA logo — right side of white strip
@@ -1920,6 +1912,7 @@ function buildLesson(rng) {
         '<div class="iw-fb" id="clFb">' + (fb || '') + '</div>';
     }
     window.clPick = function (bi) {
+      if (st.done || st.locked) return;
       if (st.done) return;
       var it = ITEMS[st.seq[st.i]];
       if (bi === it.bin) {
@@ -1937,6 +1930,11 @@ function buildLesson(rng) {
         return;
       }
       document.getElementById('clFb').textContent = L(NUDGE[bi]);
+    };
+
+    window.clSig = function(){
+      st.locked = false;
+      (typeof paint !== 'undefined' ? paint : render)('');
     };
     paint('');
   }
@@ -1975,7 +1973,12 @@ function buildLesson(rng) {
     function advance(fb) {
       st.r++; st.tries = 0; st.marks = {};
       if (st.r >= order.length) { st.done = true; }
-      paint(fb);
+      if (st.done) { paint(''); return; }
+      st.locked = true;
+      var _fe = document.getElementById('clFb');
+      if (_fe) _fe.innerHTML = (fb || '') + '<br><button onclick="clSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.binbtn');
+      if (_bs) _bs.forEach(function(b){ b.style.opacity='0.35'; b.style.pointerEvents='none'; });
     }
     window.huTap = function (j) {
       if (st.done) return;
@@ -2117,7 +2120,13 @@ function buildLesson(rng) {
     function nextRound(msg) {
       st.r++; st.tries = 0; st.esp = null; st.lug = null; st.mom = null; st.msg = msg;
       if (st.r >= C.casos.length) st.done = true;
-      paint();
+      if (st.done) { paint(); return; }
+      st.locked = true;
+      var _fe = document.getElementById('bwFb');
+      var _msg = arguments[0] || '';
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="bwSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.bwopt');
+      if (_bs) _bs.forEach(function(b){ b.style.opacity='0.35'; b.style.pointerEvents='none'; });
     }
     window.bwPick = function (grp, i) {
       if (st.done) return;
@@ -2128,6 +2137,7 @@ function buildLesson(rng) {
       paint();
     };
     window.bwCheck = function () {
+      if (st.done || st.locked) return;
       if (st.done) return;
       var cs = caso(), fb = document.getElementById('bwFb');
       if (st.esp === null || st.lug === null || st.mom === null) {
@@ -2160,6 +2170,11 @@ function buildLesson(rng) {
                 'The space is right. Check the time: the scene says at what hour it happens, and the light of the shoot depends on that.');
       }
       fb.textContent = tip;
+    };
+
+    window.bwSig = function(){
+      st.locked = false;
+      paint();
     };
     paint();
   }

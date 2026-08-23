@@ -929,17 +929,9 @@ async function generatePDF() {
   doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
   doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
 
-  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
-  //   When injecting logos, replace the two placeholder lines below with:
-  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //   Then uncomment the two doc.addImage() calls.
-  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
-  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
-  // var logoLeftB64  = '';
-  // var logoRightB64 = '';
-  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
-  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────
+  if (SCHOOL.logoLeftB64)  { try { doc.addImage(SCHOOL.logoLeftB64,  'PNG', M,   4, 48, 22); } catch(e){} }
+  if (SCHOOL.logoRightB64) { try { doc.addImage(SCHOOL.logoRightB64, 'PNG', 130, 4, 48, 22); } catch(e){} }
   // ─────────────────────────────────────────────────────────────────────────
 
   // LIAXA logo — right side of white strip
@@ -1512,26 +1504,30 @@ function buildLesson(rng) {
         '<div class="rfb" id="rimFb">' + st.msg + '</div>';
     }
     window.rimPick = function(bi){
-      if (st.done) return;
-      var it = ITEMS[st.seq[st.i]];
-      if (bi === it.bin) {
-        st.msg = '<b>' + BINS[it.bin] + '.</b> ' + it.why[LANG];
-        st.tries = 0; st.i++;
-        if (st.i >= ITEMS.length) { st.done = true; st.msg += ' ' + L('Ya distingues los dos ecos de la lengua.','You can now tell the two echoes of the language apart.'); }
-        paint(); return;
-      }
-      st.tries++;
-      if (st.tries >= 3) {
-        st.msg = L('Era ','It was ') + '<b>' + BINS[it.bin] + '</b>. ' + it.why[LANG];
-        st.tries = 0; st.i++;
-        if (st.i >= ITEMS.length) st.done = true;
-        paint(); return;
-      }
-      st.msg = (bi === 0)
-        ? L('Todavía no. Fíjate si además de las vocales se repiten también las consonantes finales.',
-            'Not yet. Check whether the final consonants repeat as well as the vowels.')
-        : L('Todavía no. Compara sonido por sonido a partir de la vocal acentuada, no solo las vocales.',
-            'Not yet. Compare sound by sound from the stressed vowel, not only the vowels.');
+      if (st.done || st.locked) return;
+      st.locked = true;
+      var _seq = st.seq || null;
+      var _it = (typeof ITEMS !== 'undefined' ? ITEMS : IT)[_seq ? _seq[st.i] : st.i];
+      var _correct = _it.bin !== undefined ? _it.bin : _it.correct;
+      var _isOk = (bi === _correct);
+      var _label = typeof BINS !== 'undefined' ? (BINS[_correct] || '') : '';
+      var _why = _it.why ? (typeof _it.why === 'object' ? (_it.why[LANG] || '') : _it.why) : '';
+      var _msg = _isOk
+        ? '<b style="color:var(--ok)">\u2713 ' + _label + '.</b> ' + _why
+        : '<b style="color:var(--bad)">\u2717 ' + (LANG===\'es\'?\'Era \':\'It was \') + _label + \'.</b> \' + _why;
+      var _fe = document.getElementById('rimFb');
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="rimSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.cls-bin');
+      if (_bs) _bs.forEach(function(b, _i){
+        b.style.pointerEvents = 'none';
+        b.style.opacity = (_i === bi) ? '1' : '0.35';
+        if (_i === bi) b.style.borderColor = _isOk ? 'var(--ok)' : 'var(--bad)';
+      });
+    };
+    window.rimSig = function(){
+      st.i++;
+      st.locked = false;
+      if (st.i >= (typeof ITEMS !== 'undefined' ? ITEMS : IT).length) st.done = true;
       paint();
     };
     paint();
@@ -1930,9 +1926,16 @@ function buildLesson(rng) {
       st.tries = 0; st.r++; st.ord = perm(4);
       if (st.r >= R.length) { st.done = true; st.msg = extra + ' ' + L('Ya sabes cerrar un par de versos por el oído.','You can now close a pair of lines by ear.'); }
       else st.msg = extra;
-      paint();
+      if (st.done) { paint(); return; }
+      st.locked = true;
+      var _fe = document.getElementById('canFb');
+      var _msg = arguments[0] || '';
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="canSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.rp-opt');
+      if (_bs) _bs.forEach(function(b){ b.style.opacity='0.35'; b.style.pointerEvents='none'; });
     }
     window.canPick = function(k){
+      if (st.done || st.locked) return;
       if (st.done) return;
       var ro = R[st.r];
       if (k === ro.ok) { nextRound('<b>' + L('Suena.','It sounds right.') + '</b> ' + ro.why[LANG]); return; }
@@ -1943,6 +1946,11 @@ function buildLesson(rng) {
       }
       st.msg = L('«' + ro.opts[k] + '» queda bien en el sentido del verso, pero no repite los sonidos finales de «' + ro.a.replace(/[,.;:]\s*$/, '').split(' ').pop() + '». Prueba otra.',
                  '«' + ro.opts[k] + '» fits the meaning of the line, but it does not repeat the final sounds of «' + ro.a.replace(/[,.;:]\s*$/, '').split(' ').pop() + '». Try another one.');
+      paint();
+    };
+
+    window.canSig = function(){
+      st.locked = false;
       paint();
     };
     paint();

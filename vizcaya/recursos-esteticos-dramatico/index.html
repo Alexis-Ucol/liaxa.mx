@@ -929,17 +929,9 @@ async function generatePDF() {
   doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
   doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
 
-  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
-  //   When injecting logos, replace the two placeholder lines below with:
-  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
-  //   Then uncomment the two doc.addImage() calls.
-  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
-  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
-  // var logoLeftB64  = '';
-  // var logoRightB64 = '';
-  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
-  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────
+  if (SCHOOL.logoLeftB64)  { try { doc.addImage(SCHOOL.logoLeftB64,  'PNG', M,   4, 48, 22); } catch(e){} }
+  if (SCHOOL.logoRightB64) { try { doc.addImage(SCHOOL.logoRightB64, 'PNG', 130, 4, 48, 22); } catch(e){} }
   // ─────────────────────────────────────────────────────────────────────────
 
   // LIAXA logo — right side of white strip
@@ -1674,31 +1666,30 @@ function buildLesson(rng) {
         }).join('') + '</div>' +
         '<div class="iw-fb" id="msFb">' + (fb || '') + '</div>';
     }
-    window.msPick = function (bi) {
-      if (st.done) return;
-      var it = ITEMS[st.seq[st.i]];
-      if (bi === it.bin) {
-        st.hits++; st.tries = 0; st.i++;
-        if (st.i >= ITEMS.length) { st.done = true; render(''); return; }
-        render('<span class="iw-ok">' + T('Correcto: ', 'Correct: ') + L(HINTS[it.bin]) + '</span>');
-        return;
-      }
-      st.tries++;
-      if (st.tries >= 3) {
-        var sol = L(BINS[it.bin]) + '. ' + L(HINTS[it.bin]);
-        st.tries = 0; st.i++;
-        if (st.i >= ITEMS.length) { st.done = true; render(''); return; }
-        render(T('Era un ', 'It was a ') + sol);
-        return;
-      }
-      document.getElementById('msFb').textContent = bi === 0
-        ? T('Revisa si esas palabras las dice alguien en escena o solo describen lo que se ve.',
-            'Check whether someone on stage says those words or they only describe what is seen.')
-        : (bi === 1
-            ? T('Revisa a quién se dirigen esas palabras: ¿hay alguien en escena que pueda contestar?',
-                'Check who those words are addressed to: is there anyone on stage who could reply?')
-            : T('Revisa si eso queda oculto para los demás personajes o si todos lo escuchan.',
-                'Check whether that stays hidden from the other characters or everyone hears it.'));
+    window.msPick = function(bi){
+      if (st.done || st.locked) return;
+      st.locked = true;
+      var _it = ITEMS[st.seq ? st.seq[st.i] : st.i];
+      var _isOk = (bi === _it.bin);
+      var _label = BINS ? L(BINS[_it.bin]) : '';
+      var _hint  = HINTS ? L(HINTS[_it.bin]) : '';
+      var _msg = _isOk
+        ? '<b style="color:var(--ok)">\u2713 ' + (LANG===\'es\'?\'Correcto: \':\'Correct: \') + _hint + \'</b>\'
+        : '<b style="color:var(--bad)">\u2717 ' + (LANG===\'es\'?\'Era un \':\'It was a \') + _label + \'. \' + _hint + \'</b>\';
+      var _fe = document.getElementById('msFb');
+      if (_fe) _fe.innerHTML = _msg + '<br><button onclick="msSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.binbtn');
+      if (_bs) _bs.forEach(function(b, _i){
+        b.style.pointerEvents = 'none';
+        b.style.opacity = (_i === bi) ? '1' : '0.35';
+        if (_i === bi) b.style.borderColor = _isOk ? 'var(--ok)' : 'var(--bad)';
+      });
+    };
+    window.msSig = function(){
+      st.i++;
+      st.locked = false;
+      if (st.i >= ITEMS.length) st.done = true;
+      render('');
     };
     render('');
   }
@@ -1736,7 +1727,12 @@ function buildLesson(rng) {
     function advance(fb) {
       st.r++; st.tries = 0;
       if (st.r >= order.length) { st.done = true; }
-      render(fb);
+      if (st.done) { render(''); return; }
+      st.locked = true;
+      var _fe = document.getElementById('tpFb');
+      if (_fe) _fe.innerHTML = (fb || '') + '<br><button onclick="tpSig()" style="margin-top:.6rem;background:var(--green);color:#fff;border:none;border-radius:8px;padding:.45rem 1.2rem;font-size:.84rem;font-weight:600;cursor:pointer;min-height:44px;font-family:inherit">' + (LANG==='es' ? 'Siguiente →' : 'Next →') + '</button>';
+      var _bs = wrap.querySelectorAll('.binbtn');
+      if (_bs) _bs.forEach(function(b){ b.style.opacity='0.35'; b.style.pointerEvents='none'; });
     }
     window.hzTap = function (j) {
       if (st.done) return;
