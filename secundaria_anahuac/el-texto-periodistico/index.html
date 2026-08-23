@@ -614,7 +614,7 @@ function startLesson() {
   var name  = document.getElementById('sName').value.trim();
   var group = document.getElementById('sGroup').value.trim();
   var err   = document.getElementById('startErr');
-  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
   err.textContent = '';
   studentData = { name: name, group: group };
   answeredCount = 0;
@@ -1210,7 +1210,6 @@ function buildLesson(rng) {
       '.mk-w.hit{background:var(--ok-bg);border-bottom-color:var(--ok);color:var(--ok)}',
       '.mk-out{display:inline-block;min-width:2.2rem;text-align:center;font-family:monospace}',
       '.reflect-prompt{font-size:.92rem;color:var(--text2);margin:.5rem 0 .85rem}',
-      '.tl-chip.drag-over{border-color:var(--green) !important;background:var(--green-bg) !important}',
       '@media(max-width:600px){.mt-grid{grid-template-columns:1fr}.exc-head{font-size:1.08rem}}'
     ].join('');
     document.head.appendChild(stEl);
@@ -1584,39 +1583,23 @@ function buildLesson(rng) {
     EXC
   );
 
-    /* ── WIDGET 2: question / detail matcher (Mode C) — per-pair colours ── */
+  /* ── WIDGET 2: question / detail matcher (Mode C) ── */
   (function buildMatch(){
     var P = caso.w6;
     var qO = perm(P.length), aO = perm(P.length);
-    /* One distinct colour per pair index. Both chips get it once matched. */
-    var PC = [
-      { bg:'#dbeafe', bd:'#3b82f6', tx:'#1e3a5f' },
-      { bg:'#dcfce7', bd:'#22c55e', tx:'#14532d' },
-      { bg:'#fef9c3', bd:'#eab308', tx:'#713f12' },
-      { bg:'#fce7f3', bd:'#ec4899', tx:'#831843' },
-      { bg:'#ede9fe', bd:'#8b5cf6', tx:'#3b0764' }
-    ];
     var st = { sel:null, done:{}, tr:{}, msg:'', left:P.length };
     var wrap = document.createElement('div');
     wrap.className = 'gw section';
     wrap.setAttribute('data-widget','match');
     wrap.id = 'mtW';
-    function chipStyle(k, isSel){
-      if (st.done[k]){
-        var c = PC[k % PC.length];
-        return ' style="background:' + c.bg + ';border-color:' + c.bd + ';color:' + c.tx + ';font-weight:600"';
-      }
-      if (isSel) return ' style="border-color:var(--gold);background:var(--gold-bg)"';
-      return '';
-    }
     function paint(){
       var qs = qO.map(function(k){
-        var cls = 'mt-chip' + (st.done[k] ? ' done' : (st.sel === k ? ' sel' : ''));
-        return '<div class="' + cls + '"' + chipStyle(k, st.sel===k) + ' onclick="mtTap(0,' + k + ')">' + P[k].q[LANG] + '</div>';
+        var c = 'mt-chip' + (st.done[k] ? ' done' : (st.sel === k ? ' sel' : ''));
+        return '<div class="' + c + '" onclick="mtTap(0,' + k + ')">' + P[k].q[LANG] + '</div>';
       }).join('');
       var as = aO.map(function(k){
-        var cls = 'mt-chip' + (st.done[k] ? ' done' : '');
-        return '<div class="' + cls + '"' + chipStyle(k, false) + ' onclick="mtTap(1,' + k + ')">' + P[k].a[LANG] + '</div>';
+        var c = 'mt-chip' + (st.done[k] ? ' done' : '');
+        return '<div class="' + c + '" onclick="mtTap(1,' + k + ')">' + P[k].a[LANG] + '</div>';
       }).join('');
       wrap.innerHTML =
         '<div class="iw-tag">' + (LANG==='es'?'Empareja':'Match') + '</div>' +
@@ -1631,27 +1614,32 @@ function buildLesson(rng) {
     }
     window.mtTap = function(col, k){
       if (st.done[k] && col === 0) return;
-      if (col === 0){ st.sel = (st.sel===k ? null : k); st.msg = ''; paint(); return; }
+      if (col === 0) { st.sel = (st.sel === k ? null : k); st.msg = ''; paint(); return; }
       if (st.done[k]) return;
-      if (st.sel === null){
+      if (st.sel === null) {
         st.msg = (LANG==='es' ? 'Elige primero una pregunta de la columna izquierda.' : 'First choose a question from the left column.');
         paint(); return;
       }
       var s = st.sel;
-      if (k === s){
-        /* Correct */
+      if (k === s) {
         st.done[s] = 1; st.left--; st.sel = null;
-        st.msg = '<b style="color:var(--ok)">\u2713</b> ' + (LANG==='es'
-          ? 'Ese dato aporta ' + P[s].tag.es + ', por eso responde a "' + P[s].q.es + '".'
-          : 'That detail gives ' + P[s].tag.en + ', so it answers "' + P[s].q.en + '".');
+        st.msg = '<b style="color:var(--ok)">✓</b> ' + (LANG==='es'
+          ? 'Ese dato aporta ' + P[s].tag.es + ', por eso responde a “' + P[s].q.es + '”.'
+          : 'That detail gives ' + P[s].tag.en + ', so it answers “' + P[s].q.en + '”.');
         if (st.left === 0) st.msg += ' ' + (LANG==='es'
           ? 'La nota completa ya quedó desarmada: cinco preguntas, cinco respuestas.'
           : 'The whole report is taken apart now: five questions, five answers.');
         paint(); return;
       }
-      /* Wrong — give a tag-based clue, deselect, never reveal the answer */
-      st.tr[s] = (st.tr[s]||0) + 1;
-      st.sel = null;
+      st.tr[s] = (st.tr[s] || 0) + 1;
+      if (st.tr[s] >= 3) {
+        st.done[s] = 1; st.left--; st.sel = null;
+        st.msg = (LANG==='es'
+          ? '“' + P[s].q.es + '” se responde con “' + P[s].a.es + '”, porque ese dato aporta ' + P[s].tag.es + '.'
+          : '“' + P[s].q.en + '” is answered by “' + P[s].a.en + '”, because that detail gives ' + P[s].tag.en + '.');
+        if (st.left === 0) st.msg += ' ' + (LANG==='es' ? 'Ya está desarmada la nota completa.' : 'The whole report is taken apart now.');
+        paint(); return;
+      }
       st.msg = (LANG==='es'
         ? 'Ese dato aporta ' + P[k].tag.es + ', y tú buscabas ' + P[s].tag.es + '. Prueba con otro.'
         : 'That detail gives ' + P[k].tag.en + ', and you were looking for ' + P[s].tag.en + '. Try another one.');
@@ -1678,94 +1666,48 @@ function buildLesson(rng) {
       : '<strong>First line test:</strong> if someone reads only the beginning and already knows what happened, the report is well built.') + '</p></div>'
   );
 
-    /* ── WIDGET 3: inverted pyramid — drag-and-drop sequencer ── */
+  /* ── WIDGET 3: inverted pyramid sequencer ── */
   (function buildPyramid(){
     var E = caso.pyr;
-    var st = { order: perm(E.length), tries:0, msg:'', done:false, dragging:null, _sel:null };
+    var st = { order: perm(E.length), sel:null, tries:0, msg:'', done:false };
     var wrap = document.createElement('div');
     wrap.className = 'gw section';
     wrap.setAttribute('data-widget','timeline');
     wrap.id = 'pyW';
-
-    function renderList(){
-      var list = wrap.querySelector('.tl-list');
-      if (!list) return;
-      list.innerHTML = '';
-      st.order.forEach(function(ei, pos){
-        var row = document.createElement('div');
-        row.className = 'tl-chip' + (st.done ? ' locked' : '') + (st._sel === pos ? ' sel' : '');
-        row.setAttribute('data-pos', String(pos));
-        if (!st.done) row.setAttribute('draggable', 'true');
-        row.innerHTML =
-          '<span class="tl-num" style="min-width:1.6rem;text-align:center;flex-shrink:0">' + (pos+1) + '</span>' +
-          '<span style="flex:1">' + E[ei][LANG] + '</span>' +
-          (st.done ? '' : '<span style="color:var(--text3);font-size:.78rem;flex-shrink:0;padding-left:.35rem">&#9639;</span>');
-        if (!st.done){
-          row.addEventListener('dragstart', function(e){
-            st.dragging = pos; e.dataTransfer.effectAllowed = 'move';
-            setTimeout(function(){ row.style.opacity = '0.4'; }, 0);
-          });
-          row.addEventListener('dragend', function(){
-            row.style.opacity = '';
-            list.querySelectorAll('.tl-chip').forEach(function(r){ r.classList.remove('drag-over'); });
-            st.dragging = null;
-          });
-          row.addEventListener('dragover', function(e){
-            e.preventDefault(); e.dataTransfer.dropEffect = 'move';
-            list.querySelectorAll('.tl-chip').forEach(function(r){ r.classList.remove('drag-over'); });
-            if (st.dragging !== pos) row.classList.add('drag-over');
-          });
-          row.addEventListener('dragleave', function(){ row.classList.remove('drag-over'); });
-          row.addEventListener('drop', function(e){
-            e.preventDefault(); row.classList.remove('drag-over');
-            var from = st.dragging;
-            var to   = parseInt(row.getAttribute('data-pos'), 10);
-            if (from === null || isNaN(to) || from === to) return;
-            var tmp = st.order[from]; st.order[from] = st.order[to]; st.order[to] = tmp;
-            st.dragging = null; st.msg = ''; renderList();
-          });
-          /* Touch / click fallback: two-tap swap */
-          row.addEventListener('click', function(){
-            if (st.done) return;
-            var p = parseInt(row.getAttribute('data-pos'), 10);
-            if (st._sel === null){ st._sel = p; renderList(); return; }
-            if (st._sel === p){ st._sel = null; renderList(); return; }
-            var tmp = st.order[st._sel]; st.order[st._sel] = st.order[p]; st.order[p] = tmp;
-            st._sel = null; st.msg = ''; renderList();
-          });
-        }
-        list.appendChild(row);
-      });
-      var fb = wrap.querySelector('#pyFb'); if (fb) fb.innerHTML = st.msg;
-      /* Re-attach Comprobar if not yet done */
-      var vbtn = wrap.querySelector('.rverify-btn');
-      if (vbtn) vbtn.onclick = window.pyCheck;
-    }
-
     function paint(){
+      var chips = st.order.map(function(ei, pos){
+        var c = 'tl-chip' + (st.sel === pos ? ' sel' : '') + (st.done ? ' locked' : '');
+        return '<div class="' + c + '" onclick="pyTap(' + pos + ')"><span class="tl-num">' + (pos+1) + '</span> ' + E[ei][LANG] + '</div>';
+      }).join('');
       wrap.innerHTML =
         '<div class="iw-tag">' + (LANG==='es'?'Arma la pirámide':'Build the pyramid') + '</div>' +
         '<div class="gw-mini">' + (LANG==='es'
-          ? 'Arrastra los datos de la nota para ordenarlos, del más importante al que se podría recortar. En móvil, toca dos para intercambiarlos.'
-          : 'Drag the details to order them, from the most important to the one that could be cut. On mobile, tap two to swap them.') + '</div>' +
-        '<div class="tl-list"></div>' +
-        (st.done ? '' : '<button class="rverify-btn" style="margin-top:.5rem" onclick="pyCheck()">' + (LANG==='es'?'Comprobar':'Check') + '</button>') +
+          ? 'Acomoda los cuatro datos de la nota, del que ningún lector puede perderse al que se podría recortar. Toca dos para intercambiarlos.'
+          : 'Arrange the four details of the report, from the one no reader can miss to the one that could be cut. Tap two to swap them.') + '</div>' +
+        '<div class="tl-list">' + chips + '</div>' +
+        (st.done ? '' : '<button class="rverify-btn" onclick="pyCheck()">' + (LANG==='es'?'Comprobar':'Check') + '</button>') +
         '<div class="rfb" id="pyFb">' + st.msg + '</div>';
-      renderList();
     }
-
+    window.pyTap = function(pos){
+      if (st.done) return;
+      if (st.sel === null) { st.sel = pos; }
+      else if (st.sel === pos) { st.sel = null; }
+      else { var t = st.order[st.sel]; st.order[st.sel] = st.order[pos]; st.order[pos] = t; st.sel = null; }
+      st.msg = '';
+      paint();
+    };
     window.pyCheck = function(){
       if (st.done) return;
       var ok = st.order.every(function(ei, pos){ return ei === pos; });
-      if (ok){
+      if (ok) {
         st.done = true;
-        st.msg = '<b style="color:var(--ok)">\u2713</b> ' + (LANG==='es'
+        st.msg = '<b style="color:var(--ok)">✓</b> ' + (LANG==='es'
           ? 'Así queda la pirámide invertida: arriba el dato que resume el suceso, abajo el antecedente que se puede recortar.'
           : 'That is the inverted pyramid: on top the detail that sums up the event, at the bottom the background that can be cut.');
         paint(); return;
       }
       st.tries++;
-      if (st.tries >= 3){
+      if (st.tries >= 3) {
         st.order = E.map(function(_, i){ return i; });
         st.done = true;
         st.msg = (LANG==='es'
@@ -1774,11 +1716,11 @@ function buildLesson(rng) {
         paint(); return;
       }
       var bad = 0;
-      for (var i = 0; i < st.order.length; i++){ if (st.order[i] !== i){ bad = i; break; } }
+      for (var i = 0; i < st.order.length; i++) { if (st.order[i] !== i) { bad = i; break; } }
       st.msg = (LANG==='es'
         ? 'Aún no. Revisa el lugar ' + (bad+1) + ': pregúntate si ese dato le importa más al lector que el que pusiste debajo.'
         : 'Not yet. Check position ' + (bad+1) + ': ask yourself whether that detail matters more to the reader than the one below it.');
-      renderList();
+      paint();
     };
     paint();
     body.appendChild(wrap);
@@ -1963,37 +1905,13 @@ function buildLesson(rng) {
       '<button class="rverify-btn" style="margin-top:.6rem" onclick="reflectSave()">' + (LANG==='es'?'Guardar':'Save') + '</button>' +
       '<div class="rfb" id="reflectFb"></div>';
     body.appendChild(wrap);
-    var reflectSnapshot = null;   /* persists canvas pixels across tab switches */
     window.reflectTab = function(which, btn){
-      /* Save canvas pixels before leaving the draw tab */
-      if (which !== 'draw'){
-        var _cv = document.getElementById('reflectCv');
-        if (_cv && _cv.width > 0){
-          try { reflectSnapshot = _cv.toDataURL('image/png'); } catch(e){}
-        }
-      }
       ['type','draw'].forEach(function(x){
         document.getElementById('reflect_' + x).classList.toggle('active', x === which);
       });
       wrap.querySelectorAll('.wtab').forEach(function(b){ b.classList.remove('active'); });
       btn.classList.add('active');
-      if (which === 'draw'){
-        setTimeout(function(){
-          var c = document.getElementById('reflectCv');
-          if (!c) return;
-          var hadPixels = c.width > 0;
-          initCanvas(c);
-          /* Restore saved pixels after canvas re-initialises */
-          if (reflectSnapshot){
-            var img = new Image();
-            img.onload = function(){
-              var dpr = window.devicePixelRatio || 1;
-              c.getContext('2d').drawImage(img, 0, 0, c.width/dpr, c.height/dpr);
-            };
-            img.src = reflectSnapshot;
-          }
-        }, 60);
-      }
+      if (which === 'draw') setTimeout(function(){ var c = document.getElementById('reflectCv'); if (c) initCanvas(c); }, 60);
     };
     window.reflectSave = function(){
       document.getElementById('reflectFb').innerHTML = '<b style="color:var(--ok)">✓</b> ' + (LANG==='es'
