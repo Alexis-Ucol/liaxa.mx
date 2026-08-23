@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Distancia entre Puntos y Distancia Punto-Recta</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── WIDGETS DE ESTA GUÍA (distancias) ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-instr { font-size:.88rem; color:var(--text2); margin-bottom:.7rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; margin-top:.7rem; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.gcanvas { display:block; width:100%; height:250px; border:1px solid var(--border); border-radius:8px; background:var(--surface); touch-action:manipulation; }
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; flex-wrap:wrap; }
+.krow input[type=range] { flex:1; min-width:130px; accent-color:var(--green); height:34px; }
+.klbl { font-size:.78rem; color:var(--text3); min-width:74px; }
+.kval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.95rem; color:var(--green); min-width:62px; text-align:right; }
+.livelbl { margin-top:.55rem; font-size:.88rem; color:var(--text2); }
+.livelbl b { color:var(--green-dark); }
+.statline { margin-top:.35rem; font-size:.84rem; color:var(--text3); }
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.stepslist { margin:.9rem 0 0; padding-left:1.1rem; }
+.stepslist li { font-size:.86rem; color:var(--text2); margin-bottom:.35rem; }
+@media (max-width: 600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .gcanvas { height:225px; }
+  .klbl { min-width:62px; font-size:.74rem; }
+}
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Distancia entre Puntos y Distancia Punto-Recta</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 1° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Distancia entre Puntos y Distancia Punto-Recta</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#1a3a6b', primaryDark:'#0f2444', primaryBg:'#e8edf5',
+  accent:'#c9a84c', accentBg:'#f7f1e3',
+  darkPrimary:'#4a78bf', darkPrimaryDark:'#7aa2e0', darkPrimaryBg:'#0e1f38',
+  darkAccent:'#d4b86a', darkAccentBg:'#241e0e',
+  pBR:26, pBG:58, pBB:107, pAR:201, pAG:168, pAB:76,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'LIAXA',
+  guideTitle:{ es:'Distancia entre Puntos y Distancia Punto-Recta', en:'Distance Between Points and Point-to-Line Distance' },
+  courseName:{ es:'Matemáticas · 1° de Secundaria', en:'Mathematics · 1° de Secundaria' }, filePrefix:'mat1_t11_g01', schoolSlug:'liaxa'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_mat1_t11_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Distancia entre Puntos y Distancia Punto-Recta','wcourse':'Matemáticas · 1° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','fillboth':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Distance Between Points and Point-to-Line Distance','wcourse':'Mathematics · 1° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','fillboth':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_mat1_t11_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_mat1_t11_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_mat1_t11_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_mat1_t11_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '';
+  // var logoRightB64 = '';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('mat1_t11_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+/* ================================================
+   buildLesson: Distancia entre puntos y distancia punto-recta (1o de Secundaria)
+   Interleaved: idea -> manipulativo -> problema(s). Cards built inline.
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 330;
+    var h = cv.clientHeight || 250;
+    cv.width  = Math.round(w*dpr);
+    cv.height = Math.round(h*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  function dot(ctx, x, y, r, col){
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  }
+  function label(ctx, s, x, y, col, w, h){
+    ctx.fillStyle = col;
+    ctx.font = '600 13px "IBM Plex Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(s, Math.max(18, Math.min(w-18, x)), Math.max(13, Math.min(h-4, y)));
+  }
+  function num1(x){ return (Math.round(x*10)/10).toFixed(1); }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = T(spec.correct);
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ============================================================
+     VALORES SEMBRADOS (se sacan una sola vez, en orden fijo)
+     ============================================================ */
+  var v1 = Math.floor(rng()*2), v2 = Math.floor(rng()*2), v3 = Math.floor(rng()*2);
+  var v4 = Math.floor(rng()*2), v5 = Math.floor(rng()*2), v6 = Math.floor(rng()*2);
+  var v7 = Math.floor(rng()*2), v8 = Math.floor(rng()*2), v9 = Math.floor(rng()*2);
+  var v10 = Math.floor(rng()*2);
+
+  var a1 = ri(1,4), b1 = a1 + ri(5,8), k1 = ri(2,9), d1 = b1 - a1;      // P1
+  var p2 = ri(2,5), d2 = ri(6,9), q2 = p2 + d2;                          // P2
+  var L4 = ri(1,4), d4 = ri(5,9), ph4 = L4 + d4, px4 = ri(2,9);          // P4
+  var h6 = ri(1,4), d6 = ri(6,10), h6b = h6 + d6;                        // P6
+  var s1 = ri(4,7), s2 = s1 + ri(2,5);                                   // P8
+  var t9 = ri(3,6);                                                      // P9
+  var hr = ri(1,3), A10 = 2*ri(2,3), D10 = 2*ri(1,2)+1;                  // P10
+  var B10 = A10 + D10, hs = hr + A10, ht = hs + B10;
+
+  /* ============================================================
+     IDEA 1
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'Qué número es una distancia', en:'What number a distance is'}),
+      '<p>'+T({
+        es:'Cuando dices que dos puntos están a cierta distancia estás hablando de una sola cosa: la longitud del segmento que va de uno al otro sin desviarse. Ese segmento es único, porque por dos puntos pasa una sola recta, y el número que mide su longitud es lo que llamamos distancia entre esos dos puntos.',
+        en:'When you say that two points are a certain distance apart you are talking about one single thing: the length of the segment that goes from one to the other without turning. That segment is unique, because only one line passes through two points, and the number that measures its length is what we call the distance between those two points.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'En una cuadrícula esto es muy fácil de contar cuando los dos puntos comparten fila o comparten columna: basta con contar las casillas que hay que recorrer de uno al otro. Y da lo mismo desde cuál de los dos empieces, porque de A hasta B hay exactamente lo mismo que de B hasta A. Una distancia nunca lleva dirección, solo tamaño.',
+        en:'On a grid this is very easy to count when the two points share a row or share a column: you just count the cells you have to travel from one to the other. And it makes no difference which one you start from, because from A to B there is exactly the same as from B to A. A distance never carries direction, only size.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Distancia',en:'Distance'})+'</div><div class="deftxt">'+T({es:'La longitud del segmento que une los dos puntos.',en:'The length of the segment joining the two points.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Misma fila',en:'Same row'})+'</div><div class="deftxt">'+T({es:'Se cuentan las casillas que separan una columna de la otra.',en:'You count the cells separating one column from the other.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Misma columna',en:'Same column'})+'</div><div class="deftxt">'+T({es:'Se cuentan las casillas que separan una altura de la otra.',en:'You count the cells separating one height from the other.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Sin dirección',en:'No direction'})+'</div><div class="deftxt">'+T({es:'De A a B y de B a A dan el mismo número.',en:'From A to B and from B to A give the same number.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 1: estira el segmento sobre la regla ---- */
+  (function(){
+    var wrap = widget('segmento');
+    var MAXU = 14;
+    var RS = [
+      { a: ri(1,3),  t: ri(5,8), side:'der' },
+      { a: ri(9,12), t: ri(5,8), side:'izq' },
+      { a: ri(5,7),  t: ri(4,6), side:'der' }
+    ];
+    var st = { r:0, b:0, tries:0, done:false, lock:false };
+    function rd(){ return RS[st.r]; }
+    function tgtB(){ var o=rd(); return o.side==='der' ? o.a+o.t : o.a-o.t; }
+    function reset(){
+      var o = rd();
+      st.b = o.side==='der' ? Math.max(0, o.a-3) : Math.min(MAXU, o.a+3);
+      st.tries = 0;
+    }
+    function dAB(){ return Math.abs(st.b - rd().a); }
+    function sideOk(){ var o=rd(); return o.side==='der' ? (st.b > o.a) : (st.b < o.a); }
+    function draw(){
+      var cv = document.getElementById('sgCv'); if (!cv) return;
+      var g = fitCv(cv), ctx = g.ctx, w = g.w, h = g.h, i;
+      var s  = (w-36)/MAXU, x0 = 18, yl = h*0.6;
+      var bd = cssv('--border'), sub = cssv('--text3'), txt = cssv('--text');
+      var col = cssv('--green'), dk = cssv('--green-dark'), acc = cssv('--gold');
+      var o = rd();
+      ctx.strokeStyle = bd; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x0, yl); ctx.lineTo(x0+MAXU*s, yl); ctx.stroke();
+      ctx.font = '500 10px "IBM Plex Mono", monospace'; ctx.textAlign = 'center';
+      for (i=0;i<=MAXU;i++){
+        ctx.strokeStyle = bd;
+        ctx.beginPath(); ctx.moveTo(x0+i*s, yl-4); ctx.lineTo(x0+i*s, yl+4); ctx.stroke();
+        if (i % 2 === 0){ ctx.fillStyle = sub; ctx.fillText(String(i), x0+i*s, yl+18); }
+      }
+      var xa = x0 + o.a*s, xb = x0 + st.b*s;
+      ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(xa, yl-16); ctx.lineTo(xb, yl-16); ctx.stroke();
+      dot(ctx, xa, yl-16, 5.5, dk);
+      dot(ctx, xb, yl-16, 5.5, acc);
+      label(ctx, 'A', xa, yl-26, dk, w, h);
+      label(ctx, 'B', xb, yl-26, acc, w, h);
+      label(ctx, dAB()+' '+T({es:'u',en:'u'}), (xa+xb)/2, yl-40, txt, w, h);
+    }
+    function upd(){
+      var e1 = document.getElementById('sgPos'); if (e1) e1.textContent = st.b;
+      var e2 = document.getElementById('sgLen'); if (e2) e2.textContent = dAB()+' u';
+      var e3 = document.getElementById('sgStat');
+      if (e3){
+        var o = rd();
+        e3.textContent = sideOk()
+          ? T({es:'B está del lado pedido y el segmento mide '+dAB()+' unidades.',
+               en:'B is on the requested side and the segment measures '+dAB()+' units.'})
+          : T({es:'Ojo: B todavía no está del lado que pide la instrucción.',
+               en:'Careful: B is not yet on the side the instruction asks for.'});
+      }
+    }
+    function goalTxt(){
+      var o = rd();
+      return o.side === 'der'
+        ? T({es:'Coloca B a la derecha de A de modo que el segmento AB mida '+o.t+' unidades.',
+             en:'Place B to the right of A so that segment AB measures '+o.t+' units.'})
+        : T({es:'Coloca B a la izquierda de A de modo que el segmento AB mida '+o.t+' unidades.',
+             en:'Place B to the left of A so that segment AB measures '+o.t+' units.'});
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Estira el segmento', en:'Stretch the segment'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Listo. Armaste el mismo tipo de segmento hacia la derecha y hacia la izquierda: la distancia salió del conteo de casillas, no del lado hacia el que apunta.',
+            en:'Done. You built the same kind of segment to the right and to the left: the distance came out of counting cells, not out of the side it points to.'
+          })+'</span></div></div>';
+        return;
+      }
+      var o = rd();
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Estira el segmento', en:'Stretch the segment'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'A está clavado en la regla. Mueve B y observa cómo cambia la longitud del segmento mientras lo haces.',
+            en:'A is pinned on the ruler. Move B and watch how the length of the segment changes as you do it.'
+          })+'</div>'+
+          '<div class="goalbar">'+goalTxt()+'</div>'+
+          '<canvas class="gcanvas" id="sgCv"></canvas>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Punto B',en:'Point B'})+'</span><input type="range" min="0" max="'+MAXU+'" value="'+st.b+'" oninput="sgSlide(this.value)"><span class="kval" id="sgPos">'+st.b+'</span></div>'+
+          '<div class="livelbl">'+T({es:'Longitud del segmento AB: ',en:'Length of segment AB: '})+'<b id="sgLen">'+dAB()+' u</b></div>'+
+          '<div class="statline" id="sgStat"></div>'+
+          '<button class="rverify-btn" onclick="sgChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="sgFb"></div>'+
+        '</div>';
+      draw(); upd();
+      setTimeout(function(){ draw(); }, 160);
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.lock = false;
+        if (st.r >= 3) st.done = true; else reset();
+        render();
+      }, ms);
+    }
+    window.sgSlide = function(val){
+      if (st.done || st.lock) return;
+      st.b = parseInt(val,10) || 0;
+      draw(); upd();
+    };
+    window.sgChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('sgFb'); if (!fb) return;
+      var o = rd(), d = dAB();
+      if (d === o.t && sideOk()){
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Exacto: entre A y B hay '+o.t+' casillas, así que el segmento mide '+o.t+' unidades.',
+          en:'Exactly: between A and B there are '+o.t+' cells, so the segment measures '+o.t+' units.'
+        })+'</span>';
+        adv(1700); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.b = tgtB(); draw(); upd();
+        fb.innerHTML = T({
+          es:'Así queda: B en la marca '+tgtB()+' deja un segmento de '+o.t+' unidades.',
+          en:'Here it is: B on mark '+tgtB()+' leaves a segment of '+o.t+' units.'
+        });
+        adv(2700); return;
+      }
+      if (!sideOk()){
+        fb.textContent = o.side === 'der'
+          ? T({es:'B tiene que quedar a la derecha de A. Muévelo hacia números más grandes.',
+               en:'B has to end up to the right of A. Move it towards bigger numbers.'})
+          : T({es:'B tiene que quedar a la izquierda de A. Muévelo hacia números más chicos.',
+               en:'B has to end up to the left of A. Move it towards smaller numbers.'});
+        return;
+      }
+      fb.textContent = d < o.t
+        ? T({es:'El segmento mide '+d+' y necesitas '+o.t+': aleja B un poco más de A.',
+             en:'The segment measures '+d+' and you need '+o.t+': move B a bit further from A.'})
+        : T({es:'El segmento mide '+d+' y te pasaste de '+o.t+': acerca B hacia A.',
+             en:'The segment measures '+d+' and you went past '+o.t+': bring B closer to A.'});
+    };
+    reset(); render();
+  })();
+
+  /* ---- PROBLEMA 1 ---- */
+  addProb(v1 === 0 ? {
+    title:{es:'Dos postes en la misma fila', en:'Two posts in the same row'},
+    q:{es:'En una cuadrícula, el poste A está en la casilla ('+a1+', '+k1+') y el poste B está en la casilla ('+b1+', '+k1+'). ¿Cuántas unidades mide el segmento que une A con B?',
+       en:'On a grid, post A sits in cell ('+a1+', '+k1+') and post B sits in cell ('+b1+', '+k1+'). How many units long is the segment joining A and B?'},
+    options:[String(d1), String(a1+b1), String(b1), String(d1-2)],
+    correct:String(d1),
+    hint:{es:'Los dos postes están a la misma altura, así que el segmento va derechito sobre esa fila y solo hay que contar cuántas casillas se avanzan.',
+          en:'Both posts sit at the same height, so the segment runs straight along that row and you only need to count how many cells you advance.'},
+    exp:{es:'Sobre esa fila, de la columna '+a1+' a la columna '+b1+' hay '+b1+' − '+a1+' = '+d1+' unidades, y esa longitud es la distancia entre A y B.',
+         en:'Along that row, from column '+a1+' to column '+b1+' there are '+b1+' − '+a1+' = '+d1+' units, and that length is the distance between A and B.'},
+    showWork:true
+  } : {
+    title:{es:'Dos marcas en la misma columna', en:'Two marks in the same column'},
+    q:{es:'En una cuadrícula, la marca M está en la casilla ('+k1+', '+a1+') y la marca N está en la casilla ('+k1+', '+b1+'). ¿Cuántas unidades mide el segmento que une M con N?',
+       en:'On a grid, mark M sits in cell ('+k1+', '+a1+') and mark N sits in cell ('+k1+', '+b1+'). How many units long is the segment joining M and N?'},
+    options:[String(d1), String(a1+b1), String(b1), String(d1-2)],
+    correct:String(d1),
+    hint:{es:'Las dos marcas están en la misma columna, así que el segmento sube derechito y solo hay que contar cuántas casillas se suben.',
+          en:'Both marks sit in the same column, so the segment goes straight up and you only need to count how many cells you climb.'},
+    exp:{es:'Sobre esa columna, de la altura '+a1+' a la altura '+b1+' hay '+b1+' − '+a1+' = '+d1+' unidades, y esa longitud es la distancia entre M y N.',
+         en:'Along that column, from height '+a1+' to height '+b1+' there are '+b1+' − '+a1+' = '+d1+' units, and that length is the distance between M and N.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 2 ---- */
+  addProb(v2 === 0 ? {
+    title:{es:'Dos puntos en la recta numérica', en:'Two points on the number line'},
+    q:{es:'Sobre una recta numérica, el punto P cae en el número '+p2+' y el punto Q cae en el número '+q2+'. ¿Cuántas unidades hay entre P y Q?',
+       en:'On a number line, point P lands on the number '+p2+' and point Q lands on the number '+q2+'. How many units are there between P and Q?'},
+    options:[String(d2), String(q2), String(p2+q2), String(d2-2)],
+    correct:String(d2),
+    hint:{es:'Piensa en el segmento que une las dos marcas y en cuántas unidades de la recta cubre.',
+          en:'Think of the segment joining the two marks and how many units of the line it covers.'},
+    exp:{es:'El segmento PQ cubre '+q2+' − '+p2+' = '+d2+' unidades. Contar de Q hacia P da el mismo número, porque la distancia no depende del punto de partida.',
+         en:'Segment PQ covers '+q2+' − '+p2+' = '+d2+' units. Counting from Q back to P gives the same number, because distance does not depend on the starting point.'},
+    showWork:true
+  } : {
+    title:{es:'Dónde cae la segunda marca', en:'Where the second mark lands'},
+    q:{es:'Sobre una recta numérica, el punto R cae en el número '+p2+'. El punto S está a '+d2+' unidades de R, hacia la derecha. ¿En qué número cae S?',
+       en:'On a number line, point R lands on the number '+p2+'. Point S is '+d2+' units away from R, to the right. What number does S land on?'},
+    options:[String(q2), String(d2), String(q2+p2), String(q2-1)],
+    correct:String(q2),
+    hint:{es:'La distancia dice cuántas unidades hay que recorrer sobre la recta, y el rumbo dice hacia dónde recorrerlas.',
+          en:'The distance tells how many units you must travel along the line, and the direction tells which way to travel them.'},
+    exp:{es:'Avanzar '+d2+' unidades hacia la derecha desde el '+p2+' lleva al '+p2+' + '+d2+' = '+q2+'.',
+         en:'Moving '+d2+' units to the right from '+p2+' lands on '+p2+' + '+d2+' = '+q2+'.'},
+    showWork:true
+  });
+
+  /* ============================================================
+     IDEA 2
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'El camino recto es el más corto', en:'The straight path is the shortest'}),
+      '<p>'+T({
+        es:'Entre dos puntos se pueden trazar muchísimos caminos: uno que da la vuelta, uno que hace escalones, uno que se va de paseo y regresa. Todos son válidos como recorridos, pero solo uno es recto, y ese siempre resulta ser el más corto de la colección.',
+        en:'Between two points you can trace a huge number of paths: one that goes around, one that makes steps, one that wanders off and comes back. All of them count as routes, but only one is straight, and that one always turns out to be the shortest of the collection.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Por eso la distancia se define con el segmento y no con el recorrido. Si midieras el recorrido, dos personas que van del mismo punto al mismo punto obtendrían números diferentes según por dónde pasaron, y ese número ya no serviría para describir la separación entre los dos lugares.',
+        en:'That is why distance is defined with the segment and not with the route. If you measured the route, two people going from the same point to the same point would get different numbers depending on where they walked, and that number would no longer describe how far apart the two places are.'
+      })+'</p>');
+
+  /* ---- PROBLEMA 3 ---- */
+  addProb(v3 === 0 ? {
+    title:{es:'El camino de Ana', en:'The way Ana walks'},
+    q:{es:'Para ir de su casa a la escuela, Ana camina primero unas cuadras hacia el norte y después otras cuadras hacia el este, siguiendo las banquetas. ¿Qué se puede afirmar sobre su recorrido?',
+       en:'To get from her house to school, Ana first walks a few blocks north and then a few more blocks east, following the sidewalks. What can be said about her route?'},
+    options:{es:['Mide más que la distancia entre la casa y la escuela',
+                 'Mide exactamente la distancia entre la casa y la escuela',
+                 'Mide menos que la distancia entre la casa y la escuela',
+                 'Mide lo mismo que la distancia solo si camina despacio'],
+             en:['It measures more than the distance between the house and the school',
+                 'It measures exactly the distance between the house and the school',
+                 'It measures less than the distance between the house and the school',
+                 'It measures the same as the distance only if she walks slowly']},
+    correct:{es:'Mide más que la distancia entre la casa y la escuela',
+             en:'It measures more than the distance between the house and the school'},
+    hint:{es:'Compara un recorrido que cambia de rumbo con el único trazo que va derecho de un lugar al otro.',
+          en:'Compare a route that changes direction with the only trace that runs straight from one place to the other.'},
+    exp:{es:'El recorrido de Ana se compone de dos tramos con un cambio de rumbo, y un camino así siempre resulta más largo que el segmento recto. La distancia entre casa y escuela es la longitud de ese segmento, no la del recorrido.',
+         en:'Ana route is made of two stretches with a turn in between, and a path like that always ends up longer than the straight segment. The distance between house and school is the length of that segment, not the length of the route.'},
+    showWork:false
+  } : {
+    title:{es:'La paloma y el perro', en:'The pigeon and the dog'},
+    q:{es:'Un perro va de la puerta P a la puerta Q siguiendo una barda que hace una vuelta en la esquina. Una paloma vuela de P a Q sin desviarse. ¿Qué se puede afirmar?',
+       en:'A dog goes from gate P to gate Q following a wall that turns at the corner. A pigeon flies from P to Q without turning. What can be said?'},
+    options:{es:['El vuelo mide la distancia entre P y Q, y el recorrido del perro mide más',
+                 'El recorrido del perro mide la distancia entre P y Q, y el vuelo mide más',
+                 'Los dos miden lo mismo porque salen y llegan al mismo lugar',
+                 'Ninguno de los dos mide la distancia entre P y Q'],
+             en:['The flight measures the distance between P and Q, and the dog route measures more',
+                 'The dog route measures the distance between P and Q, and the flight measures more',
+                 'Both measure the same because they start and end at the same places',
+                 'Neither of the two measures the distance between P and Q']},
+    correct:{es:'El vuelo mide la distancia entre P y Q, y el recorrido del perro mide más',
+             en:'The flight measures the distance between P and Q, and the dog route measures more'},
+    hint:{es:'Solo uno de los dos trayectos es el segmento que une P con Q sin cambiar de rumbo.',
+          en:'Only one of the two journeys is the segment joining P and Q without changing direction.'},
+    exp:{es:'La paloma recorre justamente el segmento que une P con Q, así que su vuelo mide la distancia entre las dos puertas. El perro rodea la esquina y por eso recorre más.',
+         en:'The pigeon travels exactly the segment joining P and Q, so its flight measures the distance between the two gates. The dog goes around the corner and therefore travels more.'},
+    showWork:false
+  });
+
+  /* ============================================================
+     IDEA 3
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'De un punto a una recta', en:'From a point to a line'}),
+      '<p>'+T({
+        es:'Ahora cambia una de las dos piezas. En lugar de dos puntos tienes un punto y una recta completa. Desde el punto puedes trazar segmentos hacia muchísimos lugares de la recta, y todos tienen longitudes distintas, así que la pregunta por la distancia se queda sin una respuesta obvia.',
+        en:'Now change one of the two pieces. Instead of two points you have a point and a whole line. From the point you can trace segments to a huge number of places on the line, and all of them have different lengths, so the question about the distance is left without an obvious answer.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La salida es quedarse con el más corto de todos esos segmentos. Ese segmento tiene una señal que lo delata: llega a la recta formando un ángulo recto. Cuando alguien pide la distancia de un punto a una recta, está pidiendo la longitud de ese segmento perpendicular y de ningún otro.',
+        en:'The way out is to keep the shortest of all those segments. That segment has a sign that gives it away: it reaches the line forming a right angle. When somebody asks for the distance from a point to a line, they are asking for the length of that perpendicular segment and of no other.'
+      })+'</p>'+
+      '<ul class="stepslist">'+
+        '<li>'+T({es:'Cada punto de la recta da un segmento distinto, y casi todos son largos.',en:'Each point of the line gives a different segment, and nearly all of them are long.'})+'</li>'+
+        '<li>'+T({es:'Al acercarse al pie de la perpendicular, los segmentos se van acortando.',en:'As you approach the foot of the perpendicular, the segments keep getting shorter.'})+'</li>'+
+        '<li>'+T({es:'El más corto es único, y es el que forma ángulo recto con la recta.',en:'The shortest one is unique, and it is the one forming a right angle with the line.'})+'</li>'+
+      '</ul>');
+
+  /* ---- MANIPULATIVO 2: caza el camino más corto ---- */
+  (function(){
+    var wrap = widget('perpendicular');
+    var MAXU = 14;
+    var RS = [
+      { px: ri(4,7),  py: ri(6,8),  L: ri(1,2) },
+      { px: ri(8,11), py: ri(7,9),  L: ri(2,3) },
+      { px: ri(3,6),  py: ri(8,10), L: ri(1,3) }
+    ];
+    var st = { r:0, q:0, tries:0, best:99, done:false, lock:false };
+    function rd(){ return RS[st.r]; }
+    function reset(){
+      var o = rd();
+      st.q = o.px >= 7 ? Math.max(0, o.px-5) : Math.min(MAXU, o.px+5);
+      st.tries = 0; st.best = 99;
+    }
+    function len(){
+      var o = rd(), dx = st.q - o.px, dy = o.py - o.L;
+      return Math.sqrt(dx*dx + dy*dy);
+    }
+    function draw(){
+      var cv = document.getElementById('ppCv'); if (!cv) return;
+      var g = fitCv(cv), ctx = g.ctx, w = g.w, h = g.h, i;
+      var o  = rd();
+      var s  = Math.min((w-36)/MAXU, (h-56)/12);
+      var x0 = (w - MAXU*s)/2, yb = h - 26;
+      function X(u){ return x0 + u*s; }
+      function Y(u){ return yb - u*s; }
+      var bd = cssv('--border'), sub = cssv('--text3'), txt = cssv('--text');
+      var col = cssv('--green'), dk = cssv('--green-dark'), acc = cssv('--gold');
+      ctx.strokeStyle = bd; ctx.lineWidth = 1;
+      for (i=0;i<=MAXU;i+=2){ ctx.beginPath(); ctx.moveTo(X(i), Y(0)); ctx.lineTo(X(i), Y(11)); ctx.stroke(); }
+      for (i=0;i<=10;i+=2){ ctx.beginPath(); ctx.moveTo(X(0), Y(i)); ctx.lineTo(X(MAXU), Y(i)); ctx.stroke(); }
+      ctx.strokeStyle = dk; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(X(0), Y(o.L)); ctx.lineTo(X(MAXU), Y(o.L)); ctx.stroke();
+      label(ctx, 'r', X(MAXU)-8, Y(o.L)-8, dk, w, h);
+      ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(X(o.px), Y(o.py)); ctx.lineTo(X(st.q), Y(o.L)); ctx.stroke();
+      if (st.q === o.px){
+        ctx.strokeStyle = acc; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(X(o.px)+11, Y(o.L)); ctx.lineTo(X(o.px)+11, Y(o.L)-11); ctx.lineTo(X(o.px), Y(o.L)-11);
+        ctx.stroke();
+      }
+      dot(ctx, X(o.px), Y(o.py), 5.5, dk);
+      dot(ctx, X(st.q), Y(o.L), 5.5, acc);
+      label(ctx, 'P', X(o.px), Y(o.py)-11, dk, w, h);
+      label(ctx, 'Q', X(st.q), Y(o.L)+18, acc, w, h);
+      label(ctx, num1(len())+' u', (X(o.px)+X(st.q))/2 + 22, (Y(o.py)+Y(o.L))/2, txt, w, h);
+    }
+    function upd(){
+      var e1 = document.getElementById('ppPos'); if (e1) e1.textContent = st.q;
+      var e2 = document.getElementById('ppLen'); if (e2) e2.textContent = num1(len())+' u';
+      var cur = len(); if (cur < st.best) st.best = cur;
+      var e3 = document.getElementById('ppBest');
+      if (e3) e3.textContent = T({es:'El segmento más corto que has conseguido hasta ahora mide '+num1(st.best)+' u.',
+                                  en:'The shortest segment you have reached so far measures '+num1(st.best)+' u.'});
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Caza el camino más corto', en:'Hunt the shortest path'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Ya lo viste tres veces: el segmento se acorta hasta que cae justo debajo de P, y ahí queda en ángulo recto con la recta. Esa longitud mínima es la distancia del punto a la recta.',
+            en:'You have seen it three times: the segment gets shorter until it lands right below P, and there it sits at a right angle with the line. That minimum length is the distance from the point to the line.'
+          })+'</span></div></div>';
+        return;
+      }
+      var o = rd();
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Caza el camino más corto', en:'Hunt the shortest path'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'P está fijo y Q se desliza sobre la recta r. Cada posición de Q da un segmento distinto, y el número de arriba te dice cuánto mide en ese momento.',
+            en:'P is fixed and Q slides along line r. Each position of Q gives a different segment, and the number above tells you how long it is at that moment.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'Deja Q donde el segmento de P a la recta quede lo más corto posible.',
+                                     en:'Leave Q where the segment from P to the line ends up as short as possible.'})+'</div>'+
+          '<canvas class="gcanvas" id="ppCv"></canvas>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Punto Q',en:'Point Q'})+'</span><input type="range" min="0" max="'+MAXU+'" value="'+st.q+'" oninput="ppSlide(this.value)"><span class="kval" id="ppPos">'+st.q+'</span></div>'+
+          '<div class="livelbl">'+T({es:'El segmento PQ mide ',en:'Segment PQ measures '})+'<b id="ppLen">'+num1(len())+' u</b></div>'+
+          '<div class="statline" id="ppBest"></div>'+
+          '<button class="rverify-btn" onclick="ppChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="ppFb"></div>'+
+        '</div>';
+      draw(); upd();
+      setTimeout(function(){ draw(); }, 160);
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.lock = false;
+        if (st.r >= 3) st.done = true; else reset();
+        render();
+      }, ms);
+    }
+    window.ppSlide = function(val){
+      if (st.done || st.lock) return;
+      st.q = parseInt(val,10) || 0;
+      draw(); upd();
+    };
+    window.ppChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('ppFb'); if (!fb) return;
+      var o = rd();
+      if (st.q === o.px){
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Ahí está: el segmento quedó vertical, forma un ángulo recto con r y mide '+(o.py-o.L)+' unidades, que es lo mínimo posible.',
+          en:'There it is: the segment ended up vertical, it forms a right angle with r and measures '+(o.py-o.L)+' units, which is the smallest possible.'
+        })+'</span>';
+        adv(2000); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.q = o.px; draw(); upd();
+        fb.innerHTML = T({
+          es:'Así queda: con Q justo debajo de P el segmento mide '+(o.py-o.L)+' unidades y llega a la recta formando un ángulo recto.',
+          en:'Here it is: with Q right below P the segment measures '+(o.py-o.L)+' units and reaches the line forming a right angle.'
+        });
+        adv(2900); return;
+      }
+      fb.textContent = (st.q > o.px)
+        ? T({es:'Ese segmento mide '+num1(len())+' u y todavía va inclinado. Corre Q hacia la izquierda para acortarlo.',
+             en:'That segment measures '+num1(len())+' u and it is still slanted. Slide Q to the left to shorten it.'})
+        : T({es:'Ese segmento mide '+num1(len())+' u y todavía va inclinado. Corre Q hacia la derecha para acortarlo.',
+             en:'That segment measures '+num1(len())+' u and it is still slanted. Slide Q to the right to shorten it.'});
+    };
+    reset(); render();
+  })();
+
+  /* ---- PROBLEMA 4 ---- */
+  addProb(v4 === 0 ? {
+    title:{es:'El punto sobre la recta horizontal', en:'The point above the horizontal line'},
+    q:{es:'En una cuadrícula, la recta r es horizontal y pasa por todas las casillas de altura '+L4+'. El punto P está en la casilla ('+px4+', '+ph4+'). ¿Cuántas unidades mide la distancia de P a la recta r?',
+       en:'On a grid, line r is horizontal and passes through every cell at height '+L4+'. Point P sits in cell ('+px4+', '+ph4+'). How many units is the distance from P to line r?'},
+    options:[String(d4), String(ph4), String(ph4+L4), String(d4-3)],
+    correct:String(d4),
+    hint:{es:'De todos los segmentos que van de P a r, el que cuenta es el que llega formando un ángulo recto, y contra una recta horizontal ese segmento queda vertical.',
+          en:'Of all the segments running from P to r, the one that counts is the one arriving at a right angle, and against a horizontal line that segment ends up vertical.'},
+    exp:{es:'El segmento perpendicular baja en línea recta desde la altura '+ph4+' hasta la altura '+L4+', así que mide '+ph4+' − '+L4+' = '+d4+' unidades.',
+         en:'The perpendicular segment drops straight down from height '+ph4+' to height '+L4+', so it measures '+ph4+' − '+L4+' = '+d4+' units.'},
+    showWork:true
+  } : {
+    title:{es:'El punto junto a la recta vertical', en:'The point beside the vertical line'},
+    q:{es:'En una cuadrícula, la recta v es vertical y pasa por todas las casillas cuya primera coordenada es '+L4+'. El punto Q está en la casilla ('+ph4+', '+px4+'). ¿Cuántas unidades mide la distancia de Q a la recta v?',
+       en:'On a grid, line v is vertical and passes through every cell whose first coordinate is '+L4+'. Point Q sits in cell ('+ph4+', '+px4+'). How many units is the distance from Q to line v?'},
+    options:[String(d4), String(ph4), String(ph4+L4), String(d4-3)],
+    correct:String(d4),
+    hint:{es:'Contra una recta vertical, el segmento que llega formando un ángulo recto queda horizontal, así que solo cambia la primera coordenada.',
+          en:'Against a vertical line, the segment arriving at a right angle ends up horizontal, so only the first coordinate changes.'},
+    exp:{es:'El segmento perpendicular cruza en línea recta de la columna '+ph4+' a la columna '+L4+', así que mide '+ph4+' − '+L4+' = '+d4+' unidades.',
+         en:'The perpendicular segment runs straight across from column '+ph4+' to column '+L4+', so it measures '+ph4+' − '+L4+' = '+d4+' units.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 5 ---- */
+  addProb(v5 === 0 ? {
+    title:{es:'Cuál de todos los segmentos', en:'Which of all the segments'},
+    q:{es:'Desde un punto P se trazan varios segmentos que terminan en lugares distintos de una misma recta r. ¿Cuál de ellos mide la distancia de P a r?',
+       en:'From a point P several segments are drawn, each ending at a different place on the same line r. Which one of them measures the distance from P to r?'},
+    options:{es:['El que llega a la recta formando un ángulo recto',
+                 'El que llega al lugar de la recta que queda más a la izquierda',
+                 'Cualquiera de ellos, porque todos van de P a r',
+                 'El que llega al final de la recta'],
+             en:['The one reaching the line at a right angle',
+                 'The one reaching the place on the line furthest to the left',
+                 'Any of them, because they all go from P to r',
+                 'The one reaching the end of the line']},
+    correct:{es:'El que llega a la recta formando un ángulo recto',
+             en:'The one reaching the line at a right angle'},
+    hint:{es:'Entre todos esos segmentos hay uno que es más corto que los demás, y ese es el que se toma como la distancia.',
+          en:'Among all those segments there is one that is shorter than the rest, and that is the one taken as the distance.'},
+    exp:{es:'Todos los demás segmentos quedan inclinados y por eso son más largos. El perpendicular es el más corto, y su longitud es la que se llama distancia de P a r. Además, una recta no tiene final, así que no existe un segmento que llegue a su extremo.',
+         en:'All the other segments end up slanted and are therefore longer. The perpendicular one is the shortest, and its length is what is called the distance from P to r. Besides, a line has no end, so no segment can reach its tip.'},
+    showWork:false
+  } : {
+    title:{es:'La manguera del jardinero', en:'The gardener hose'},
+    q:{es:'Un jardinero va a tender una manguera desde una llave que está en el patio hasta la orilla recta de un camino. Quiere gastar la menor cantidad de manguera posible. ¿Cómo debe tenderla?',
+       en:'A gardener is going to run a hose from a tap in the yard to the straight edge of a path. He wants to use as little hose as possible. How should he run it?'},
+    options:{es:['Perpendicular a la orilla del camino',
+                 'Paralela a la orilla del camino',
+                 'Hacia el lugar del camino que quede más lejos de la llave',
+                 'Inclinada, porque así se estira menos la manguera'],
+             en:['Perpendicular to the edge of the path',
+                 'Parallel to the edge of the path',
+                 'Towards the place on the path that is furthest from the tap',
+                 'Slanted, because that way the hose stretches less']},
+    correct:{es:'Perpendicular a la orilla del camino', en:'Perpendicular to the edge of the path'},
+    hint:{es:'La menor cantidad de manguera corresponde al segmento más corto que se puede trazar de la llave a la orilla.',
+          en:'The least amount of hose corresponds to the shortest segment that can be drawn from the tap to the edge.'},
+    exp:{es:'El tramo más corto de la llave a la orilla es el que llega formando un ángulo recto, y su longitud es justamente la distancia de la llave al camino. Una manguera paralela nunca llegaría, porque no toca la orilla.',
+         en:'The shortest run from the tap to the edge is the one arriving at a right angle, and its length is exactly the distance from the tap to the path. A parallel hose would never arrive, because it never touches the edge.'},
+    showWork:false
+  });
+
+  /* ============================================================
+     IDEA 4
+     ============================================================ */
+  sec(T({es:'Idea 4', en:'Idea 4'}),
+      T({es:'La franja entre dos paralelas', en:'The band between two parallels'}),
+      '<p>'+T({
+        es:'Dos rectas paralelas nunca se cruzan, por más que las alargues hacia los dos lados. Entre ellas queda una franja que se mantiene igual de ancha en todo el dibujo, y por eso tiene sentido hablar de la distancia entre las dos rectas como si fueran dos puntos.',
+        en:'Two parallel lines never cross, no matter how far you extend them either way. Between them there is a band that stays equally wide across the whole drawing, and that is why it makes sense to speak of the distance between the two lines as if they were two points.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Para medirla se reutiliza la idea anterior: se toma cualquier punto de una de las rectas y se mide en perpendicular hasta la otra. Como el ancho de la franja no cambia, no importa qué punto elijas. Con dos rectas que se cruzan la historia sería distinta, porque cerca del cruce quedan casi encimadas y lejos quedan muy separadas, y no habría un solo número que sirviera.',
+        en:'To measure it you reuse the previous idea: take any point on one of the lines and measure perpendicular to the other. Since the width of the band does not change, it makes no difference which point you pick. With two crossing lines the story would be different, because near the crossing they are almost on top of each other and far away they are widely separated, so no single number would work.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 3: ajusta el ancho de la franja ---- */
+  (function(){
+    var wrap = widget('paralelas');
+    var MAXH = 12, MAXU = 14;
+    var RS = [
+      { ha: ri(2,3),  t: ri(4,6) },
+      { ha: ri(9,11), t: ri(4,6) },
+      { ha: ri(5,6),  t: ri(4,6) }
+    ];
+    var st = { r:0, hb:0, mx:7, tries:0, done:false, lock:false };
+    function rd(){ return RS[st.r]; }
+    function reset(){
+      var o = rd();
+      st.hb = o.ha >= 8 ? Math.max(0, o.ha - 2) : Math.min(MAXH, o.ha + 2);
+      st.mx = 4; st.tries = 0;
+    }
+    function gap(){ return Math.abs(st.hb - rd().ha); }
+    function sol(){
+      var o = rd();
+      return (o.ha + o.t <= MAXH) ? (o.ha + o.t) : (o.ha - o.t);
+    }
+    function draw(){
+      var cv = document.getElementById('paCv'); if (!cv) return;
+      var g = fitCv(cv), ctx = g.ctx, w = g.w, h = g.h, i;
+      var o  = rd();
+      var s  = Math.min((w-36)/MAXU, (h-46)/MAXH);
+      var x0 = (w - MAXU*s)/2, yb = h - 22;
+      function X(u){ return x0 + u*s; }
+      function Y(u){ return yb - u*s; }
+      var bd = cssv('--border'), sub = cssv('--text3'), txt = cssv('--text');
+      var dk = cssv('--green-dark'), col = cssv('--green'), acc = cssv('--gold');
+      ctx.strokeStyle = bd; ctx.lineWidth = 1;
+      for (i=0;i<=MAXU;i+=2){ ctx.beginPath(); ctx.moveTo(X(i), Y(0)); ctx.lineTo(X(i), Y(MAXH)); ctx.stroke(); }
+      for (i=0;i<=MAXH;i+=2){ ctx.beginPath(); ctx.moveTo(X(0), Y(i)); ctx.lineTo(X(MAXU), Y(i)); ctx.stroke(); }
+      ctx.strokeStyle = dk; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(X(0), Y(o.ha)); ctx.lineTo(X(MAXU), Y(o.ha)); ctx.stroke();
+      ctx.strokeStyle = col; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(X(0), Y(st.hb)); ctx.lineTo(X(MAXU), Y(st.hb)); ctx.stroke();
+      label(ctx, 'a', X(0)+10, Y(o.ha)-7, dk, w, h);
+      label(ctx, 'b', X(0)+10, Y(st.hb)-7, col, w, h);
+      ctx.strokeStyle = acc; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(X(st.mx), Y(o.ha)); ctx.lineTo(X(st.mx), Y(st.hb)); ctx.stroke();
+      label(ctx, gap()+' u', X(st.mx)+20, (Y(o.ha)+Y(st.hb))/2, txt, w, h);
+    }
+    function upd(){
+      var e1 = document.getElementById('paPos'); if (e1) e1.textContent = st.hb;
+      var e2 = document.getElementById('paMx');  if (e2) e2.textContent = st.mx;
+      var e3 = document.getElementById('paGap'); if (e3) e3.textContent = gap()+' u';
+      var e4 = document.getElementById('paStat');
+      if (e4) e4.textContent = T({
+        es:'Medida en la columna '+st.mx+': '+gap()+' unidades. Mueve el medidor y verás que el número no cambia.',
+        en:'Measured at column '+st.mx+': '+gap()+' units. Move the gauge and you will see the number does not change.'
+      });
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Ajusta la franja', en:'Set the band'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Listo. Cada vez que moviste el medidor de un lado a otro, el ancho de la franja siguió dando el mismo número: eso es lo que permite hablar de una sola distancia entre dos paralelas.',
+            en:'Done. Every time you moved the gauge from one side to the other, the width of the band kept giving the same number: that is what lets us speak of a single distance between two parallels.'
+          })+'</span></div></div>';
+        return;
+      }
+      var o = rd();
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Ajusta la franja', en:'Set the band'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'La recta a está fija a la altura '+o.ha+'. Sube o baja la recta b, que siempre se mantiene paralela, y desliza el medidor amarillo para revisar el ancho en distintas columnas.',
+            en:'Line a is fixed at height '+o.ha+'. Raise or lower line b, which always stays parallel, and slide the yellow gauge to check the width at different columns.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'Deja la franja entre a y b con un ancho de exactamente '+o.t+' unidades.',
+                                     en:'Leave the band between a and b exactly '+o.t+' units wide.'})+'</div>'+
+          '<canvas class="gcanvas" id="paCv"></canvas>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Recta b',en:'Line b'})+'</span><input type="range" min="0" max="'+MAXH+'" value="'+st.hb+'" oninput="paSlide(this.value)"><span class="kval" id="paPos">'+st.hb+'</span></div>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Medidor',en:'Gauge'})+'</span><input type="range" min="1" max="'+(MAXU-1)+'" value="'+st.mx+'" oninput="paMove(this.value)"><span class="kval" id="paMx">'+st.mx+'</span></div>'+
+          '<div class="livelbl">'+T({es:'Ancho de la franja: ',en:'Width of the band: '})+'<b id="paGap">'+gap()+' u</b></div>'+
+          '<div class="statline" id="paStat"></div>'+
+          '<button class="rverify-btn" onclick="paChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="paFb"></div>'+
+        '</div>';
+      draw(); upd();
+      setTimeout(function(){ draw(); }, 160);
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.lock = false;
+        if (st.r >= 3) st.done = true; else reset();
+        render();
+      }, ms);
+    }
+    window.paSlide = function(val){
+      if (st.done || st.lock) return;
+      st.hb = parseInt(val,10) || 0;
+      draw(); upd();
+    };
+    window.paMove = function(val){
+      if (st.done || st.lock) return;
+      st.mx = parseInt(val,10) || 1;
+      draw(); upd();
+    };
+    window.paChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('paFb'); if (!fb) return;
+      var o = rd(), d = gap();
+      if (d === o.t){
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Correcto: la franja mide '+o.t+' unidades en la columna donde está el medidor y también en todas las demás.',
+          en:'Correct: the band measures '+o.t+' units at the column where the gauge is and at every other column too.'
+        })+'</span>';
+        adv(1900); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.hb = sol(); draw(); upd();
+        fb.innerHTML = T({
+          es:'Así queda: con b en la altura '+sol()+' la franja mide '+o.t+' unidades.',
+          en:'Here it is: with b at height '+sol()+' the band measures '+o.t+' units.'
+        });
+        adv(2800); return;
+      }
+      fb.textContent = d < o.t
+        ? T({es:'La franja mide '+d+' y necesitas '+o.t+': separa más la recta b de la recta a.',
+             en:'The band measures '+d+' and you need '+o.t+': move line b further from line a.'})
+        : T({es:'La franja mide '+d+' y necesitas '+o.t+': acerca la recta b a la recta a.',
+             en:'The band measures '+d+' and you need '+o.t+': bring line b closer to line a.'});
+    };
+    reset(); render();
+  })();
+
+  /* ---- PROBLEMA 6 ---- */
+  addProb(v6 === 0 ? {
+    title:{es:'El ancho de la franja', en:'The width of the band'},
+    q:{es:'En una cuadrícula, la recta a es horizontal y pasa por la altura '+h6+'. La recta b también es horizontal y pasa por la altura '+h6b+'. ¿Cuántas unidades mide la distancia entre las dos rectas?',
+       en:'On a grid, line a is horizontal and passes through height '+h6+'. Line b is also horizontal and passes through height '+h6b+'. How many units is the distance between the two lines?'},
+    options:[String(d6), String(h6+h6b), String(h6b), String(d6-3)],
+    correct:String(d6),
+    hint:{es:'Elige cualquier punto de una de las rectas y mide en perpendicular hasta la otra: contra rectas horizontales esa medida es vertical.',
+          en:'Pick any point on one of the lines and measure perpendicular to the other: against horizontal lines that measurement is vertical.'},
+    exp:{es:'La medida perpendicular sube de la altura '+h6+' a la altura '+h6b+', así que la franja mide '+h6b+' − '+h6+' = '+d6+' unidades, y ese ancho es el mismo en cualquier columna.',
+         en:'The perpendicular measurement climbs from height '+h6+' to height '+h6b+', so the band measures '+h6b+' − '+h6+' = '+d6+' units, and that width is the same at any column.'},
+    showWork:true
+  } : {
+    title:{es:'La paralela que falta', en:'The missing parallel'},
+    q:{es:'En una cuadrícula, la recta a es horizontal y pasa por la altura '+h6+'. La recta b es paralela a la recta a, queda por encima de ella y la distancia entre ambas es de '+d6+' unidades. ¿Por qué altura pasa la recta b?',
+       en:'On a grid, line a is horizontal and passes through height '+h6+'. Line b is parallel to line a, sits above it, and the distance between them is '+d6+' units. Through which height does line b pass?'},
+    options:[String(h6b), String(d6), String(d6-h6), String(h6b+h6)],
+    correct:String(h6b),
+    hint:{es:'La distancia entre las paralelas indica cuántas unidades hay que subir en vertical desde la recta de abajo.',
+          en:'The distance between the parallels tells how many units you must climb vertically from the lower line.'},
+    exp:{es:'Subir '+d6+' unidades en vertical desde la altura '+h6+' lleva a la altura '+h6+' + '+d6+' = '+h6b+'.',
+         en:'Climbing '+d6+' units vertically from height '+h6+' lands on height '+h6+' + '+d6+' = '+h6b+'.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 7 ---- */
+  addProb(v7 === 0 ? {
+    title:{es:'Dos alumnos midiendo', en:'Two students measuring'},
+    q:{es:'En una hoja hay dibujadas dos rectas paralelas muy largas. Un alumno mide la separación entre ellas cerca del borde izquierdo de la hoja y otro la mide cerca del borde derecho. ¿Qué obtienen?',
+       en:'A sheet has two very long parallel lines drawn on it. One student measures the separation between them near the left edge of the sheet and another measures it near the right edge. What do they get?'},
+    options:{es:['La misma medida, porque la separación entre paralelas no cambia',
+                 'Medidas distintas, porque las rectas se van juntando poco a poco',
+                 'Medidas distintas, porque las rectas se van separando poco a poco',
+                 'La misma medida solo si las dos rectas son horizontales'],
+             en:['The same measurement, because the separation between parallels does not change',
+                 'Different measurements, because the lines slowly come together',
+                 'Different measurements, because the lines slowly move apart',
+                 'The same measurement only if both lines are horizontal']},
+    correct:{es:'La misma medida, porque la separación entre paralelas no cambia',
+             en:'The same measurement, because the separation between parallels does not change'},
+    hint:{es:'Piensa en qué le pasaría a dos rectas que se fueran juntando poco a poco si las alargas lo suficiente.',
+          en:'Think about what would happen to two lines that slowly came together if you extended them far enough.'},
+    exp:{es:'Si la separación cambiara de un borde al otro, las rectas terminarían por cruzarse en algún punto y ya no serían paralelas. Justo porque el ancho se mantiene igual, ese número sirve como la distancia entre las dos rectas.',
+         en:'If the separation changed from one edge to the other, the lines would end up crossing somewhere and would no longer be parallel. Precisely because the width stays the same, that number works as the distance between the two lines.'},
+    showWork:false
+  } : {
+    title:{es:'Paralelas y rectas que se cruzan', en:'Parallels and crossing lines'},
+    q:{es:'¿Por qué tiene sentido hablar de la distancia entre dos rectas paralelas y no de la distancia entre dos rectas que se cruzan?',
+       en:'Why does it make sense to speak of the distance between two parallel lines but not of the distance between two crossing lines?'},
+    options:{es:['Porque entre las paralelas la separación es siempre la misma, y entre las que se cruzan cambia de un lugar a otro',
+                 'Porque las rectas que se cruzan siempre quedan más cerca una de la otra',
+                 'Porque las rectas paralelas siempre son horizontales y se miden más fácil',
+                 'Porque las rectas que se cruzan no se pueden medir con una regla'],
+             en:['Because between parallels the separation is always the same, while between crossing lines it changes from place to place',
+                 'Because crossing lines always end up closer to each other',
+                 'Because parallel lines are always horizontal and easier to measure',
+                 'Because crossing lines cannot be measured with a ruler']},
+    correct:{es:'Porque entre las paralelas la separación es siempre la misma, y entre las que se cruzan cambia de un lugar a otro',
+             en:'Because between parallels the separation is always the same, while between crossing lines it changes from place to place'},
+    hint:{es:'Para que un solo número describa la separación, esa separación no puede depender del lugar donde midas.',
+          en:'For a single number to describe the separation, that separation cannot depend on where you measure it.'},
+    exp:{es:'En dos rectas que se cruzan la separación vale cero en el cruce y crece conforme te alejas, así que ningún número la describe. Entre paralelas el ancho es constante y por eso ese valor único se toma como la distancia.',
+         en:'In two crossing lines the separation is zero at the crossing and grows as you move away, so no single number describes it. Between parallels the width is constant and that unique value is taken as the distance.'},
+    showWork:false
+  });
+
+  /* ============================================================
+     IDEA 5
+     ============================================================ */
+  sec(T({es:'Idea 5', en:'Idea 5'}),
+      T({es:'Cuándo tres longitudes cierran un triángulo', en:'When three lengths close a triangle'}),
+      '<p>'+T({
+        es:'Toma tres varillas y trata de armar un triángulo con ellas. A veces se puede y a veces no, y que se pueda depende solamente de cuánto miden. Si dos de las varillas juntas se quedan cortas frente a la tercera, sus puntas nunca llegan a tocarse y la figura queda abierta.',
+        en:'Take three rods and try to build a triangle with them. Sometimes it works and sometimes it does not, and whether it works depends only on how long they are. If two of the rods together fall short against the third, their tips never manage to touch and the figure stays open.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Detrás de esto está la misma idea de siempre: ir de un vértice a otro pasando por el tercero es un camino de dos tramos, y un camino de dos tramos no puede ser más corto que el segmento recto que une esos dos vértices. Cuando los dos tramos suman exactamente lo mismo que el lado largo, la figura se aplasta y queda una línea en lugar de un triángulo.',
+        en:'Behind this is the same idea as always: going from one vertex to another by way of the third is a two stretch path, and a two stretch path cannot be shorter than the straight segment joining those two vertices. When the two stretches add up to exactly the same as the long side, the figure flattens out and a line is left instead of a triangle.'
+      })+'</p>');
+
+  /* ---- MANIPULATIVO 4: cierra el triángulo ---- */
+  (function(){
+    var wrap = widget('triangulo');
+    var MAXS = 15;
+    var RS = [
+      { mode:'close', a: ri(7,10) },
+      { mode:'flat',  a: ri(6,9) },
+      { mode:'max',   a: ri(6,9), cF: ri(3,5) }
+    ];
+    var st = { r:0, b:2, c:2, tries:0, done:false, lock:false };
+    function rd(){ return RS[st.r]; }
+    function reset(){
+      var o = rd();
+      if (o.mode === 'max'){ st.b = 3; st.c = Math.min(MAXS, o.cF + 2); }
+      else { st.b = 2; st.c = 2; }
+      st.tries = 0;
+    }
+    function valid(){
+      var a = rd().a;
+      return (st.b + st.c > a) && (a + st.c > st.b) && (a + st.b > st.c);
+    }
+    function draw(){
+      var cv = document.getElementById('trCv'); if (!cv) return;
+      var g = fitCv(cv), ctx = g.ctx, w = g.w, h = g.h;
+      var o  = rd(), a = o.a;
+      var ux = 0, uy = 0, ok = valid();
+      if (ok){
+        ux = (a*a + st.b*st.b - st.c*st.c) / (2*a);
+        uy = Math.sqrt(Math.max(0, st.b*st.b - ux*ux));
+      }
+      var span = Math.max(a, st.b + st.c, 12);
+      var s = Math.min((w-40)/span, (h-56)/Math.max(uy+1.5, 6));
+      var x0 = (w - a*s)/2, yb = h - 30;
+      function X(u){ return x0 + u*s; }
+      function Y(u){ return yb - u*s; }
+      var dk = cssv('--green-dark'), col = cssv('--green'), acc = cssv('--gold');
+      var txt = cssv('--text'), sub = cssv('--text3'), bad = cssv('--bad');
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = dk; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(a), Y(0)); ctx.stroke();
+      dot(ctx, X(0), Y(0), 5, dk); dot(ctx, X(a), Y(0), 5, dk);
+      label(ctx, T({es:'base ',en:'base '})+a+' u', X(a/2), Y(0)+20, dk, w, h);
+      if (ok){
+        ctx.strokeStyle = col; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(X(0), Y(0)); ctx.lineTo(X(ux), Y(uy)); ctx.stroke();
+        ctx.strokeStyle = acc; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(X(a), Y(0)); ctx.lineTo(X(ux), Y(uy)); ctx.stroke();
+        dot(ctx, X(ux), Y(uy), 5, txt);
+        label(ctx, st.b+' u', X(ux/2)-14, Y(uy/2), col, w, h);
+        label(ctx, st.c+' u', X((ux+a)/2)+14, Y(uy/2), acc, w, h);
+      } else {
+        var yo = Y(0) - 13;
+        ctx.strokeStyle = col; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(X(0), yo); ctx.lineTo(X(st.b), yo); ctx.stroke();
+        ctx.strokeStyle = acc; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(X(a), yo); ctx.lineTo(X(a-st.c), yo); ctx.stroke();
+        label(ctx, st.b+' u', X(st.b/2), yo-9, col, w, h);
+        label(ctx, st.c+' u', X(a-st.c/2), yo-9, acc, w, h);
+        if (st.b + st.c < a){
+          ctx.strokeStyle = bad; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(X(st.b), yo); ctx.lineTo(X(a-st.c), yo); ctx.stroke();
+          label(ctx, T({es:'faltan ',en:'missing '})+(a-st.b-st.c)+' u', X((st.b+a-st.c)/2), yo-9, bad, w, h);
+        }
+      }
+    }
+    function statTxt(){
+      var o = rd(), a = o.a, sum = st.b + st.c;
+      if (valid()) return T({es:'Los dos brazos se juntan arriba de la base: el triángulo cierra.',
+                             en:'The two arms meet above the base: the triangle closes.'});
+      if (st.b > a + st.c) return T({es:'El brazo izquierdo mide más que la base y el brazo derecho juntos, así que nunca se cierra.',
+                                     en:'The left arm measures more than the base and the right arm together, so it never closes.'});
+      if (st.c > a + st.b) return T({es:'El brazo derecho mide más que la base y el brazo izquierdo juntos, así que nunca se cierra.',
+                                     en:'The right arm measures more than the base and the left arm together, so it never closes.'});
+      if (sum === a) return T({es:'Los brazos se tocan justo sobre la base: la figura queda plana y no es un triángulo.',
+                               en:'The arms touch right on the base: the figure lies flat and is not a triangle.'});
+      return T({es:'A los dos brazos les faltan '+(a-sum)+' unidades para tocarse.',
+                en:'The two arms are '+(a-sum)+' units short of touching.'});
+    }
+    function upd(){
+      var e1 = document.getElementById('trB'); if (e1) e1.textContent = st.b+' u';
+      var e2 = document.getElementById('trC'); if (e2) e2.textContent = st.c+' u';
+      var e3 = document.getElementById('trSum'); if (e3) e3.textContent = (st.b+st.c)+' u';
+      var e4 = document.getElementById('trStat'); if (e4) e4.textContent = statTxt();
+    }
+    function goalTxt(){
+      var o = rd();
+      if (o.mode === 'close') return T({es:'Ajusta los dos brazos hasta que el triángulo cierre.',
+                                        en:'Adjust both arms until the triangle closes.'});
+      if (o.mode === 'flat')  return T({es:'Consigue que los dos brazos juntos midan exactamente lo mismo que la base y observa qué figura queda.',
+                                        en:'Make the two arms together measure exactly the same as the base and see what figure is left.'});
+      return T({es:'Deja el brazo derecho en '+o.cF+' unidades y encuentra el brazo izquierdo entero más largo con el que el triángulo todavía cierra.',
+                en:'Leave the right arm at '+o.cF+' units and find the longest whole left arm for which the triangle still closes.'});
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Cierra el triángulo', en:'Close the triangle'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Ya viste los tres casos: brazos que alcanzan, brazos que quedan exactamente planos y el punto justo donde uno de ellos deja de servir. La figura cierra mientras dos lados juntos superen al tercero.',
+            en:'You have seen the three cases: arms that reach, arms that end up exactly flat and the precise point where one of them stops working. The figure closes as long as two sides together beat the third.'
+          })+'</span></div></div>';
+        return;
+      }
+      var o = rd();
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Cierra el triángulo', en:'Close the triangle'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'La base está fija y mide '+o.a+' unidades. Alarga o acorta los dos brazos y observa si sus puntas alcanzan a juntarse.',
+            en:'The base is fixed and measures '+o.a+' units. Lengthen or shorten the two arms and watch whether their tips manage to meet.'
+          })+'</div>'+
+          '<div class="goalbar">'+goalTxt()+'</div>'+
+          '<canvas class="gcanvas" id="trCv"></canvas>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Brazo izq.',en:'Left arm'})+'</span><input type="range" min="1" max="'+MAXS+'" value="'+st.b+'" oninput="trSlideB(this.value)"><span class="kval" id="trB">'+st.b+' u</span></div>'+
+          '<div class="krow"><span class="klbl">'+T({es:'Brazo der.',en:'Right arm'})+'</span><input type="range" min="1" max="'+MAXS+'" value="'+st.c+'" oninput="trSlideC(this.value)"><span class="kval" id="trC">'+st.c+' u</span></div>'+
+          '<div class="livelbl">'+T({es:'Los dos brazos juntos miden ',en:'The two arms together measure '})+'<b id="trSum">'+(st.b+st.c)+' u</b></div>'+
+          '<div class="statline" id="trStat"></div>'+
+          '<button class="rverify-btn" onclick="trChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="trFb"></div>'+
+        '</div>';
+      draw(); upd();
+      setTimeout(function(){ draw(); }, 160);
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.lock = false;
+        if (st.r >= 3) st.done = true; else reset();
+        render();
+      }, ms);
+    }
+    window.trSlideB = function(val){
+      if (st.done || st.lock) return;
+      st.b = parseInt(val,10) || 1;
+      draw(); upd();
+    };
+    window.trSlideC = function(val){
+      if (st.done || st.lock) return;
+      st.c = parseInt(val,10) || 1;
+      draw(); upd();
+    };
+    window.trChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('trFb'); if (!fb) return;
+      var o = rd(), a = o.a, sum = st.b + st.c;
+      if (o.mode === 'close'){
+        if (valid()){
+          fb.innerHTML = '<span class="okmsg">'+T({
+            es:'Cerró: los brazos suman '+sum+' unidades y eso alcanza a superar los '+a+' de la base.',
+            en:'It closed: the arms add up to '+sum+' units and that is enough to beat the '+a+' of the base.'
+          })+'</span>';
+          adv(1900); return;
+        }
+        st.tries++;
+        if (st.tries >= 3){
+          st.b = Math.ceil(a/2)+1; st.c = Math.ceil(a/2)+1; draw(); upd();
+          fb.innerHTML = T({es:'Así cierra: con brazos de '+st.b+' y '+st.c+' unidades, su suma pasa de los '+a+' de la base.',
+                            en:'Like this it closes: with arms of '+st.b+' and '+st.c+' units, their sum goes past the '+a+' of the base.'});
+          adv(2800); return;
+        }
+        fb.textContent = (st.b > a + st.c || st.c > a + st.b)
+          ? T({es:'Un brazo se alargó demasiado y ya rebasa a los otros dos lados juntos. Recórtalo.',
+               en:'One arm grew too long and now beats the other two sides together. Cut it back.'})
+          : T({es:'Los brazos suman '+sum+' y la base mide '+a+': todavía no alcanzan. Alarga alguno de los dos.',
+               en:'The arms add up to '+sum+' and the base measures '+a+': they still do not reach. Lengthen one of them.'});
+        return;
+      }
+      if (o.mode === 'flat'){
+        if (sum === a){
+          fb.innerHTML = '<span class="okmsg">'+T({
+            es:'Ahí está el caso límite: los brazos suman exactamente '+a+' y la figura se aplasta sobre la base, así que no hay triángulo.',
+            en:'There is the borderline case: the arms add up to exactly '+a+' and the figure flattens onto the base, so there is no triangle.'
+          })+'</span>';
+          adv(2400); return;
+        }
+        st.tries++;
+        if (st.tries >= 3){
+          st.b = Math.floor(a/2); st.c = a - st.b; draw(); upd();
+          fb.innerHTML = T({es:'Así queda: '+st.b+' y '+st.c+' suman los '+a+' de la base y la figura se aplasta.',
+                            en:'Here it is: '+st.b+' and '+st.c+' add up to the '+a+' of the base and the figure flattens.'});
+          adv(2800); return;
+        }
+        fb.textContent = sum < a
+          ? T({es:'Los brazos suman '+sum+' y la base mide '+a+': alárgalos hasta que la suma llegue a '+a+'.',
+               en:'The arms add up to '+sum+' and the base measures '+a+': lengthen them until the sum reaches '+a+'.'})
+          : T({es:'Los brazos suman '+sum+' y la base mide '+a+': recórtalos hasta que la suma baje a '+a+'.',
+               en:'The arms add up to '+sum+' and the base measures '+a+': shorten them until the sum drops to '+a+'.'});
+        return;
+      }
+      var tgt = a + o.cF - 1;
+      if (st.c === o.cF && st.b === tgt){
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Correcto: con '+tgt+' todavía cierra, y una unidad más ya rebasaría a la base y al otro brazo juntos.',
+          en:'Correct: with '+tgt+' it still closes, and one unit more would already beat the base and the other arm together.'
+        })+'</span>';
+        adv(2400); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.c = o.cF; st.b = tgt; draw(); upd();
+        fb.innerHTML = T({es:'Así queda: el brazo izquierdo más largo que todavía cierra mide '+tgt+' unidades.',
+                          en:'Here it is: the longest left arm that still closes measures '+tgt+' units.'});
+        adv(2900); return;
+      }
+      if (st.c !== o.cF){
+        fb.textContent = T({es:'Primero deja el brazo derecho exactamente en '+o.cF+' unidades.',
+                            en:'First leave the right arm at exactly '+o.cF+' units.'});
+        return;
+      }
+      fb.textContent = valid()
+        ? T({es:'Con '+st.b+' el triángulo todavía cierra, así que puedes estirar más el brazo izquierdo.',
+             en:'With '+st.b+' the triangle still closes, so you can stretch the left arm further.'})
+        : T({es:'Con '+st.b+' el brazo izquierdo ya rebasa a los otros dos lados juntos. Recórtalo un poco.',
+             en:'With '+st.b+' the left arm already beats the other two sides together. Cut it back a little.'});
+    };
+    reset(); render();
+  })();
+
+  /* ---- PROBLEMA 8 ---- */
+  addProb(v8 === 0 ? {
+    title:{es:'El tercer lado más largo', en:'The longest third side'},
+    q:{es:'Dos lados de un triángulo miden '+s1+' y '+s2+' unidades. El tercer lado debe medir un número entero de unidades. ¿Cuál es el mayor valor que puede tomar?',
+       en:'Two sides of a triangle measure '+s1+' and '+s2+' units. The third side must measure a whole number of units. What is the largest value it can take?'},
+    options:[String(s1+s2-1), String(s1+s2), String(s1+s2+1), String(s2-s1+1)],
+    correct:String(s1+s2-1),
+    hint:{es:'Los dos lados conocidos forman un camino de dos tramos entre los extremos del tercero, y ese camino tiene que resultar más largo que el tercer lado.',
+          en:'The two known sides form a two stretch path between the ends of the third one, and that path has to come out longer than the third side.'},
+    exp:{es:'Los dos lados conocidos suman '+s1+' + '+s2+' = '+(s1+s2)+' unidades. Si el tercero llegara a esa medida la figura quedaría plana, así que debe quedar por debajo: el mayor entero posible es '+(s1+s2)+' − 1 = '+(s1+s2-1)+'.',
+         en:'The two known sides add up to '+s1+' + '+s2+' = '+(s1+s2)+' units. If the third one reached that measure the figure would lie flat, so it must stay below: the largest whole number possible is '+(s1+s2)+' − 1 = '+(s1+s2-1)+'.'},
+    showWork:true
+  } : {
+    title:{es:'El tercer lado más corto', en:'The shortest third side'},
+    q:{es:'Dos lados de un triángulo miden '+s1+' y '+s2+' unidades. El tercer lado debe medir un número entero de unidades. ¿Cuál es el menor valor que puede tomar?',
+       en:'Two sides of a triangle measure '+s1+' and '+s2+' units. The third side must measure a whole number of units. What is the smallest value it can take?'},
+    options:[String(s2-s1+1), String(s2-s1), String(s2-s1-1), String(s1+s2-1)],
+    correct:String(s2-s1+1),
+    hint:{es:'Ahora el lado largo es el de '+s2+' unidades, y los otros dos juntos tienen que superarlo para que la figura cierre.',
+          en:'Now the long side is the one of '+s2+' units, and the other two together have to beat it for the figure to close.'},
+    exp:{es:'El tercer lado junto con el de '+s1+' debe superar al de '+s2+', así que tiene que pasar de '+s2+' − '+s1+' = '+(s2-s1)+' unidades. El menor entero que lo logra es '+(s2-s1)+' + 1 = '+(s2-s1+1)+'.',
+         en:'The third side together with the one of '+s1+' must beat the one of '+s2+', so it has to go past '+s2+' − '+s1+' = '+(s2-s1)+' units. The smallest whole number that manages it is '+(s2-s1)+' + 1 = '+(s2-s1+1)+'.'},
+    showWork:true
+  });
+
+  /* ============================================================
+     CIERRE
+     ============================================================ */
+  sec(T({es:'Cierre', en:'Wrap up'}), T({es:'Junta todo lo anterior', en:'Put it all together'}), '');
+
+  /* ---- PROBLEMA 9 ---- */
+  addProb(v9 === 0 ? {
+    title:{es:'La terna que sí arma', en:'The triple that works'},
+    q:{es:'¿Cuál de estas ternas de longitudes sí puede formar un triángulo?',
+       en:'Which of these triples of lengths can actually form a triangle?'},
+    options:{es:[t9+', '+(t9+2)+' y '+(t9+3)+' unidades',
+                 t9+', '+(t9+1)+' y '+(2*t9+2)+' unidades',
+                 t9+', '+(t9+3)+' y '+(2*t9+4)+' unidades',
+                 (t9+1)+', '+(t9+2)+' y '+(2*t9+3)+' unidades'],
+             en:[t9+', '+(t9+2)+' and '+(t9+3)+' units',
+                 t9+', '+(t9+1)+' and '+(2*t9+2)+' units',
+                 t9+', '+(t9+3)+' and '+(2*t9+4)+' units',
+                 (t9+1)+', '+(t9+2)+' and '+(2*t9+3)+' units']},
+    correct:{es:t9+', '+(t9+2)+' y '+(t9+3)+' unidades',
+             en:t9+', '+(t9+2)+' and '+(t9+3)+' units'},
+    hint:{es:'En cada terna, junta las dos longitudes más chicas y compáralas con la más grande.',
+          en:'In each triple, put the two smaller lengths together and compare them with the largest one.'},
+    exp:{es:'En la terna correcta, las dos longitudes más chicas juntas dan '+(2*t9+2)+' unidades y eso supera a la más grande, que es '+(t9+3)+', así que la figura cierra. En las otras tres las dos chicas se quedan cortas o apenas empatan con la grande, y el triángulo no se arma.',
+         en:'In the correct triple, the two smaller lengths together give '+(2*t9+2)+' units and that beats the largest one, which is '+(t9+3)+', so the figure closes. In the other three the two small ones fall short or barely tie the large one, and the triangle does not come together.'},
+    showWork:true
+  } : {
+    title:{es:'La terna que no arma', en:'The triple that fails'},
+    q:{es:'¿Cuál de estas ternas de longitudes NO puede formar un triángulo?',
+       en:'Which of these triples of lengths does NOT form a triangle?'},
+    options:{es:[t9+', '+(t9+1)+' y '+(2*t9+2)+' unidades',
+                 t9+', '+(t9+2)+' y '+(t9+3)+' unidades',
+                 (t9+1)+', '+(t9+2)+' y '+(t9+3)+' unidades',
+                 (t9+2)+', '+(t9+3)+' y '+(t9+4)+' unidades'],
+             en:[t9+', '+(t9+1)+' and '+(2*t9+2)+' units',
+                 t9+', '+(t9+2)+' and '+(t9+3)+' units',
+                 (t9+1)+', '+(t9+2)+' and '+(t9+3)+' units',
+                 (t9+2)+', '+(t9+3)+' and '+(t9+4)+' units']},
+    correct:{es:t9+', '+(t9+1)+' y '+(2*t9+2)+' unidades',
+             en:t9+', '+(t9+1)+' and '+(2*t9+2)+' units'},
+    hint:{es:'En cada terna, junta las dos longitudes más chicas y compáralas con la más grande.',
+          en:'In each triple, put the two smaller lengths together and compare them with the largest one.'},
+    exp:{es:'En esa terna las dos longitudes más chicas juntas dan '+(2*t9+1)+' unidades y la más grande mide '+(2*t9+2)+', así que las puntas nunca se tocan. En las otras tres, las dos chicas siempre superan a la grande.',
+         en:'In that triple the two smaller lengths together give '+(2*t9+1)+' units while the largest measures '+(2*t9+2)+', so the tips never touch. In the other three, the two small ones always beat the large one.'},
+    showWork:true
+  });
+
+  /* ---- PROBLEMA 10 ---- */
+  addProb(v10 === 0 ? {
+    title:{es:'Tres rectas horizontales', en:'Three horizontal lines'},
+    q:{es:'En una cuadrícula hay tres rectas horizontales: la recta r pasa por la altura '+hr+', la recta s pasa por la altura '+hs+' y la recta t pasa por la altura '+ht+'. ¿Cuántas unidades más grande es la distancia de s a t que la distancia de r a s?',
+       en:'On a grid there are three horizontal lines: line r passes through height '+hr+', line s passes through height '+hs+' and line t passes through height '+ht+'. How many units bigger is the distance from s to t than the distance from r to s?'},
+    options:[String(D10), String(A10), String(B10), String(A10+B10)],
+    correct:String(D10),
+    hint:{es:'Saca por separado el ancho de cada franja y luego compara los dos resultados.',
+          en:'Work out the width of each band separately and then compare the two results.'},
+    exp:{es:'De r a s hay '+hs+' − '+hr+' = '+A10+' unidades y de s a t hay '+ht+' − '+hs+' = '+B10+' unidades. La segunda franja supera a la primera por '+B10+' − '+A10+' = '+D10+'.',
+         en:'From r to s there are '+hs+' − '+hr+' = '+A10+' units and from s to t there are '+ht+' − '+hs+' = '+B10+' units. The second band beats the first one by '+B10+' − '+A10+' = '+D10+'.'},
+    showWork:true
+  } : {
+    title:{es:'La tercera paralela', en:'The third parallel'},
+    q:{es:'En una cuadrícula, la recta r es horizontal y pasa por la altura '+hr+'. La recta s es paralela a r y está '+A10+' unidades por encima de ella. La recta t es paralela a las dos y está '+B10+' unidades por encima de s. ¿Por qué altura pasa la recta t?',
+       en:'On a grid, line r is horizontal and passes through height '+hr+'. Line s is parallel to r and sits '+A10+' units above it. Line t is parallel to both and sits '+B10+' units above s. Through which height does line t pass?'},
+    options:[String(ht), String(hs), String(A10+B10), String(hr+B10)],
+    correct:String(ht),
+    hint:{es:'Cada distancia dice cuántas unidades hay que subir desde la recta anterior, y las subidas se acumulan.',
+          en:'Each distance says how many units to climb from the previous line, and the climbs pile up.'},
+    exp:{es:'Desde la altura '+hr+' se suben '+A10+' unidades hasta s y luego '+B10+' más hasta t: '+hr+' + '+A10+' + '+B10+' = '+ht+'.',
+         en:'From height '+hr+' you climb '+A10+' units up to s and then '+B10+' more up to t: '+hr+' + '+A10+' + '+B10+' = '+ht+'.'},
+    showWork:true
+  });
+}
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbzLGV15JRTPs9bbSvHRLfgOXeT9oUExDf1AH546WOwq5tYxXSdhX212OWi_bTJfMGx9/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Distancia entre Puntos y Distancia Punto-Recta';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>
