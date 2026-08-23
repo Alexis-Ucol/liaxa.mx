@@ -1579,19 +1579,22 @@ function buildLesson(rng) {
     }
     function r1(x){ return Math.round(x*10)/10; }
     function kind(){
-      var g = geo(), s = g.s.slice().sort(function(a,b){ return a-b; });
-      var e1 = Math.abs(s[0]-s[1]) <= 0.35, e2 = Math.abs(s[1]-s[2]) <= 0.35, e3 = Math.abs(s[0]-s[2]) <= 0.35;
-      if (e1 && e2 && e3) return 'equi';
-      if (e1 || e2 || e3) return 'iso';
-      if (Math.abs(s[0]-s[1]) > 0.6 && Math.abs(s[1]-s[2]) > 0.6) return 'esc';
-      return 'casi';
+      /* Use the same rounded-to-1-decimal values shown to the student,
+         so the label "9.1, 9.1, 7.0" always agrees with the classification.
+         Two sides are "equal" iff their displayed values match exactly.
+         "Almost isosceles" zone removed: rounded values are either equal or not. */
+      var g = geo();
+      var s = [r1(g.s[0]), r1(g.s[1]), r1(g.s[2])].sort(function(a,b){ return a-b; });
+      var e1 = (s[0] === s[1]), e2 = (s[1] === s[2]), e3 = (s[0] === s[2]);
+      if (e1 && e2) return 'equi';   // all three equal
+      if (e1 || e2 || e3) return 'iso';   // exactly two equal
+      return 'esc';                  // all three different
     }
     function kindTxt(){
       var k = kind();
       if (k === 'equi') return T({es:'Equilátero', en:'Equilateral'});
       if (k === 'iso')  return T({es:'Isósceles', en:'Isosceles'});
-      if (k === 'esc')  return T({es:'Escaleno', en:'Scalene'});
-      return T({es:'Casi isósceles: dos lados están muy cerca de ser iguales', en:'Almost isosceles: two sides are very close to equal'});
+      return T({es:'Escaleno', en:'Scalene'});
     }
     function draw(){
       var cv = document.getElementById('trCv'); if (!cv) return;
@@ -1692,7 +1695,8 @@ function buildLesson(rng) {
       if (st.done || st.lock) return;
       var fb = document.getElementById('trFb'); if (!fb) return;
       var g = geo(), k = kind(), goal = GOALS[st.r].k;
-      var s = g.s.slice().sort(function(a,b){ return a-b; });
+      /* Use rounded values for all comparisons and messages — same as classification */
+      var s = [r1(g.s[0]), r1(g.s[1]), r1(g.s[2])].sort(function(a,b){ return a-b; });
       if (k === goal){
         fb.innerHTML = '<span class="okmsg">'+T({
           es:'Correcto. Con lados de '+r1(g.s[0])+', '+r1(g.s[1])+' y '+r1(g.s[2])+' cm el triángulo es '+kindTxt().toLowerCase()+'.',
@@ -1718,10 +1722,10 @@ function buildLesson(rng) {
       else if (goal === 'iso') msg = (k === 'equi')
         ? T({es:'Te quedaron los tres iguales, y eso ya es equilátero. Separa solo uno de los vértices.',
              en:'All three came out equal, and that is equilateral. Move just one of the vertices apart.'})
-        : T({es:'Aún no hay dos lados iguales. Los más parecidos son '+r1(s[0])+' y '+r1(s[1])+' cm: acércalos.',
-             en:'There are still no two equal sides. The closest ones are '+r1(s[0])+' and '+r1(s[1])+' cm: bring them together.'});
-      else msg = T({es:'Todavía hay medidas repetidas o casi repetidas. Separa más los vértices para que los tres lados queden distintos.',
-                    en:'There are still repeated or nearly repeated lengths. Move the vertices further apart so all three sides differ.'});
+        : T({es:'Aún no hay dos lados iguales. Los más parecidos son '+s[0]+' y '+s[1]+' cm: acércalos hasta que coincidan.',
+             en:'There are still no two equal sides. The closest ones are '+s[0]+' and '+s[1]+' cm: bring them together until they match.'});
+      else msg = T({es:'Todavía hay medidas repetidas. Separa más los vértices hasta que los tres lados muestren valores distintos.',
+                    en:'There are still repeated lengths. Move the vertices further apart until all three sides show different values.'});
       fb.textContent = msg;
     };
     render();
