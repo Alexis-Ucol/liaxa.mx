@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jerarquía de Operaciones con Números con Signo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; text-align: justify; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── MANIPULATIVES ── */
+.mstage { font-size:.7rem; letter-spacing:.09em; text-transform:uppercase; color:var(--text3); margin-bottom:.45rem; }
+.mlabel { font-size:.82rem; color:var(--text2); margin-bottom:.55rem; }
+.mexpr { font-family:'IBM Plex Mono',monospace; font-size:1.1rem; font-weight:600; color:var(--green-dark); background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:.75rem .8rem; text-align:center; overflow-x:auto; white-space:nowrap; }
+.mexpr.big { font-size:1.22rem; }
+.mrow { display:flex; gap:.45rem; flex-wrap:wrap; align-items:center; margin-top:.65rem; }
+.mbtn { background:var(--surface2); border:1.5px solid var(--border); border-radius:8px; padding:.5rem .8rem; font-size:.83rem; cursor:pointer; color:var(--text); font-family:inherit; min-height:44px; text-align:left; }
+.mbtn:hover { border-color:var(--green); background:var(--green-bg); }
+.mbtn.on { background:var(--green); color:var(--green-bg); border-color:var(--green); }
+.mbtn.mono { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mbtn.wide { flex:1; min-width:135px; text-align:center; }
+.mfb { margin-top:.7rem; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.6rem .8rem; font-size:.82rem; color:var(--text2); min-height:2.6rem; }
+.mfb.good { background:var(--ok-bg); border-left-color:var(--ok); color:var(--ok); }
+.mfb.warn { background:var(--bad-bg); border-left-color:var(--bad); color:var(--bad); }
+.mcanvas { display:block; width:100%; height:160px; touch-action:none; }
+.mtrack { font-size:.72rem; color:var(--text3); margin-top:.5rem; letter-spacing:.03em; }
+.eqbox { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; align-items:stretch; margin-top:.7rem; }
+@media(max-width:520px){ .eqbox { grid-template-columns:1fr; } }
+.eqside { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:.6rem .5rem; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:.84rem; color:var(--text2); }
+.eqside b { display:block; font-size:1.08rem; color:var(--green-dark); margin-top:.25rem; }
+.mtiles { display:flex; gap:.3rem; flex-wrap:wrap; align-items:center; justify-content:center; margin:.2rem 0; }
+.mtile { font-family:'IBM Plex Mono',monospace; font-size:1rem; font-weight:600; background:var(--surface2); border:1.5px solid var(--border); border-radius:8px; min-width:44px; min-height:44px; display:inline-flex; align-items:center; justify-content:center; color:var(--green-dark); padding:0 .5rem; }
+.mtile.hot { border-color:var(--ok); background:var(--ok-bg); color:var(--ok); }
+.mtile.op { color:var(--gold); border-style:dashed; cursor:pointer; font-family:inherit; font-size:1.05rem; }
+.mtile.op:hover { background:var(--gold-bg); border-color:var(--gold); }
+.mtile.par { border:none; background:none; color:var(--text3); font-size:1.35rem; min-width:12px; padding:0; }
+.mstep { display:flex; gap:.5rem; align-items:center; margin-top:.55rem; font-size:.8rem; color:var(--text2); flex-wrap:wrap; }
+.mstep .mbtn { min-height:40px; padding:.35rem .7rem; }
+.mval { font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--green); font-size:1rem; min-width:2.4rem; text-align:center; }
+.mchain { display:flex; align-items:center; justify-content:center; gap:.4rem; flex-wrap:wrap; margin-top:.7rem; }
+.mnode { background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:.45rem .7rem; font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; color:var(--green-dark); min-width:52px; text-align:center; }
+.mnode.goal { border-color:var(--gold); background:var(--gold-bg); color:var(--gold); }
+.mgear { background:var(--green-bg); border:1.5px solid var(--green); border-radius:10px; padding:.45rem .7rem; font-family:'IBM Plex Mono',monospace; font-size:.9rem; color:var(--green-dark); }
+.marrow { color:var(--text3); font-size:1.1rem; }
+.bwrap { position:relative; height:118px; margin-top:.8rem; }
+.bbeam { position:absolute; left:8%; width:84%; top:56px; height:6px; background:var(--green); border-radius:3px; transform-origin:50% 50%; transition:transform .35s ease; }
+.bpost { position:absolute; left:50%; top:56px; width:6px; height:52px; margin-left:-3px; background:var(--border); border-radius:3px; }
+.bbase { position:absolute; left:34%; width:32%; top:106px; height:6px; background:var(--border); border-radius:3px; }
+.bpan { position:absolute; top:8px; width:86px; margin-left:-43px; padding:.3rem .2rem; border:1.5px solid var(--border); border-radius:9px; background:var(--surface2); font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:700; color:var(--green-dark); text-align:center; transition:transform .35s ease; }
+.bpan.pl { left:12%; }
+.bpan.pr { left:88%; }
+.mgrid2 { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-top:.6rem; }
+@media(max-width:520px){ .mgrid2 { grid-template-columns:1fr; } }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Jerarquía de Operaciones con Números con Signo</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 1° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Jerarquía de Operaciones con Números con Signo</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c8454', primaryDark:'#054e31', primaryBg:'#e5f7f0',
+  accent:'#fccc24', accentBg:'#fff7db',
+  darkPrimary:'#35d495', darkPrimaryDark:'#67f3bb', darkPrimaryBg:'#063f29',
+  darkAccent:'#ffd43f', darkAccentBg:'#2d2405',
+  pBR:12, pBG:132, pBB:84, pAR:252, pAG:204, pAB:36,
+  logoLeftB64:'data:image/jpeg;base64,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', logoRightB64:'', logoAlt:'Monte Corona',
+  guideTitle:{ es:'Jerarquía de Operaciones con Números con Signo', en:'Order of Operations with Signed Numbers' },
+  courseName:{ es:'Matemáticas · 1° de Secundaria', en:'Mathematics · Grade 7' }, filePrefix:'mat1_t03_g03', schoolSlug:'monte_corona'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'mat1_t03_g03__lang';
+var TX = {
+  es: {
+    'wtitle':'Jerarquía de Operaciones con Números con Signo','wcourse':'Matemáticas · 1° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Order of Operations with Signed Numbers','wcourse':'Mathematics · Grade 7',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'mat1_t03_g03__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'mat1_t03_g03__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'mat1_t03_g03__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'mat1_t03_g03__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
+  }
+
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+    // ── SAVE / SHARE — iOS-safe download (LIAXA iOS PDF fix, Rule 12) ─────────
+  //   iOS Safari ignores the <a download> attribute, so a plain download fails
+  //   silently on iPhone/iPad. iOS -> native share sheet (-> "Save to Files"),
+  //   with an inline-open fallback; everything else -> <a download> click.
+  //   Runs synchronously off the tap so iOS accepts navigator.share().
+  var _fname   = 'mat1_t03_g03_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
+  var _pdfBlob = doc.output('blob');
+
+  function _restorePdfBtn(){ btn.innerHTML = '\u2b07 &nbsp;' + t('btn-pdf'); btn.disabled = false; }
+  function _openPdfInline(b){
+    var u = URL.createObjectURL(b);
+    var w = window.open(u, '_blank');
+    if (!w) { window.location.href = u; }
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
+  }
+
+  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (_isIOS) {
+    var _pdfFile = new File([_pdfBlob], _fname, { type:'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files:[_pdfFile] })) {
+      navigator.share({ files:[_pdfFile], title:_fname })
+        .then(_restorePdfBtn)
+        .catch(function(e){
+          if (e && e.name === 'AbortError') { _restorePdfBtn(); return; }
+          _openPdfInline(_pdfBlob); _restorePdfBtn();
+        });
+      return;
+    }
+    _openPdfInline(_pdfBlob); _restorePdfBtn();
+    return;
+  }
+
+  var _dlUrl = URL.createObjectURL(_pdfBlob);
+  var _dlA   = document.createElement('a');
+  _dlA.href  = _dlUrl; _dlA.download = _fname;
+  document.body.appendChild(_dlA); _dlA.click();
+  setTimeout(function(){ document.body.removeChild(_dlA); URL.revokeObjectURL(_dlUrl); }, 200);
+  _restorePdfBtn();
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+/* ══════════════════════════════════════════════════════════════════════════
+   GUIDE CONTENT: mat1_t03_g03
+   Jerarquía de Operaciones con Números con Signo · 1° de Secundaria
+   Operaciones y sus relaciones inversas · números con signo
+   ══════════════════════════════════════════════════════════════════════════ */
+function L(o){ if(o===null||o===undefined) return ''; if(typeof o!=='object') return String(o); return (o[LANG]!==undefined?o[LANG]:o.es); }
+function numStr(n){ return n<0 ? '−'+Math.abs(n) : String(n); }
+function par(n){ return n<0 ? '(−'+Math.abs(n)+')' : String(n); }
+function addT(n){ return n<0 ? ' − '+Math.abs(n) : ' + '+n; }
+function ri(r,a,b){ return a + Math.floor(r()*(b-a+1)); }
+function cssVar(n){ try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); } catch(e){ return ''; } }
+function shuffleOpts(opts, correct, rng){ var a=shuffle(opts,rng); return { options:a, correctIdx:a.indexOf(correct) }; }
+function mkNums(correct, cands){
+  var out=[correct], i;
+  for(i=0;i<cands.length && out.length<4;i++){ if(out.indexOf(cands[i])<0) out.push(cands[i]); }
+  var d=1;
+  while(out.length<4){
+    if(out.indexOf(correct+d)<0) out.push(correct+d);
+    if(out.length<4 && out.indexOf(correct-d)<0) out.push(correct-d);
+    d++;
+  }
+  return out;
+}
+function numOptions(correct, cands){
+  return { options: mkNums(correct,cands).map(function(v){ return numStr(v); }), correct: numStr(correct) };
+}
+function txtOptions(correct, others){ return { options:[correct].concat(others), correct:correct }; }
+function addSection(html){
+  var d=document.createElement('div'); d.className='section'; d.innerHTML=html;
+  document.getElementById('lessonBody').appendChild(d); return d;
+}
+function addProblem(rng, cfg){
+  var so = shuffleOpts(cfg.options, cfg.correct, rng);
+  problems.push({ title:cfg.title, questionText:cfg.questionText, fn:cfg.fn||'', hint:cfg.hint,
+    explanation:cfg.explanation, options:so.options, correctIdx:so.correctIdx,
+    showWork:!!cfg.showWork, studentChoice:null, pendingChoice:null });
+  buildOneCard(problems[problems.length-1], problems.length-1);
+}
+function subRng(rng, tag){ return seededRng(tag + Math.floor(rng()*1000000)); }
+function setFb(id, txt, kind){ var e=document.getElementById(id); if(!e) return; e.innerHTML=txt; e.className='mfb'+(kind?(' '+kind):''); }
+function actv(btn){ var row=btn.parentNode.querySelectorAll('.mbtn'), i; for(i=0;i<row.length;i++) row[i].classList.remove('on'); btn.classList.add('on'); }
+
+/* ═════════ W1 · la recta con dos saltos ═════════ */
+var W1 = { s:0, m1:0, m2:0, target:0, round:0, tries:0, done:false, rng:null };
+function w1New(){
+  var r=W1.rng, t;
+  W1.s = ri(r,-9,9);
+  do { t = ri(r,-12,12); } while (t===W1.s || Math.abs(t-W1.s)>14);
+  W1.target=t; W1.m1=0; W1.m2=0; W1.tries=0;
+  w1Render();
+}
+function w1Adj(which,d){
+  if(W1.done) return;
+  if(which===1) W1.m1=Math.max(-9,Math.min(9,W1.m1+d));
+  else W1.m2=Math.max(-9,Math.min(9,W1.m2+d));
+  w1Render();
+}
+function w1Pos(){ return W1.s+W1.m1+W1.m2; }
+function w1Render(){
+  var e=document.getElementById('w1expr');
+  if(e) e.innerHTML = numStr(W1.s)+addT(W1.m1)+addT(W1.m2)+' = '+numStr(w1Pos());
+  var g=document.getElementById('w1goal');
+  if(g) g.innerHTML = L({es:'Sale de ',en:'Starts at '})+'<b>'+numStr(W1.s)+'</b>'+L({es:' y la bandera está en ',en:' and the flag is at '})+'<b>'+numStr(W1.target)+'</b>';
+  var rd=document.getElementById('w1round');
+  if(rd) rd.textContent = L({es:'Recta ',en:'Line '})+Math.min(W1.round+1,3)+' / 3';
+  var d = W1.target - w1Pos();
+  if(!W1.done){
+    if(d===0) setFb('w1fb', L({es:'La ficha cayó justo en la bandera.',en:'The token landed right on the flag.'}), 'good');
+    else setFb('w1fb', L({ es:'La ficha quedó a '+Math.abs(d)+' unidades de la bandera, hacia la '+(d>0?'izquierda':'derecha')+'.',
+                           en:'The token is '+Math.abs(d)+' units to the '+(d>0?'left':'right')+' of the flag.' }));
+  }
+  w1Draw();
+}
+function w1Draw(){
+  var cv=document.getElementById('w1cv'); if(!cv) return;
+  var dpr=window.devicePixelRatio||1, rc=cv.getBoundingClientRect();
+  if(!rc.width) return;
+  cv.width=rc.width*dpr; cv.height=rc.height*dpr;
+  var ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  var W=rc.width, H=rc.height, pad=16, MIN=-15, MAX=15, y=H-38;
+  function X(v){ var q=Math.max(MIN,Math.min(MAX,v)); return pad+(q-MIN)*(W-2*pad)/(MAX-MIN); }
+  var kBorder=cssVar('--border')||'#cccccc';
+  var kTxt=cssVar('--text3')||'#777777';
+  var kMain=cssVar('--green')||'#1a4a8a';
+  var kAcc=cssVar('--gold')||'#c9a84c';
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle=kBorder; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+  ctx.font='10px IBM Plex Mono, monospace'; ctx.textAlign='center';
+  for(var v=MIN;v<=MAX;v++){
+    var x=X(v), big=(v%5===0);
+    ctx.strokeStyle=kBorder; ctx.beginPath();
+    ctx.moveTo(x,y-(big?7:4)); ctx.lineTo(x,y+(big?7:4)); ctx.stroke();
+    if(big){ ctx.fillStyle=kTxt; ctx.fillText(numStr(v), x, y+21); }
+  }
+  var xt=X(W1.target);
+  ctx.strokeStyle=kAcc; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(xt,y); ctx.lineTo(xt,y-48); ctx.stroke();
+  ctx.fillStyle=kAcc; ctx.beginPath();
+  ctx.moveTo(xt,y-48); ctx.lineTo(xt+17,y-42); ctx.lineTo(xt,y-36); ctx.closePath(); ctx.fill();
+  var p0=W1.s, p1=W1.s+W1.m1, p2=p1+W1.m2;
+  function arc(from,to,h,col){
+    if(from===to) return;
+    ctx.strokeStyle=col; ctx.lineWidth=2.2;
+    ctx.beginPath(); ctx.moveTo(X(from),y-2);
+    ctx.quadraticCurveTo((X(from)+X(to))/2, y-h, X(to), y-3); ctx.stroke();
+    var dir=(to>from)?1:-1;
+    ctx.fillStyle=col; ctx.beginPath();
+    ctx.moveTo(X(to),y-1); ctx.lineTo(X(to)-dir*7,y-9); ctx.lineTo(X(to)-dir*7,y+4); ctx.closePath(); ctx.fill();
+  }
+  arc(p0,p1,36,kMain); arc(p1,p2,58,kAcc);
+  ctx.fillStyle=kMain; ctx.beginPath(); ctx.arc(X(p0),y,4,0,6.2832); ctx.fill();
+  ctx.fillStyle=kMain; ctx.beginPath(); ctx.arc(X(p2),y,7,0,6.2832); ctx.fill();
+}
+function w1Check(){
+  if(W1.done) return;
+  if(w1Pos()===W1.target){
+    W1.round++;
+    if(W1.round>=3){ W1.done=true; setFb('w1fb', L({es:'Tres rectas seguidas: ya lees los signos como movimientos. 🎉',en:'Three lines in a row: you read signs as movements now. 🎉'}),'good'); w1Draw(); return; }
+    setFb('w1fb', L({es:'¡Bandera alcanzada! Va otra recta.',en:'Flag reached! Here comes another line.'}),'good');
+    setTimeout(w1New, 950); return;
+  }
+  W1.tries++;
+  if(W1.tries>=3){
+    var need=W1.target-W1.s;
+    var a1=Math.max(-9,Math.min(9,need)), a2=need-a1;
+    W1.m1=a1; W1.m2=a2;
+    setFb('w1fb', L({ es:'La distancia total entre la ficha y la bandera es '+numStr(need)+'. Un camino posible: '+numStr(a1)+' y después '+numStr(a2)+'.',
+                      en:'The whole distance from token to flag is '+numStr(need)+'. One possible path: '+numStr(a1)+' then '+numStr(a2)+'.' }),'warn');
+    W1.round++;
+    if(W1.round>=3){ W1.done=true; w1Draw(); return; }
+    setTimeout(w1New, 2200); return;
+  }
+  var d=W1.target-w1Pos();
+  setFb('w1fb', L({ es:'Todavía no. Te sobra '+Math.abs(d)+' hacia la '+(d>0?'izquierda':'derecha')+': ajusta un salto.',
+                    en:'Not yet. You are off by '+Math.abs(d)+' to the '+(d>0?'left':'right')+': adjust one jump.' }),'warn');
+}
+
+/* ═════════ W2 · máquina y su operación inversa ═════════ */
+var W2 = { k:-3, b:4, x:0, sol:0, target:0, round:0, tries:0, done:false, rng:null };
+function w2New(){
+  var r=W2.rng;
+  W2.k = pick([-4,-3,-2,2,3], r);
+  W2.b = pick([-9,-7,-5,-4,4,5,7,9], r);
+  W2.sol = ri(r,-6,6);
+  W2.target = W2.k*W2.sol + W2.b;
+  W2.x = 0; W2.tries = 0;
+  w2Render();
+}
+function w2Adj(d){ if(W2.done) return; W2.x=Math.max(-12,Math.min(12,W2.x+d)); w2Render(); }
+function w2Out(){ return W2.k*W2.x + W2.b; }
+function w2Render(){
+  var n=document.getElementById('w2in'); if(n) n.textContent=numStr(W2.x);
+  var g1=document.getElementById('w2g1'); if(g1) g1.textContent='× '+par(W2.k);
+  var g2=document.getElementById('w2g2'); if(g2) g2.textContent=(W2.b<0?'− '+Math.abs(W2.b):'+ '+W2.b);
+  var mid=document.getElementById('w2mid'); if(mid) mid.textContent=numStr(W2.k*W2.x);
+  var out=document.getElementById('w2out'); if(out) out.textContent=numStr(w2Out());
+  var tg=document.getElementById('w2goal'); if(tg) tg.textContent=numStr(W2.target);
+  var rd=document.getElementById('w2round'); if(rd) rd.textContent=L({es:'Máquina ',en:'Machine '})+Math.min(W2.round+1,3)+' / 3';
+  if(W2.done) return;
+  var d=w2Out()-W2.target;
+  if(d===0) setFb('w2fb', L({es:'La salida coincide con la meta. Toca Comprobar.',en:'The output matches the goal. Tap Check.'}),'good');
+  else {
+    var tip = (W2.k<0)
+      ? L({es:' Ojo: el factor es negativo, así que subir la entrada baja la salida.',en:' Careful: the factor is negative, so raising the input lowers the output.'})
+      : L({es:' El factor es positivo, así que subir la entrada sube la salida.',en:' The factor is positive, so raising the input raises the output.'});
+    setFb('w2fb', L({ es:'La salida está '+Math.abs(d)+' unidades por '+(d>0?'arriba':'abajo')+' de la meta.',
+                      en:'The output is '+Math.abs(d)+' units '+(d>0?'above':'below')+' the goal.' })+tip);
+  }
+}
+function w2Check(){
+  if(W2.done) return;
+  if(w2Out()===W2.target){
+    var inv = L({es:'Comprobación al revés: (',en:'Backwards check: ('})+numStr(W2.target)+addT(-W2.b)+') ÷ '+par(W2.k)+' = '+numStr(W2.sol);
+    W2.round++;
+    if(W2.round>=3){ W2.done=true; setFb('w2fb', inv+L({es:'. Tres máquinas desarmadas. 🎉',en:'. Three machines cracked. 🎉'}),'good'); return; }
+    setFb('w2fb', inv+L({es:'. Dividir deshace multiplicar y restar deshace sumar.',en:'. Dividing undoes multiplying and subtracting undoes adding.'}),'good');
+    setTimeout(w2New, 1700); return;
+  }
+  W2.tries++;
+  if(W2.tries>=3){
+    W2.x=W2.sol;
+    setFb('w2fb', L({es:'La entrada era ',en:'The input was '})+numStr(W2.sol)+L({es:'. Se halla al revés: (',en:'. You find it backwards: ('})+numStr(W2.target)+addT(-W2.b)+') ÷ '+par(W2.k)+' = '+numStr(W2.sol),'warn');
+    W2.round++;
+    if(W2.round>=3){ W2.done=true; w2Render(); return; }
+    setTimeout(w2New, 2400); return;
+  }
+  var d=w2Out()-W2.target;
+  setFb('w2fb', L({ es:'Todavía no. Te pasaste '+Math.abs(d)+' unidades por '+(d>0?'arriba':'abajo')+'; mueve la entrada.',
+                    en:'Not yet. You are '+Math.abs(d)+' units '+(d>0?'above':'below')+'; move the input.' }),'warn');
+}
+
+/* ═════════ W3 · ¿qué operación se resuelve primero? ═════════ */
+var W3 = { toks:[], rounds:[], round:0, tries:0, done:false };
+function w3N(v){ return {t:'n',v:v}; }
+function w3O(v){ return {t:'o',v:v}; }
+function w3P(v){ return {t:'p',v:v}; }
+function w3Build(r){
+  var out=[];
+  var a=-ri(r,2,9), b=ri(r,2,7), c=ri(r,2,6), d=ri(r,3,9);
+  out.push([w3N(a),w3O('+'),w3N(b),w3O('×'),w3N(c),w3O('−'),w3N(d)]);
+  var e=ri(r,2,6), f=ri(r,8,14), g=ri(r,2,5), h=ri(r,3,9);
+  out.push([w3P('('),w3N(e),w3O('−'),w3N(f),w3P(')'),w3O('×'),w3N(g),w3O('+'),w3N(h)]);
+  var c2=pick([2,3,4],r), d2=c2*ri(r,2,5), a2=-ri(r,3,10), b2=ri(r,2,6), e2=ri(r,2,5);
+  out.push([w3N(a2),w3O('−'),w3N(d2),w3O('÷'),w3N(c2),w3O('+'),w3N(b2),w3O('×'),w3N(e2)]);
+  W3.rounds=out; W3.round=0; W3.tries=0; W3.done=false;
+  W3.toks=w3Copy(W3.rounds[0]);
+}
+function w3Copy(a){ return a.map(function(k){ return {t:k.t,v:k.v}; }); }
+function w3Zone(toks){
+  var open=-1, close=-1, i;
+  for(i=0;i<toks.length;i++){
+    if(toks[i].t==='p'&&toks[i].v==='(') open=i;
+    if(toks[i].t==='p'&&toks[i].v===')'&&open>=0){ close=i; break; }
+  }
+  if(open>=0&&close>=0) return [open+1, close-1, true];
+  return [0, toks.length-1, false];
+}
+function w3Next(toks){
+  var z=w3Zone(toks), i;
+  for(i=z[0];i<=z[1];i++) if(toks[i].t==='o'&&(toks[i].v==='×'||toks[i].v==='÷')) return i;
+  for(i=z[0];i<=z[1];i++) if(toks[i].t==='o') return i;
+  return -1;
+}
+function w3Apply(i){
+  var a=W3.toks[i-1].v, op=W3.toks[i].v, b=W3.toks[i+1].v, v;
+  if(op==='+') v=a+b; else if(op==='−') v=a-b; else if(op==='×') v=a*b; else v=Math.round(a/b);
+  W3.toks.splice(i-1,3,w3N(v));
+  var z=w3Zone(W3.toks);
+  if(z[2] && z[0]===z[1] && W3.toks[z[0]].t==='n'){
+    W3.toks.splice(z[1]+1,1); W3.toks.splice(z[0]-1,1);
+  }
+  return v;
+}
+function w3RenderTiles(){
+  var box=document.getElementById('w3tiles'); if(!box) return;
+  var html='', i, k;
+  for(i=0;i<W3.toks.length;i++){
+    k=W3.toks[i];
+    if(k.t==='n') html+='<span class="mtile">'+numStr(k.v)+'</span>';
+    else if(k.t==='p') html+='<span class="mtile par">'+k.v+'</span>';
+    else html+='<span class="mtile op" onclick="w3Tap('+i+')">'+k.v+'</span>';
+  }
+  box.innerHTML=html;
+  var rd=document.getElementById('w3round');
+  if(rd) rd.textContent=L({es:'Expresión ',en:'Expression '})+Math.min(W3.round+1,3)+' / 3';
+}
+function w3Tap(i){
+  if(W3.done) return;
+  if(W3.toks.length===1) return;
+  var good=w3Next(W3.toks);
+  if(i===good){
+    var op=W3.toks[i].v, v=w3Apply(i);
+    W3.tries=0;
+    w3RenderTiles();
+    if(W3.toks.length===1){
+      setFb('w3fb', L({es:'Todo resuelto: el valor es ',en:'All solved: the value is '})+'<b>'+numStr(W3.toks[0].v)+'</b>','good');
+      W3.round++;
+      if(W3.round>=3){ W3.done=true; setFb('w3fb', L({es:'Tres expresiones desarmadas en el orden correcto. 🎉',en:'Three expressions taken apart in the right order. 🎉'}),'good'); return; }
+      setTimeout(function(){ W3.toks=w3Copy(W3.rounds[W3.round]); W3.tries=0; w3RenderTiles(); setFb('w3fb', L({es:'Nueva expresión: elige la primera operación.',en:'New expression: choose the first operation.'})); }, 1500);
+      return;
+    }
+    setFb('w3fb', L({es:'Correcto: esa era la primera. Ahora quedan ',en:'Right: that one went first. Now '})+(W3.toks.filter(function(k){return k.t==='o';}).length)+L({es:' operaciones.',en:' operations are left.'}),'good');
+    return;
+  }
+  W3.tries++;
+  var z=w3Zone(W3.toks), why;
+  if(z[2] && (i<z[0]||i>z[1])) why=L({es:'Lo que está dentro del paréntesis se resuelve antes que nada.',en:'Whatever sits inside the parentheses is solved before anything else.'});
+  else if(W3.toks[i].v==='+'||W3.toks[i].v==='−') why=L({es:'Todavía hay una multiplicación o una división esperando, y esas van antes.',en:'There is still a multiplication or division waiting, and those go first.'});
+  else why=L({es:'Cuando dos operaciones son del mismo nivel, se resuelven de izquierda a derecha.',en:'When two operations are on the same level, they go left to right.'});
+  if(W3.tries>=3){
+    var opv=W3.toks[good].v, av=W3.toks[good-1].v, bv=W3.toks[good+1].v, res=w3Apply(good);
+    W3.tries=0; w3RenderTiles();
+    setFb('w3fb', why+L({es:' Iba ',en:' The step was '})+numStr(av)+' '+opv+' '+numStr(bv)+' = '+numStr(res),'warn');
+    if(W3.toks.length===1){
+      W3.round++;
+      if(W3.round>=3){ W3.done=true; return; }
+      setTimeout(function(){ W3.toks=w3Copy(W3.rounds[W3.round]); w3RenderTiles(); setFb('w3fb', L({es:'Nueva expresión: elige la primera operación.',en:'New expression: choose the first operation.'})); }, 1800);
+    }
+    return;
+  }
+  setFb('w3fb', why,'warn');
+}
+function w3Reset(){
+  if(W3.done) return;
+  W3.toks=w3Copy(W3.rounds[Math.min(W3.round,2)]); W3.tries=0; w3RenderTiles();
+  setFb('w3fb', L({es:'Expresión restaurada. Vuelve a elegir la primera operación.',en:'Expression restored. Pick the first operation again.'}));
+}
+
+/* ═════════ W4 · balanza de propiedades ═════════ */
+var W4 = { a:-3, b:5, c:4, test:'sum', moves:0, found:false };
+function w4Set(k,v){ W4[k]=parseInt(v,10); W4.moves++; w4Render(); }
+function w4Test(t,btn){ W4.test=t; W4.moves=0; W4.found=false; actv(btn); w4Render(); }
+function w4Sides(){
+  var a=W4.a,b=W4.b,c=W4.c;
+  if(W4.test==='sum') return { lt:numStr(a)+addT(b), lv:a+b, rt:numStr(b)+addT(a), rv:b+a };
+  if(W4.test==='res') return { lt:numStr(a)+' − '+par(b), lv:a-b, rt:numStr(b)+' − '+par(a), rv:b-a };
+  if(W4.test==='aso') return { lt:'('+numStr(a)+addT(b)+')'+addT(c), lv:(a+b)+c, rt:numStr(a)+' + ('+numStr(b)+addT(c)+')', rv:a+(b+c) };
+  return { lt:numStr(a)+' × ('+numStr(b)+addT(c)+')', lv:a*(b+c), rt:numStr(a)+' × '+par(b)+' + '+numStr(a)+' × '+par(c), rv:a*b+a*c };
+}
+function w4Render(){
+  var s=w4Sides();
+  var lb=document.getElementById('w4left'), rb=document.getElementById('w4right');
+  if(lb) lb.innerHTML=s.lt+'<b>'+numStr(s.lv)+'</b>';
+  if(rb) rb.innerHTML=s.rt+'<b>'+numStr(s.rv)+'</b>';
+  var pl=document.getElementById('w4pl'), pr=document.getElementById('w4pr'), bm=document.getElementById('w4beam');
+  var diff=s.lv-s.rv, dy=Math.max(-24,Math.min(24,diff*3));
+  if(bm) bm.style.transform='rotate('+(dy/2.2)+'deg)';
+  if(pl){ pl.style.transform='translateY('+dy+'px)'; pl.textContent=numStr(s.lv); }
+  if(pr){ pr.style.transform='translateY('+(-dy)+'px)'; pr.textContent=numStr(s.rv); }
+  ['a','b','c'].forEach(function(k){
+    var e=document.getElementById('w4v'+k); if(e) e.textContent=numStr(W4[k]);
+  });
+  var cwrap=document.getElementById('w4cwrap');
+  if(cwrap) cwrap.style.display=(W4.test==='sum'||W4.test==='res')?'none':'block';
+  if(W4.test==='res'){
+    if(diff!==0){ W4.found=true; setFb('w4fb', L({es:'Lo lograste: la balanza se inclinó. Al voltear una resta el resultado cambia de signo, así que el orden sí importa.',en:'You did it: the beam tipped. Flipping a subtraction changes the sign of the result, so order does matter.'}),'good'); }
+    else setFb('w4fb', L({es:'Con estos valores los dos lados coinciden. Sigue moviendo hasta desequilibrarla.',en:'With these values both sides match. Keep moving until it tips.'}));
+    return;
+  }
+  if(diff!==0){ setFb('w4fb', L({es:'La balanza se inclinó, revisa los valores.',en:'The beam tipped, check the values.'}),'warn'); return; }
+  if(W4.moves>=5) setFb('w4fb', L({es:'Llevas '+W4.moves+' combinaciones y la balanza no se mueve: esta propiedad se cumple con cualquier número con signo.',en:'You have tried '+W4.moves+' combinations and the beam never moves: this property holds for any signed number.'}),'good');
+  else setFb('w4fb', L({es:'Equilibrada con estos valores. Prueba con negativos a ver si consigues romperla.',en:'Balanced with these values. Try negatives and see if you can break it.'}));
+}
+
+/* ═════════ W5 · coloca los paréntesis y llega a la meta ═════════ */
+var W5 = { a:-4, b:5, c:3, d:7, p1:false, p2:false, target:0, round:0, tries:0, done:false, rng:null };
+function w5Val(p1,p2){
+  var a=W5.a,b=W5.b,c=W5.c,d=W5.d;
+  if(p1&&p2) return (a+b)*(c-d);
+  if(p1) return (a+b)*c-d;
+  if(p2) return a+b*(c-d);
+  return a+b*c-d;
+}
+function w5New(){
+  var r=W5.rng, tries=0, ch;
+  do {
+    W5.a=-ri(r,2,8); W5.b=ri(r,2,7); W5.c=ri(r,2,6); W5.d=ri(r,3,9);
+    ch=pick([[true,false],[false,true],[true,true]], r);
+    tries++;
+  } while (w5Val(ch[0],ch[1])===w5Val(false,false) && tries<25);
+  W5.target=w5Val(ch[0],ch[1]);
+  W5.p1=false; W5.p2=false; W5.tries=0;
+  w5Render();
+}
+function w5Toggle(which,btn){
+  if(W5.done) return;
+  if(which===1) W5.p1=!W5.p1; else W5.p2=!W5.p2;
+  btn.classList.toggle('on');
+  w5Render();
+}
+function w5Expr(){
+  var lf = W5.p1 ? '('+numStr(W5.a)+addT(W5.b)+')' : numStr(W5.a)+addT(W5.b);
+  var rt = W5.p2 ? '('+W5.c+' − '+W5.d+')' : W5.c+' − '+W5.d;
+  return lf+' × '+rt;
+}
+function w5Render(){
+  var v=w5Val(W5.p1,W5.p2);
+  var e=document.getElementById('w5expr'); if(e) e.innerHTML=w5Expr()+' = '+numStr(v);
+  var g=document.getElementById('w5goal'); if(g) g.textContent=numStr(W5.target);
+  var rd=document.getElementById('w5round'); if(rd) rd.textContent=L({es:'Meta ',en:'Goal '})+Math.min(W5.round+1,3)+' / 3';
+  var b1=document.getElementById('w5b1'), b2=document.getElementById('w5b2');
+  if(b1) b1.classList.toggle('on', W5.p1);
+  if(b2) b2.classList.toggle('on', W5.p2);
+  if(W5.done) return;
+  var d=v-W5.target;
+  if(d===0) setFb('w5fb', L({es:'Esa combinación da justo la meta. Toca Comprobar.',en:'That combination hits the goal. Tap Check.'}),'good');
+  else setFb('w5fb', L({ es:'Vas '+Math.abs(d)+' '+(d>0?'por arriba':'por abajo')+' de la meta. Cambia dónde agrupas.',
+                         en:'You are '+Math.abs(d)+' '+(d>0?'above':'below')+' the goal. Change where you group.' }));
+}
+function w5Check(){
+  if(W5.done) return;
+  if(w5Val(W5.p1,W5.p2)===W5.target){
+    W5.round++;
+    if(W5.round>=3){ W5.done=true; setFb('w5fb', L({es:'Tres metas: los paréntesis mandan sobre la jerarquía normal. 🎉',en:'Three goals: parentheses outrank the normal order. 🎉'}),'good'); return; }
+    setFb('w5fb', L({es:'¡Meta alcanzada! Los mismos números, otro agrupamiento, otro resultado.',en:'Goal reached! Same numbers, different grouping, different result.'}),'good');
+    setTimeout(w5New, 1500); return;
+  }
+  W5.tries++;
+  if(W5.tries>=3){
+    var cfgs=[[false,false],[true,false],[false,true],[true,true]], i, hit=null;
+    for(i=0;i<4;i++) if(w5Val(cfgs[i][0],cfgs[i][1])===W5.target){ hit=cfgs[i]; break; }
+    if(hit){ W5.p1=hit[0]; W5.p2=hit[1]; }
+    setFb('w5fb', L({es:'Así se llega: ',en:'This is the way: '})+w5Expr()+' = '+numStr(W5.target),'warn');
+    W5.round++;
+    if(W5.round>=3){ W5.done=true; w5Render(); return; }
+    setTimeout(w5New, 2400); return;
+  }
+  var d=w5Val(W5.p1,W5.p2)-W5.target;
+  setFb('w5fb', L({ es:'Todavía no: te faltan '+Math.abs(d)+' unidades '+(d>0?'hacia abajo':'hacia arriba')+'.',
+                    en:'Not yet: you are '+Math.abs(d)+' units '+(d>0?'too high':'too low')+'.' }),'warn');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BUILD LESSON
+   ══════════════════════════════════════════════════════════════════════════ */
+function buildLesson(rng) {
+  var i;
+
+  /* ───────── CONCEPTO 1 ───────── */
+  addSection(
+    '<div class="stag">'+L({es:'Concepto 1',en:'Concept 1'})+'</div>'+
+    '<h2>'+L({es:'Sumar y restar es moverse por la recta',en:'Adding and subtracting is moving along the line'})+'</h2>'+
+    '<p>'+L({es:'Un número con signo guarda dos datos a la vez: cuánto vale y hacia dónde apunta. En la recta numérica el cero es el punto de partida, los positivos quedan a la derecha y los negativos a la izquierda.',
+             en:'A signed number carries two pieces of information at once: how big it is and which way it points. On the number line zero is the starting point, positives sit to the right and negatives to the left.'})+'</p>'+
+    '<p>'+L({es:'Sumar significa avanzar hacia la derecha y restar significa avanzar hacia la izquierda. Por eso un resultado puede quedar del otro lado del cero sin que haya ningún error: la ficha simplemente cruzó.',
+             en:'Adding means stepping right and subtracting means stepping left. That is why a result can end up on the other side of zero with no mistake at all: the token simply crossed over.'})+'</p>'+
+    '<div class="callout"><p><strong>'+L({es:'Idea clave',en:'Key idea'})+':</strong> '+
+      L({es:'el signo no es un adorno del número, es la dirección del movimiento. Dos saltos seguidos se acumulan y el punto final depende de hacia dónde apuntó cada uno.',
+         en:'the sign is not decoration, it is the direction of the movement. Two jumps in a row stack up and the landing point depends on where each one pointed.'})+'</p></div>'+
+    '<div class="gcrd">'+
+      '<div class="mstage" id="w1round">'+L({es:'Recta 1 / 3',en:'Line 1 / 3'})+'</div>'+
+      '<div class="mlabel" id="w1goal"></div>'+
+      '<div class="cvwrap"><canvas class="mcanvas" id="w1cv"></canvas></div>'+
+      '<div class="mexpr" id="w1expr" style="margin-top:.6rem"></div>'+
+      '<div class="mstep"><span>'+L({es:'Salto 1',en:'Jump 1'})+'</span>'+
+        '<button class="mbtn mono" onclick="w1Adj(1,-5)">−5</button>'+
+        '<button class="mbtn mono" onclick="w1Adj(1,-1)">−1</button>'+
+        '<button class="mbtn mono" onclick="w1Adj(1,1)">+1</button>'+
+        '<button class="mbtn mono" onclick="w1Adj(1,5)">+5</button></div>'+
+      '<div class="mstep"><span>'+L({es:'Salto 2',en:'Jump 2'})+'</span>'+
+        '<button class="mbtn mono" onclick="w1Adj(2,-5)">−5</button>'+
+        '<button class="mbtn mono" onclick="w1Adj(2,-1)">−1</button>'+
+        '<button class="mbtn mono" onclick="w1Adj(2,1)">+1</button>'+
+        '<button class="mbtn mono" onclick="w1Adj(2,5)">+5</button></div>'+
+      '<div class="mrow"><button class="mbtn wide" onclick="w1Check()">'+L({es:'Comprobar',en:'Check'})+'</button></div>'+
+      '<div class="mfb" id="w1fb"></div>'+
+    '</div>'
+  );
+  W1.rng = subRng(rng,'w1'); W1.round=0; W1.done=false; w1New();
+  setTimeout(w1Draw, 120);
+
+  /* ───────── PROBLEMA 1 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), a, b, c, res, expr, cands;
+    if(v===0){
+      a=-ri(rng,4,12); b=ri(rng,3,9); c=ri(rng,4,11);
+      res=a+b-c; expr=numStr(a)+' + '+b+' − '+c;
+      cands=[a+b+c, a-b-c, -res];
+    } else {
+      a=ri(rng,2,9); b=ri(rng,6,14); c=ri(rng,2,8);
+      res=a-b-c; expr=numStr(a)+' − '+b+' − '+c;
+      cands=[a-b+c, b-a-c, -res];
+    }
+    var o=numOptions(res,cands);
+    addProblem(rng,{
+      title:L({es:'Dos movimientos en la recta',en:'Two moves on the line'}),
+      questionText:L({es:'Calcula el resultado de la siguiente operación.',en:'Work out the result of the operation below.'}),
+      fn:expr, showWork:true, options:o.options, correct:o.correct,
+      hint:L({es:'Parte del primer número. Sumar mueve la ficha a la derecha y restar la mueve a la izquierda; ve un paso a la vez.',
+              en:'Start at the first number. Adding moves the token right and subtracting moves it left; go one step at a time.'}),
+      explanation:L({es:'Se avanza en orden, de izquierda a derecha: '+expr+' = '+numStr(res),
+                     en:'Move in order, left to right: '+expr+' = '+numStr(res)})
+    });
+  })();
+
+  /* ───────── PROBLEMA 2 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), qt, ex, res, cands;
+    if(v===0){
+      var d=ri(rng,8,16), s=ri(rng,3,7), b=ri(rng,6,12);
+      res=-d+s-b;
+      qt=L({es:'Una buzo trabaja a '+d+' metros bajo la superficie del mar. Sube '+s+' metros para revisar una boya y después desciende '+b+' metros más. Si la superficie del agua es el cero, ¿qué número con signo representa su posición final?',
+            en:'A diver is working '+d+' metres below the sea surface. She rises '+s+' metres to check a buoy and then descends '+b+' metres more. If the water surface is zero, which signed number is her final position?'});
+      ex=L({es:'Bajo la superficie es negativo, subir suma y descender resta: '+numStr(-d)+' + '+s+' − '+b+' = '+numStr(res),
+            en:'Below the surface is negative, rising adds and descending subtracts: '+numStr(-d)+' + '+s+' − '+b+' = '+numStr(res)});
+      cands=[-d-s-b, -d+s+b, d-s+b];
+    } else {
+      var p0=-ri(rng,2,4), up=ri(rng,5,9), dn=ri(rng,3,8);
+      res=p0+up-dn;
+      qt=L({es:'Un elevador de carga arranca en el nivel '+numStr(p0)+' del estacionamiento. Sube '+up+' niveles para dejar una caja y luego baja '+dn+' niveles. ¿En qué nivel se queda el elevador?',
+            en:'A freight lift starts at parking level '+numStr(p0)+'. It goes up '+up+' levels to drop off a box and then down '+dn+' levels. Which level does the lift end on?'});
+      ex=L({es:'Los niveles bajo tierra son negativos, subir suma y bajar resta: '+numStr(p0)+' + '+up+' − '+dn+' = '+numStr(res),
+            en:'Underground levels are negative, going up adds and going down subtracts: '+numStr(p0)+' + '+up+' − '+dn+' = '+numStr(res)});
+      cands=[p0-up+dn, p0+up+dn, -(p0+up-dn)];
+    }
+    var o=numOptions(res,cands);
+    addProblem(rng,{
+      title:L({es:'Posición final con signo',en:'Final signed position'}),
+      questionText:qt, showWork:true, options:o.options, correct:o.correct,
+      hint:L({es:'Escribe la posición inicial como número con signo y aplica cada movimiento en el orden en que ocurre.',
+              en:'Write the starting position as a signed number and apply each movement in the order it happens.'}),
+      explanation:ex
+    });
+  })();
+
+  /* ───────── CONCEPTO 2 ───────── */
+  addSection(
+    '<div class="stag">'+L({es:'Concepto 2',en:'Concept 2'})+'</div>'+
+    '<h2>'+L({es:'Multiplicar, dividir y deshacer',en:'Multiplying, dividing and undoing'})+'</h2>'+
+    '<p>'+L({es:'Multiplicar con signo tiene una lógica corta: si los dos factores apuntan hacia el mismo lado el producto es positivo, y si apuntan a lados distintos el producto es negativo. La división se comporta igual porque es la operación que deshace a la multiplicación.',
+             en:'Multiplying with signs follows a short rule: if both factors point the same way the product is positive, and if they point opposite ways the product is negative. Division behaves the same because it is the operation that undoes multiplication.'})+'</p>'+
+    '<p>'+L({es:'Esa palabra, deshacer, es la clave de todo el tema. Cada operación tiene otra que la cancela: sumar y restar se cancelan entre sí, multiplicar y dividir también. Por eso siempre puedes revisar un resultado caminando el proceso al revés.',
+             en:'That word, undo, is the key to this whole topic. Each operation has another one that cancels it: adding and subtracting cancel each other, and so do multiplying and dividing. That is why you can always check a result by walking the process backwards.'})+'</p>'+
+    '<div class="rules-grid">'+
+      '<div class="rcard"><div class="rname">'+L({es:'Mismo signo',en:'Same sign'})+'</div><div class="rform">(−) × (−) = +</div><div class="rnote">'+L({es:'y también (+) × (+) = +',en:'and also (+) × (+) = +'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Signos distintos',en:'Different signs'})+'</div><div class="rform">(−) × (+) = −</div><div class="rnote">'+L({es:'la división sigue la misma regla',en:'division follows the same rule'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Se deshacen',en:'They undo'})+'</div><div class="rform">× ↔ ÷</div><div class="rnote">'+L({es:'igual que + ↔ −',en:'just like + ↔ −'})+'</div></div>'+
+    '</div>'+
+    '<div class="gcrd">'+
+      '<div class="mstage" id="w2round">'+L({es:'Máquina 1 / 3',en:'Machine 1 / 3'})+'</div>'+
+      '<div class="mlabel">'+L({es:'Mueve la entrada hasta que la salida caiga en la meta.',en:'Move the input until the output lands on the goal.'})+'</div>'+
+      '<div class="mchain">'+
+        '<span class="mnode" id="w2in">0</span><span class="marrow">→</span>'+
+        '<span class="mgear" id="w2g1"></span><span class="marrow">→</span>'+
+        '<span class="mnode" id="w2mid">0</span><span class="marrow">→</span>'+
+        '<span class="mgear" id="w2g2"></span><span class="marrow">→</span>'+
+        '<span class="mnode" id="w2out">0</span>'+
+      '</div>'+
+      '<div class="mchain" style="margin-top:.5rem"><span class="mlabel" style="margin:0">'+L({es:'Meta de salida',en:'Output goal'})+':</span><span class="mnode goal" id="w2goal">0</span></div>'+
+      '<div class="mstep"><span>'+L({es:'Entrada',en:'Input'})+'</span>'+
+        '<button class="mbtn mono" onclick="w2Adj(-3)">−3</button>'+
+        '<button class="mbtn mono" onclick="w2Adj(-1)">−1</button>'+
+        '<button class="mbtn mono" onclick="w2Adj(1)">+1</button>'+
+        '<button class="mbtn mono" onclick="w2Adj(3)">+3</button></div>'+
+      '<div class="mrow"><button class="mbtn wide" onclick="w2Check()">'+L({es:'Comprobar',en:'Check'})+'</button></div>'+
+      '<div class="mfb" id="w2fb"></div>'+
+    '</div>'
+  );
+  W2.rng = subRng(rng,'w2'); W2.round=0; W2.done=false; w2New();
+
+  /* ───────── PROBLEMA 3 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), res, expr, cands;
+    if(v===0){
+      var p=ri(rng,4,9), c=pick([2,3],rng), k=ri(rng,2,4), q=c*k;
+      res=p*q/c; expr='−'+p+' × (−'+q+') ÷ '+c;
+      cands=[-res, p*q*c, -(p*q/c)-c];
+    } else {
+      var c2=pick([2,3,4],rng), k2=ri(rng,3,6), p2=c2*k2, q2=ri(rng,2,5);
+      res=-(p2/c2)*q2; expr='−'+p2+' ÷ '+c2+' × '+q2;
+      cands=[-res, -(p2/c2)-q2, -(p2-c2*q2)];
+    }
+    var o=numOptions(res,cands);
+    addProblem(rng,{
+      title:L({es:'Producto y cociente con signo',en:'Signed product and quotient'}),
+      questionText:L({es:'Calcula el resultado de la siguiente operación.',en:'Work out the result of the operation below.'}),
+      fn:expr, showWork:true, options:o.options, correct:o.correct,
+      hint:L({es:'Multiplicaciones y divisiones se resuelven de izquierda a derecha. Decide primero el signo de cada paso y después el valor.',
+              en:'Multiplications and divisions are solved left to right. Decide the sign of each step first and the value after that.'}),
+      explanation:L({es:'Se resuelve de izquierda a derecha aplicando la regla de los signos: '+expr+' = '+numStr(res),
+                     en:'Solve left to right applying the sign rule: '+expr+' = '+numStr(res)})
+    });
+  })();
+
+  /* ───────── PROBLEMA 4 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), qt, ex, res, cands;
+    if(v===0){
+      var n=ri(rng,3,6), amt=ri(rng,7,12)*5, tot=n*amt;
+      res=n;
+      qt=L({es:'El saldo de una tarjeta de transporte cambió '+numStr(-tot)+' pesos después de varios cargos iguales de '+amt+' pesos cada uno. ¿Cuántos cargos se registraron?',
+            en:'The balance on a transit card changed by '+numStr(-tot)+' pesos after several equal charges of '+amt+' pesos each. How many charges were recorded?'});
+      ex=L({es:'Cada cargo aporta '+numStr(-amt)+'. Como dividir deshace multiplicar: '+numStr(-tot)+' ÷ '+par(-amt)+' = '+res,
+            en:'Each charge contributes '+numStr(-amt)+'. Since dividing undoes multiplying: '+numStr(-tot)+' ÷ '+par(-amt)+' = '+res});
+      cands=[n+1, n-1, n+2];
+    } else {
+      var m=ri(rng,6,10), per=ri(rng,7,12), tot2=m*per;
+      res=per;
+      qt=L({es:'Un dron desciende siempre la misma cantidad de metros cada minuto. Después de '+m+' minutos su altura cambió '+numStr(-tot2)+' metros. ¿Cuántos metros desciende cada minuto?',
+            en:'A drone descends the same number of metres every minute. After '+m+' minutes its height changed by '+numStr(-tot2)+' metres. How many metres does it descend each minute?'});
+      ex=L({es:'El cambio total se reparte entre los minutos, porque dividir deshace multiplicar: '+tot2+' ÷ '+m+' = '+res,
+            en:'The total change is shared among the minutes, because dividing undoes multiplying: '+tot2+' ÷ '+m+' = '+res});
+      cands=[per+1, per-1, per+3];
+    }
+    var o=numOptions(res,cands);
+    addProblem(rng,{
+      title:L({es:'Deshacer para encontrar el dato',en:'Undo to find the missing value'}),
+      questionText:qt, showWork:true, options:o.options, correct:o.correct,
+      hint:L({es:'Un cambio total repetido en partes iguales se reparte con una división: es la operación que cancela a la multiplicación.',
+              en:'A total change made of equal parts is split with a division: that is the operation that cancels multiplication.'}),
+      explanation:ex
+    });
+  })();
+
+  /* ───────── CONCEPTO 3 ───────── */
+  addSection(
+    '<div class="stag">'+L({es:'Concepto 3',en:'Concept 3'})+'</div>'+
+    '<h2>'+L({es:'Cuando hay varias operaciones, hay un turno',en:'When several operations meet, there is a turn order'})+'</h2>'+
+    '<p>'+L({es:'Si una expresión mezcla operaciones, resolverla de izquierda a derecha como si fuera una lista de mandados casi siempre da un número distinto al correcto. Existe un turno acordado por todos para que la misma expresión valga lo mismo en cualquier cuaderno del mundo.',
+             en:'If an expression mixes operations, solving it left to right like a shopping list almost always gives a different number from the correct one. There is an agreed turn order so that the same expression is worth the same in any notebook in the world.'})+'</p>'+
+    '<p>'+L({es:'Primero pasan las multiplicaciones y las divisiones, y hasta el final las sumas y las restas. Entre operaciones del mismo turno se avanza de izquierda a derecha. Los signos de los números no cambian ese turno: solo cambian el valor que sale de cada paso.',
+             en:'Multiplications and divisions go first, and additions and subtractions come last. Between operations of the same turn you move left to right. The signs of the numbers do not change that order: they only change the value each step produces.'})+'</p>'+
+    '<div class="callout"><p><strong>'+L({es:'Ojo',en:'Watch out'})+':</strong> '+
+      L({es:'una multiplicación escondida en medio de una suma cambia por completo el resultado, aunque los números sean los mismos.',
+         en:'a multiplication hidden in the middle of a sum changes the result completely, even when the numbers are the same.'})+'</p></div>'+
+    '<div class="gcrd">'+
+      '<div class="mstage" id="w3round">'+L({es:'Expresión 1 / 3',en:'Expression 1 / 3'})+'</div>'+
+      '<div class="mlabel">'+L({es:'Toca la operación que debe resolverse primero. Si aciertas, esa parte se convierte en su resultado.',en:'Tap the operation that must be solved first. If you are right, that part collapses into its value.'})+'</div>'+
+      '<div class="mtiles" id="w3tiles"></div>'+
+      '<div class="mrow"><button class="mbtn wide" onclick="w3Reset()">'+L({es:'Restaurar expresión',en:'Restore expression'})+'</button></div>'+
+      '<div class="mfb" id="w3fb"></div>'+
+    '</div>'
+  );
+  w3Build(subRng(rng,'w3')); w3RenderTiles();
+  setFb('w3fb', L({es:'Elige la primera operación del turno.',en:'Choose the first operation in the order.'}));
+
+  /* ───────── PROBLEMA 5 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), res, expr, cands;
+    if(v===0){
+      var a=-ri(rng,2,9), b=ri(rng,2,7), c=ri(rng,2,6), e=pick([2,3,4],rng), d=e*ri(rng,2,5);
+      res=a+b*c-d/e; expr=numStr(a)+' + '+b+' × '+c+' − '+d+' ÷ '+e;
+      cands=[a+b*c+d/e, (a+b)*c-d/e, a+b*(c-d/e)];
+    } else {
+      var c2=pick([2,3,4],rng), b2=c2*ri(rng,2,5), a2=-ri(rng,3,10), d2=ri(rng,2,6), e2=ri(rng,2,5);
+      res=a2-b2/c2+d2*e2; expr=numStr(a2)+' − '+b2+' ÷ '+c2+' + '+d2+' × '+e2;
+      cands=[a2-b2/c2-d2*e2, a2-(b2/c2+d2)*e2, a2-b2/c2+d2+e2];
+    }
+    cands=cands.map(function(x){ return Math.round(x); });
+    var o=numOptions(res,cands);
+    addProblem(rng,{
+      title:L({es:'El turno decide el resultado',en:'The turn order decides the result'}),
+      questionText:L({es:'Calcula el resultado de la siguiente operación.',en:'Work out the result of the operation below.'}),
+      fn:expr, showWork:true, options:o.options, correct:o.correct,
+      hint:L({es:'Marca primero las multiplicaciones y divisiones, resuélvelas, y solo entonces junta las sumas y restas de izquierda a derecha.',
+              en:'Mark the multiplications and divisions first, solve them, and only then combine the additions and subtractions left to right.'}),
+      explanation:L({es:'Primero el producto y el cociente, después las sumas y restas: '+expr+' = '+numStr(res),
+                     en:'Product and quotient first, then additions and subtractions: '+expr+' = '+numStr(res)})
+    });
+  })();
+
+  /* ───────── PROBLEMA 6 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), qt, ex, res, cands;
+    if(v===0){
+      var p0=-ri(rng,3,9), n1=ri(rng,2,4), v1=ri(rng,6,10), n2=ri(rng,3,5), v2=ri(rng,3,6);
+      res=p0+n1*v1-n2*v2;
+      qt=L({es:'En un videojuego empiezas con '+numStr(p0)+' puntos de castigo. Después ganas '+n1+' rondas que valen '+v1+' puntos cada una y pierdes '+n2+' rondas que quitan '+v2+' puntos cada una. ¿Con cuántos puntos terminas?',
+            en:'In a video game you start with '+numStr(p0)+' penalty points. Then you win '+n1+' rounds worth '+v1+' points each and lose '+n2+' rounds that take away '+v2+' points each. How many points do you end with?'});
+      ex=L({es:'Primero los productos y luego las sumas y restas: '+numStr(p0)+' + '+n1+' × '+v1+' − '+n2+' × '+v2+' = '+numStr(res),
+            en:'Products first, then additions and subtractions: '+numStr(p0)+' + '+n1+' × '+v1+' − '+n2+' × '+v2+' = '+numStr(res)});
+      cands=[p0+n1*v1+n2*v2, (p0+n1)*v1-n2*v2, p0+n1*v1-n2-v2];
+    } else {
+      var t0=-ri(rng,2,6), h=ri(rng,3,5), up=ri(rng,2,4), dn=ri(rng,4,9);
+      res=t0+h*up-dn;
+      qt=L({es:'Al amanecer, un invernadero marcaba '+numStr(t0)+' grados. Durante '+h+' horas la temperatura subió '+up+' grados cada hora y al entrar la sombra bajó '+dn+' grados de golpe. ¿Qué temperatura marcaba al final?',
+            en:'At dawn a greenhouse showed '+numStr(t0)+' degrees. For '+h+' hours the temperature rose '+up+' degrees each hour and when the shade arrived it dropped '+dn+' degrees at once. What temperature did it show at the end?'});
+      ex=L({es:'Primero el producto de las horas y después las sumas y restas: '+numStr(t0)+' + '+h+' × '+up+' − '+dn+' = '+numStr(res),
+            en:'The product of the hours first, then additions and subtractions: '+numStr(t0)+' + '+h+' × '+up+' − '+dn+' = '+numStr(res)});
+      cands=[t0+h*up+dn, (t0+h)*up-dn, t0+h+up-dn];
+    }
+    var o=numOptions(res,cands);
+    addProblem(rng,{
+      title:L({es:'Ganancias y pérdidas repetidas',en:'Repeated gains and losses'}),
+      questionText:qt, showWork:true, options:o.options, correct:o.correct,
+      hint:L({es:'Lo que se repite varias veces se agrupa en una multiplicación; esas multiplicaciones se resuelven antes de juntarlas con el valor inicial.',
+              en:'Whatever repeats several times becomes a multiplication; those multiplications are solved before combining them with the starting value.'}),
+      explanation:ex
+    });
+  })();
+
+  /* ───────── CONCEPTO 4 ───────── */
+  addSection(
+    '<div class="stag">'+L({es:'Concepto 4',en:'Concept 4'})+'</div>'+
+    '<h2>'+L({es:'Los paréntesis se saltan la fila',en:'Parentheses jump the queue'})+'</h2>'+
+    '<p>'+L({es:'Los paréntesis y los corchetes son símbolos de agrupación: encierran una parte de la expresión y la convierten en un solo número antes de que cualquier otra operación tome su turno. Son la única manera de obligar a que una suma se resuelva antes que una multiplicación.',
+             en:'Parentheses and brackets are grouping symbols: they wrap a piece of the expression and turn it into a single number before any other operation takes its turn. They are the only way to force an addition to be solved before a multiplication.'})+'</p>'+
+    '<p>'+L({es:'Con números con signo esto pesa todavía más, porque agrupar puede cambiar el signo de lo que multiplicas y con eso cambia el signo del resultado completo. Los mismos números, agrupados distinto, dan resultados muy distintos.',
+             en:'With signed numbers this matters even more, because grouping can flip the sign of what you multiply and that flips the sign of the whole result. The same numbers, grouped differently, give very different results.'})+'</p>'+
+    '<div class="gcrd">'+
+      '<div class="mstage" id="w5round">'+L({es:'Meta 1 / 3',en:'Goal 1 / 3'})+'</div>'+
+      '<div class="mlabel">'+L({es:'Enciende o apaga los agrupamientos hasta que la expresión valga lo mismo que la meta.',en:'Switch the groupings on and off until the expression is worth the same as the goal.'})+'</div>'+
+      '<div class="mexpr big" id="w5expr"></div>'+
+      '<div class="mchain" style="margin-top:.5rem"><span class="mlabel" style="margin:0">'+L({es:'Meta',en:'Goal'})+':</span><span class="mnode goal" id="w5goal">0</span></div>'+
+      '<div class="mrow">'+
+        '<button class="mbtn wide" id="w5b1" onclick="w5Toggle(1,this)">'+L({es:'Agrupar la suma',en:'Group the sum'})+'</button>'+
+        '<button class="mbtn wide" id="w5b2" onclick="w5Toggle(2,this)">'+L({es:'Agrupar la resta',en:'Group the subtraction'})+'</button>'+
+      '</div>'+
+      '<div class="mrow"><button class="mbtn wide" onclick="w5Check()">'+L({es:'Comprobar',en:'Check'})+'</button></div>'+
+      '<div class="mfb" id="w5fb"></div>'+
+    '</div>'
+  );
+  W5.rng = subRng(rng,'w5'); W5.round=0; W5.done=false; w5New();
+
+  /* ───────── PROBLEMA 7 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), res, expr, cands;
+    if(v===0){
+      var m=ri(rng,2,5), x=-ri(rng,5,9), y=ri(rng,2,6), z=ri(rng,3,8);
+      res=m*(x+y)-z; expr=m+' × ('+numStr(x)+' + '+y+') − '+z;
+      cands=[m*x+y-z, m*(x+y)+z, m*(x+y-z)];
+    } else {
+      var a=ri(rng,2,6), b=ri(rng,8,14), n=ri(rng,2,5), q=ri(rng,3,9);
+      res=(a-b)*n+q; expr='('+a+' − '+b+') × '+n+' + '+q;
+      cands=[a-b*n+q, (a-b)*(n+q), (a-b)*n-q];
+    }
+    var o=numOptions(res,cands);
+    addProblem(rng,{
+      title:L({es:'Primero lo agrupado',en:'Grouped part first'}),
+      questionText:L({es:'Calcula el resultado de la siguiente operación.',en:'Work out the result of the operation below.'}),
+      fn:expr, showWork:true, options:o.options, correct:o.correct,
+      hint:L({es:'Convierte el paréntesis en un solo número con signo antes de tocar cualquier otra operación.',
+              en:'Turn the parentheses into a single signed number before touching any other operation.'}),
+      explanation:L({es:'Se resuelve primero el paréntesis y después el resto del turno: '+expr+' = '+numStr(res),
+                     en:'Solve the parentheses first and then the rest of the order: '+expr+' = '+numStr(res)})
+    });
+  })();
+
+  /* ───────── CONCEPTO 5 ───────── */
+  addSection(
+    '<div class="stag">'+L({es:'Concepto 5',en:'Concept 5'})+'</div>'+
+    '<h2>'+L({es:'Qué se puede mover y qué no',en:'What you may move and what you may not'})+'</h2>'+
+    '<p>'+L({es:'Algunas operaciones aguantan que les cambies el orden y otras no. La suma y la multiplicación son conmutativas: puedes voltear los dos números y el resultado no se mueve. La resta y la división no lo son, y con números con signo eso se nota de inmediato porque el resultado cambia de lado del cero.',
+             en:'Some operations put up with a change of order and some do not. Addition and multiplication are commutative: you can swap the two numbers and the result stays put. Subtraction and division are not, and with signed numbers you notice at once because the result jumps to the other side of zero.'})+'</p>'+
+    '<p>'+L({es:'La propiedad asociativa habla de cómo agrupas tres números en una misma suma, y la distributiva conecta la multiplicación con la suma: multiplicar por un total es lo mismo que multiplicar por cada parte y luego juntar. Cada propiedad se comprueba probando valores, no repitiendo el nombre.',
+             en:'The associative property is about how you group three numbers inside the same sum, and the distributive one connects multiplication with addition: multiplying by a total is the same as multiplying each part and then combining. Each property is checked by testing values, not by repeating its name.'})+'</p>'+
+    '<div class="gcrd">'+
+      '<div class="mstage">'+L({es:'Balanza de propiedades',en:'Property balance'})+'</div>'+
+      '<div class="mlabel">'+L({es:'Elige qué comparar, mueve los valores y observa si la balanza se mantiene equilibrada.',en:'Choose what to compare, move the values and watch whether the beam stays level.'})+'</div>'+
+      '<div class="mrow">'+
+        '<button class="mbtn on" onclick="w4Test(\'sum\',this)">a + b</button>'+
+        '<button class="mbtn" onclick="w4Test(\'res\',this)">a − b</button>'+
+        '<button class="mbtn" onclick="w4Test(\'aso\',this)">'+L({es:'agrupar 3',en:'group 3'})+'</button>'+
+        '<button class="mbtn" onclick="w4Test(\'dis\',this)">a × (b + c)</button>'+
+      '</div>'+
+      '<div class="eqbox"><div class="eqside" id="w4left"></div><div class="eqside" id="w4right"></div></div>'+
+      '<div class="bwrap"><div class="bbase"></div><div class="bpost"></div><div class="bbeam" id="w4beam"></div>'+
+        '<div class="bpan pl" id="w4pl">0</div><div class="bpan pr" id="w4pr">0</div></div>'+
+      '<div class="cgrid" style="margin-top:.6rem">'+
+        '<div class="cg"><label>a = <span class="cval" id="w4va">−3</span></label><input type="range" min="-9" max="9" value="-3" oninput="w4Set(\'a\',this.value)"></div>'+
+        '<div class="cg"><label>b = <span class="cval" id="w4vb">5</span></label><input type="range" min="-9" max="9" value="5" oninput="w4Set(\'b\',this.value)"></div>'+
+      '</div>'+
+      '<div class="cgrid" id="w4cwrap" style="display:none">'+
+        '<div class="cg"><label>c = <span class="cval" id="w4vc">4</span></label><input type="range" min="-9" max="9" value="4" oninput="w4Set(\'c\',this.value)"></div>'+
+      '</div>'+
+      '<div class="mfb" id="w4fb"></div>'+
+    '</div>'
+  );
+  W4.a=-3; W4.b=5; W4.c=4; W4.test='sum'; W4.moves=0; W4.found=false; w4Render();
+
+  /* ───────── PROBLEMA 8 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), qt, opts, corr, ex, hint;
+    if(v===0){
+      corr='a + b = b + a';
+      opts=txtOptions(corr, ['a − b = b − a', 'a ÷ b = b ÷ a', '(a − b) − c = a − (b − c)']);
+      qt=L({es:'¿Cuál de estas igualdades se cumple con cualquier pareja o trío de números con signo, sin importar los valores que elijas?',
+            en:'Which of these equalities holds for any pair or trio of signed numbers, whatever values you choose?'});
+      ex=L({es:'Al voltear una suma el resultado no cambia. En la resta y en la división voltear el orden cambia el resultado, y al mover los paréntesis de una resta encadenada también cambia.',
+            en:'Flipping a sum leaves the result unchanged. In subtraction and division swapping the order changes the result, and moving the parentheses in a chained subtraction changes it too.'});
+      hint=L({es:'Prueba cada igualdad con un número negativo y uno positivo; basta un ejemplo que falle para descartarla.',
+              en:'Test each equality with one negative and one positive number; a single failing example is enough to discard it.'});
+    } else {
+      var m=-ri(rng,3,7), x=ri(rng,6,10), y=ri(rng,2,5);
+      corr=L({es:'Multiplicar '+numStr(m)+' por '+x+' y al resultado restarle el producto de '+numStr(m)+' por '+y,
+              en:'Multiply '+numStr(m)+' by '+x+' and subtract from it the product of '+numStr(m)+' and '+y});
+      opts=txtOptions(corr, [
+        L({es:'Multiplicar '+numStr(m)+' por '+x+' y al resultado sumarle el producto de '+numStr(m)+' por '+y,
+           en:'Multiply '+numStr(m)+' by '+x+' and add to it the product of '+numStr(m)+' and '+y}),
+        L({es:'Multiplicar '+numStr(m)+' por '+x+' y al resultado restarle únicamente '+y,
+           en:'Multiply '+numStr(m)+' by '+x+' and subtract only '+y+' from it'}),
+        L({es:'Sumar '+x+' y '+y+' y multiplicar ese total por '+numStr(m),
+           en:'Add '+x+' and '+y+' and multiply that total by '+numStr(m)})
+      ]);
+      qt=L({es:'Al calcular '+numStr(m)+' × ('+x+' − '+y+'), ¿cuál procedimiento distinto da exactamente el mismo resultado?',
+            en:'When working out '+numStr(m)+' × ('+x+' − '+y+'), which different procedure gives exactly the same result?'});
+      ex=L({es:'El factor se reparte entre las dos partes conservando la resta: '+numStr(m)+' × '+x+' menos '+numStr(m)+' × '+y+' da el mismo valor que multiplicar por la diferencia.',
+            en:'The factor is shared between both parts keeping the subtraction: '+numStr(m)+' × '+x+' minus '+numStr(m)+' × '+y+' gives the same value as multiplying by the difference.'});
+      hint=L({es:'Reparte el factor entre cada parte del paréntesis y conserva la operación que había dentro.',
+              en:'Share the factor with each part inside the parentheses and keep the operation that was in there.'});
+    }
+    addProblem(rng,{
+      title:L({es:'Propiedades puestas a prueba',en:'Properties put to the test'}),
+      questionText:qt, showWork:false, options:opts.options, correct:opts.correct,
+      hint:hint, explanation:ex
+    });
+  })();
+
+  /* ───────── CIERRE ───────── */
+  addSection(
+    '<div class="stag">'+L({es:'Cierre',en:'Wrap up'})+'</div>'+
+    '<h2>'+L({es:'Todo junto',en:'Everything together'})+'</h2>'
+  );
+
+  /* ───────── PROBLEMA 9 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), qt, ex, res, cands;
+    if(v===0){
+      var base=ri(rng,18,30)*10, n=ri(rng,3,5), cg=ri(rng,5,9)*10, dep=ri(rng,6,12)*5;
+      res=base-n*cg+dep;
+      qt=L({es:'La cuenta de una cooperativa escolar tiene '+base+' pesos. Se aplican '+n+' cargos de '+cg+' pesos cada uno y después entra un depósito de '+dep+' pesos. ¿Cuál es el saldo final de la cuenta, en pesos?',
+            en:'A school co-op account holds '+base+' pesos. Then '+n+' charges of '+cg+' pesos each are applied and afterwards a deposit of '+dep+' pesos comes in. What is the final balance of the account, in pesos?'});
+      ex=L({es:'Primero el producto de los cargos y luego las sumas y restas: '+base+' − '+n+' × '+cg+' + '+dep+' = '+numStr(res),
+            en:'The product of the charges first and then the additions and subtractions: '+base+' − '+n+' × '+cg+' + '+dep+' = '+numStr(res)});
+      cands=[base-n*cg-dep, base+n*cg-dep, base-cg+dep];
+    } else {
+      var lt=ri(rng,15,22)*10, k=ri(rng,4,6), cub=ri(rng,12,18), add=ri(rng,4,9)*10;
+      res=lt-k*cub+add;
+      qt=L({es:'Un tinaco tiene '+lt+' litros de agua. Se sacan '+k+' cubetas de '+cub+' litros cada una y después se agregan '+add+' litros con una manguera. ¿Cuántos litros quedan en el tinaco?',
+            en:'A water tank holds '+lt+' litres. Then '+k+' buckets of '+cub+' litres each are taken out and afterwards '+add+' litres are added with a hose. How many litres are left in the tank?'});
+      ex=L({es:'Primero el producto de las cubetas y luego las sumas y restas: '+lt+' − '+k+' × '+cub+' + '+add+' = '+numStr(res),
+            en:'The product of the buckets first and then the additions and subtractions: '+lt+' − '+k+' × '+cub+' + '+add+' = '+numStr(res)});
+      cands=[lt-k*cub-add, lt+k*cub-add, lt-cub+add];
+    }
+    var o=numOptions(res,cands);
+    addProblem(rng,{
+      title:L({es:'Varios movimientos en una cuenta',en:'Several moves in one account'}),
+      questionText:qt, showWork:true, options:o.options, correct:o.correct,
+      hint:L({es:'Junta primero lo que se repite en una sola multiplicación y después aplica los cambios en el orden en que ocurren.',
+              en:'First gather whatever repeats into a single multiplication and then apply the changes in the order they happen.'}),
+      explanation:ex
+    });
+  })();
+
+  /* ───────── PROBLEMA 10 ───────── */
+  (function(){
+    var v = Math.floor(rng()*2), res, expr, cands;
+    if(v===0){
+      var c=pick([2,4,5],rng), k=ri(rng,2,6), w=c*k, d=ri(rng,2,5), e=ri(rng,2,6);
+      res=w/c-d*e; expr='−'+w+' ÷ (−'+c+') + '+d+' × (−'+e+')';
+      cands=[-(w/c)-d*e, w/c+d*e, -(w/c)+d*e];
+    } else {
+      var c2=pick([2,3],rng), s=-ri(rng,2,6)*c2, b2=ri(rng,3,7), a2=s-b2, m2=ri(rng,2,5);
+      res=s*m2/c2; expr='['+numStr(a2)+' + '+b2+'] × '+m2+' ÷ '+c2;
+      cands=[-res, res-m2, Math.round(a2+b2*m2/c2)];
+    }
+    cands=cands.map(function(x){ return Math.round(x); });
+    var o=numOptions(res,cands);
+    addProblem(rng,{
+      title:L({es:'Agrupación, signos y turnos',en:'Grouping, signs and turns'}),
+      questionText:L({es:'Calcula el resultado de la siguiente operación.',en:'Work out the result of the operation below.'}),
+      fn:expr, showWork:true, options:o.options, correct:o.correct,
+      hint:L({es:'Resuelve lo agrupado, luego los productos y cocientes de izquierda a derecha, y hasta el final las sumas y restas.',
+              en:'Solve what is grouped, then products and quotients left to right, and only at the end the additions and subtractions.'}),
+      explanation:L({es:'Siguiendo el turno completo con la regla de los signos: '+expr+' = '+numStr(res),
+                     en:'Following the full order with the sign rule: '+expr+' = '+numStr(res)})
+    });
+  })();
+}
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbykkuJ_apGq3vALIFd4mr3acu81c7K4OKxW-DZ-i52Ceyl3lOanXMdvbS9SIXPrLQBm/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Jerarquía de Operaciones con Números con Signo';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2009 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Problemas de Reparto Proporcional</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; text-align: justify; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--gold-bg); }
+.wgt-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.5rem 1.1rem; font-size:.83rem; font-weight:600; cursor:pointer; font-family:inherit; min-height:44px; }
+.wgt-btn:hover { background:var(--green-dark); }
+.wgt-step { background:var(--surface2); border:1.5px solid var(--border); color:var(--text); border-radius:8px; width:44px; height:44px; font-size:1.05rem; cursor:pointer; font-family:inherit; }
+.wgt-step:hover { border-color:var(--green); color:var(--green); }
+.wgt-fb { margin-top:.6rem; font-size:.84rem; color:var(--text2); min-height:2.4rem; line-height:1.5; }
+.wgt-lead { font-size:.86rem; color:var(--text2); margin-bottom:.6rem; }
+.wgt-cv { width:100%; display:block; }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Problemas de Reparto Proporcional</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 3° de Secundaria · Funciones</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Problemas de Reparto Proporcional</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c8454', primaryDark:'#054e31', primaryBg:'#e5f7f0',
+  accent:'#fccc24', accentBg:'#fff7db',
+  darkPrimary:'#35d495', darkPrimaryDark:'#67f3bb', darkPrimaryBg:'#063f29',
+  darkAccent:'#ffd43f', darkAccentBg:'#2d2405',
+  pBR:12, pBG:132, pBB:84, pAR:252, pAG:204, pAB:36,
+  logoLeftB64:'data:image/jpeg;base64,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', logoRightB64:'', logoAlt:'Monte Corona',
+  guideTitle:{ es:'Problemas de Reparto Proporcional', en:'Proportional Sharing Problems' },
+  courseName:{ es:'Matemáticas · 3° de Secundaria · Funciones', en:'Mathematics · Grade 9 · Functions' },
+  filePrefix:'mat3_t03_g02', schoolSlug:'monte_corona'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'mat3_t03_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Problemas de Reparto Proporcional','wcourse':'Matemáticas · 3° de Secundaria · Funciones',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.',
+    'pdf-student':'ALUMNO','pdf-group':'GRUPO','pdf-summary':'RESUMEN DE PROBLEMAS',
+    'pdf-summary-cont':'RESUMEN DE PROBLEMAS (continuación)','pdf-problem':'Problema','pdf-of':'de',
+    'pdf-ok':'Correcto','pdf-bad':'Incorrecto','pdf-question':'PREGUNTA','pdf-chosen':'Alumno: ',
+    'pdf-answer':'Correcto: ','pdf-solution':'Solución: ','pdf-work':'TRABAJO DEL ALUMNO',
+    'pdf-score':'correcta(s) de','pdf-questions':'preguntas','pdf-code':'Código:','pdf-page':'Página'
+  },
+  en: {
+    'wtitle':'Proportional Sharing Problems','wcourse':'Mathematics · Grade 9 · Functions',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.',
+    'pdf-student':'STUDENT','pdf-group':'GROUP','pdf-summary':'PROBLEM SUMMARY',
+    'pdf-summary-cont':'PROBLEM SUMMARY (continued)','pdf-problem':'Problem','pdf-of':'of',
+    'pdf-ok':'Correct','pdf-bad':'Incorrect','pdf-question':'QUESTION','pdf-chosen':'Student: ',
+    'pdf-answer':'Correct: ','pdf-solution':'Solution: ','pdf-work':'STUDENT WORK',
+    'pdf-score':'correct out of','pdf-questions':'questions','pdf-code':'Code:','pdf-page':'Page'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'mat3_t03_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'mat3_t03_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'mat3_t03_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'mat3_t03_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = (LANG==='es' ? 'Generando PDF…' : 'Generating PDF…');
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString(LANG==='es'?'es-MX':'en-US', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
+  }
+
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text(t('pdf-student'), M+4, 79); doc.text(t('pdf-group'), 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' '+t('pdf-score')+' '+total+' '+t('pdf-questions'), PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text(t('pdf-summary'), M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text(t('pdf-summary-cont'), M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(t('pdf-problem')+' '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?t('pdf-ok'):t('pdf-bad'), PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text(t('pdf-problem')+' '+(i+1)+' '+t('pdf-of')+' '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(t('pdf-question'), M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize(t('pdf-chosen')+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize(t('pdf-answer')+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize(t('pdf-solution')+expRaw, TW-18).slice(0,6);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text(t('pdf-work'), M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  '+t('pdf-code')+' '+code+'  ·  '+t('pdf-page')+' '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+    // ── SAVE / SHARE — iOS-safe download (LIAXA iOS PDF fix, Rule 12) ─────────
+  //   iOS Safari ignores the <a download> attribute, so a plain download fails
+  //   silently on iPhone/iPad. iOS -> native share sheet (-> "Save to Files"),
+  //   with an inline-open fallback; everything else -> <a download> click.
+  //   Runs synchronously off the tap so iOS accepts navigator.share().
+  var _fname   = SCHOOL.filePrefix + '_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
+  var _pdfBlob = doc.output('blob');
+
+  function _restorePdfBtn(){ btn.innerHTML = '\u2b07 &nbsp;' + t('btn-pdf'); btn.disabled = false; }
+  function _openPdfInline(b){
+    var u = URL.createObjectURL(b);
+    var w = window.open(u, '_blank');
+    if (!w) { window.location.href = u; }
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
+  }
+
+  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (_isIOS) {
+    var _pdfFile = new File([_pdfBlob], _fname, { type:'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files:[_pdfFile] })) {
+      navigator.share({ files:[_pdfFile], title:_fname })
+        .then(_restorePdfBtn)
+        .catch(function(e){
+          if (e && e.name === 'AbortError') { _restorePdfBtn(); return; }
+          _openPdfInline(_pdfBlob); _restorePdfBtn();
+        });
+      return;
+    }
+    _openPdfInline(_pdfBlob); _restorePdfBtn();
+    return;
+  }
+
+  var _dlUrl = URL.createObjectURL(_pdfBlob);
+  var _dlA   = document.createElement('a');
+  _dlA.href  = _dlUrl; _dlA.download = _fname;
+  document.body.appendChild(_dlA); _dlA.click();
+  setTimeout(function(){ document.body.removeChild(_dlA); URL.revokeObjectURL(_dlUrl); }, 200);
+  _restorePdfBtn();
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+function buildLesson(rng) {
+  var body = document.getElementById('lessonBody');
+  problems = [];
+  body.innerHTML = '';
+  var ES = (LANG === 'es');
+
+  /* ── helpers ─────────────────────────────────────────────── */
+  function L(o){ return ES ? o.es : o.en; }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function pk(a){ return a[Math.floor(rng()*a.length)]; }
+  function tok(n){ try { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); } catch(e){ return ''; } }
+  function mf(n,d){ return '<span class="mf-outer"><span class="mf-num">'+n+'</span><span class="mf-den">'+d+'</span></span>'; }
+  function tbl(head, rows){
+    var h = '<div style="overflow-x:auto;margin:.7rem 0"><table style="width:100%;border-collapse:collapse;font-family:\'IBM Plex Mono\',monospace;font-size:.82rem"><tr>';
+    head.forEach(function(c){ h += '<th style="border:1px solid var(--border);padding:.34rem .5rem;background:var(--surface2);color:var(--text2);font-weight:600">'+c+'</th>'; });
+    h += '</tr>';
+    rows.forEach(function(r){
+      h += '<tr>';
+      r.forEach(function(c,ci){ h += '<td style="border:1px solid var(--border);padding:.34rem .5rem;text-align:center;color:'+(ci===0?'var(--text2)':'var(--text)')+';background:'+(ci===0?'var(--surface2)':'var(--surface)')+'">'+c+'</td>'; });
+      h += '</tr>';
+    });
+    return h + '</table></div>';
+  }
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+html;
+    body.appendChild(d);
+    return d;
+  }
+  function opts4(correct, cands){
+    var out = [String(correct)];
+    for (var i=0; i<cands.length && out.length<4; i++){
+      var v = cands[i];
+      if (!isFinite(v) || v <= 0) continue;
+      if (out.indexOf(String(v)) === -1) out.push(String(v));
+    }
+    var g = 1;
+    while (out.length < 4){
+      var e = String(Number(correct) + g*7);
+      if (out.indexOf(e) === -1) out.push(e);
+      g++;
+    }
+    return out;
+  }
+  function addP(p){
+    var arr = p.options.slice();
+    for (var i=arr.length-1; i>0; i--){ var j=Math.floor(rng()*(i+1)); var tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp; }
+    var prob = {
+      title: p.title,
+      questionText: p.questionText,
+      fn: p.fn || '',
+      hint: p.hint,
+      explanation: p.explanation,
+      options: arr,
+      correctIdx: arr.indexOf(String(p.correct)),
+      showWork: p.showWork !== false,
+      studentChoice: null,
+      pendingChoice: null
+    };
+    problems.push(prob);
+    buildOneCard(prob, problems.length - 1);
+  }
+  function cvSetup(cv, hpx){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 560;
+    cv.style.height = hpx + 'px';
+    cv.width = Math.round(w*dpr); cv.height = Math.round(hpx*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,hpx);
+    return { ctx: ctx, w: w, h: hpx };
+  }
+
+  /* ── PARÁMETROS DE LA SEMILLA (números + variante estructural + texto) ── */
+  var p1v  = ri(0,1);
+  var p1i  = ri(0,2);
+  var p1r  = ri(6,9);
+  var p1t1 = ri(4,6);
+  var p1t2 = p1t1 + ri(4,7);
+  var p1q1 = p1r*p1t1;
+  var p1q2 = p1r*p1t2;
+
+  var p2v  = ri(0,1);
+  var p2k  = ri(3,9);
+  var p2x1 = ri(2,4);
+  var p2y1 = p2k*p2x1;
+  var p2x2 = p2x1 + ri(2,5);
+  var p2y2 = p2k*p2x2;
+
+  var p3d  = pk([4,5,8]);
+  var p3n  = ri(1,p3d-1);
+  var p3u  = 5*ri(6,18);
+  var p3T  = p3u*p3d;
+  var p3a  = p3u*p3n;
+
+  var p4p  = pk([[2,3],[3,4],[3,5],[2,5],[4,5],[5,7]]);
+  var p4i  = ri(0,1);
+  var p4s  = p4p[0]+p4p[1];
+  var p4u  = 10*ri(5,20);
+  var p4T  = p4u*p4s;
+  var p4a  = p4u*p4p[0];
+
+  var p5p  = pk([[2,3,5],[3,4,5],[2,3,4],[3,5,7],[2,5,8],[4,5,6]]);
+  var p5s  = p5p[0]+p5p[1]+p5p[2];
+  var p5u  = 10*ri(4,15);
+  var p5T  = p5u*p5s;
+  var p5a  = p5u*p5p[2];
+
+  var p6p  = pk([[2,3,7],[1,3,6],[2,4,7],[3,4,8],[1,4,5],[2,5,6]]);
+  var p6s  = p6p[0]+p6p[1]+p6p[2];
+  var p6u  = 5*ri(6,20);
+  var p6T  = p6u*p6s;
+  var p6a  = p6u*(p6p[2]-p6p[0]);
+
+  var p7m  = pk([2,3]);
+  var p7q  = ri(3,8);
+  var p7d  = p7m*p7q;
+  var p7w1 = pk([4,5,6]);
+  var p7w2 = p7w1*p7m;
+  var p7k  = p7w1*p7d;
+
+  var p8p  = pk([[2,3],[3,4],[2,5],[3,5],[4,5]]);
+  var p8s  = p8p[0]+p8p[1];
+  var p8u  = 10*ri(5,18);
+  var p8T  = p8u*p8s;
+  var p8a  = p8u*p8p[1];
+
+  var p9s  = ri(6,12);
+  var p9u  = 10*ri(4,12);
+  var p9T  = p9u*p9s;
+  var p9c  = ri(2,p9s-2);
+  var p9a  = p9u*p9c;
+
+  var p10p = pk([[3,4,5],[2,3,5],[4,5,6],[2,4,5],[3,5,6]]);
+  var p10s = p10p[0]+p10p[1]+p10p[2];
+  var p10u = 10*ri(6,20);
+  var p10T = p10u*p10s;
+  var p10A = p10u*p10p[0];
+
+  /* parámetros de las actividades */
+  var m1Ks = shuffle([4,5,6,7,8,9], rng).slice(0,3);
+  var m2R  = [];
+  for (var z=0; z<3; z++){
+    var zp = pk([[2,3],[3,4],[2,5],[3,5],[4,5],[1,4]]);
+    var zu = 10*ri(3,12);
+    m2R.push({ a:zp[0], b:zp[1], u:zu, T:zu*(zp[0]+zp[1]) });
+  }
+  var m3p = pk([[2,3,4],[1,3,5],[2,3,5],[3,4,5],[1,2,4],[2,4,5]]);
+  var m3s = m3p[0]+m3p[1]+m3p[2];
+  var m3u = 5*ri(6,20);
+  var m3T = m3u*m3s;
+  var m4w = ri(3,9);
+  var m4d = ri(3,9);
+  var m4k = m4w*m4d;
+
+  var NAMES = ['Ana','Bruno','Carla'];
+
+  /* ══════════════════════════════════════════════════════════
+     SECCIÓN 1 — variación de dos cantidades
+     ══════════════════════════════════════════════════════════ */
+  sec(L({es:'Concepto 1',en:'Concept 1'}),
+      L({es:'Dos cantidades que cambian juntas',en:'Two quantities that change together'}),
+    '<p>'+L({
+      es:'Cuando dos cantidades varían de manera directamente proporcional, su cociente no cambia: al dividir cada valor de y entre su valor de x siempre aparece el mismo número. Ese número fijo es la constante de proporcionalidad y se escribe k.',
+      en:'When two quantities vary in direct proportion, their quotient never changes: dividing each y value by its x value always gives the same number. That fixed number is the constant of proportionality, written k.'})+'</p>'+
+    '<p>'+L({
+      es:'La misma relación se puede leer de tres maneras distintas y todas dicen lo mismo.',
+      en:'The same relation can be read in three different ways, and all three say the same thing.'})+'</p>'+
+    '<div class="rules-grid">'+
+      '<div class="rcard"><div class="rname">'+L({es:'Tabla',en:'Table'})+'</div><div class="rform">y ÷ x = k</div><div class="rnote">'+L({es:'el cociente se repite en cada pareja de valores',en:'the quotient repeats in every pair of values'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Gráfica',en:'Graph'})+'</div><div class="rform">'+L({es:'recta por el origen',en:'line through the origin'})+'</div><div class="rnote">'+L({es:'al doble de x le corresponde el doble de y',en:'twice the x gives twice the y'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Regla algebraica',en:'Algebraic rule'})+'</div><div class="rform">y = kx</div><div class="rnote">'+L({es:'con k puedes calcular cualquier valor que falte',en:'with k you can work out any missing value'})+'</div></div>'+
+    '</div>'+
+    '<div class="callout"><p><strong>'+L({es:'Idea clave:',en:'Key idea:'})+'</strong> '+L({
+      es:'basta con conocer una sola pareja de valores para obtener k, y con k se reconstruye la tabla completa y la recta.',
+      en:'a single pair of values is enough to get k, and with k you can rebuild the whole table and the line.'})+'</p></div>'+
+    '<div class="gcrd">'+
+      '<div class="mtabs"><span class="mtab active" id="m1r"></span></div>'+
+      '<div class="wgt-lead">'+L({
+        es:'Los puntos vienen de una tabla de proporcionalidad directa. Mueve el deslizador hasta que tu recta pase justo por ellos.',
+        en:'The dots come from a direct proportion table. Move the slider until your line runs exactly through them.'})+'</div>'+
+      '<div id="m1tbl"></div>'+
+      '<canvas class="wgt-cv" id="m1cv"></canvas>'+
+      '<div class="cgrid" style="margin-top:.8rem">'+
+        '<div class="cg"><label>'+L({es:'Valor de k',en:'Value of k'})+': <span class="cval" id="m1v">1</span></label>'+
+        '<input type="range" id="m1s" min="1" max="10" step="1" value="1" oninput="m1Move()"></div>'+
+        '<div class="cg" style="display:flex;align-items:flex-end"><button class="wgt-btn" style="width:100%" onclick="m1Check()">'+L({es:'Comprobar',en:'Check'})+'</button></div>'+
+      '</div>'+
+      '<div class="wgt-fb" id="m1f"></div>'+
+    '</div>');
+
+  var m1 = { round:0, guess:1, tries:0, lock:false };
+  function m1Draw(){
+    var cv = document.getElementById('m1cv'); if (!cv || m1.round > 2) return;
+    var S = cvSetup(cv, 230), c = S.ctx;
+    var padL=34, padB=24, padT=12, padR=10;
+    var X = function(x){ return padL + x/6*(S.w-padL-padR); };
+    var Y = function(y){ return S.h-padB - y/50*(S.h-padB-padT); };
+    c.strokeStyle = tok('--border'); c.lineWidth = 1;
+    for (var g=1; g<=6; g++){ c.beginPath(); c.moveTo(X(g),Y(0)); c.lineTo(X(g),Y(50)); c.stroke(); }
+    for (var v=10; v<=50; v+=10){ c.beginPath(); c.moveTo(X(0),Y(v)); c.lineTo(X(6),Y(v)); c.stroke(); }
+    c.strokeStyle = tok('--text3'); c.lineWidth = 1.4;
+    c.beginPath(); c.moveTo(X(0),Y(0)); c.lineTo(X(6),Y(0)); c.moveTo(X(0),Y(0)); c.lineTo(X(0),Y(50)); c.stroke();
+    c.fillStyle = tok('--text3'); c.font = '10px IBM Plex Sans';
+    for (g=1; g<=6; g++) c.fillText(String(g), X(g)-3, Y(0)+13);
+    for (v=10; v<=50; v+=10) c.fillText(String(v), 6, Y(v)+3);
+    var kg = m1.guess, xe = Math.min(6, 50/kg);
+    c.strokeStyle = tok('--gold'); c.lineWidth = 2.6;
+    c.beginPath(); c.moveTo(X(0),Y(0)); c.lineTo(X(xe),Y(kg*xe)); c.stroke();
+    var k = m1Ks[m1.round];
+    c.fillStyle = tok('--green');
+    for (var x=1; x<=5; x++){ c.beginPath(); c.arc(X(x),Y(k*x),4.8,0,6.2832); c.fill(); }
+  }
+  function m1Render(){
+    var r = document.getElementById('m1r'); if (!r) return;
+    r.textContent = L({es:'Ronda '+(m1.round+1)+' de 3', en:'Round '+(m1.round+1)+' of 3'});
+    var k = m1Ks[m1.round];
+    document.getElementById('m1tbl').innerHTML = tbl(['x','1','2','3','4','5'], [['y', k, 2*k, 3*k, 4*k, 5*k]]);
+    document.getElementById('m1f').innerHTML = L({
+      es:'Cada punto de la gráfica es una pareja de la tabla.',
+      en:'Each dot on the graph is one pair from the table.'});
+    m1Draw();
+  }
+  function m1Advance(){
+    m1.lock = true;
+    setTimeout(function(){
+      m1.round++;
+      var f = document.getElementById('m1f'); if (!f) return;
+      if (m1.round >= 3){
+        f.innerHTML = L({
+          es:'Tres tablas, tres constantes distintas: en todas, y ÷ x fue siempre el mismo número.',
+          en:'Three tables, three different constants: in all of them y ÷ x was always the same number.'});
+        var rr = document.getElementById('m1r'); if (rr) rr.textContent = L({es:'Rondas completas',en:'Rounds complete'});
+        var cv = document.getElementById('m1cv'); if (cv) cv.style.opacity = '0.55';
+        return;
+      }
+      m1.lock = false; m1.tries = 0; m1.guess = 1;
+      var s = document.getElementById('m1s'); if (s) s.value = 1;
+      var vv = document.getElementById('m1v'); if (vv) vv.textContent = '1';
+      m1Render();
+    }, 1700);
+  }
+  window.m1Move = function(){
+    if (m1.lock || m1.round > 2) return;
+    m1.guess = parseInt(document.getElementById('m1s').value,10);
+    document.getElementById('m1v').textContent = m1.guess;
+    m1Draw();
+    var k = m1Ks[m1.round], f = document.getElementById('m1f');
+    if (m1.guess < k) f.innerHTML = L({es:'Tu recta pasa por debajo de los puntos: sube el valor.',en:'Your line runs below the dots: raise the value.'});
+    else if (m1.guess > k) f.innerHTML = L({es:'Tu recta pasa por arriba de los puntos: baja el valor.',en:'Your line runs above the dots: lower the value.'});
+    else f.innerHTML = L({es:'La recta toca todos los puntos. Confírmalo.',en:'The line touches every dot. Confirm it.'});
+  };
+  window.m1Check = function(){
+    if (m1.lock || m1.round > 2) return;
+    var k = m1Ks[m1.round], f = document.getElementById('m1f');
+    if (m1.guess === k){
+      f.innerHTML = L({
+        es:'Correcto: '+(5*k)+' ÷ 5 = '+k+' y lo mismo pasa con cada pareja, así que la regla es y = '+k+'x.',
+        en:'Correct: '+(5*k)+' ÷ 5 = '+k+' and the same happens with every pair, so the rule is y = '+k+'x.'});
+      m1Advance();
+      return;
+    }
+    m1.tries++;
+    if (m1.tries >= 3){
+      document.getElementById('m1s').value = k; m1.guess = k;
+      document.getElementById('m1v').textContent = k; m1Draw();
+      f.innerHTML = L({
+        es:'La constante era '+k+': cada y vale '+k+' veces su x, por eso la regla es y = '+k+'x.',
+        en:'The constant was '+k+': each y is '+k+' times its x, so the rule is y = '+k+'x.'});
+      m1Advance();
+      return;
+    }
+    f.innerHTML = (m1.guess < k
+      ? L({es:'Todavía no: los puntos quedan arriba de tu recta. Sube el valor y vuelve a intentarlo.',en:'Not yet: the dots sit above your line. Raise the value and try again.'})
+      : L({es:'Todavía no: los puntos quedan abajo de tu recta. Baja el valor y vuelve a intentarlo.',en:'Not yet: the dots sit below your line. Lower the value and try again.'}));
+  };
+
+  /* ── Problema 1 ── */
+  var p1pool = [
+    { es:{dev:'Una impresora de la escuela trabaja a ritmo constante', vb:'imprime', it:'hojas', many:'¿Cuántas hojas'},
+      en:{dev:'A school printer works at a constant rate', vb:'prints', vb0:'print', it:'sheets', many:'How many sheets'} },
+    { es:{dev:'Una bomba llena un tinaco con flujo constante', vb:'sube', it:'litros', many:'¿Cuántos litros'},
+      en:{dev:'A pump fills a tank at a constant flow', vb:'raises', vb0:'raise', it:'liters', many:'How many liters'} },
+    { es:{dev:'Una máquina empacadora trabaja a ritmo constante', vb:'empaca', it:'cajas', many:'¿Cuántas cajas'},
+      en:{dev:'A packing machine works at a constant rate', vb:'packs', vb0:'pack', it:'boxes', many:'How many boxes'} }
+  ];
+  var P1 = p1pool[p1i];
+  addP({
+    title: L({es:'Ritmo constante',en:'Constant rate'}),
+    questionText: (p1v === 0
+      ? L({ es: P1.es.dev+': en '+p1t1+' minutos '+P1.es.vb+' '+p1q1+' '+P1.es.it+'. '+P1.es.many+' '+P1.es.vb+' en '+p1t2+' minutos?',
+            en: P1.en.dev+': in '+p1t1+' minutes it '+P1.en.vb+' '+p1q1+' '+P1.en.it+'. '+P1.en.many+' does it '+P1.en.vb0+' in '+p1t2+' minutes?' })
+      : L({ es: P1.es.dev+': en '+p1t1+' minutos '+P1.es.vb+' '+p1q1+' '+P1.es.it+'. ¿En cuántos minutos '+P1.es.vb+' '+p1q2+' '+P1.es.it+'?',
+            en: P1.en.dev+': in '+p1t1+' minutes it '+P1.en.vb+' '+p1q1+' '+P1.en.it+'. In how many minutes does it '+P1.en.vb0+' '+p1q2+' '+P1.en.it+'?' })),
+    hint: L({es:'Encuentra primero cuánto corresponde a un solo minuto dividiendo, y usa ese valor como constante.',
+             en:'First find how much matches a single minute by dividing, and use that value as the constant.'}),
+    explanation: (p1v === 0
+      ? L({ es:'En un minuto: '+p1q1+' ÷ '+p1t1+' = '+p1r+'. La regla es y = '+p1r+'x, así que en '+p1t2+' minutos: '+p1r+' × '+p1t2+' = '+p1q2,
+            en:'In one minute: '+p1q1+' ÷ '+p1t1+' = '+p1r+'. The rule is y = '+p1r+'x, so in '+p1t2+' minutes: '+p1r+' × '+p1t2+' = '+p1q2 })
+      : L({ es:'En un minuto: '+p1q1+' ÷ '+p1t1+' = '+p1r+'. Para llegar a '+p1q2+': '+p1q2+' ÷ '+p1r+' = '+p1t2,
+            en:'In one minute: '+p1q1+' ÷ '+p1t1+' = '+p1r+'. To reach '+p1q2+': '+p1q2+' ÷ '+p1r+' = '+p1t2 })),
+    options: (p1v === 0
+      ? opts4(p1q2, [p1q2+p1r, p1q2-p1r, p1q1+(p1t2-p1t1)])
+      : opts4(p1t2, [p1t2+2, p1t2-2, p1t1+p1t2])),
+    correct: (p1v === 0 ? p1q2 : p1t2),
+    showWork: true
+  });
+
+  /* ── Problema 2 ── */
+  function graphSVG(){
+    var W=280, H=180, pl=36, pb=28, pt=12, pr=12, xmax=10, ymax=p2k*10;
+    var gx = function(x){ return (pl + x/xmax*(W-pl-pr)).toFixed(1); };
+    var gy = function(y){ return (H-pb - y/ymax*(H-pb-pt)).toFixed(1); };
+    var s = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:340px;height:auto;display:block;margin:.7rem auto">';
+    var i;
+    for (i=2; i<=xmax; i+=2) s += '<line x1="'+gx(i)+'" y1="'+gy(0)+'" x2="'+gx(i)+'" y2="'+gy(ymax)+'" stroke="var(--border)" stroke-width="1"/>';
+    for (i=2; i<=10; i+=2) s += '<line x1="'+gx(0)+'" y1="'+gy(p2k*i)+'" x2="'+gx(xmax)+'" y2="'+gy(p2k*i)+'" stroke="var(--border)" stroke-width="1"/>';
+    s += '<line x1="'+gx(0)+'" y1="'+gy(0)+'" x2="'+gx(xmax)+'" y2="'+gy(0)+'" stroke="var(--text3)" stroke-width="1.4"/>';
+    s += '<line x1="'+gx(0)+'" y1="'+gy(0)+'" x2="'+gx(0)+'" y2="'+gy(ymax)+'" stroke="var(--text3)" stroke-width="1.4"/>';
+    s += '<line x1="'+gx(0)+'" y1="'+gy(0)+'" x2="'+gx(xmax)+'" y2="'+gy(ymax)+'" stroke="var(--green)" stroke-width="2.4"/>';
+    s += '<circle cx="'+gx(p2x1)+'" cy="'+gy(p2y1)+'" r="4.5" fill="var(--gold)"/>';
+    s += '<text x="'+(Number(gx(p2x1))+6)+'" y="'+(Number(gy(p2y1))-5)+'" fill="var(--text2)" font-size="9" font-family="IBM Plex Sans">('+p2x1+', '+p2y1+')</text>';
+    for (i=2; i<=xmax; i+=2) s += '<text x="'+(Number(gx(i))-4)+'" y="'+(Number(gy(0))+11)+'" fill="var(--text3)" font-size="8" font-family="IBM Plex Sans">'+i+'</text>';
+    for (i=2; i<=10; i+=2) s += '<text x="4" y="'+(Number(gy(p2k*i))+3)+'" fill="var(--text3)" font-size="8" font-family="IBM Plex Sans">'+(p2k*i)+'</text>';
+    s += '<text x="'+(W-16)+'" y="'+(Number(gy(0))+11)+'" fill="var(--text3)" font-size="9" font-family="IBM Plex Sans">x</text>';
+    s += '<text x="6" y="'+(pt+8)+'" fill="var(--text3)" font-size="9" font-family="IBM Plex Sans">y</text>';
+    return s + '</svg>';
+  }
+  addP({
+    title: L({es:'Lectura de la gráfica',en:'Reading the graph'}),
+    questionText: L({
+      es:'La gráfica muestra una relación directamente proporcional entre x y y.'+graphSVG()+(p2v===0
+        ? '¿Qué valor de y corresponde a x = '+p2x2+'?'
+        : '¿Qué valor de x corresponde a y = '+p2y2+'?'),
+      en:'The graph shows a directly proportional relation between x and y.'+graphSVG()+(p2v===0
+        ? 'Which value of y matches x = '+p2x2+'?'
+        : 'Which value of x matches y = '+p2y2+'?')}),
+    hint: L({es:'Usa el punto marcado en la recta para obtener k con una división, y luego aplica y = kx.',
+             en:'Use the marked point on the line to get k with one division, then apply y = kx.'}),
+    explanation: (p2v===0
+      ? L({ es:'La recta pasa por el origen y por ('+p2x1+', '+p2y1+'), así que k = '+p2y1+' ÷ '+p2x1+' = '+p2k+' y la regla es y = '+p2k+'x. Entonces '+p2k+' × '+p2x2+' = '+p2y2,
+            en:'The line passes through the origin and through ('+p2x1+', '+p2y1+'), so k = '+p2y1+' ÷ '+p2x1+' = '+p2k+' and the rule is y = '+p2k+'x. Then '+p2k+' × '+p2x2+' = '+p2y2 })
+      : L({ es:'La recta pasa por el origen y por ('+p2x1+', '+p2y1+'), así que k = '+p2y1+' ÷ '+p2x1+' = '+p2k+' y la regla es y = '+p2k+'x. Entonces '+p2y2+' ÷ '+p2k+' = '+p2x2,
+            en:'The line passes through the origin and through ('+p2x1+', '+p2y1+'), so k = '+p2y1+' ÷ '+p2x1+' = '+p2k+' and the rule is y = '+p2k+'x. Then '+p2y2+' ÷ '+p2k+' = '+p2x2 })),
+    options: (p2v===0
+      ? opts4(p2y2, [p2y2+p2k, p2y2-p2k, p2y1+p2x2])
+      : opts4(p2x2, [p2x2+1, p2x2-1, p2x2+3])),
+    correct: (p2v===0 ? p2y2 : p2x2),
+    showWork: false
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     SECCIÓN 2 — el valor de una parte
+     ══════════════════════════════════════════════════════════ */
+  sec(L({es:'Concepto 2',en:'Concept 2'}),
+      L({es:'Cuánto vale una parte',en:'What one part is worth'}),
+    '<p>'+L({
+      es:'En un reparto proporcional una cantidad total se divide entre varios participantes de modo que a cada uno le toque en proporción a un número dado: las horas que trabajó, el material que aportó, los kilómetros que recorrió.',
+      en:'In a proportional share a total amount is split among several participants so that each one gets an amount in proportion to a given number: hours worked, material contributed, kilometers travelled.'})+'</p>'+
+    '<p>'+L({
+      es:'El camino es corto: se suman los números de las partes, se divide el total entre esa suma para saber cuánto vale una sola parte y se multiplica ese valor por las partes de cada participante.',
+      en:'The route is short: add the part numbers, divide the total by that sum to find what a single part is worth, then multiply that value by each participant’s number of parts.'})+'</p>'+
+    '<div class="callout"><p><strong>'+L({es:'Comprobación:',en:'Check:'})+'</strong> '+L({
+      es:'si divides lo que recibió cada quien entre su número de partes, siempre obtienes el mismo valor. Es la misma constante k de la sección anterior.',
+      en:'if you divide what each person received by their number of parts, you always get the same value. It is the same constant k as in the previous section.'})+'</p></div>'+
+    '<div class="gcrd">'+
+      '<div class="mtabs"><span class="mtab active" id="m2r"></span></div>'+
+      '<div class="wgt-lead" id="m2goal"></div>'+
+      '<div id="m2bar" style="display:flex;gap:5px;flex-wrap:wrap;margin:.7rem 0"></div>'+
+      '<div class="metrics">'+
+        '<div class="metric"><div class="mlbl">Ana</div><div class="mnum cs" id="m2A">0</div></div>'+
+        '<div class="metric"><div class="mlbl">Bruno</div><div class="mnum ps" id="m2B">0</div></div>'+
+        '<div class="metric"><div class="mlbl">'+L({es:'Total',en:'Total'})+'</div><div class="mnum ts" id="m2T">0</div></div>'+
+      '</div>'+
+      '<button class="wgt-btn" style="margin-top:.8rem" onclick="m2Check()">'+L({es:'Comprobar',en:'Check'})+'</button>'+
+      '<div class="wgt-fb" id="m2f"></div>'+
+    '</div>');
+
+  var m2 = { round:0, sel:[], tries:0, lock:false };
+  function m2Render(){
+    var r = m2R[m2.round], el = document.getElementById('m2bar');
+    if (!el || m2.round > 2) return;
+    var h = '';
+    for (var i=0; i<m2.sel.length; i++){
+      var on = m2.sel[i];
+      h += '<div onclick="m2Tap('+i+')" style="flex:1;min-width:44px;height:50px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.74rem;font-family:\'IBM Plex Mono\',monospace;border:1.5px solid '+(on?'var(--green)':'var(--border)')+';background:'+(on?'var(--green-bg)':'var(--surface2)')+';color:'+(on?'var(--green-dark)':'var(--text3)')+'">'+r.u+'</div>';
+    }
+    el.innerHTML = h;
+    var na = 0;
+    for (i=0;i<m2.sel.length;i++) if (m2.sel[i]) na++;
+    document.getElementById('m2A').textContent = na*r.u;
+    document.getElementById('m2B').textContent = (m2.sel.length-na)*r.u;
+    document.getElementById('m2T').textContent = r.T;
+  }
+  function m2Round(){
+    var r = m2R[m2.round];
+    m2.sel = [];
+    for (var i=0; i<r.a+r.b; i++) m2.sel.push(false);
+    var lbl = document.getElementById('m2r');
+    if (lbl) lbl.textContent = L({es:'Ronda '+(m2.round+1)+' de 3', en:'Round '+(m2.round+1)+' of 3'});
+    var goal = document.getElementById('m2goal');
+    if (goal) goal.innerHTML = L({
+      es:'Ana y Bruno deben repartirse '+r.T+' pesos en partes proporcionales a '+r.a+' y '+r.b+'. Toca las tarjetas que le corresponden a Ana.',
+      en:'Ana and Bruno must split '+r.T+' pesos in parts proportional to '+r.a+' and '+r.b+'. Tap the cards that belong to Ana.'});
+    var f = document.getElementById('m2f');
+    if (f) f.innerHTML = L({es:'Cada tarjeta vale lo mismo y juntas suman el total.',en:'Every card is worth the same and together they add up to the total.'});
+    m2Render();
+  }
+  function m2Advance(){
+    m2.lock = true;
+    setTimeout(function(){
+      m2.round++;
+      var f = document.getElementById('m2f'); if (!f) return;
+      if (m2.round >= 3){
+        f.innerHTML = L({
+          es:'En los tres repartos hiciste lo mismo: partir el total en tantas partes iguales como indica la suma de los números.',
+          en:'In all three splits you did the same thing: cut the total into as many equal parts as the sum of the numbers indicates.'});
+        var lbl = document.getElementById('m2r'); if (lbl) lbl.textContent = L({es:'Rondas completas',en:'Rounds complete'});
+        var bar = document.getElementById('m2bar'); if (bar) bar.style.opacity = '0.55';
+        return;
+      }
+      m2.lock = false; m2.tries = 0;
+      m2Round();
+    }, 1900);
+  }
+  window.m2Tap = function(i){
+    if (m2.lock || m2.round > 2) return;
+    m2.sel[i] = !m2.sel[i];
+    m2Render();
+    var r = m2R[m2.round], na = 0, f = document.getElementById('m2f');
+    for (var j=0;j<m2.sel.length;j++) if (m2.sel[j]) na++;
+    if (na < r.a) f.innerHTML = L({
+      es:'Ana lleva '+na+' de las '+m2.sel.length+' tarjetas. Para la razón '+r.a+' : '+r.b+' todavía necesita más.',
+      en:'Ana holds '+na+' of the '+m2.sel.length+' cards. For the ratio '+r.a+' : '+r.b+' she still needs more.'});
+    else if (na > r.a) f.innerHTML = L({
+      es:'Ana lleva '+na+' tarjetas y son demasiadas para la razón '+r.a+' : '+r.b+'. Devuélvele alguna a Bruno.',
+      en:'Ana holds '+na+' cards, too many for the ratio '+r.a+' : '+r.b+'. Give one back to Bruno.'});
+    else f.innerHTML = L({
+      es:'El reparto ya está en la razón '+r.a+' : '+r.b+'. Confírmalo.',
+      en:'The split is now in the ratio '+r.a+' : '+r.b+'. Confirm it.'});
+  };
+  window.m2Check = function(){
+    if (m2.lock || m2.round > 2) return;
+    var r = m2R[m2.round], na = 0, f = document.getElementById('m2f');
+    for (var j=0;j<m2.sel.length;j++) if (m2.sel[j]) na++;
+    if (na === r.a){
+      f.innerHTML = L({
+        es:'Correcto: '+r.T+' ÷ '+(r.a+r.b)+' = '+r.u+' por tarjeta, así que Ana recibe '+r.u+' × '+r.a+' = '+(r.u*r.a)+' y Bruno '+r.u+' × '+r.b+' = '+(r.u*r.b)+'.',
+        en:'Correct: '+r.T+' ÷ '+(r.a+r.b)+' = '+r.u+' per card, so Ana gets '+r.u+' × '+r.a+' = '+(r.u*r.a)+' and Bruno '+r.u+' × '+r.b+' = '+(r.u*r.b)+'.'});
+      m2Advance();
+      return;
+    }
+    m2.tries++;
+    if (m2.tries >= 3){
+      for (j=0;j<m2.sel.length;j++) m2.sel[j] = (j < r.a);
+      m2Render();
+      f.innerHTML = L({
+        es:'Así queda: '+r.T+' ÷ '+(r.a+r.b)+' = '+r.u+' por tarjeta. Ana toma '+r.a+' tarjetas ('+(r.u*r.a)+') y Bruno '+r.b+' ('+(r.u*r.b)+').',
+        en:'Here it is: '+r.T+' ÷ '+(r.a+r.b)+' = '+r.u+' per card. Ana takes '+r.a+' cards ('+(r.u*r.a)+') and Bruno '+r.b+' ('+(r.u*r.b)+').'});
+      m2Advance();
+      return;
+    }
+    f.innerHTML = (na < r.a
+      ? L({es:'Aún no. Ana tiene menos tarjetas de las que le tocan según '+r.a+' : '+r.b+'. Agrega y comprueba de nuevo.',
+           en:'Not yet. Ana has fewer cards than the ratio '+r.a+' : '+r.b+' calls for. Add some and check again.'})
+      : L({es:'Aún no. Ana tiene más tarjetas de las que le tocan según '+r.a+' : '+r.b+'. Quita y comprueba de nuevo.',
+           en:'Not yet. Ana has more cards than the ratio '+r.a+' : '+r.b+' calls for. Remove some and check again.'}));
+  };
+
+  /* ── Problema 3 (cálculo directo) ── */
+  addP({
+    title: L({es:'Cálculo directo',en:'Direct calculation'}),
+    questionText: L({es:'Calcula:',en:'Calculate:'}),
+    fn: mf(p3n, p3d) + ' × ' + p3T,
+    hint: L({es:'Divide primero entre el denominador para obtener una parte y después multiplica por el numerador.',
+             en:'Divide by the denominator first to get one part, then multiply by the numerator.'}),
+    explanation: L({es:p3T+' ÷ '+p3d+' = '+p3u+', y luego '+p3u+' × '+p3n+' = '+p3a,
+                    en:p3T+' ÷ '+p3d+' = '+p3u+', and then '+p3u+' × '+p3n+' = '+p3a}),
+    options: opts4(p3a, [p3u*(p3n+1), p3u*(p3n-1), p3T-p3a]),
+    correct: p3a,
+    showWork: true
+  });
+
+  /* ── Problema 4 ── */
+  var p4ctx = [
+    { es:{who:'Dos socias de un puesto de jugos', unit:'horas', verb:'trabajó', qw:'la que trabajó'},
+      en:{who:'Two partners in a juice stand', unit:'hours', verb:'worked', qw:'the one who worked'} },
+    { es:{who:'Dos primos que limpiaron un jardín', unit:'horas', verb:'trabajó', qw:'el que trabajó'},
+      en:{who:'Two cousins who cleaned a garden', unit:'hours', verb:'worked', qw:'the one who worked'} }
+  ][p4i];
+  addP({
+    title: L({es:'Reparto entre dos',en:'Sharing between two'}),
+    questionText: L({
+      es: p4ctx.es.who+' reparten '+p4T+' pesos en partes proporcionales a las horas que trabajó cada quien: '+p4p[0]+' horas y '+p4p[1]+' horas. ¿Cuántos pesos recibe '+p4ctx.es.qw+' '+p4p[0]+' horas?',
+      en: p4ctx.en.who+' split '+p4T+' pesos in parts proportional to the hours each one worked: '+p4p[0]+' hours and '+p4p[1]+' hours. How many pesos does '+p4ctx.en.qw+' '+p4p[0]+' hours receive?'}),
+    hint: L({es:'Suma las dos cantidades de horas, divide el total entre esa suma y multiplica por las horas de esa persona.',
+             en:'Add the two hour amounts, divide the total by that sum and multiply by that person’s hours.'}),
+    explanation: L({
+      es:'Las partes suman '+p4p[0]+' + '+p4p[1]+' = '+p4s+'. Cada parte vale '+p4T+' ÷ '+p4s+' = '+p4u+'. Quien trabajó '+p4p[0]+' horas recibe '+p4u+' × '+p4p[0]+' = '+p4a,
+      en:'The parts add up to '+p4p[0]+' + '+p4p[1]+' = '+p4s+'. Each part is worth '+p4T+' ÷ '+p4s+' = '+p4u+'. The one who worked '+p4p[0]+' hours receives '+p4u+' × '+p4p[0]+' = '+p4a}),
+    options: opts4(p4a, [p4u*p4p[1], p4T/2, p4u*(p4p[0]+1)]),
+    correct: p4a,
+    showWork: true
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     SECCIÓN 3 — repartos con tres participantes
+     ══════════════════════════════════════════════════════════ */
+  sec(L({es:'Concepto 3',en:'Concept 3'}),
+      L({es:'Repartos con tres participantes',en:'Sharing among three'}),
+    '<p>'+L({
+      es:'Con tres o más participantes el método es idéntico, pero conviene revisar dos cosas al terminar: que la suma de lo repartido sea exactamente el total y que todos los cocientes den el mismo valor.',
+      en:'With three or more participants the method is identical, but two things are worth checking at the end: that the shares add up to exactly the total, and that all the quotients give the same value.'})+'</p>'+
+    '<p>'+L({
+      es:'Un ejemplo con 2, 3 y 5 partes sobre un total de 500 pesos deja ver la estructura completa.',
+      en:'An example with 2, 3 and 5 parts over a total of 500 pesos shows the whole structure.'})+'</p>'+
+    tbl([L({es:'Partes',en:'Parts'}),'2','3','5',L({es:'Suma',en:'Sum'})],
+        [[L({es:'Recibe',en:'Receives'}),'100','150','250','500'],
+         [L({es:'Cociente',en:'Quotient'}),'50','50','50','k = 50']])+
+    '<div class="callout"><p><strong>'+L({es:'Ojo:',en:'Watch out:'})+'</strong> '+L({
+      es:'el número de partes casi nunca coincide con el número de pesos. Primero se busca cuánto vale una parte y sólo después se reparte.',
+      en:'the number of parts almost never matches the number of pesos. First find what one part is worth, and only then hand out the shares.'})+'</p></div>'+
+    '<div class="gcrd">'+
+      '<div class="wgt-lead">'+L({
+        es:'La barra reparte el dinero entre Ana, Bruno y Carla en partes proporcionales a '+m3p[0]+', '+m3p[1]+' y '+m3p[2]+'. Ajusta cuánto vale una parte hasta que la barra llegue justo a la meta de '+m3T+' pesos.',
+        en:'The bar splits the money among Ana, Bruno and Carla in parts proportional to '+m3p[0]+', '+m3p[1]+' and '+m3p[2]+'. Adjust what one part is worth until the bar lands exactly on the goal of '+m3T+' pesos.'})+'</div>'+
+      '<canvas class="wgt-cv" id="m3cv"></canvas>'+
+      '<div class="cgrid" style="margin-top:.8rem">'+
+        '<div class="cg"><label>'+L({es:'Valor de una parte',en:'Value of one part'})+': <span class="cval" id="m3v">5</span></label>'+
+        '<input type="range" id="m3s" min="5" max="'+(2*m3u)+'" step="5" value="5" oninput="m3Move()"></div>'+
+        '<div class="cg" style="display:flex;align-items:flex-end"><button class="wgt-btn" style="width:100%" onclick="m3Check()">'+L({es:'Comprobar',en:'Check'})+'</button></div>'+
+      '</div>'+
+      '<div class="wgt-fb" id="m3f"></div>'+
+    '</div>');
+
+  var m3 = { u:5, tries:0, lock:false };
+  function m3Draw(){
+    var cv = document.getElementById('m3cv'); if (!cv) return;
+    var S = cvSetup(cv, 170), c = S.ctx;
+    var padL=12, padR=12, wpx = S.w - padL - padR, maxV = 2*m3u*m3s;
+    var X = function(v){ return padL + Math.min(v,maxV)/maxV*wpx; };
+    var y0 = 52, bh = 42;
+    var cols = [tok('--green'), tok('--gold'), tok('--green-dark')];
+    var acc = 0, i;
+    c.fillStyle = tok('--surface2'); c.fillRect(padL, y0, wpx, bh);
+    for (i=0; i<3; i++){
+      var v = m3.u*m3p[i];
+      c.fillStyle = cols[i];
+      c.fillRect(X(acc), y0, Math.max(0, X(acc+v)-X(acc)), bh);
+      acc += v;
+    }
+    c.strokeStyle = tok('--border'); c.lineWidth = 1; c.strokeRect(padL, y0, wpx, bh);
+    c.strokeStyle = tok('--bad'); c.lineWidth = 2; c.setLineDash([5,4]);
+    c.beginPath(); c.moveTo(X(m3T), y0-18); c.lineTo(X(m3T), y0+bh+10); c.stroke(); c.setLineDash([]);
+    c.fillStyle = tok('--bad'); c.font = '11px IBM Plex Sans';
+    c.fillText(L({es:'Meta ',en:'Goal '})+m3T, Math.max(padL, Math.min(X(m3T)+5, S.w-78)), y0-7);
+    c.font = '11px IBM Plex Sans';
+    for (i=0; i<3; i++){
+      var bx = padL + i*(wpx/3);
+      c.fillStyle = cols[i]; c.fillRect(bx, y0+bh+18, 10, 10);
+      c.fillStyle = tok('--text2');
+      c.fillText(NAMES[i]+': '+(m3.u*m3p[i]), bx+14, y0+bh+27);
+    }
+    c.fillStyle = tok('--text3');
+    c.fillText(L({es:'Suma: ',en:'Sum: '})+(m3.u*m3s), padL, y0-22);
+  }
+  function m3Advance(){
+    m3.lock = true;
+    var cv = document.getElementById('m3cv'); if (cv) cv.style.opacity = '0.65';
+  }
+  window.m3Move = function(){
+    if (m3.lock) return;
+    m3.u = parseInt(document.getElementById('m3s').value,10);
+    document.getElementById('m3v').textContent = m3.u;
+    m3Draw();
+    var sum = m3.u*m3s, f = document.getElementById('m3f');
+    if (sum < m3T) f.innerHTML = L({
+      es:'La barra suma '+sum+' pesos: faltan '+(m3T-sum)+' para llegar a la meta.',
+      en:'The bar adds up to '+sum+' pesos: '+(m3T-sum)+' short of the goal.'});
+    else if (sum > m3T) f.innerHTML = L({
+      es:'La barra suma '+sum+' pesos: se pasa de la meta por '+(sum-m3T)+'.',
+      en:'The bar adds up to '+sum+' pesos: '+(sum-m3T)+' over the goal.'});
+    else f.innerHTML = L({es:'La barra llega justo a la meta. Confírmalo.',en:'The bar lands exactly on the goal. Confirm it.'});
+  };
+  window.m3Check = function(){
+    if (m3.lock) return;
+    var f = document.getElementById('m3f');
+    if (m3.u === m3u){
+      f.innerHTML = L({
+        es:'Correcto: '+m3T+' ÷ '+m3s+' = '+m3u+' por parte, así que Ana recibe '+(m3u*m3p[0])+', Bruno '+(m3u*m3p[1])+' y Carla '+(m3u*m3p[2])+'.',
+        en:'Correct: '+m3T+' ÷ '+m3s+' = '+m3u+' per part, so Ana gets '+(m3u*m3p[0])+', Bruno '+(m3u*m3p[1])+' and Carla '+(m3u*m3p[2])+'.'});
+      m3Advance();
+      return;
+    }
+    m3.tries++;
+    if (m3.tries >= 3){
+      document.getElementById('m3s').value = m3u; m3.u = m3u;
+      document.getElementById('m3v').textContent = m3u; m3Draw();
+      f.innerHTML = L({
+        es:'Las partes suman '+m3p[0]+' + '+m3p[1]+' + '+m3p[2]+' = '+m3s+', así que cada parte vale '+m3T+' ÷ '+m3s+' = '+m3u+'.',
+        en:'The parts add up to '+m3p[0]+' + '+m3p[1]+' + '+m3p[2]+' = '+m3s+', so each part is worth '+m3T+' ÷ '+m3s+' = '+m3u+'.'});
+      m3Advance();
+      return;
+    }
+    f.innerHTML = (m3.u*m3s < m3T
+      ? L({es:'Aún no: la barra se queda corta por '+(m3T-m3.u*m3s)+' pesos. Sube el valor de la parte.',
+           en:'Not yet: the bar falls short by '+(m3T-m3.u*m3s)+' pesos. Raise the value of one part.'})
+      : L({es:'Aún no: la barra se pasa por '+(m3.u*m3s-m3T)+' pesos. Baja el valor de la parte.',
+           en:'Not yet: the bar overshoots by '+(m3.u*m3s-m3T)+' pesos. Lower the value of one part.'}));
+  };
+
+  /* ── Problema 5 ── */
+  addP({
+    title: L({es:'Reparto entre tres',en:'Sharing among three'}),
+    questionText: L({
+      es:'Ana, Bruno y Carla organizaron una venta escolar y aportaron material: Ana '+p5p[0]+' paquetes, Bruno '+p5p[1]+' paquetes y Carla '+p5p[2]+' paquetes. Las ganancias de '+p5T+' pesos se reparten en partes proporcionales a lo que aportó cada quien. ¿Cuántos pesos recibe Carla?',
+      en:'Ana, Bruno and Carla ran a school sale and contributed supplies: Ana '+p5p[0]+' packs, Bruno '+p5p[1]+' packs and Carla '+p5p[2]+' packs. The '+p5T+' pesos of profit are split in parts proportional to what each one contributed. How many pesos does Carla receive?'}),
+    hint: L({es:'Suma los tres aportes, divide el total entre esa suma para saber cuánto vale un paquete y multiplica por los paquetes de Carla.',
+             en:'Add the three contributions, divide the total by that sum to find what one pack is worth, then multiply by Carla’s packs.'}),
+    explanation: L({
+      es:'Los aportes suman '+p5p[0]+' + '+p5p[1]+' + '+p5p[2]+' = '+p5s+' partes. Cada parte vale '+p5T+' ÷ '+p5s+' = '+p5u+'. Carla recibe '+p5u+' × '+p5p[2]+' = '+p5a,
+      en:'The contributions add up to '+p5p[0]+' + '+p5p[1]+' + '+p5p[2]+' = '+p5s+' parts. Each part is worth '+p5T+' ÷ '+p5s+' = '+p5u+'. Carla receives '+p5u+' × '+p5p[2]+' = '+p5a}),
+    options: opts4(p5a, [p5u*p5p[0], p5u*p5p[1], Math.round(p5T/3)]),
+    correct: p5a,
+    showWork: true
+  });
+
+  /* ── Problema 6 ── */
+  addP({
+    title: L({es:'Diferencia entre partes',en:'Difference between shares'}),
+    questionText: L({
+      es:'Se reparten '+p6T+' litros de pintura entre tres talleres en partes proporcionales al número de muros que pintó cada uno: '+p6p[0]+', '+p6p[1]+' y '+p6p[2]+' muros. ¿Cuántos litros más recibe el taller de '+p6p[2]+' muros que el de '+p6p[0]+' muros?',
+      en:'A total of '+p6T+' liters of paint is split among three workshops in parts proportional to the number of walls each one painted: '+p6p[0]+', '+p6p[1]+' and '+p6p[2]+' walls. How many more liters does the workshop with '+p6p[2]+' walls get than the one with '+p6p[0]+' walls?'}),
+    hint: L({es:'Encuentra cuántos litros corresponden a un muro y multiplícalo por la diferencia entre los dos números de muros.',
+             en:'Find how many liters match one wall and multiply that by the difference between the two wall counts.'}),
+    explanation: L({
+      es:'Los muros suman '+p6p[0]+' + '+p6p[1]+' + '+p6p[2]+' = '+p6s+' partes y cada parte vale '+p6T+' ÷ '+p6s+' = '+p6u+' litros. La diferencia de partes es '+p6p[2]+' − '+p6p[0]+' = '+(p6p[2]-p6p[0])+', así que '+p6u+' × '+(p6p[2]-p6p[0])+' = '+p6a,
+      en:'The walls add up to '+p6p[0]+' + '+p6p[1]+' + '+p6p[2]+' = '+p6s+' parts and each part is worth '+p6T+' ÷ '+p6s+' = '+p6u+' liters. The difference in parts is '+p6p[2]+' − '+p6p[0]+' = '+(p6p[2]-p6p[0])+', so '+p6u+' × '+(p6p[2]-p6p[0])+' = '+p6a}),
+    options: opts4(p6a, [p6u*(p6p[2]+p6p[0]), p6u*p6p[2], p6u*(p6p[1]-p6p[0])]),
+    correct: p6a,
+    showWork: true
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     SECCIÓN 4 — variación inversa
+     ══════════════════════════════════════════════════════════ */
+  sec(L({es:'Concepto 4',en:'Concept 4'}),
+      L({es:'Cuando más significa menos',en:'When more means less'}),
+    '<p>'+L({
+      es:'No toda pareja de cantidades varía en el mismo sentido. Si al aumentar x la otra cantidad disminuye de modo que el producto x·y se mantiene fijo, la variación es inversa y se escribe x·y = k. Su gráfica no es una recta: es una curva que se acerca a los ejes sin llegar a tocarlos.',
+      en:'Not every pair of quantities moves the same way. If x grows while the other quantity shrinks so that the product x·y stays fixed, the variation is inverse and is written x·y = k. Its graph is not a line: it is a curve that approaches the axes without ever touching them.'})+'</p>'+
+    '<div class="rules-grid">'+
+      '<div class="rcard"><div class="rname">'+L({es:'Directa',en:'Direct'})+'</div><div class="rform">y ÷ x = k</div><div class="rnote">'+L({es:'si x se duplica, y se duplica',en:'if x doubles, y doubles'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Inversa',en:'Inverse'})+'</div><div class="rform">x · y = k</div><div class="rnote">'+L({es:'si x se duplica, y se reduce a la mitad',en:'if x doubles, y is halved'})+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+L({es:'Reparto inverso',en:'Inverse share'})+'</div><div class="rform">a, b → b, a</div><div class="rnote">'+L({es:'repartir inverso a dos números es repartir directo a los mismos números intercambiados',en:'sharing inversely to two numbers is sharing directly to the same numbers swapped'})+'</div></div>'+
+    '</div>'+
+    '<div class="callout"><p><strong>'+L({es:'Por qué funciona:',en:'Why it works:'})+'</strong> '+L({
+      es:'ser inversamente proporcional a 2 y a 3 significa ser proporcional a un medio y a un tercio; al multiplicar ambas fracciones por 6 quedan 3 y 2, los mismos números en orden contrario.',
+      en:'being inversely proportional to 2 and 3 means being proportional to one half and one third; multiplying both fractions by 6 leaves 3 and 2, the same numbers in the opposite order.'})+'</p></div>'+
+    '<div class="gcrd">'+
+      '<div class="wgt-lead">'+L({
+        es:'Un trabajo completo equivale a '+m4k+' jornadas de una persona. Mueve el deslizador para armar el equipo que lo termine exactamente en '+m4d+' días, sin gente de sobra.',
+        en:'A full job is worth '+m4k+' one-person days. Move the slider to build the team that finishes it in exactly '+m4d+' days, with nobody to spare.'})+'</div>'+
+      '<canvas class="wgt-cv" id="m4cv"></canvas>'+
+      '<div class="cgrid" style="margin-top:.8rem">'+
+        '<div class="cg"><label>'+L({es:'Personas en el equipo',en:'People on the team'})+': <span class="cval" id="m4v">1</span></label>'+
+        '<input type="range" id="m4s" min="1" max="12" step="1" value="1" oninput="m4Move()"></div>'+
+        '<div class="cg" style="display:flex;align-items:flex-end"><button class="wgt-btn" style="width:100%" onclick="m4Check()">'+L({es:'Comprobar',en:'Check'})+'</button></div>'+
+      '</div>'+
+      '<div class="wgt-fb" id="m4f"></div>'+
+    '</div>');
+
+  var m4 = { w:1, tries:0, lock:false };
+  function m4Draw(){
+    var cv = document.getElementById('m4cv'); if (!cv) return;
+    var S = cvSetup(cv, 220), c = S.ctx;
+    var padL=38, padB=26, padT=26, padR=12, xmax=12, ymax=m4k;
+    var X = function(x){ return padL + x/xmax*(S.w-padL-padR); };
+    var Y = function(y){ return S.h-padB - Math.min(y,ymax)/ymax*(S.h-padB-padT); };
+    var g;
+    c.strokeStyle = tok('--border'); c.lineWidth = 1;
+    for (g=2; g<=12; g+=2){ c.beginPath(); c.moveTo(X(g),Y(0)); c.lineTo(X(g),Y(ymax)); c.stroke(); }
+    c.strokeStyle = tok('--text3'); c.lineWidth = 1.4;
+    c.beginPath(); c.moveTo(X(0),Y(0)); c.lineTo(X(xmax),Y(0)); c.moveTo(X(0),Y(0)); c.lineTo(X(0),Y(ymax)); c.stroke();
+    c.fillStyle = tok('--text3'); c.font = '10px IBM Plex Sans';
+    for (g=2; g<=12; g+=2) c.fillText(String(g), X(g)-4, Y(0)+13);
+    c.strokeStyle = tok('--bad'); c.lineWidth = 1.6; c.setLineDash([5,4]);
+    c.beginPath(); c.moveTo(X(0),Y(m4d)); c.lineTo(X(xmax),Y(m4d)); c.stroke(); c.setLineDash([]);
+    c.fillStyle = tok('--bad');
+    c.fillText(m4d + L({es:' días',en:' days'}), X(0)+5, Y(m4d)-5);
+    c.strokeStyle = tok('--green'); c.lineWidth = 2.6; c.beginPath();
+    var first = true;
+    for (var w=1; w<=12.001; w+=0.08){
+      var d = m4k/w;
+      if (d > ymax){ first = true; continue; }
+      if (first){ c.moveTo(X(w),Y(d)); first = false; } else c.lineTo(X(w),Y(d));
+    }
+    c.stroke();
+    var dw = m4k/m4.w;
+    c.fillStyle = tok('--gold');
+    c.beginPath(); c.arc(X(m4.w), Y(Math.min(dw,ymax)), 6, 0, 6.2832); c.fill();
+    c.fillStyle = tok('--text'); c.font = '11px IBM Plex Sans';
+    c.fillText(m4.w + L({es:' personas · ',en:' people · '}) + (Math.round(dw*10)/10) + L({es:' días',en:' days'}), padL, 16);
+  }
+  window.m4Move = function(){
+    if (m4.lock) return;
+    m4.w = parseInt(document.getElementById('m4s').value,10);
+    document.getElementById('m4v').textContent = m4.w;
+    m4Draw();
+    var d = m4k/m4.w, f = document.getElementById('m4f');
+    if (d > m4d) f.innerHTML = L({
+      es:'Con '+m4.w+' personas el trabajo dura '+(Math.round(d*10)/10)+' días: se pasa de la fecha, hace falta más gente.',
+      en:'With '+m4.w+' people the job takes '+(Math.round(d*10)/10)+' days: past the deadline, more people are needed.'});
+    else if (d < m4d) f.innerHTML = L({
+      es:'Con '+m4.w+' personas termina en '+(Math.round(d*10)/10)+' días: se adelanta, hay gente de sobra en el equipo.',
+      en:'With '+m4.w+' people it ends in '+(Math.round(d*10)/10)+' days: too early, the team has people to spare.'});
+    else f.innerHTML = L({es:'El equipo termina justo en '+m4d+' días. Confírmalo.',en:'The team finishes in exactly '+m4d+' days. Confirm it.'});
+  };
+  window.m4Check = function(){
+    if (m4.lock) return;
+    var f = document.getElementById('m4f');
+    if (m4.w === m4w){
+      f.innerHTML = L({
+        es:'Correcto: '+m4w+' × '+m4d+' = '+m4k+', el producto se mantiene fijo en toda la curva.',
+        en:'Correct: '+m4w+' × '+m4d+' = '+m4k+', the product stays fixed all along the curve.'});
+      m4.lock = true;
+      var cv = document.getElementById('m4cv'); if (cv) cv.style.opacity = '0.65';
+      return;
+    }
+    m4.tries++;
+    if (m4.tries >= 3){
+      document.getElementById('m4s').value = m4w; m4.w = m4w;
+      document.getElementById('m4v').textContent = m4w; m4Draw();
+      f.innerHTML = L({
+        es:'El equipo era de '+m4w+' personas: '+m4k+' ÷ '+m4d+' = '+m4w+', porque personas por días siempre da '+m4k+'.',
+        en:'The team was '+m4w+' people: '+m4k+' ÷ '+m4d+' = '+m4w+', because people times days always gives '+m4k+'.'});
+      m4.lock = true;
+      var cv2 = document.getElementById('m4cv'); if (cv2) cv2.style.opacity = '0.65';
+      return;
+    }
+    f.innerHTML = (m4k/m4.w > m4d
+      ? L({es:'Aún no: ese equipo tarda de más. Agrega personas y comprueba de nuevo.',en:'Not yet: that team takes too long. Add people and check again.'})
+      : L({es:'Aún no: ese equipo termina antes de tiempo. Quita personas y comprueba de nuevo.',en:'Not yet: that team finishes too early. Remove people and check again.'}));
+  };
+
+  /* ── Problema 7 ── */
+  addP({
+    title: L({es:'Personas y días',en:'People and days'}),
+    questionText: L({
+      es:'Un equipo de '+p7w1+' personas termina de pintar una barda en '+p7d+' días, todas trabajando al mismo ritmo. Si el mismo trabajo lo hacen '+p7w2+' personas con ese ritmo, ¿en cuántos días lo terminan?',
+      en:'A team of '+p7w1+' people finishes painting a wall in '+p7d+' days, all working at the same rate. If the same job is done by '+p7w2+' people at that rate, in how many days do they finish it?'}),
+    hint: L({es:'Multiplica personas por días para obtener el trabajo total y divide ese producto entre el nuevo número de personas.',
+             en:'Multiply people by days to get the total work and divide that product by the new number of people.'}),
+    explanation: L({
+      es:'El trabajo total es '+p7w1+' × '+p7d+' = '+p7k+' jornadas de una persona. Con '+p7w2+' personas: '+p7k+' ÷ '+p7w2+' = '+p7q,
+      en:'The total work is '+p7w1+' × '+p7d+' = '+p7k+' one-person days. With '+p7w2+' people: '+p7k+' ÷ '+p7w2+' = '+p7q}),
+    options: opts4(p7q, [p7d*p7m, p7d-p7m, p7q+p7m]),
+    correct: p7q,
+    showWork: true
+  });
+
+  /* ── Problema 8 ── */
+  addP({
+    title: L({es:'Reparto inverso',en:'Inverse share'}),
+    questionText: L({
+      es:'Un premio de '+p8T+' pesos se reparte entre dos equipos de robótica en partes inversamente proporcionales al tiempo que tardaron en completar la pista: el equipo A tardó '+p8p[0]+' minutos y el equipo B tardó '+p8p[1]+' minutos. ¿Cuántos pesos recibe el equipo A?',
+      en:'A prize of '+p8T+' pesos is split between two robotics teams in parts inversely proportional to the time they took to finish the track: team A took '+p8p[0]+' minutes and team B took '+p8p[1]+' minutes. How many pesos does team A receive?'}),
+    hint: L({es:'Un reparto inversamente proporcional a dos números es un reparto directamente proporcional a esos mismos números intercambiados.',
+             en:'A share inversely proportional to two numbers is a share directly proportional to those same numbers swapped.'}),
+    explanation: L({
+      es:'Repartir en partes inversamente proporcionales a '+p8p[0]+' y '+p8p[1]+' equivale a repartir en partes proporcionales a '+p8p[1]+' y '+p8p[0]+'. Esas partes suman '+p8s+' y cada una vale '+p8T+' ÷ '+p8s+' = '+p8u+'. El equipo A recibe '+p8u+' × '+p8p[1]+' = '+p8a,
+      en:'Sharing in parts inversely proportional to '+p8p[0]+' and '+p8p[1]+' is the same as sharing in parts proportional to '+p8p[1]+' and '+p8p[0]+'. Those parts add up to '+p8s+' and each is worth '+p8T+' ÷ '+p8s+' = '+p8u+'. Team A receives '+p8u+' × '+p8p[1]+' = '+p8a}),
+    options: opts4(p8a, [p8u*p8p[0], p8T/2, p8u*(p8p[1]+1)]),
+    correct: p8a,
+    showWork: true
+  });
+
+  /* ══════════════════════════════════════════════════════════
+     BLOQUE FINAL
+     ══════════════════════════════════════════════════════════ */
+  sec(L({es:'Cierre',en:'Wrap-up'}), L({es:'Pon todo junto',en:'Put it all together'}), '');
+
+  /* ── Problema 9 (cálculo directo) ── */
+  addP({
+    title: L({es:'Cálculo directo',en:'Direct calculation'}),
+    questionText: L({es:'Calcula:',en:'Calculate:'}),
+    fn: p9T+' ÷ '+p9s+' × '+p9c,
+    hint: L({es:'Resuelve de izquierda a derecha: primero la división y después la multiplicación.',
+             en:'Work from left to right: division first, then multiplication.'}),
+    explanation: L({es:p9T+' ÷ '+p9s+' = '+p9u+', y luego '+p9u+' × '+p9c+' = '+p9a,
+                    en:p9T+' ÷ '+p9s+' = '+p9u+', and then '+p9u+' × '+p9c+' = '+p9a}),
+    options: opts4(p9a, [p9u*(p9c+1), p9T-p9a, p9u*p9s]),
+    correct: p9a,
+    showWork: true
+  });
+
+  /* ── Problema 10 ── */
+  addP({
+    title: L({es:'Del reparto al total',en:'From the share to the total'}),
+    questionText: L({
+      es:'Tres socias reparten la ganancia de un puesto de tortas en partes proporcionales a los paquetes de pan que aportó cada una. La tabla muestra las aportaciones.'+
+         tbl([L({es:'Socia',en:'Partner'}),'Ana','Bruno','Carla'],
+             [[L({es:'Paquetes',en:'Packs'}), p10p[0], p10p[1], p10p[2]]])+
+         'A Ana le tocaron '+p10A+' pesos. ¿De cuántos pesos fue la ganancia total?',
+      en:'Three partners split the profit of a sandwich stand in parts proportional to the packs of bread each one contributed. The table shows the contributions.'+
+         tbl([L({es:'Socia',en:'Partner'}),'Ana','Bruno','Carla'],
+             [[L({es:'Paquetes',en:'Packs'}), p10p[0], p10p[1], p10p[2]]])+
+         'Ana received '+p10A+' pesos. How many pesos was the total profit?'}),
+    hint: L({es:'Con lo que recibió Ana y sus paquetes obtienes cuánto vale una parte; multiplica ese valor por la suma de todas las partes.',
+             en:'Ana’s amount and her packs give you what one part is worth; multiply that value by the sum of all the parts.'}),
+    explanation: L({
+      es:'Ana aportó '+p10p[0]+' partes, así que cada parte vale '+p10A+' ÷ '+p10p[0]+' = '+p10u+'. Las aportaciones suman '+p10p[0]+' + '+p10p[1]+' + '+p10p[2]+' = '+p10s+' partes, de modo que la ganancia total es '+p10u+' × '+p10s+' = '+p10T,
+      en:'Ana contributed '+p10p[0]+' parts, so each part is worth '+p10A+' ÷ '+p10p[0]+' = '+p10u+'. The contributions add up to '+p10p[0]+' + '+p10p[1]+' + '+p10p[2]+' = '+p10s+' parts, so the total profit is '+p10u+' × '+p10s+' = '+p10T}),
+    options: opts4(p10T, [p10A*3, p10T-p10A, p10u*(p10s+1)]),
+    correct: p10T,
+    showWork: true
+  });
+
+  /* ── arranque de las actividades (tras el primer render) ── */
+  setTimeout(function(){
+    m1Render();
+    m2Round();
+    m3Draw();
+    m4Draw();
+    var f3 = document.getElementById('m3f');
+    if (f3) f3.innerHTML = L({es:'Mueve el deslizador y observa cómo crecen las tres partes a la vez.',en:'Move the slider and watch the three shares grow together.'});
+    var f4 = document.getElementById('m4f');
+    if (f4) f4.innerHTML = L({es:'Mueve el deslizador y observa cómo cambian los días.',en:'Move the slider and watch the number of days change.'});
+  }, 160);
+  window.addEventListener('resize', function(){
+    if (document.getElementById('m1cv')) { m1Draw(); m3Draw(); m4Draw(); }
+  });
+}
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbykkuJ_apGq3vALIFd4mr3acu81c7K4OKxW-DZ-i52Ceyl3lOanXMdvbS9SIXPrLQBm/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Problemas de Reparto Proporcional';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>
