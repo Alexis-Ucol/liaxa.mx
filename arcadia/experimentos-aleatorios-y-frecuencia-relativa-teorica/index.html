@@ -1,0 +1,2361 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Experimentos Aleatorios, Frecuencia Relativa y Teórica</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; text-align: justify; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── GUIDE-SPECIFIC: manipulativos de azar y frecuencia ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-instr { font-size:.88rem; color:var(--text2); margin-bottom:.7rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; margin-top:.7rem; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.gcanvas { display:block; width:100%; height:250px; border:1px solid var(--border); border-radius:8px; background:var(--surface); touch-action:manipulation; cursor:pointer; }
+.binrow { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.7rem; }
+.binbtn { flex:1 1 150px; min-height:44px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.82rem; font-weight:600; cursor:pointer; font-family:inherit; padding:.4rem .5rem; }
+.binbtn:hover { border-color:var(--green); color:var(--green); }
+.simrow { display:flex; gap:.45rem; flex-wrap:wrap; margin-top:.75rem; }
+.simbtn { flex:1 1 92px; min-height:44px; border:1.5px solid var(--green); border-radius:8px; background:var(--green); color:#fff; font-size:.82rem; font-weight:600; cursor:pointer; font-family:inherit; padding:.4rem .5rem; }
+.simbtn.alt { background:var(--surface2); color:var(--text2); border-color:var(--border); }
+.facegrid { display:grid; grid-template-columns:repeat(6,1fr); gap:.4rem; margin:.75rem 0 .2rem; }
+.facebtn { min-height:46px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:1.05rem; font-weight:700; cursor:pointer; }
+.facebtn.on { background:var(--gold-bg); border-color:var(--gold); }
+.facebtn.good { background:var(--ok-bg); border-color:var(--ok); color:var(--ok); }
+.pbarwrap { position:relative; height:26px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; overflow:hidden; margin:.65rem 0 .2rem; }
+.pbarfill { position:absolute; left:0; top:0; bottom:0; background:var(--green); opacity:.72; transition:width .14s; }
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; flex-wrap:wrap; }
+.krow input[type=range] { flex:1; min-width:150px; accent-color:var(--green); height:36px; }
+.kval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1rem; color:var(--green); min-width:120px; text-align:right; }
+.livelbl { margin-top:.55rem; font-size:.88rem; color:var(--text2); }
+.livelbl b { color:var(--green-dark); }
+.bigval { font-family:'IBM Plex Mono',monospace; font-size:1.5rem; font-weight:700; color:var(--green-dark); text-align:center; margin:.45rem 0; }
+.dtable { width:100%; border-collapse:collapse; margin:.7rem 0; font-size:.83rem; }
+.dtable th, .dtable td { border:1px solid var(--border); padding:.35rem .5rem; text-align:center; }
+.dtable th { background:var(--surface2); color:var(--text3); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+.dtable td { color:var(--text2); font-family:'IBM Plex Mono',monospace; }
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.stepslist { margin:.9rem 0 0; padding-left:1.1rem; }
+.stepslist li { font-size:.86rem; color:var(--text2); margin-bottom:.35rem; }
+@media (max-width:600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .gcanvas { height:225px; }
+  .facegrid { grid-template-columns:repeat(3,1fr); }
+  .dtable th, .dtable td { padding:.28rem .25rem; font-size:.76rem; }
+  .kval { min-width:100px; font-size:.9rem; }
+}
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Experimentos Aleatorios, Frecuencia Relativa y Teórica</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 2° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Experimentos Aleatorios, Frecuencia Relativa y Teórica</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c0c24', primaryDark:'#14143f', primaryBg:'#e9e9f4',
+  accent:'#243c6c', accentBg:'#e4eaf6',
+  darkPrimary:'#5555b4', darkPrimaryDark:'#8383d7', darkPrimaryBg:'#121234',
+  darkAccent:'#6e8fd0', darkAccentBg:'#0f1623',
+  pBR:12, pBG:12, pBB:36, pAR:36, pAG:60, pAB:108,
+  logoLeftB64:'data:image/jpeg;base64,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', logoRightB64:'', logoAlt:'Arcadia',
+  guideTitle:{ es:'Experimentos Aleatorios, Frecuencia Relativa y Teórica', en:'Random Experiments, Relative and Theoretical Frequency' },
+  courseName:{ es:'Matemáticas · 2° de Secundaria', en:'Mathematics · 2° de Secundaria' }, filePrefix:'mat2_t11_g01', schoolSlug:'arcadia'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_mat2_t11_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Experimentos Aleatorios, Frecuencia Relativa y Teórica','wcourse':'Matemáticas · 2° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Random Experiments, Relative and Theoretical Frequency','wcourse':'Mathematics · 2° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_mat2_t11_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_mat2_t11_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_mat2_t11_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_mat2_t11_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
+  }
+
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+    // ── SAVE / SHARE — iOS-safe download (LIAXA iOS PDF fix, Rule 12) ─────────
+  //   iOS Safari ignores the <a download> attribute, so a plain download fails
+  //   silently on iPhone/iPad. iOS -> native share sheet (-> "Save to Files"),
+  //   with an inline-open fallback; everything else -> <a download> click.
+  //   Runs synchronously off the tap so iOS accepts navigator.share().
+  var _fname   = 'mat2_t11_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
+  var _pdfBlob = doc.output('blob');
+
+  function _restorePdfBtn(){ btn.innerHTML = '\u2b07 &nbsp;' + t('btn-pdf'); btn.disabled = false; }
+  function _openPdfInline(b){
+    var u = URL.createObjectURL(b);
+    var w = window.open(u, '_blank');
+    if (!w) { window.location.href = u; }
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
+  }
+
+  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (_isIOS) {
+    var _pdfFile = new File([_pdfBlob], _fname, { type:'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files:[_pdfFile] })) {
+      navigator.share({ files:[_pdfFile], title:_fname })
+        .then(_restorePdfBtn)
+        .catch(function(e){
+          if (e && e.name === 'AbortError') { _restorePdfBtn(); return; }
+          _openPdfInline(_pdfBlob); _restorePdfBtn();
+        });
+      return;
+    }
+    _openPdfInline(_pdfBlob); _restorePdfBtn();
+    return;
+  }
+
+  var _dlUrl = URL.createObjectURL(_pdfBlob);
+  var _dlA   = document.createElement('a');
+  _dlA.href  = _dlUrl; _dlA.download = _fname;
+  document.body.appendChild(_dlA); _dlA.click();
+  setTimeout(function(){ document.body.removeChild(_dlA); URL.revokeObjectURL(_dlUrl); }, 200);
+  _restorePdfBtn();
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  var REDRAW = [];
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 230;
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  function d2(v){ return String(Math.round(v*100)/100); }
+  function frac(n,d){ return '<span class="mf-outer"><span class="mf-num">'+n+'</span><span class="mf-den">'+d+'</span></span>'; }
+  function gcd(a,b){ while(b){ var t=a%b; a=b; b=t; } return a; }
+  function pickD(c, cands, fmt, step, lo, hi){
+    var out = [fmt(c)], i, k = 1, v;
+    for (i=0;i<cands.length && out.length<4;i++){
+      v = cands[i];
+      if (v < lo || v > hi) continue;
+      if (out.indexOf(fmt(v)) < 0) out.push(fmt(v));
+    }
+    while (out.length < 4 && k < 60){
+      v = c + k*step; if (v <= hi && out.indexOf(fmt(v)) < 0) out.push(fmt(v));
+      v = c - k*step; if (out.length < 4 && v >= lo && out.indexOf(fmt(v)) < 0) out.push(fmt(v));
+      k++;
+    }
+    return out;
+  }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = T(spec.correct);
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ============================================================
+     VALORES CON SEMILLA (en orden fijo)
+     ============================================================ */
+  var vsel = [], vi, SP, i, j;
+  for (vi=0; vi<10; vi++) vsel.push(Math.floor(rng()*2));
+
+  var CTXS = [
+    { it:{es:'canicas',en:'marbles'}, it1:{es:'canica',en:'marble'}, art:{es:'una',en:'a'}, qm:{es:'¿Cuántas',en:'How many'},
+      box:{es:'una bolsa',en:'a bag'}, boxD:{es:'la bolsa',en:'the bag'},
+      cs:[{es:'roja',en:'red'},{es:'azul',en:'blue'},{es:'verde',en:'green'}],
+      cp:[{es:'rojas',en:'red'},{es:'azules',en:'blue'},{es:'verdes',en:'green'}] },
+    { it:{es:'fichas',en:'counters'}, it1:{es:'ficha',en:'counter'}, art:{es:'una',en:'a'}, qm:{es:'¿Cuántas',en:'How many'},
+      box:{es:'una caja',en:'a box'}, boxD:{es:'la caja',en:'the box'},
+      cs:[{es:'amarilla',en:'yellow'},{es:'blanca',en:'white'},{es:'negra',en:'black'}],
+      cp:[{es:'amarillas',en:'yellow'},{es:'blancas',en:'white'},{es:'negras',en:'black'}] },
+    { it:{es:'cubos',en:'cubes'}, it1:{es:'cubo',en:'cube'}, art:{es:'un',en:'a'}, qm:{es:'¿Cuántos',en:'How many'},
+      box:{es:'una urna',en:'an urn'}, boxD:{es:'la urna',en:'the urn'},
+      cs:[{es:'naranja',en:'orange'},{es:'morado',en:'purple'},{es:'gris',en:'grey'}],
+      cp:[{es:'naranjas',en:'orange'},{es:'morados',en:'purple'},{es:'grises',en:'grey'}] }
+  ];
+  var CX = CTXS[Math.floor(rng()*CTXS.length)];
+  function itm(k){ return T({ es: CX.art.es+' '+CX.it1.es+' '+CX.cs[k].es, en: 'a '+CX.cs[k].en+' '+CX.it1.en }); }
+  function colP(k){ return T(CX.cp[k]); }
+  function colS(k){ return T(CX.cs[k]); }
+
+  var NPOOL = [20,25,50];
+  var N = NPOOL[Math.floor(rng()*NPOOL.length)];
+  var SETS = {
+    20: [[7,8,5],[9,6,5],[6,10,4],[8,5,7]],
+    25: [[9,10,6],[8,12,5],[11,9,5],[10,8,7]],
+    50: [[17,20,13],[16,22,12],[19,15,16],[21,14,15]]
+  };
+  var cnt = SETS[N][Math.floor(rng()*SETS[N].length)].slice();
+  var p = [cnt[0]/N, cnt[1]/N, cnt[2]/N];
+  var pct = [Math.round(cnt[0]*100/N), Math.round(cnt[1]*100/N), Math.round(cnt[2]*100/N)];
+
+  function comp(){
+    return T({
+      es: 'En '+CX.box.es+' hay '+N+' '+CX.it.es+': '+cnt[0]+' '+CX.cp[0].es+', '+cnt[1]+' '+CX.cp[1].es+' y '+cnt[2]+' '+CX.cp[2].es+'.',
+      en: 'In '+CX.box.en+' there are '+N+' '+CX.it.en+': '+cnt[0]+' '+CX.cp[0].en+', '+cnt[1]+' '+CX.cp[1].en+' and '+cnt[2]+' '+CX.cp[2].en+'.'
+    });
+  }
+
+  /* dos tandas de extracciones con devolución */
+  var NT  = [25,50][Math.floor(rng()*2)];
+  var NT2 = (NT === 25) ? 50 : 25;
+  function tanda(tot){
+    var q = [Math.round(tot*cnt[0]/N), Math.round(tot*cnt[1]/N), 0], z, big, oth, dd;
+    q[2] = tot - q[0] - q[1];
+    big = 0;
+    for (z=1;z<3;z++) if (q[z] > q[big]) big = z;
+    oth = (big + 1 + Math.floor(rng()*2)) % 3;
+    dd  = ri(1,2);
+    q[oth] += dd; q[big] -= dd;
+    return q;
+  }
+  var g = tanda(NT), h = tanda(NT2);
+  var rel  = [g[0]/NT,  g[1]/NT,  g[2]/NT];
+  var rel2 = [h[0]/NT2, h[1]/NT2, h[2]/NT2];
+
+  /* dado de seis caras */
+  var DEVS = shufA([
+    { es:'un número par',            en:'an even number',              fav:[2,4,6] },
+    { es:'un número impar',          en:'an odd number',               fav:[1,3,5] },
+    { es:'un número mayor que 4',    en:'a number greater than 4',     fav:[5,6]   },
+    { es:'un número menor que 3',    en:'a number smaller than 3',     fav:[1,2]   },
+    { es:'un múltiplo de 3',         en:'a multiple of 3',             fav:[3,6]   },
+    { es:'un número mayor que 1',    en:'a number greater than 1',     fav:[2,3,4,5,6] }
+  ]);
+  var DE = DEVS[0];
+  var deG = gcd(DE.fav.length, 6);
+  var deN = DE.fav.length / deG, deD = 6 / deG;
+
+  /* selecciones para problemas */
+  var j2 = ri(0,2);              // color observado en la tanda 1
+  var j3 = ri(0,2);              // color de la frecuencia faltante
+  var j6 = ri(0,2);              // color del porcentaje
+  var j8 = ri(0,2);              // color del complemento
+  var j9 = ri(0,2);              // color del conteo esperado
+  var kR = ri(2,4);
+  var M  = N * kR;               // repeticiones del problema de cierre
+  var esp = cnt[j9] * kR;
+
+  /* ============================================================
+     IDEA 1: experimento aleatorio
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'Cuándo un experimento es aleatorio', en:'When an experiment is random'}),
+      '<p>'+T({
+        es:'Un experimento es aleatorio cuando, aunque sepas exactamente cómo se realiza, no puedes decir de antemano cuál va a ser el resultado: lo único que conoces por adelantado es la lista de resultados que podrían aparecer. Repetirlo en las mismas condiciones puede dar cosas distintas, y ahí está toda la gracia.',
+        en:'An experiment is random when, even though you know exactly how it is carried out, you cannot say beforehand what the result will be: the only thing you know in advance is the list of results that could show up. Repeating it under the same conditions may give different things, and that is the whole point.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'A esa lista completa de resultados posibles se le llama espacio muestral. Cualquier grupo de resultados que te interese observar, por ejemplo que salga un número par, se llama evento. Un cálculo como el área de una figura no es un experimento aleatorio: por más veces que lo repitas, el resultado ya estaba decidido antes de empezar.',
+        en:'That complete list of possible results is called the sample space. Any group of results you want to watch, for example that an even number comes up, is called an event. A calculation such as the area of a figure is not a random experiment: no matter how many times you repeat it, the result was already settled before you started.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Experimento aleatorio',en:'Random experiment'})+'</div><div class="deftxt">'+T({es:'Se puede repetir y el resultado no se conoce hasta que ocurre.',en:'It can be repeated and the result is unknown until it happens.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Espacio muestral',en:'Sample space'})+'</div><div class="deftxt">'+T({es:'Todos los resultados distintos que pueden aparecer.',en:'Every different result that can show up.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Evento',en:'Event'})+'</div><div class="deftxt">'+T({es:'Un grupo de resultados dentro del espacio muestral.',en:'A group of results inside the sample space.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Repetición',en:'Trial'})+'</div><div class="deftxt">'+T({es:'Cada vez que se realiza el experimento y se anota lo que salió.',en:'Each time the experiment is run and the result is written down.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p>'+T({
+        es:'El espacio muestral depende de qué decides registrar: no es lo mismo anotar el resultado completo que anotar solo una característica de ese resultado.',
+        en:'The sample space depends on what you decide to record: writing down the full result is not the same as writing down only one feature of that result.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 1: aleatorio o no ---- */
+  (function(){
+    var wrap = widget('azar');
+    var BINS = T({ es:['Aleatorio','Se sabe de antemano'], en:['Random','Known beforehand'] });
+    var ITEMS = [
+      { es:'Girar una ruleta de colores y anotar en qué color se detiene', en:'Spin a colour wheel and record which colour it stops on', bin:0 },
+      { es:'Calcular el área de un cuadrado que mide 6 centímetros por lado', en:'Work out the area of a square measuring 6 centimetres on each side', bin:1 },
+      { es:'Sacar una carta de un mazo revuelto sin verla', en:'Take a card from a shuffled deck without looking at it', bin:0 },
+      { es:'Contar cuántos días tiene el mes de marzo', en:'Count how many days the month of March has', bin:1 },
+      { es:'Lanzar dos dados y anotar la suma de los puntos', en:'Roll two dice and record the sum of the dots', bin:0 },
+      { es:'Sumar los puntos de dos dados que ya cayeron y están a la vista', en:'Add the dots of two dice that already landed and are in plain sight', bin:1 }
+    ];
+    var seq = shufA([0,1,2,3,4,5]);
+    var st = { i:0, tries:0, hits:0, done:false, lock:false };
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Azar o certeza', en:'Chance or certainty'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Ya tienes el criterio: si antes de hacerlo puedes decir el resultado con seguridad, no hay azar; si solo puedes decir qué cosas podrían pasar, el experimento es aleatorio.',
+            en:'You now have the test: if before doing it you can state the result for sure, there is no chance involved; if you can only say which things could happen, the experiment is random.'
+          })+'</span></div></div>';
+        return;
+      }
+      var it = ITEMS[seq[st.i]];
+      var bt = '', z;
+      for (z=0;z<2;z++) bt += '<button class="binbtn" onclick="azPick('+z+')">'+BINS[z]+'</button>';
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Azar o certeza', en:'Chance or certainty'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Situación',en:'Situation'})+' '+(st.i+1)+' / '+ITEMS.length+'</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Lee la situación y toca el recuadro que le corresponde. Si te equivocas, la pista te dice en qué fijarte.',
+            en:'Read the situation and tap the box it belongs to. If you miss, the feedback tells you what to look at.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'¿El resultado se puede saber antes de realizarlo?', en:'Can the result be known before running it?'})+'</div>'+
+          '<div class="bigval" style="font-size:.95rem;line-height:1.4">'+T(it)+'</div>'+
+          '<div class="binrow">'+bt+'</div>'+
+          '<div class="rfb" id="azFb"></div>'+
+        '</div>';
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.i++; st.tries = 0; st.lock = false;
+        if (st.i >= ITEMS.length) st.done = true;
+        render();
+      }, ms);
+    }
+    window.azPick = function(bi){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('azFb'); if (!fb) return;
+      var it = ITEMS[seq[st.i]];
+      if (bi === it.bin){
+        st.hits++;
+        fb.innerHTML = '<span class="okmsg">'+T(bi === 0
+          ? {es:'Correcto: puedes decir qué resultados son posibles, pero no cuál va a salir.', en:'Correct: you can say which results are possible, but not which one will come up.'}
+          : {es:'Correcto: el resultado ya está determinado, repetirlo no lo cambia.', en:'Correct: the result is already settled, repeating it does not change it.'})+'</span>';
+        adv(1150); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        fb.innerHTML = T({
+          es:'Va en <b>'+BINS[it.bin]+'</b>. Prueba siempre lo mismo: imagina que lo repites diez veces y pregúntate si siempre saldría igual.',
+          en:'It goes in <b>'+BINS[it.bin]+'</b>. Always run the same test: imagine repeating it ten times and ask whether it would always come out the same.'
+        });
+        adv(2300); return;
+      }
+      fb.textContent = T(bi === 0
+        ? {es:'Todavía no. Si lo repitieras muchas veces, ¿podría salir algo distinto alguna vez?', en:'Not yet. If you repeated it many times, could something different ever come out?'}
+        : {es:'Todavía no. Antes de hacerlo, ¿podrías escribir el resultado en un papel y acertar siempre?', en:'Not yet. Before doing it, could you write the result on paper and always be right?'});
+    };
+    render();
+  })();
+
+  /* ---- P1 ---- */
+  (function(){
+    if (vsel[0] === 0){
+      SP = {
+        title:{es:'Lo que se anota', en:'What gets recorded'},
+        q:{ es:'En una caja hay tarjetas numeradas del 1 al 8. Se saca una tarjeta al azar y solo se anota si el número es par o impar. ¿Cuántos resultados distintos puede tener ese registro?',
+            en:'A box holds cards numbered from 1 to 8. One card is drawn at random and only whether the number is even or odd gets recorded. How many different results can that record have?' },
+        options:{ es:['2 resultados','4 resultados','8 resultados','16 resultados'],
+                  en:['2 results','4 results','8 results','16 results'] },
+        correct:{ es:'2 resultados', en:'2 results' },
+        hint:{ es:'El espacio muestral reúne los registros distintos que pueden aparecer, no las tarjetas que hay dentro de la caja. Fíjate en qué queda escrito en la hoja después de cada extracción.',
+               en:'The sample space gathers the different records that can appear, not the cards inside the box. Look at what ends up written on the sheet after each draw.' },
+        exp:{ es:'Aunque hay ocho tarjetas, lo único que se escribe es par o impar, así que el registro solo tiene dos resultados posibles.',
+              en:'Even though there are eight cards, the only thing written down is even or odd, so the record has only two possible results.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'Dos objetos, un resultado', en:'Two objects, one result'},
+        q:{ es:'Se lanza una moneda y enseguida se lanza un dado común, y se anota la pareja formada por lo que salió en cada uno. ¿Cuántas parejas distintas puede tener ese registro?',
+            en:'A coin is tossed and right after that an ordinary die is rolled, and the pair formed by what came up on each one gets recorded. How many different pairs can that record have?' },
+        options:{ es:['12 parejas','8 parejas','6 parejas','36 parejas'],
+                  en:['12 pairs','8 pairs','6 pairs','36 pairs'] },
+        correct:{ es:'12 parejas', en:'12 pairs' },
+        hint:{ es:'Fija primero una cara de la moneda y cuenta cuántas parejas se pueden formar con ella; después repite el conteo con la otra cara.',
+               en:'First fix one side of the coin and count how many pairs can be formed with it; then repeat the count with the other side.' },
+        exp:{ es:'Con una cara de la moneda se forman seis parejas, una por cada cara del dado, y lo mismo pasa con la otra cara, de modo que el espacio muestral reúne 12 parejas.',
+              en:'One side of the coin forms six pairs, one for each face of the die, and the same happens with the other side, so the sample space gathers 12 pairs.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 2: tabla de frecuencias
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'Registrar lo que salió: frecuencia absoluta y relativa', en:'Recording what came up: absolute and relative frequency'}),
+      '<p>'+T({
+        es:'Un experimento aleatorio se estudia repitiéndolo muchas veces y anotando cada resultado en una tabla de frecuencias. La frecuencia absoluta de un resultado es la cantidad de veces que apareció. Es un conteo directo, y por sí sola no dice mucho: 9 apariciones son muchas en una tanda corta y muy pocas en una tanda larga.',
+        en:'A random experiment is studied by repeating it many times and writing every result into a frequency table. The absolute frequency of a result is the number of times it showed up. It is a plain count, and on its own it does not say much: 9 appearances are a lot in a short run and very few in a long one.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Por eso se usa la frecuencia relativa, que compara ese conteo con el total de repeticiones de la tanda. Como es una parte del total, siempre queda entre 0 y 1, y permite comparar tandas de distinto tamaño. Las frecuencias relativas de todos los resultados suman 1, porque entre todas reparten el total.',
+        en:'That is why relative frequency is used: it compares that count with the total number of trials in the run. Since it is a part of the total, it always sits between 0 and 1, and it lets you compare runs of different sizes. The relative frequencies of all the results add up to 1, because together they share out the whole total.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Frecuencia absoluta',en:'Absolute frequency'})+'</div><div class="deftxt">'+T({es:'Cuántas veces apareció ese resultado en la tanda.',en:'How many times that result showed up in the run.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Frecuencia relativa',en:'Relative frequency'})+'</div><div class="deftxt">'+T({es:'Qué parte del total de repeticiones se llevó ese resultado.',en:'What share of all the trials that result took.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p>'+T({
+        es:'Dos tandas del mismo experimento casi nunca dan la misma tabla. La frecuencia relativa cambia de una tanda a otra, y ese cambio es información, no un error.',
+        en:'Two runs of the same experiment almost never give the same table. Relative frequency changes from one run to the next, and that change is information, not a mistake.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 2: simulador de extracciones ---- */
+  (function(){
+    var wrap = widget('simula');
+    var st = { n:0, f:[0,0,0] };
+    function draw(){
+      var cv = document.getElementById('smCv'); if (!cv) return;
+      var G = fitCv(cv), ctx = G.ctx, W = G.w, H = G.h;
+      var L = 40, Rm = 14, Tp = 14, B = 30;
+      var pw = W-L-Rm, ph = H-Tp-B, z, y, bw = pw/3;
+      var col = cssv('--green'), gold = cssv('--gold'), bd = cssv('--border'), tx = cssv('--text3');
+      ctx.font = '500 10px "IBM Plex Sans", sans-serif';
+      ctx.textAlign = 'right'; ctx.fillStyle = tx; ctx.strokeStyle = bd; ctx.lineWidth = 1;
+      for (z=0; z<=4; z++){
+        y = Tp + ph - (z/4)*ph;
+        ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(W-Rm,y); ctx.stroke();
+        ctx.fillText(d2(z/4), L-5, y+3);
+      }
+      for (z=0; z<3; z++){
+        var rv = st.n ? st.f[z]/st.n : 0;
+        var bh = rv*ph;
+        ctx.fillStyle = col; ctx.globalAlpha = 0.78;
+        ctx.fillRect(L+z*bw+8, Tp+ph-bh, bw-16, bh);
+        ctx.globalAlpha = 1;
+        var ty = Tp + ph - p[z]*ph;
+        ctx.strokeStyle = gold; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(L+z*bw+2, ty); ctx.lineTo(L+z*bw+bw-2, ty); ctx.stroke();
+      }
+      ctx.strokeStyle = tx; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(L,Tp+ph); ctx.lineTo(W-Rm,Tp+ph); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(L,Tp); ctx.lineTo(L,Tp+ph); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.fillStyle = tx;
+      for (z=0; z<3; z++) ctx.fillText(colP(z), L+(z+0.5)*bw, Tp+ph+14);
+      ctx.fillStyle = gold; ctx.textAlign = 'left';
+      ctx.fillText(T({es:'la línea marca la probabilidad teórica', en:'the line marks the theoretical probability'}), L+2, Tp+ph+26);
+    }
+    function tbl(){
+      var r = '', z;
+      var hd = T({ es:'<tr><th>Color</th><th>Veces</th><th>Frec. relativa</th><th>Teórica</th></tr>',
+                   en:'<tr><th>Colour</th><th>Times</th><th>Rel. frequency</th><th>Theoretical</th></tr>' });
+      for (z=0; z<3; z++){
+        r += '<tr><td>'+colP(z)+'</td><td>'+st.f[z]+'</td><td>'+(st.n ? d2(st.f[z]/st.n) : '0')+'</td><td>'+d2(p[z])+'</td></tr>';
+      }
+      return '<table class="dtable">'+hd+r+'</table>';
+    }
+    function msg(){
+      if (!st.n) return T({es:'Todavía no hay extracciones. Toca un botón y observa cómo se levantan las barras.', en:'No draws yet. Tap a button and watch the bars rise.'});
+      var worst = 0, z, dif;
+      for (z=1;z<3;z++) if (Math.abs(st.f[z]/st.n - p[z]) > Math.abs(st.f[worst]/st.n - p[worst])) worst = z;
+      dif = Math.abs(st.f[worst]/st.n - p[worst]);
+      var base = T({ es:'Llevas '+st.n+' extracciones. La barra más alejada de su línea es la de '+colP(worst)+', con una diferencia de '+d2(dif)+'. ',
+                     en:'You have made '+st.n+' draws. The bar furthest from its line is '+colP(worst)+', with a gap of '+d2(dif)+'. ' });
+      if (st.n < 20) return base + T({es:'Con tan pocas repeticiones las barras brincan mucho: agrega más y vuelve a mirar.', en:'With so few trials the bars jump around: add more and look again.'});
+      if (dif > 0.08)  return base + T({es:'Todavía hay desajuste. Sigue extrayendo y verás cómo la diferencia se encoge.', en:'There is still a gap. Keep drawing and you will see the gap shrink.'});
+      return base + '<span class="okmsg">'+T({es:'Las barras ya se acomodaron alrededor de sus líneas: eso es lo que hace la repetición.', en:'The bars have settled around their lines: that is what repetition does.'})+'</span>';
+    }
+    function render(){
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Extrae y registra', en:'Draw and record'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Cada extracción devuelve el objeto a su lugar. Toca los botones para hacer extracciones y observa cómo cambian las barras de frecuencia relativa frente a las líneas doradas.',
+            en:'Every draw puts the object back in place. Tap the buttons to make draws and watch the relative frequency bars move against the golden lines.'
+          })+'</div>'+
+          '<div class="goalbar">'+comp()+'</div>'+
+          '<canvas class="gcanvas" id="smCv"></canvas>'+
+          '<div class="simrow">'+
+            '<button class="simbtn" onclick="smGo(1)">'+T({es:'Extraer 1',en:'Draw 1'})+'</button>'+
+            '<button class="simbtn" onclick="smGo(10)">'+T({es:'Extraer 10',en:'Draw 10'})+'</button>'+
+            '<button class="simbtn" onclick="smGo(50)">'+T({es:'Extraer 50',en:'Draw 50'})+'</button>'+
+            '<button class="simbtn alt" onclick="smGo(0)">'+T({es:'Vaciar registro',en:'Clear record'})+'</button>'+
+          '</div>'+
+          tbl()+
+          '<div class="rfb" id="smFb">'+msg()+'</div>'+
+        '</div>';
+      draw();
+    }
+    function one(){
+      var r = Math.random()*N, acc = 0, z;
+      for (z=0;z<3;z++){ acc += cnt[z]; if (r < acc) return z; }
+      return 2;
+    }
+    window.smGo = function(k){
+      if (k === 0){ st.n = 0; st.f = [0,0,0]; render(); return; }
+      var z;
+      for (z=0; z<k; z++){ st.f[one()]++; st.n++; }
+      render();
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P2 ---- */
+  (function(){
+    var serie = T({
+      es: 'En una tanda de '+NT+' extracciones, devolviendo cada vez el objeto a su lugar, se anotó: '+colP(0)+' '+g[0]+' veces, '+colP(1)+' '+g[1]+' veces y '+colP(2)+' '+g[2]+' veces.',
+      en: 'In a run of '+NT+' draws, putting the object back each time, the record was: '+colP(0)+' '+g[0]+' times, '+colP(1)+' '+g[1]+' times and '+colP(2)+' '+g[2]+' times.'
+    });
+    if (vsel[1] === 0){
+      var op2 = pickD(rel[j2], [p[j2], rel[(j2+1)%3], 1-rel[j2], rel[(j2+2)%3]], d2, 0.05, 0, 1);
+      SP = {
+        title:{es:'La parte del total', en:'The share of the total'},
+        q:{ es: serie+' ¿Cuál fue la frecuencia relativa de '+colP(j2)+' en esa tanda?',
+            en: serie+' What was the relative frequency of '+colP(j2)+' in that run?' },
+        options: op2,
+        correct: d2(rel[j2]),
+        hint:{ es:'La frecuencia relativa compara el conteo de un resultado con el total de repeticiones de la tanda: divide el conteo entre el total.',
+               en:'Relative frequency compares the count of a result with the total number of trials in the run: divide the count by the total.' },
+        exp:{ es:'De las '+NT+' extracciones, '+g[j2]+' fueron '+colP(j2)+'. Al dividir '+g[j2]+' entre '+NT+' se obtiene '+d2(rel[j2])+', que es '+frac(g[j2],NT)+' del total.',
+              en:'Out of the '+NT+' draws, '+g[j2]+' were '+colP(j2)+'. Dividing '+g[j2]+' by '+NT+' gives '+d2(rel[j2])+', which is '+frac(g[j2],NT)+' of the total.' },
+        showWork:true
+      };
+    } else {
+      var fmtV = function(v){ return T({ es: v+' veces', en: v+' times' }); };
+      var op2b = pickD(g[j2], [Math.round(rel[j2]*NT2), cnt[j2], NT-g[j2], g[(j2+1)%3]], fmtV, 1, 1, NT);
+      SP = {
+        title:{es:'Del dato relativo al conteo', en:'From the share back to the count'},
+        q:{ es:'En una tanda de '+NT+' extracciones de '+CX.boxD.es+', devolviendo cada vez el objeto, la frecuencia relativa de '+colP(j2)+' fue '+d2(rel[j2])+'. ¿Cuántas veces salió '+colS(j2)+' en esa tanda?',
+            en:'In a run of '+NT+' draws from '+CX.boxD.en+', putting the object back each time, the relative frequency of '+colP(j2)+' was '+d2(rel[j2])+'. How many times did '+colS(j2)+' come up in that run?' },
+        options: op2b,
+        correct: fmtV(g[j2]),
+        hint:{ es:'La frecuencia relativa es la parte del total que se llevó ese resultado, así que el conteo se recupera aplicando esa parte al número de repeticiones.',
+               en:'Relative frequency is the share of the total that result took, so the count comes back by applying that share to the number of trials.' },
+        exp:{ es:'Esa parte del total aplicada a '+NT+' repeticiones da '+g[j2]+', y en efecto '+frac(g[j2],NT)+' equivale a '+d2(rel[j2])+'.',
+              en:'That share applied to '+NT+' trials gives '+g[j2]+', and indeed '+frac(g[j2],NT)+' equals '+d2(rel[j2])+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P3 ---- */
+  (function(){
+    if (vsel[2] === 0){
+      var o1 = (j3+1)%3, o2 = (j3+2)%3;
+      var op3 = pickD(rel2[j3], [rel2[o1], 1-rel2[j3], rel2[o2], p[j3]], d2, 0.04, 0, 1);
+      SP = {
+        title:{es:'La frecuencia que falta', en:'The missing frequency'},
+        q:{ es:'Otra tanda tuvo '+NT2+' extracciones de '+CX.boxD.es+'. Se anotaron '+h[o1]+' veces '+colP(o1)+' y '+h[o2]+' veces '+colP(o2)+'; el resto de las extracciones fueron '+colP(j3)+'. ¿Cuál fue la frecuencia relativa de '+colP(j3)+'?',
+            en:'Another run had '+NT2+' draws from '+CX.boxD.en+'. It recorded '+h[o1]+' times '+colP(o1)+' and '+h[o2]+' times '+colP(o2)+'; the rest of the draws were '+colP(j3)+'. What was the relative frequency of '+colP(j3)+'?' },
+        options: op3,
+        correct: d2(rel2[j3]),
+        hint:{ es:'Las tres frecuencias absolutas suman el total de repeticiones, así que primero recupera el conteo que falta y después compáralo con ese total.',
+               en:'The three absolute frequencies add up to the total number of trials, so first recover the missing count and then compare it with that total.' },
+        exp:{ es:'Los dos conteos dados dejan '+h[j3]+' extracciones para '+colP(j3)+'. Comparadas con las '+NT2+' repeticiones, esas '+h[j3]+' dan '+d2(rel2[j3])+'.',
+              en:'The two given counts leave '+h[j3]+' draws for '+colP(j3)+'. Compared with the '+NT2+' trials, those '+h[j3]+' give '+d2(rel2[j3])+'.' },
+        showWork:true
+      };
+    } else {
+      var r1 = rel[0], r2 = rel2[0];
+      var opsES = ['En la tanda de '+NT+' extracciones',
+                   'En la tanda de '+NT2+' extracciones',
+                   'En las dos tandas fue igual',
+                   'No se pueden comparar porque el número de extracciones es distinto'];
+      var opsEN = ['In the run of '+NT+' draws',
+                   'In the run of '+NT2+' draws',
+                   'It was the same in both runs',
+                   'They cannot be compared because the number of draws is different'];
+      var ci3 = (Math.abs(r1-r2) < 0.0005) ? 2 : (r1 > r2 ? 0 : 1);
+      SP = {
+        title:{es:'Dos tandas frente a frente', en:'Two runs side by side'},
+        q:{ es:'En una tanda de '+NT+' extracciones salió '+colS(0)+' '+g[0]+' veces. En otra tanda de '+NT2+' extracciones salió '+colS(0)+' '+h[0]+' veces. ¿En cuál de las dos tandas fue mayor la frecuencia relativa de '+colP(0)+'?',
+            en:'In a run of '+NT+' draws, '+colS(0)+' came up '+g[0]+' times. In another run of '+NT2+' draws, '+colS(0)+' came up '+h[0]+' times. In which of the two runs was the relative frequency of '+colP(0)+' larger?' },
+        options:{ es:opsES, en:opsEN },
+        correct:{ es:opsES[ci3], en:opsEN[ci3] },
+        hint:{ es:'Los conteos no se comparan directamente porque las tandas tienen distinto tamaño: convierte cada conteo en la parte que representa de su propio total.',
+               en:'The counts cannot be compared directly because the runs have different sizes: turn each count into the share it represents of its own total.' },
+        exp:{ es:'La frecuencia relativa fue '+d2(r1)+' en la tanda de '+NT+' y '+d2(r2)+' en la de '+NT2+'. Justamente para eso sirve la frecuencia relativa: pone las dos tandas en la misma escala.',
+              en:'The relative frequency was '+d2(r1)+' in the run of '+NT+' and '+d2(r2)+' in the one of '+NT2+'. That is exactly what relative frequency is for: it puts both runs on the same scale.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 3: probabilidad teórica
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'De lo que salió a lo que debería salir', en:'From what came up to what should come up'}),
+      '<p>'+T({
+        es:'Cuando todos los resultados de un experimento tienen la misma posibilidad de ocurrir, no hace falta repetirlo para saber qué esperar: basta con contar. Se cuentan los resultados que hacen ocurrir el evento, llamados casos favorables, y se comparan con todos los resultados posibles. Ese valor es la probabilidad teórica del evento.',
+        en:'When every result of an experiment has the same chance of happening, there is no need to repeat it to know what to expect: counting is enough. You count the results that make the event happen, called favourable cases, and compare them with all the possible results. That value is the theoretical probability of the event.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La probabilidad teórica no cambia nunca: es la misma antes del primer lanzamiento y después del número mil. La frecuencia relativa sí cambia en cada tanda, pero al aumentar las repeticiones se acerca a la teórica y se queda rondando cerca de ella. Por eso la frecuencia relativa sirve como estimación cuando el conteo de casos no es posible.',
+        en:'Theoretical probability never changes: it is the same before the first toss and after the thousandth. Relative frequency does change from run to run, but as the trials pile up it moves closer to the theoretical value and stays hovering around it. That is why relative frequency works as an estimate when counting cases is not possible.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Casos favorables',en:'Favourable cases'})+'</div><div class="deftxt">'+T({es:'Los resultados del experimento que hacen ocurrir el evento.',en:'The results of the experiment that make the event happen.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Casos posibles',en:'Possible cases'})+'</div><div class="deftxt">'+T({es:'Todos los resultados del espacio muestral.',en:'Every result in the sample space.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p>'+T({
+        es:'El conteo de casos solo vale si ningún resultado tiene ventaja sobre los demás. Si un resultado es más pesado, más ancho o más probable por su forma, contar caras no alcanza.',
+        en:'Counting cases only works if no result has an advantage over the others. If one result is heavier, wider or more likely because of its shape, counting faces is not enough.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 3: contar casos favorables ---- */
+  (function(){
+    var wrap = widget('casos');
+    var ROUNDS = [DEVS[1], DEVS[2], DEVS[3]];
+    var st = { r:0, sel:[], tries:0, done:false, lock:false };
+    function inFav(z){ return ROUNDS[st.r].fav.indexOf(z) >= 0; }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Cuenta los casos', en:'Count the cases'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Ese es el procedimiento completo: marcar las caras que cumplen, contarlas y compararlas con las seis caras posibles.',
+            en:'That is the whole procedure: mark the faces that fit, count them and compare them with the six possible faces.'
+          })+'</span></div></div>';
+        return;
+      }
+      var ev = ROUNDS[st.r], b = '', z, on;
+      for (z=1; z<=6; z++){
+        on = st.sel.indexOf(z) >= 0 ? ' on' : '';
+        b += '<button class="facebtn'+on+'" id="fc'+z+'" onclick="csTap('+z+')">'+z+'</button>';
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Cuenta los casos', en:'Count the cases'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Marca las caras del dado que hacen ocurrir el evento y toca Verificar. Puedes desmarcar una cara tocándola otra vez.',
+            en:'Mark the faces of the die that make the event happen and tap Check. You can unmark a face by tapping it again.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'Evento: obtener '+ev.es, en:'Event: getting '+ev.en})+'</div>'+
+          '<div class="facegrid">'+b+'</div>'+
+          '<div class="livelbl" id="csLive"></div>'+
+          '<button class="rverify-btn" onclick="csCheck()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="csFb"></div>';
+      live();
+    }
+    function live(){
+      var el = document.getElementById('csLive'); if (!el) return;
+      el.innerHTML = T({ es:'Llevas marcadas <b>'+st.sel.length+'</b> caras de las 6 posibles: ',
+                         en:'You have marked <b>'+st.sel.length+'</b> faces out of the 6 possible: ' }) + frac(st.sel.length, 6);
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.tries = 0; st.sel = []; st.lock = false;
+        if (st.r >= 3) st.done = true;
+        render();
+      }, ms);
+    }
+    window.csTap = function(z){
+      if (st.done || st.lock) return;
+      var k = st.sel.indexOf(z);
+      if (k >= 0) st.sel.splice(k,1); else st.sel.push(z);
+      var el = document.getElementById('fc'+z);
+      if (el) el.className = 'facebtn' + (st.sel.indexOf(z) >= 0 ? ' on' : '');
+      live();
+    };
+    window.csCheck = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('csFb'); if (!fb) return;
+      var ev = ROUNDS[st.r], z, extra = -1, falta = -1;
+      for (z=0; z<st.sel.length; z++) if (!inFav(st.sel[z])) { extra = st.sel[z]; break; }
+      for (z=0; z<ev.fav.length; z++) if (st.sel.indexOf(ev.fav[z]) < 0) { falta = ev.fav[z]; break; }
+      if (extra < 0 && falta < 0){
+        var gg = gcd(ev.fav.length, 6);
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Correcto: '+ev.fav.length+' caras favorables entre 6 posibles, es decir ',
+          en:'Correct: '+ev.fav.length+' favourable faces out of 6 possible, that is '
+        })+frac(ev.fav.length,6)+T({es:', que se simplifica a ',en:', which simplifies to '})+frac(ev.fav.length/gg, 6/gg)+'.</span>';
+        adv(2100); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.sel = ev.fav.slice();
+        for (z=1; z<=6; z++){
+          var e2 = document.getElementById('fc'+z);
+          if (e2) e2.className = 'facebtn' + (inFav(z) ? ' good' : '');
+        }
+        live();
+        fb.innerHTML = T({ es:'Las caras que cumplen son las marcadas en verde: ', en:'The faces that fit are the ones marked in green: ' })
+          + ev.fav.join(', ') + T({es:'. La probabilidad del evento es ', en:'. The probability of the event is '}) + frac(ev.fav.length,6) + '.';
+        adv(2800); return;
+      }
+      if (extra >= 0){
+        fb.textContent = T({ es:'La cara '+extra+' que marcaste no hace ocurrir el evento. Quítala y vuelve a verificar.',
+                             en:'The face '+extra+' you marked does not make the event happen. Remove it and check again.' });
+      } else {
+        fb.textContent = T({ es:'Te falta al menos una cara que sí cumple. Revisa las seis caras una por una.',
+                             en:'You are missing at least one face that does fit. Go over the six faces one by one.' });
+      }
+    };
+    render();
+  })();
+
+  /* ---- P4 ---- */
+  (function(){
+    var POOL = [[1,6],[1,3],[1,2],[2,3],[5,6],[1,4]];
+    var cval = deN/deD;
+    var cands = shufA(POOL).filter(function(pr){ return Math.abs(pr[0]/pr[1] - cval) > 0.001; });
+    if (vsel[3] === 0){
+      var op4 = [frac(deN,deD), frac(cands[0][0],cands[0][1]), frac(cands[1][0],cands[1][1]), frac(cands[2][0],cands[2][1])];
+      SP = {
+        title:{es:'Contar antes de lanzar', en:'Counting before rolling'},
+        q:{ es:'Se lanza un dado común de seis caras y todas tienen la misma posibilidad de quedar arriba. ¿Cuál es la probabilidad de obtener '+DE.es+'?',
+            en:'An ordinary six sided die is rolled and every face has the same chance of landing face up. What is the probability of getting '+DE.en+'?' },
+        options: op4,
+        correct: frac(deN,deD),
+        hint:{ es:'Anota cuáles caras cumplen la condición y cuántas son en total; después escribe la razón entre ambas cantidades y simplifícala.',
+               en:'Write down which faces meet the condition and how many there are in total; then write the ratio between both amounts and simplify it.' },
+        exp:{ es:'Las caras que cumplen son '+DE.fav.join(', ')+', o sea '+DE.fav.length+' de las 6 caras, y esa razón se reduce a '+frac(deN,deD)+'.',
+              en:'The faces that fit are '+DE.fav.join(', ')+', that is '+DE.fav.length+' of the 6 faces, and that ratio reduces to '+frac(deN,deD)+'.' },
+        showWork:true
+      };
+    } else {
+      var nf = DE.fav.length, nc = 6 - nf, cg = gcd(nc,6);
+      var cands2 = shufA(POOL).filter(function(pr){ return Math.abs(pr[0]/pr[1] - nc/6) > 0.001; });
+      var op4b = [frac(nc/cg, 6/cg), frac(cands2[0][0],cands2[0][1]), frac(cands2[1][0],cands2[1][1]), frac(cands2[2][0],cands2[2][1])];
+      SP = {
+        title:{es:'Las caras que no cumplen', en:'The faces that do not fit'},
+        q:{ es:'Se lanza un dado común de seis caras y todas tienen la misma posibilidad de quedar arriba. ¿Cuál es la probabilidad de que el resultado no sea '+DE.es+'?',
+            en:'An ordinary six sided die is rolled and every face has the same chance of landing face up. What is the probability that the result is not '+DE.en+'?' },
+        options: op4b,
+        correct: frac(nc/cg, 6/cg),
+        hint:{ es:'Identifica primero las caras que sí cumplen la condición; las demás son las que te interesan. Cuenta esas y compáralas con el total de caras.',
+               en:'First spot the faces that do meet the condition; the remaining ones are the ones you want. Count those and compare them with the total number of faces.' },
+        exp:{ es:'Las caras '+DE.fav.join(', ')+' cumplen la condición, así que quedan '+nc+' caras que no la cumplen de las 6 posibles, y esa razón se reduce a '+frac(nc/cg, 6/cg)+'.',
+              en:'Faces '+DE.fav.join(', ')+' meet the condition, so '+nc+' faces out of the 6 possible do not, and that ratio reduces to '+frac(nc/cg, 6/cg)+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P5 ---- */
+  (function(){
+    if (vsel[4] === 0){
+      var opsES = ['Que su frecuencia relativa quede más cerca de la probabilidad teórica',
+                   'Que su frecuencia relativa se aleje más de la probabilidad teórica al haber más lanzamientos',
+                   'Que obtenga exactamente el mismo porcentaje que el primer grupo',
+                   'Que la probabilidad teórica del evento cambie por el número de lanzamientos'];
+      var opsEN = ['That its relative frequency lands closer to the theoretical probability',
+                   'That its relative frequency drifts further from the theoretical probability because there are more rolls',
+                   'That it gets exactly the same percentage as the first group',
+                   'That the theoretical probability of the event changes because of the number of rolls'];
+      SP = {
+        title:{es:'Pocas tiradas, muchas tiradas', en:'Few rolls, many rolls'},
+        q:{ es:'Un equipo lanzó un dado 30 veces y obtuvo un número par en el 60% de sus lanzamientos. Otro equipo va a lanzar el mismo dado 600 veces. ¿Qué es lo más razonable esperar del segundo equipo?',
+            en:'One team rolled a die 30 times and got an even number in 60% of its rolls. Another team is going to roll the same die 600 times. What is the most reasonable thing to expect from the second team?' },
+        options:{ es:opsES, en:opsEN },
+        correct:{ es:opsES[0], en:opsEN[0] },
+        hint:{ es:'Piensa en qué le pasa a la frecuencia relativa cuando el número de repeticiones crece, y en si la probabilidad teórica depende de cuántas veces se lance.',
+               en:'Think about what happens to relative frequency as the number of trials grows, and whether theoretical probability depends on how many times you roll.' },
+        exp:{ es:'La probabilidad teórica está fija en la mitad y no depende de cuántas veces se lance. Lo que cambia es la frecuencia relativa, y al aumentar las repeticiones tiende a acomodarse cerca del valor teórico.',
+              en:'The theoretical probability is fixed at one half and does not depend on how many times you roll. What changes is the relative frequency, and as trials increase it tends to settle near the theoretical value.' },
+        showWork:false
+      };
+    } else {
+      var opsES2 = ['En pocas repeticiones la frecuencia relativa puede alejarse bastante del valor teórico',
+                    'La moneda está cargada, porque el valor teórico se cumple en cualquier cantidad de lanzamientos',
+                    'La probabilidad teórica de sol subió durante los lanzamientos',
+                    'El valor teórico solo se cumple cuando el número de repeticiones es par'];
+      var opsEN2 = ['With few trials the relative frequency can drift quite far from the theoretical value',
+                    'The coin is loaded, because the theoretical value holds for any number of tosses',
+                    'The theoretical probability of heads went up during the tosses',
+                    'The theoretical value only holds when the number of trials is even'];
+      SP = {
+        title:{es:'Una tanda desviada', en:'A run that drifts'},
+        q:{ es:'Al lanzar una moneda 20 veces, un alumno obtuvo sol 13 veces. ¿Qué explica mejor esa diferencia respecto de la probabilidad teórica?',
+            en:'Tossing a coin 20 times, a student got heads 13 times. What best explains that difference from the theoretical probability?' },
+        options:{ es:opsES2, en:opsEN2 },
+        correct:{ es:opsES2[0], en:opsEN2[0] },
+        hint:{ es:'Compara qué tan estable es la frecuencia relativa en tandas cortas y en tandas largas antes de culpar a la moneda.',
+               en:'Compare how steady relative frequency is in short runs and in long runs before blaming the coin.' },
+        exp:{ es:'En 20 lanzamientos un desajuste así ocurre con facilidad. La probabilidad teórica sigue siendo la mitad, y para juzgar la moneda haría falta una tanda mucho más larga.',
+              en:'In 20 tosses a drift like that happens easily. The theoretical probability is still one half, and judging the coin would need a much longer run.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 4: equivalencias
+     ============================================================ */
+  sec(T({es:'Idea 4', en:'Idea 4'}),
+      T({es:'La misma probabilidad, tres escrituras', en:'The same probability, three ways of writing it'}),
+      '<p>'+T({
+        es:'Una probabilidad nace como una comparación entre dos conteos, así que se escribe de manera natural como fracción. Esa misma fracción se puede escribir como decimal, y el decimal se puede leer como porcentaje. Las tres formas nombran exactamente el mismo valor, solo que con distinta ropa.',
+        en:'A probability is born as a comparison between two counts, so it is naturally written as a fraction. That same fraction can be written as a decimal, and the decimal can be read as a percentage. The three forms name exactly the same value, just dressed differently.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Cambiar de forma es útil porque cada una responde una pregunta distinta: la fracción muestra los conteos originales, el decimal permite comparar de un vistazo y el porcentaje se entiende al hablar. Cuando dos probabilidades vienen escritas de forma distinta conviene llevarlas a una sola forma antes de compararlas.',
+        en:'Switching forms is useful because each one answers a different question: the fraction shows the original counts, the decimal lets you compare at a glance and the percentage is the one people use when talking. When two probabilities come written in different forms, it is worth taking them to a single form before comparing them.'
+      })+'</p>'+
+      '<div class="callout"><p>'+T({
+        es:'Un porcentaje es una comparación con cien partes, no un número de objetos. En '+CX.boxD.es+' de este ejemplo hay '+N+' '+CX.it.es+', y aun así las probabilidades se pueden expresar en porcentaje.',
+        en:'A percentage is a comparison with one hundred parts, not a number of objects. In '+CX.boxD.en+' of this example there are '+N+' '+CX.it.en+', and even so the probabilities can be expressed as a percentage.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 4: fracción, decimal, porcentaje ---- */
+  (function(){
+    var wrap = widget('equival');
+    var PAIRS = shufA([[1,4],[3,4],[2,5],[3,5],[3,10],[7,10],[9,20],[13,20],[7,25],[11,25],[21,50]]);
+    var st = { r:0, tries:0, val:50, done:false, lock:false };
+    function cur(){ return PAIRS[st.r]; }
+    function target(){ return Math.round(cur()[0]*100/cur()[1]); }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Tres formas, un valor', en:'Three forms, one value'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Ya viste el camino completo: la fracción se convierte en decimal y el decimal se lee como porcentaje sin que el valor cambie.',
+            en:'You have seen the full path: the fraction turns into a decimal and the decimal is read as a percentage without the value changing.'
+          })+'</span></div></div>';
+        return;
+      }
+      var f = cur();
+      st.val = 50;
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Tres formas, un valor', en:'Three forms, one value'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Mueve la barra hasta que el porcentaje valga lo mismo que la fracción de arriba. El decimal se actualiza solo mientras la mueves.',
+            en:'Move the slider until the percentage is worth the same as the fraction above. The decimal updates by itself as you move it.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'Lleva esta fracción a porcentaje:', en:'Take this fraction to a percentage:'})+' '+frac(f[0],f[1])+'</div>'+
+          '<div class="pbarwrap"><div class="pbarfill" id="eqFill" style="width:50%"></div></div>'+
+          '<div class="krow">'+
+            '<input type="range" min="0" max="100" step="1" value="50" oninput="eqMove(this.value)">'+
+            '<span class="kval" id="eqVal">50% = 0.5</span>'+
+          '</div>'+
+          '<button class="rverify-btn" onclick="eqCheck()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="eqFb"></div>';
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.tries = 0; st.lock = false;
+        if (st.r >= 3) st.done = true;
+        render();
+      }, ms);
+    }
+    window.eqMove = function(v){
+      st.val = parseInt(v,10) || 0;
+      var fl = document.getElementById('eqFill'); if (fl) fl.style.width = st.val + '%';
+      var el = document.getElementById('eqVal'); if (el) el.textContent = st.val + '% = ' + d2(st.val/100);
+    };
+    window.eqCheck = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('eqFb'); if (!fb) return;
+      var f = cur(), tg = target(), dif = st.val - tg;
+      if (dif === 0){
+        fb.innerHTML = '<span class="okmsg">'+frac(f[0],f[1])+T({
+          es:' equivale a '+d2(tg/100)+' y a '+tg+'%. Las tres escrituras valen lo mismo.',
+          en:' equals '+d2(tg/100)+' and '+tg+'%. The three ways of writing it are worth the same.'
+        })+'</span>';
+        adv(2100); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.val = tg;
+        var fl = document.getElementById('eqFill'); if (fl) fl.style.width = tg + '%';
+        var el = document.getElementById('eqVal'); if (el) el.textContent = tg + '% = ' + d2(tg/100);
+        fb.innerHTML = T({ es:'Aquí queda: ', en:'Here it is: ' }) + frac(f[0],f[1]) +
+          T({ es:' vale '+d2(tg/100)+', y ese decimal leído en cien partes es '+tg+'%.',
+              en:' is worth '+d2(tg/100)+', and that decimal read in one hundred parts is '+tg+'%.' });
+        adv(3000); return;
+      }
+      var lejos = Math.abs(dif) > 15;
+      fb.textContent = (dif > 0)
+        ? T({ es:'Te pasaste'+(lejos?' por mucho':'')+': tu porcentaje vale más que la fracción. Baja la barra.',
+              en:'Too high'+(lejos?' by a lot':'')+': your percentage is worth more than the fraction. Move the slider down.' })
+        : T({ es:'Te quedaste corto'+(lejos?' por mucho':'')+': tu porcentaje vale menos que la fracción. Sube la barra.',
+              en:'Too low'+(lejos?' by a lot':'')+': your percentage is worth less than the fraction. Move the slider up.' });
+    };
+    render();
+  })();
+
+  /* ---- P6 ---- */
+  (function(){
+    if (vsel[5] === 0){
+      var fmtP = function(v){ return v + '%'; };
+      var op6 = pickD(pct[j6], [100-pct[j6], pct[(j6+1)%3], cnt[j6], pct[(j6+2)%3]], fmtP, 5, 1, 99);
+      SP = {
+        title:{es:'La probabilidad en porcentaje', en:'The probability as a percentage'},
+        q:{ es: comp()+' Se saca '+T(CX.art)+' '+T(CX.it1)+' sin mirar. ¿Qué porcentaje de probabilidad hay de que sea '+colS(j6)+'?',
+            en: comp()+' One '+T(CX.it1)+' is drawn without looking. What percentage of probability is there that it is '+colS(j6)+'?' },
+        options: op6,
+        correct: pct[j6] + '%',
+        hint:{ es:'Escribe la comparación entre los casos favorables y el total, conviértela a decimal y después léela en cien partes.',
+               en:'Write the comparison between the favourable cases and the total, turn it into a decimal and then read it in one hundred parts.' },
+        exp:{ es:'Los casos favorables frente al total son '+frac(cnt[j6],N)+', que en decimal es '+d2(p[j6])+' y leído en cien partes da '+pct[j6]+'%.',
+              en:'The favourable cases against the total are '+frac(cnt[j6],N)+', which as a decimal is '+d2(p[j6])+' and read in one hundred parts gives '+pct[j6]+'%.' },
+        showWork:true
+      };
+    } else {
+      var fmtC = function(v){ return T({ es: v+' '+CX.it.es, en: v+' '+CX.it.en }); };
+      var op6b = pickD(cnt[j6], [pct[j6], cnt[(j6+1)%3], N-cnt[j6], cnt[(j6+2)%3]], fmtC, 1, 1, N-1);
+      SP = {
+        title:{es:'Del porcentaje al conteo', en:'From the percentage to the count'},
+        q:{ es:'En '+CX.box.es+' hay '+N+' '+CX.it.es+' que solo se distinguen por su color. La probabilidad de sacar '+itm(j6)+' sin mirar es de '+pct[j6]+'%. '+CX.qm.es+' '+CX.it.es+' '+CX.cp[j6].es+' hay?',
+            en:'In '+CX.box.en+' there are '+N+' '+CX.it.en+' that differ only in colour. The probability of drawing '+itm(j6)+' without looking is '+pct[j6]+'%. How many '+colP(j6)+' '+CX.it.en+' are there?' },
+        options: op6b,
+        correct: fmtC(cnt[j6]),
+        hint:{ es:'Un porcentaje es una parte de cien; llévalo primero a decimal y aplica esa parte al total de objetos que hay dentro.',
+               en:'A percentage is a part of one hundred; take it to a decimal first and apply that share to the total number of objects inside.' },
+        exp:{ es:'Ese porcentaje equivale a '+d2(p[j6])+', y esa parte de '+N+' objetos da '+cnt[j6]+', que también se lee como '+frac(cnt[j6],N)+'.',
+              en:'That percentage equals '+d2(p[j6])+', and that share of '+N+' objects gives '+cnt[j6]+', which also reads as '+frac(cnt[j6],N)+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P7 ---- */
+  (function(){
+    var SETS7 = [
+      { o:['0.4','35%',frac(3,10),frac(1,4)], v:[0.4,0.35,0.3,0.25], ex:{es:'0.4 es 40%, 35% es 0.35, '+frac(3,10)+' es 0.3 y '+frac(1,4)+' es 0.25.',
+           en:'0.4 is 40%, 35% is 0.35, '+frac(3,10)+' is 0.3 and '+frac(1,4)+' is 0.25.'} },
+      { o:['0.6','45%',frac(7,10),frac(1,2)], v:[0.6,0.45,0.7,0.5], ex:{es:'0.6 es 60%, 45% es 0.45, '+frac(7,10)+' es 0.7 y '+frac(1,2)+' es 0.5.',
+           en:'0.6 is 60%, 45% is 0.45, '+frac(7,10)+' is 0.7 and '+frac(1,2)+' is 0.5.'} },
+      { o:['0.18','22%',frac(1,5),frac(1,4)], v:[0.18,0.22,0.2,0.25], ex:{es:'0.18 es 18%, 22% es 0.22, '+frac(1,5)+' es 0.2 y '+frac(1,4)+' es 0.25.',
+           en:'0.18 is 18%, 22% is 0.22, '+frac(1,5)+' is 0.2 and '+frac(1,4)+' is 0.25.'} }
+    ];
+    var S7 = SETS7[Math.floor(rng()*SETS7.length)];
+    var bi = 0, si = 0, z;
+    for (z=1; z<4; z++){ if (S7.v[z] > S7.v[bi]) bi = z; }
+    for (z=1; z<4; z++){ if (S7.v[z] < S7.v[si]) si = z; }
+    if (vsel[6] === 0){
+      SP = {
+        title:{es:'La más alta de las cuatro', en:'The highest of the four'},
+        q:{ es:'Cuatro eventos de distintos experimentos tienen las probabilidades que aparecen abajo, cada una escrita de una forma. ¿Cuál de ellas es la mayor?',
+            en:'Four events from different experiments have the probabilities shown below, each one written in a different form. Which of them is the largest?' },
+        options: S7.o,
+        correct: S7.o[bi],
+        hint:{ es:'No se pueden comparar en formas distintas: lleva las cuatro a decimal y después ordénalas.',
+               en:'They cannot be compared in different forms: take all four to decimals and then order them.' },
+        exp:{ es:T(S7.ex)+' La mayor es '+S7.o[bi]+'.', en:T(S7.ex)+' The largest is '+S7.o[bi]+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'La más baja de las cuatro', en:'The lowest of the four'},
+        q:{ es:'Cuatro eventos de distintos experimentos tienen las probabilidades que aparecen abajo, cada una escrita de una forma. ¿Cuál de ellas es la menor?',
+            en:'Four events from different experiments have the probabilities shown below, each one written in a different form. Which of them is the smallest?' },
+        options: S7.o,
+        correct: S7.o[si],
+        hint:{ es:'Una fracción y un porcentaje no se comparan de frente: convierte las cuatro a decimal y después ordénalas.',
+               en:'A fraction and a percentage cannot be compared head on: convert all four to decimals and then order them.' },
+        exp:{ es:T(S7.ex)+' La menor es '+S7.o[si]+'.', en:T(S7.ex)+' The smallest is '+S7.o[si]+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 5: cuánto puede valer una probabilidad
+     ============================================================ */
+  sec(T({es:'Idea 5', en:'Idea 5'}),
+      T({es:'Entre lo imposible y lo seguro', en:'Between impossible and certain'}),
+      '<p>'+T({
+        es:'Ninguna probabilidad puede salirse del tramo que va de 0 a 1. Vale 0 cuando ningún resultado del experimento hace ocurrir el evento, y vale 1 cuando todos lo hacen ocurrir. Todo lo demás queda en medio: mientras más casos favorables tenga el evento, más a la derecha de ese tramo se coloca. En porcentaje, ese mismo tramo va de 0% a 100%.',
+        en:'No probability can leave the stretch that runs from 0 to 1. It is 0 when no result of the experiment makes the event happen, and 1 when every result makes it happen. Everything else sits in between: the more favourable cases the event has, the further right along that stretch it lands. As a percentage, that same stretch runs from 0% to 100%.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Como todos los resultados posibles reparten entre sí el tramo completo, sus probabilidades suman 1. De ahí sale una herramienta muy cómoda: la probabilidad de que un evento no ocurra es lo que le falta al evento para completar el tramo, y suele ser más rápido contar por ese lado.',
+        en:'Since all the possible results share out the whole stretch between them, their probabilities add up to 1. That gives a very handy tool: the probability that an event does not happen is what the event needs to complete the stretch, and counting from that side is often faster.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Evento imposible',en:'Impossible event'})+'</div><div class="deftxt">'+T({es:'Ningún resultado lo hace ocurrir, su probabilidad es 0.',en:'No result makes it happen, its probability is 0.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Evento seguro',en:'Certain event'})+'</div><div class="deftxt">'+T({es:'Todos los resultados lo hacen ocurrir, su probabilidad es 1.',en:'Every result makes it happen, its probability is 1.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 5: coloca la probabilidad en la recta ---- */
+  (function(){
+    var wrap = widget('recta');
+    var EVS = [
+      { es:'Al lanzar un dado, obtener un número menor que 7', en:'When rolling a die, getting a number smaller than 7', v:1 },
+      { es:'Al lanzar un dado de seis caras, obtener el número 8', en:'When rolling a six sided die, getting the number 8', v:0 },
+      { es:'Al lanzar una moneda, obtener sol', en:'When tossing a coin, getting heads', v:0.5 },
+      { es:'Al lanzar un dado, obtener el número 3', en:'When rolling a die, getting the number 3', v:1/6 },
+      { es:'Al lanzar un dado, obtener un número mayor que 2', en:'When rolling a die, getting a number greater than 2', v:4/6 }
+    ];
+    var RS = shufA(EVS).slice(0,3);
+    var st = { r:0, tries:0, mark:null, shown:false, done:false, lock:false };
+    var GEO = { x0:0, x1:0, y:0 };
+    function draw(){
+      var cv = document.getElementById('rcCv'); if (!cv) return;
+      var G = fitCv(cv), ctx = G.ctx, W = G.w, H = G.h;
+      var x0 = 34, x1 = W-34, y = Math.round(H*0.55), z, x;
+      GEO = { x0:x0, x1:x1, y:y };
+      var col = cssv('--green'), gold = cssv('--gold'), tx = cssv('--text3'), ok = cssv('--ok');
+      ctx.strokeStyle = tx; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+      ctx.font = '500 11px "IBM Plex Sans", sans-serif';
+      ctx.textAlign = 'center'; ctx.fillStyle = tx;
+      for (z=0; z<=4; z++){
+        x = x0 + (z/4)*(x1-x0);
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(x, y-7); ctx.lineTo(x, y+7); ctx.stroke();
+        ctx.fillText(d2(z/4), x, y+22);
+      }
+      ctx.font = '600 10px "IBM Plex Sans", sans-serif';
+      ctx.fillText(T({es:'imposible',en:'impossible'}), x0, y-16);
+      ctx.fillText(T({es:'seguro',en:'certain'}), x1, y-16);
+      if (st.mark !== null){
+        x = x0 + st.mark*(x1-x0);
+        ctx.fillStyle = gold;
+        ctx.beginPath(); ctx.moveTo(x, y-2); ctx.lineTo(x-7, y-16); ctx.lineTo(x+7, y-16); ctx.closePath(); ctx.fill();
+        ctx.font = '600 11px "IBM Plex Mono", monospace';
+        ctx.fillText(d2(st.mark), x, y+38);
+      }
+      if (st.shown){
+        x = x0 + RS[st.r].v*(x1-x0);
+        ctx.strokeStyle = ok; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x, y-14); ctx.lineTo(x, y+14); ctx.stroke();
+        ctx.fillStyle = ok; ctx.font = '600 11px "IBM Plex Mono", monospace';
+        ctx.fillText(d2(RS[st.r].v), x, y-20);
+      }
+      ctx.fillStyle = col;
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'La recta de la probabilidad', en:'The probability line'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Toda probabilidad vive en ese tramo: pegada al 0 cuando el evento casi no ocurre y pegada al 1 cuando casi siempre ocurre.',
+            en:'Every probability lives on that stretch: near 0 when the event hardly ever happens and near 1 when it almost always happens.'
+          })+'</span></div></div>';
+        return;
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'La recta de la probabilidad', en:'The probability line'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Toca la recta donde creas que va la probabilidad del evento. Puedes volver a tocar cuantas veces quieras antes de verificar.',
+            en:'Tap the line where you think the probability of the event belongs. You can tap again as many times as you like before checking.'
+          })+'</div>'+
+          '<div class="goalbar">'+T(RS[st.r])+'</div>'+
+          '<canvas class="gcanvas" id="rcCv" style="height:170px" onclick="rcTap(event)"></canvas>'+
+          '<button class="rverify-btn" onclick="rcCheck()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="rcFb"></div>';
+      draw();
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.tries = 0; st.mark = null; st.shown = false; st.lock = false;
+        if (st.r >= 3) st.done = true;
+        render();
+      }, ms);
+    }
+    window.rcTap = function(ev){
+      if (st.done || st.lock) return;
+      var cv = document.getElementById('rcCv'); if (!cv) return;
+      var r = cv.getBoundingClientRect();
+      var x = ev.clientX - r.left;
+      var v = (x - GEO.x0) / (GEO.x1 - GEO.x0);
+      if (v < 0) v = 0; if (v > 1) v = 1;
+      st.mark = Math.round(v*100)/100;
+      draw();
+      var fb = document.getElementById('rcFb');
+      if (fb) fb.textContent = T({ es:'Tu marca está en '+d2(st.mark)+'. Ajústala o toca Verificar.',
+                                   en:'Your mark sits at '+d2(st.mark)+'. Adjust it or tap Check.' });
+    };
+    window.rcCheck = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('rcFb'); if (!fb) return;
+      if (st.mark === null){
+        fb.textContent = T({es:'Primero toca la recta para colocar tu marca.', en:'First tap the line to place your mark.'});
+        return;
+      }
+      var tv = RS[st.r].v, dif = st.mark - tv;
+      if (Math.abs(dif) <= 0.06){
+        st.shown = true; draw();
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Muy bien: ese evento vale '+d2(tv)+' en la recta.',
+          en:'Nicely done: that event is worth '+d2(tv)+' on the line.'
+        })+'</span>';
+        adv(2100); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.shown = true; draw();
+        fb.innerHTML = T({ es:'La marca verde señala el valor correcto, '+d2(tv)+'. Cuenta los casos favorables del evento y compáralos con los posibles para ubicarlo.',
+                           en:'The green mark shows the correct value, '+d2(tv)+'. Count the favourable cases of the event and compare them with the possible ones to place it.' });
+        adv(3000); return;
+      }
+      var lejos = Math.abs(dif) > 0.25;
+      fb.textContent = (dif > 0)
+        ? T({ es:'Tu marca quedó a la derecha del valor: ese evento es'+(lejos?' bastante':'')+' menos probable de lo que marcaste.',
+              en:'Your mark landed to the right of the value: that event is'+(lejos?' quite a bit':'')+' less likely than you marked.' })
+        : T({ es:'Tu marca quedó a la izquierda del valor: ese evento es'+(lejos?' bastante':'')+' más probable de lo que marcaste.',
+              en:'Your mark landed to the left of the value: that event is'+(lejos?' quite a bit':'')+' more likely than you marked.' });
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P8 ---- */
+  (function(){
+    var o1 = (j8+1)%3, o2 = (j8+2)%3;
+    if (vsel[7] === 0){
+      var cval8 = 1 - p[j8];
+      var op8 = pickD(cval8, [p[j8], p[o1], p[o2], cval8-0.1], d2, 0.05, 0.02, 0.98);
+      SP = {
+        title:{es:'Lo que le falta al evento', en:'What the event is missing'},
+        q:{ es: comp()+' Se saca '+T(CX.art)+' '+T(CX.it1)+' sin mirar. ¿Cuál es la probabilidad de que no sea '+colS(j8)+'?',
+            en: comp()+' One '+T(CX.it1)+' is drawn without looking. What is the probability that it is not '+colS(j8)+'?' },
+        options: op8,
+        correct: d2(cval8),
+        hint:{ es:'Todos los resultados posibles reparten entre sí una probabilidad total de 1, así que el evento contrario se lleva lo que le falta al evento. También puedes contar directamente los objetos de los otros dos colores.',
+               en:'All the possible results share out a total probability of 1, so the opposite event takes what the event is missing. You can also count directly the objects of the other two colours.' },
+        exp:{ es:'Los objetos que no son '+colP(j8)+' son '+(cnt[o1]+cnt[o2])+' de '+N+', o sea '+frac(cnt[o1]+cnt[o2],N)+' = '+d2(cval8)+'. Es lo mismo que quitarle '+d2(p[j8])+' al total de 1.',
+              en:'The objects that are not '+colP(j8)+' are '+(cnt[o1]+cnt[o2])+' out of '+N+', that is '+frac(cnt[o1]+cnt[o2],N)+' = '+d2(cval8)+'. It is the same as taking '+d2(p[j8])+' away from the total of 1.' },
+        showWork:true
+      };
+    } else {
+      var cval8b = p[j8] + p[o1];
+      var op8b = pickD(cval8b, [p[j8], p[o1], p[o2], 1-cval8b], d2, 0.05, 0.02, 0.98);
+      SP = {
+        title:{es:'Dos colores a la vez', en:'Two colours at once'},
+        q:{ es: comp()+' Se saca '+T(CX.art)+' '+T(CX.it1)+' sin mirar. ¿Cuál es la probabilidad de que sea '+colS(j8)+' o '+colS(o1)+'?',
+            en: comp()+' One '+T(CX.it1)+' is drawn without looking. What is the probability that it is '+colS(j8)+' or '+colS(o1)+'?' },
+        options: op8b,
+        correct: d2(cval8b),
+        hint:{ es:'El evento ocurre con los objetos de cualquiera de esos dos colores, así que los casos favorables son los de ambos grupos juntos frente al total.',
+               en:'The event happens with objects of either of those two colours, so the favourable cases are both groups together against the total.' },
+        exp:{ es:'Los casos favorables son '+cnt[j8]+' y '+cnt[o1]+', en total '+(cnt[j8]+cnt[o1])+' de '+N+', o sea '+frac(cnt[j8]+cnt[o1],N)+' = '+d2(cval8b)+'.',
+              en:'The favourable cases are '+cnt[j8]+' and '+cnt[o1]+', in total '+(cnt[j8]+cnt[o1])+' out of '+N+', that is '+frac(cnt[j8]+cnt[o1],N)+' = '+d2(cval8b)+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     CIERRE
+     ============================================================ */
+  sec(T({es:'Cierre', en:'Wrap up'}),
+      T({es:'Dos situaciones para terminar', en:'Two situations to finish'}),
+      '<p>'+T({
+        es:'Las dos situaciones que siguen juntan todo lo anterior.',
+        en:'The two situations that follow bring everything above together.'
+      })+'</p>');
+
+  /* ---- P9 ---- */
+  (function(){
+    var fmtV9 = function(v){ return T({ es: v+' veces', en: v+' times' }); };
+    if (vsel[8] === 0){
+      var op9 = pickD(esp, [cnt[j9], M-esp, Math.round(M/3), esp+kR], fmtV9, kR, 1, M);
+      SP = {
+        title:{es:'Cuántas veces se espera', en:'How many times to expect'},
+        q:{ es: comp()+' Se va a repetir '+M+' veces la extracción, devolviendo cada vez el objeto a su lugar. ¿Cuántas veces se espera obtener '+colS(j9)+' aproximadamente?',
+            en: comp()+' The draw is going to be repeated '+M+' times, putting the object back each time. Roughly how many times is '+colS(j9)+' expected to come up?' },
+        options: op9,
+        correct: fmtV9(esp),
+        hint:{ es:'La probabilidad de ese color dice qué parte del total de repeticiones se espera para él; aplica esa parte a las repeticiones que se van a hacer.',
+               en:'The probability of that colour says what share of all the trials is expected for it; apply that share to the trials that are going to be run.' },
+        exp:{ es:'La probabilidad de ese color es '+d2(p[j9])+', y esa parte de '+M+' repeticiones da alrededor de '+esp+'. Es una estimación: en una tanda real el conteo queda cerca, no clavado.',
+              en:'The probability of that colour is '+d2(p[j9])+', and that share of '+M+' trials gives around '+esp+'. It is an estimate: in a real run the count lands close, not exactly on it.' },
+        showWork:true
+      };
+    } else {
+      var noEsp = M - esp;
+      var op9b = pickD(noEsp, [esp, N-cnt[j9], Math.round(M*2/3), noEsp-kR], fmtV9, kR, 1, M);
+      SP = {
+        title:{es:'Las veces que no', en:'The times it does not'},
+        q:{ es: comp()+' Se va a repetir '+M+' veces la extracción, devolviendo cada vez el objeto a su lugar. ¿Cuántas veces se espera que el objeto extraído no sea '+colS(j9)+'?',
+            en: comp()+' The draw is going to be repeated '+M+' times, putting the object back each time. How many times is the drawn object expected not to be '+colS(j9)+'?' },
+        options: op9b,
+        correct: fmtV9(noEsp),
+        hint:{ es:'Averigua primero qué parte del total le toca al evento contrario y después aplícala al número de repeticiones que se van a hacer.',
+               en:'First work out what share of the total goes to the opposite event and then apply it to the number of trials that will be run.' },
+        exp:{ es:'La probabilidad de que no sea ese color es '+d2(1-p[j9])+', y esa parte de '+M+' repeticiones da alrededor de '+noEsp+'.',
+              en:'The probability that it is not that colour is '+d2(1-p[j9])+', and that share of '+M+' trials gives around '+noEsp+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P10 ---- */
+  (function(){
+    if (vsel[9] === 0){
+      var opsES = ['Lanzarla muchas veces y usar la frecuencia relativa obtenida',
+                   'Repartir la probabilidad entre las dos posiciones en que puede caer',
+                   'Lanzarla dos veces y quedarse con la posición que salió primero',
+                   'Suponer que se comporta igual que una moneda bien equilibrada'];
+      var opsEN = ['Tossing it many times and using the relative frequency obtained',
+                   'Sharing the probability out between the two positions it can land in',
+                   'Tossing it twice and keeping the position that came up first',
+                   'Assuming it behaves just like a well balanced coin'];
+      SP = {
+        title:{es:'Cuando no se puede contar', en:'When counting is not possible'},
+        q:{ es:'Se quiere conocer la probabilidad de que una tachuela caiga con la punta hacia arriba. La tachuela puede caer de dos maneras, pero por su forma una es más fácil que la otra. ¿Cómo conviene estimar esa probabilidad?',
+            en:'The aim is to find the probability that a drawing pin lands point up. The pin can land in two ways, but because of its shape one is easier than the other. How is it best to estimate that probability?' },
+        options:{ es:opsES, en:opsEN },
+        correct:{ es:opsES[0], en:opsEN[0] },
+        hint:{ es:'Recuerda qué condición se necesita para calcular una probabilidad contando casos, y qué herramienta queda cuando esa condición no se cumple.',
+               en:'Recall which condition is needed to work out a probability by counting cases, and which tool is left when that condition does not hold.' },
+        exp:{ es:'Contar las dos posiciones supondría que ambas son igual de fáciles, y no lo son. Al repetir el lanzamiento muchas veces, la frecuencia relativa se estabiliza y sirve como estimación de la probabilidad.',
+              en:'Counting the two positions would assume both are equally easy, and they are not. By repeating the toss many times, the relative frequency settles down and works as an estimate of the probability.' },
+        showWork:false
+      };
+    } else {
+      var opsES2 = ['Lanzar una tachuela y anotar si la punta queda hacia arriba',
+                    'Lanzar un dado común y anotar el número que queda arriba',
+                    'Sacar sin mirar un objeto de una caja donde solo se distinguen por el color',
+                    'Girar una ruleta dividida en sectores del mismo tamaño y anotar el sector'];
+      var opsEN2 = ['Tossing a drawing pin and recording whether the point ends up facing up',
+                    'Rolling an ordinary die and recording the number facing up',
+                    'Drawing an object without looking from a box where they differ only in colour',
+                    'Spinning a wheel divided into sectors of the same size and recording the sector'];
+      SP = {
+        title:{es:'El conteo no siempre sirve', en:'Counting does not always work'},
+        q:{ es:'¿En cuál de estos experimentos no se puede obtener la probabilidad contando los casos favorables frente a los posibles?',
+            en:'In which of these experiments can the probability not be obtained by counting favourable cases against possible ones?' },
+        options:{ es:opsES2, en:opsEN2 },
+        correct:{ es:opsES2[0], en:opsEN2[0] },
+        hint:{ es:'Revisa en cuál de los cuatro experimentos los resultados posibles no tienen todos la misma facilidad de ocurrir.',
+               en:'Check which of the four experiments has possible results that are not all equally easy to happen.' },
+        exp:{ es:'En los otros tres los resultados son igual de fáciles y basta contarlos. La tachuela cae con más facilidad de una manera que de la otra, así que su probabilidad se estima repitiendo el lanzamiento.',
+              en:'In the other three the results are equally easy and counting them is enough. The pin lands more easily one way than the other, so its probability is estimated by repeating the toss.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* los canvas se dibujan de nuevo cuando la pantalla ya es visible */
+  setTimeout(function(){
+    for (var q=0;q<REDRAW.length;q++){ try { REDRAW[q](); } catch(e){} }
+  }, 220);
+}
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbykkuJ_apGq3vALIFd4mr3acu81c7K4OKxW-DZ-i52Ceyl3lOanXMdvbS9SIXPrLQBm/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Experimentos Aleatorios y Frecuencia Relativa/Teórica';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>

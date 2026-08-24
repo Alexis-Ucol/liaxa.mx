@@ -1,0 +1,2468 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medidas de Tendencia Central y Dispersión</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; text-align: justify; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── GUIDE-SPECIFIC: manipulativos de azar y frecuencia ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-instr { font-size:.88rem; color:var(--text2); margin-bottom:.7rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; margin-top:.7rem; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.gcanvas { display:block; width:100%; height:250px; border:1px solid var(--border); border-radius:8px; background:var(--surface); touch-action:manipulation; cursor:pointer; }
+.binrow { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.7rem; }
+.binbtn { flex:1 1 150px; min-height:44px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.82rem; font-weight:600; cursor:pointer; font-family:inherit; padding:.4rem .5rem; }
+.binbtn:hover { border-color:var(--green); color:var(--green); }
+.simrow { display:flex; gap:.45rem; flex-wrap:wrap; margin-top:.75rem; }
+.simbtn { flex:1 1 92px; min-height:44px; border:1.5px solid var(--green); border-radius:8px; background:var(--green); color:#fff; font-size:.82rem; font-weight:600; cursor:pointer; font-family:inherit; padding:.4rem .5rem; }
+.simbtn.alt { background:var(--surface2); color:var(--text2); border-color:var(--border); }
+.facegrid { display:grid; grid-template-columns:repeat(6,1fr); gap:.4rem; margin:.75rem 0 .2rem; }
+.facebtn { min-height:46px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:1.05rem; font-weight:700; cursor:pointer; }
+.facebtn.on { background:var(--gold-bg); border-color:var(--gold); }
+.facebtn.good { background:var(--ok-bg); border-color:var(--ok); color:var(--ok); }
+.pbarwrap { position:relative; height:26px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; overflow:hidden; margin:.65rem 0 .2rem; }
+.pbarfill { position:absolute; left:0; top:0; bottom:0; background:var(--green); opacity:.72; transition:width .14s; }
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; flex-wrap:wrap; }
+.krow input[type=range] { flex:1; min-width:150px; accent-color:var(--green); height:36px; }
+.kval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1rem; color:var(--green); min-width:120px; text-align:right; }
+.livelbl { margin-top:.55rem; font-size:.88rem; color:var(--text2); }
+.livelbl b { color:var(--green-dark); }
+.bigval { font-family:'IBM Plex Mono',monospace; font-size:1.5rem; font-weight:700; color:var(--green-dark); text-align:center; margin:.45rem 0; }
+.dtable { width:100%; border-collapse:collapse; margin:.7rem 0; font-size:.83rem; }
+.dtable th, .dtable td { border:1px solid var(--border); padding:.35rem .5rem; text-align:center; }
+.dtable th { background:var(--surface2); color:var(--text3); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+.dtable td { color:var(--text2); font-family:'IBM Plex Mono',monospace; }
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.stepslist { margin:.9rem 0 0; padding-left:1.1rem; }
+.stepslist li { font-size:.86rem; color:var(--text2); margin-bottom:.35rem; }
+.mdgrid { display:grid; grid-template-columns:repeat(5,1fr); gap:.4rem; margin-top:.75rem; }
+.mdcell { display:flex; flex-direction:column; gap:.3rem; }
+.mdbtn { min-height:42px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.9rem; font-weight:700; cursor:pointer; font-family:inherit; }
+.mdbtn:hover { border-color:var(--green); color:var(--green); }
+.chiprow { display:flex; flex-wrap:wrap; gap:.45rem; margin:.75rem 0 .2rem; }
+.numchip { min-width:52px; min-height:44px; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.92rem; cursor:pointer; }
+.numchip.mid { border-color:var(--green); }
+.numchip.sel { border-color:var(--gold); background:var(--gold-bg); }
+.numchip.locked { cursor:default; border-color:var(--ok); color:var(--ok); }
+.statrow { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.7rem; }
+.statcell { flex:1 1 104px; background:var(--surface2); border-radius:8px; padding:.45rem; text-align:center; }
+.statlbl { font-size:.65rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); }
+.statval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1rem; color:var(--green); }
+.statval.alt { color:var(--gold); }
+@media (max-width:600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .gcanvas { height:225px; }
+  .facegrid { grid-template-columns:repeat(3,1fr); }
+  .dtable th, .dtable td { padding:.28rem .25rem; font-size:.76rem; }
+  .kval { min-width:100px; font-size:.9rem; }
+  .mdgrid { gap:.28rem; }
+  .mdbtn { font-size:.8rem; }
+  .numchip { min-width:44px; font-size:.85rem; }
+  .statcell { flex:1 1 88px; padding:.35rem; }
+}
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Medidas de Tendencia Central y Dispersión</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 2° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Medidas de Tendencia Central y Dispersión</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#0c0c24', primaryDark:'#14143f', primaryBg:'#e9e9f4',
+  accent:'#243c6c', accentBg:'#e4eaf6',
+  darkPrimary:'#5555b4', darkPrimaryDark:'#8383d7', darkPrimaryBg:'#121234',
+  darkAccent:'#6e8fd0', darkAccentBg:'#0f1623',
+  pBR:12, pBG:12, pBB:36, pAR:36, pAG:60, pAB:108,
+  logoLeftB64:'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCADhAOEDASIAAhEBAxEB/8QAHgABAAMAAwEBAQEAAAAAAAAAAAYHCAQFCQMCAQr/xABcEAAABAUCAwIJBggICA0FAAACAwQFAAEGBxIIExEUIjJCCRUWISMxM1JiJENRcoKSFzRBU2Fjc6IYJTVxgYOTsjhkdHaRo6S0JidERVRVlKGxwcLDxDaEs9Lw/8QAGwEBAAIDAQEAAAAAAAAAAAAAAAQFAgMGAQf/xAA8EQABAwMCAwUGBAQFBQAAAAABAAIDBBEhEjEFQVEGEyJhcTKBkaGxwRQjQtEVFlLwM2KS4fEkQ3KCov/aAAwDAQACEQMRAD8A9UIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQj5HKE6aXpziiv54IvrCOOUrSny+TqCTv5jeMciCJCEIIkIQgiQhCCJCEIIkIQgiQhCCJCEIIkIQgiQhCCJCEIIkIQgiQhGUb46rqkMqwdjNMjMGqK9FPZWuMyt5GzTnPgOXDsHGh82WQwFFZgzHx6I3QwPndpZ7zyHmVg+RsYu5XVdm+trrJtQHO4lUEoZn+dGjKmI1YsnL8hJAOsf9EsYzqDVBqevnPY042SmyMh0uEqiqPE3hKc/aABmBP0+4E40fwR2VGaVraWjal16tUVXoqqqOcpHObk+q5mNyYyfd9Nw3uAukOQcezgSCI68eEwohQ9zpWzdqnyqhz3No5UcBrTbQC8hnAlgM0JYAZCHMYAY4Cixgpg6/wCFj7wjdxw33A4+Jv5BRJJdOZXab8hv9FFryUBcuh6SnWmqrWI9oSVHEohipfekNcb+ZICSJJn6++TiH1jGGMfDb2K5726SoCiHU5qYkilzcneo1gF6hEiILGMZx+BQAA90BeY8x4gziaVvdij7yXPJuhqUZ6/myPxUxMBNMLU/Lp28Bgyhkg5gAB9BpY97AYBiH194Ea2rYFiHnQ1X7fpTb0R6A1MjJVpG4k2bjub5GYFQB/KBG4Z9vz49jzReNdJQNYJAS5xAuBZjb+iryRUklhAAB83H4rAaNnTUeyU5W1QW/wCepypdzk3FoOAgMLUkGCCem3toYAGgEDLrB1gwH9TW9gaQUXWbD3LTHq3rem3tCXurKXqM4ZphfH1D9qanGV8YCR/Y7ETLRyzUjSGkWqGzU8ykNVLSqZVPlapRjKltDTp8JAKNDnnMeWGHVnLo/JGW3WprLUxdkirNIKe4yF1YjTXMk5xOJ8XFpiC8jx4DANRyu1nnvDB0RnI81rpIowQWnDvaael73zyWLfyAyRxBvm2zvdZbIOvNrYsTKQryWwaq9pwnhvvFOS2lAJd8XT0YB980lOGLtstqhtDfYHKUZUM0z3IneOY3YnlXAqXv7U/MaD4yhDB8UZvZfCgNSBQ1huXZh7ZkDukAsRuDU4gcCzSpjwMFgMBXYGAYB9QhAEEUonlS2T06avad/CjZmpyGqoU528Q9sWSY1Os45cVSfoGA34/RHerrw80UFRTFovVxaP8AM3b3i9vorGOYPP5L7+R3+J/3WtIRjS3upW5liKtT2e1eESCnUT2WeuCZfJjQccQc2PEABB44h38AYTEDeADLONjgHI+UjyZxXTQPgIvkHYjY+n93UuOUSDG/MdF9IQhGlbEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIqjUpedNYm07nWoSiD3U6cm1mSG/wDKXE7zEg+qHrMH8BQ4zjjdK4MZuVi5wYNTtlT+qi+lXu1SF6Z7FnTnV7qVxf3gs7bAyoxgzw3fmTRF9YjPmiuuWQxFxDrZ350eaSmMi39H1Asraqj5lkuaunW0asxco/IABoxbWGWeBYDhdoQx5jGMY8Z0yirm67iupNvuRSrGfUivff3Gon4lAY9GDMy6++MrLr2wA6+jPPaJw1afo2prTFp7r66Dg8SqivSKaUp0LiUVIpG1zOLmVMaQHvYj9sPz+vHDIfHpX0dNTRtp5XG5tZowXE8yTgDoOQ87qp7+WRxlYNuZ5DoFSl7LxsOq66JErkXXPt1QBH8gJDmFSv8AR9kawzlxbW6MYBg3MxgKxw7o89E1XY2yNmdFlxqsskuJqI58p7ZNqmSwCo9UmMGEIwFjB0lF4jH6MPCXn6+PCKw0eafaG1OaaHqk6wkehc6UqdTJgfUn4whLPIIMGT8ZW7mIZY/f7naiK1BQNzNGNN1UyM9zmt0PqRxTNk/FCvdLTFYGnjOPSD/FlQ9gAAdvoCbgP3POJVdPQwua15aISLs5OAItkDnub3zyKm8D4XU8ZrYqWIDVNjUT7ODe/kPIXVn6G7YW+vbpWqmk7ushChla6rUnIlhpu0Y3ZpEwhmknfM+vP3erq4xTtdUXQ9iaZdFNiryrqpRVW7eJT3ZIUNNtIyACNGjLUg9EsAM3rGYV0eiw9/PrrW3MrisHxDbCr39fVVO1Gq+WNLucNUXIwABGgO9LmDoGX15gGThlmSPCNa1dbqbRZaqZPzSnPdVqUskpXUTdytPNxe+ERfz+709kA8+gfsQJyx4Rzs3F3cZgmZC4s1nY5A26Ak+63vXd/wAt/wAj8Xppa8NmDPELDJGRkO207je5A2WLLOJZ1xVhFpqndz/JyrOZJWds3ljAEGmkLCCvz5QwdzrGDMHfjW95LH2gsToir9ysweS6nvaREiWVGcsApULU5i4goYN4HQErhMfQDEEfaibB0Obbh8QURTNUU5USh1XEEPaBIBzGWnJVmgLTHlKjRhGRiWHMjpzxD159cVbeK4F07VUYbTsn9rIdntxNRu6xtmP5naMB0GjGNOp7HbGcMAAehGSDoiLwypk4TSapX6mtcHaBflbqLfPHS2RO7TU8XbXjrYqCPu3kaNTgM2uSTpJ2B57gb3wpno9tJbS9+jQ5gu83kybGKoHGaJxmbyp7UXgUaYaWd3A5DHnn0C7/ABig2V9pDS1eAiotON//AC+nu7C1okzqSy3FF2hkjUB+TnYByHvg7Hb9+OLQdQXCvf8A8QVUVwuXNdV8yei8buRxpaJyIINPIUmD6x7WReAwdYMBDH2wAi9Lr6TKR0paUK4qtM4+UdbuxCJmOfDiNoCZMqWEFHkpSuvAAyjBgGPIQxcZ/Ujo+EcYg4iHvJP5jrd3gjNs3t9LLiO1PZeq7MVLKaUtdZocHi+Rkbcsg8yrBqzWJo8v9Th9uLrze6dJcCyz0hzw3bfLDGD0aks0kRoAdA+2PoEAYwD4gGME+Lp2uq86e62atPNyqlTvtEPvCdA1aSdupplj9mm3cx8ShdkHX6EfousAiRxXmnXTFSOqzSc0+UJx7JVFNuDi2Mz8STI0ySfd3iyVAJz9MUEagXeCMHCeAwdUZ+uNbCr7EhW2wqC41EVSxqFe94taX4BqlMp/PATj9KmNH2B+/wDXASMEttFSPc+licbgm7Tnbm09fI7i4VAaiYBszwLHYj6Hy+69pYRm3Q/ftTea2M2ap3ASiqqOkUiczTp9a1OMHyVZ9sABgH+tKNjSUc3NC6CQxv3CtY5BK0PbzSEIRqWaQhCCJCEIIkIQgiQhCCJCEIIkIQgiR536zapU3PvBUdNkS3qcszRy57Wk/NmuJhAR8fjx3ERX1D1Eeg6pWnQJj1KjhIkkuZps/wD+/mjCul23ai91lb61u5T4Ot1lbijJOnLzbQyxnkmA+0rCV/8AbA92LLhxbCXVD9hYf6jn5AqLU6n2jbzufh/vZUdpr0wtmq2wT2nTvBTJWNGvhidscTSN0tQiPIKP5ZWDtjDumKBAH2wbvf7EfItt1QaaaSqOz14KWdV1s6kb1LWdtG8+jRZl4AWITQ+xwFiPYHhn7gB9cdBZ3UbWNgbPrbYWwaTz7h1k9qFqwySLmjGVOAstMAkCfvqRDLMH19AACD0DiTIdL133CjKo1L6nj3SaenGlU5trS7rRmuLitkX6Hfz/ABcjdw9H2xdjAAPX1MrnsleagjuiRpBy4nHs5Fs3/wCMmmZpcxvdg6gMnl7/ANlEbQVXqDU2nlYzTjT75NQ+OCl0qV3bpbRgzR4kATFqR4BJKCUQAQzM8xjNGDow67fbNH6nTxp6uLde955T6tPaijp0ujV7ScpSA8MyDjFYevfAIYux0AzN9tnFV2b0w1Jf6yp1x7UuMk9fUa7qGpWTv8r42T7ZZ5JxZwfYng3xle4MBQex35u3XwvM22Wr2z+qenaiXNRyUtnRmrPkDxNaZkYAAFBpQwHFBCQaPfEAWGIe3mEAYnFZYmxyEuaIwfzAR4iLj4gjbbGOSsOBwVc9bCykDjMT+WQTg8vS3MnAUsQ6UmM+2D440RUC5C6r1S2mTnF2NAaWhTDWCIJH6IoGARgI5c4eHYUjH0ACMEQlC06g7BWura1Ooen1q+2i1vLbELec5AO3FhhnoeRVgz2SggLGaMAwd0GAADHHdUrq4rd8oKobX0TRDIRUbmetXEc3mvLdk4zDVJ7btdGBoyjBgAPrz7GABjCMMgqqzjo8N9xLrVeCsXWSilG04+iOs18MW7geSUgHiPAQAyEAfQLM6S3oADCOW4bUn8E+GjLQHHw3GQ8aefK4yCbjB2Xe8dpJ4+OxzdomvdoI1ZvqhLjkWObG4IGcjfJUNRXxvhfegXWy9qiZsdQrlSx52Wk/aG9Jz1GZ6TdNHkmmUE/PpH1AKGAXx/1fpmlpsslVTnd5fN7c1yVO9LWNqMnJO3TAo2ko+YmAXyk08/Y3MMAEjVe2wBEjlpKcmW1T5VVsbiza3tO6qG15cnDNMYiaUqzrOQ7PXI30BQx98eAygYZdX3uzdRUnoW4lsrr0DUZzG6+KmtG4LFY0rw5LUuJpgOYNAcEaZOWWSAZ4QcBnCNGDPmOhQTyM4d3Na5ugm7xYatHhtc9TfAGd7LLjFPTT9ou+7OMcHjDNxeXJcRcjAGSTgm18FSJHoea6ktBVCO1FTnIqqE4qWs5W+zAaBSiAZ+KSESAHLgNDt5mAAIQsRA9mPCKJqQ7U/Zm11RWEvtTL6fQ74kmQ2LDT+aKalpBgT0xpCgGfoN0sARkD7gswYY4DsJo1fXUqSg6ioG1LQVT1bLzVryjVJChrznEvrMPTJQDD6JSEqeQOIDs9oQOgwYIgz7pauXSNnaw1M6jXBepeyEhRLM0uKzmlnOKzwpi1SoY88Nrf3QEe+EGfYwFadm5ac0oawt0ahYW8WrGRt87rne21NxWDirzxTUZSL3JBboubWtjFiMbFdbQLzqLuBaBj0/aeKWe/EqeRit/c0nyXxisPMEMwsagYwAAQUHArt9eAvowiaVno2lpj001Vc+tnBC61wtJTMzaSk/E2gtWeUQcMAp+c0/aMNDudGGU8PfiJ0JpYre69jqcv1YhQeRWLSaobHlvRrJJVCgxKZ6NSlNzBMBu1IrMGQMx9f1/vU+pe6lT2fqrTTqOb3VO+TJLWMLu4oxpVnMJTwH8srAMIMwmhLEUA/wB8Qc888wdBIZHyWpXNsH+MDDj4s3ybj7Lkm6WtvKDcjwnltj09V22lSpVNoKjtJdr2DJWZq2i36fzcsFYSiBj9zARiIX/aI9XY88nSwjih8Gy0p1xZ5L4gOBVhMpcChp5qlAg/6QJVWX1ygxtSytb/AISLSUbXs/bPzIiWn/tDCw5/vZRznFXNnJmbyc5vu3H3HoFaUeqMBjuYB+x+ynMIQinU9IQhBEhCEESEIQRIQhBEhCEESEIQRVxqJeT6bsFcZ9IlKZ6GlHU8n9pJIbOUVBpqd01mdDJFbKCpTkwtLy9TD+c2z1AywfdAAP8ARFm6rEnM6aLpJyfXOkHb/dhiinaVZldbeDlXsrPLfWKaSeSCSvzhpZijo+8CLGBjX0zWu2MgB9LD91FkJbKSN9OPiscWsp3UdWFuXW/diq3qPyia3tSRVbc3LB7i40eKkC8hP2Ds9/AZGHzWYM84nzLrdfL32erawd506Iio3VkUo2d8JJ5UtUtAXkWmVldko0RpeOYcQZiwwB5svpo41A0Npi08VDWtYCULV9VVEZNhaEkvlDkWnSEBGb8BQDRiAMz4e/2YgVSXAunrEcnytXCgqQp2lqURqHJ+fUtOJzTESYguZuzzygAzRqBdwAMO1ngGOnki76Z/fRjQw+F+xBxYCwyL+G3LrhVLXaI26HXJGRve/wBF22nrVS26U9PK5I0NxLrW9ZvalzRJFUxyTtyIBZRAFKvv9ZoDcAA7YA9sEc4lLqE1HWmrG599ag8V0qx7b0zPjuRyqMswGRY0xCYorMZAyj/b4dsort9cVTb8u5VuKAQ6jqIpGlaiZEKs1seJO1OJ3ObKtLxEDMYg8wAoRRhIgGAGDDMQB9zPVDnq4pvVbpguLQL8Wioep07KXM81aaObWZ6YqQNs4ARDAMY+nZmCY/XhniLhF4vSwyRvLmAtebPfcXaLjbpbrc/Cyn8Br6uiq4ZqVxErLaGgX1Ha3nfYjoqvtxpouBSpJ133lg8dtdOOBpMmhjIA6KDTCzDCDDhpxjBmQDAY+jMY+noHFgVPcq1i+06ipJzpwhcRIxsRPjIzppLFBh8ghGSMraAVzRXQo6wJ89oQBkpix5jsWz+qK3zBQVRSo/mKqqLxqtPJY5T5DgmMVnjLUjOVYBARiMAhj6xgz7EVZe2nrpX0pF0qJc30gQ6024eM3IluK5FMUWMsJXLDUKPaqeAwCzUcuPDsE4DAOOGigigoXOpQHOBuP1XOOVuV+dgeYOAvqlRxGt4rx9kXHiYogS2+YwG5xn+oe8A+Eiy4tLXnt7XDdOnKPoCnEVRJ3Va8k+UTOUanUbigRgAfJwDGMCcowR4wdGQyg9eARjj53Fs6dWFoFtxahqlCgQ02cWt8onBnTIUa0w8ZRE0xHJFdBGWGAwAUAz/5SdmPCvrRW4rq2NSIb11s0eTlO024mIZK3YgfLmLds1NgMAOwEA88xnDKJ6cN4Gecai1DXLb7yaYqzpSoXVlphzUktpxCs9YI1vVl82UIAwYAEbPMJYugIBhF59kw7EY5e8OYKqm01rQ1hdbVYA2xexty5cut73WfaeZ3BeMsf2feZHtF7A6wHknw6f8AMCAbgnIDSLLOVO2Bv1aalXS+TA086+U6apRNhLHiuUI1uBhA1x5QwdZRQchgLAEeYxFZg2845lQ6zVGo3TlWVnrnEIkNbkpCnNtcEs9tM68ioLUGEjK9ZJ+0SPzdgQ/Vh0Ai+WDWZbO3lnqqq2mCV1UuhD0pVzZySRpTE5R5mJJx4zQdBHYzGAI8BmhBwjJNYVVdTU83VVeuqKIo6nKWpRIaesdm6nE5RilR2UqMtcaAag48RpgAdA8AZiH7gB9N2ao6dtPrDRpDgdd86sY539MLhu3PFOJ13E3DiN2vaNIZpIAZc2PvuTfOVN7Zawf4MGmlkoKkECF1rd+VLHk81Z+Jsqc4zEjcCD2xoigBHhkDAAsx+4OP1SyalrjWeqnUHqGq+o/JVAjLmzNquXKydViowBBGCQGAAEBGYAQx4dYAdHazBHKKcrl2IpKltQlH0hStRUs7S2ebdqcTKjW1xAYIo9MYoxAoJzEX0Gb2AwCDF/Xg1ZUjqt0n1jTpCGdO1wxSRPJzQcduFqk5CsoR56U3vhACQxDB2wY/bi9kj7mcSQxghz/E/cjxZFrYsuQa7WzTI6xAw3rjc/BX5aWtlV99B6hzeFIlDqopR1ZVhvzhikgs0jP6w8AD+1Hb6BnJQ4aYKcJUS6kC92RS/Zlrz8P3JhiC6MWpVTGg5c5OEpEhXJH50J/yf0oQD+0EvP7USzweZEpaaECn/pL49Hf7eaH/ANEc5VsYxlQxuwkFv/pWkJJ7su30n7LTMIQipU5IQhBEhCEESEIQRIQhBEhCEESEIQRdJWDEGqKSfKaP9k6t6hF/aFiD/wCcZf0CVw3INK6xNU09jyEVuJLnvT+DmTx/2pigP2BRruPNq5AlVmq91MWo86dFcKk1tQM3n9rmWeeMBYPtuYRfsige5FjRR/iGOg82n52PyKjTvMbg/wBR8r/ZZtbnaj2jkrwVPYpDVNEOzqtRI0hrwrSgaDAKBn+LhiKFhntHhNAAYOsBgx+/Gz3bUJZC9+j64dFWfaCaWc2mmFJvkjsASmFJgSzGMgBPQcVjIfnB9vDjEV8HgKgCNN90vwuzZJUP5RfLfG2HJ/ihGeefmy9l6+rsRni4f8HNRccj+CknuL423TOT3dnxd7MW5t73yva2s897owy7kdLKGVk5ic1wMZBDs6eRsc4PmMqoY58MYdcWeMjn0wr90IXVt/YvTNV9a3Nd+Qa11WGkIku1uKHAwCBNmAgnv/R7vT1cIqWsKroi/wA2VSmsDYqdIeKXBNUDm3N2Zpjki2zyOZ5coG0SMoR/YK/PiH14RVNKfg1xpb8NqevvJfZN8S+T3L7XL7497DmO9zGeff7PzeEbwqdZp8T6G7iqNKShCnQEtxZrjNIIZTgWbuAzGrz+UbuGfb+joiFxmhilD2O1XmIF/wBLcgZ6+hVr2f4vNwmshrYg09zc6T+rBv6XBtdZDsPTj7+Ehqe06c8hC0mmHnK+gr9RgXmDrEMRgCsAAGP0vQAcbNqN9Y3/AE+VRTrbxPIaW7ibQ7iW0taJQWBQEI8FYCuX2gD4Ze4PEBwADHhFX6TpJa+0s1O93Wdin0pHWJpCQqp3DdLcShpEYRtszFAvneOIPdN2x9yIJqRV0R4jX0lbFVW3JU04IlrmTUKvd4ojyMkRxYxj3TkoBdPyjMZQzQg6OxHJuoP4G2VoJeYyHcwCBYcjyJsRvtYhfRZeMjt/xOl1gQh/gGGv07usbge1+nYXFiCfEdGUfdShmG1VQvf4XVzuR5QrSJtNOt6FzWOBipWbsBkmAnGLiaHsZ9AozdeCknOoLcoXKl7c+TrU0u6lacxpOUN5cs/aIAdtJSgFAN3fRDIT7oADH14GdEVpYl2bKfr4mo6gUnkUq0tyk6pTSv8Aq7YEHZMB2DszdoACB5gGPDoHGxtQ6pslpyrKr7N881NjG3ojgq57xTisWKxlFGHHTN9L8nRnDKBn2BiEAGHLgx0UIPFKXudJbqcG3ubXxyvbG+bnoRupnGo29iePNqonCTSDIRpaCAbixIBuTyI02vc3GFji1JyeiHqd0K1pia2kGklaS4pVctst5NPSGkAbgZg6xGiM6+3gAIxj7Eatvnfa0V/tENYNtmiJNZ9NyaTllMcoBKobk4F6f5kHTtA98HEHRHM0l1DQz/oze3HU68EOtMTqFYTM6qFY1U5hwKwAWMeRu7Icx4YdefY/JGP63/AN5WLv4MSe4hJPi9dzvjbZ5LxbsD5r/GNjayz3evs9/COn4JwaOhLobuL2Pvq/Ri2D0wLcz6rhO13aubtPUsrHsaxpYGht7u5m5PPfoBbC1RpQvTbewOjQhyu6okenfnp1k2tOyFSodS9wJQwAKF0zDmAWYxcAevz+eMtVm+0NddyqKrbM2BQUA104kMc3NySOSk0tOn9mAGyAYEpIzRD2gEAB15fm8xx11Gfgh8d05/CPT1+e1eLk3izxHy3LeLurDt9eOW7ns9ee7342ZqRHY9R4P9+npwm1+SvjBp3vF3tNznyPxrP0u7lte16+x+iLotZRVWsBxdI7fIaATt5m3VcmC6eHTcAMG25VgPtzqQU+D28r6XQEtTUso9Oykoy5eZEYZIKIZMv2Q5j8/wAGUWZpDp1TTOmq3TasIkQoOaC3M8r6DFcxKR/vHTjz3oVU6V/p6s9pob1PpqzrFxWnfqm7mDSjOn3MfGBv1yAx6xIEqZuSkNyAqRRKcoBJJUu4WDpl/wB0c9xCIUodEDu9x9wwPqfgrSmcZrPPJo+JyfsuVCEIqVNSEIQRIQhBEhCEESEIQRIQhBEhCEESMkeEBtOqf6EQ3hphMLx3Qu7JZImXEZ7KdjzXT3toQAG/UAb70a3j4qCEylPNOeRI0k2XCZc5fkjdTTGmlEo5cuvVYSMEjS0rxApgimanbWS19wLv+QFLNKsxaT/E6heWpUn9I1hm10DFiABQBj7ACvjHnt9zsPZCzOjy4laWTdSKnXu9MqSTat3wKzTU48QHgLGDoJB2sgB93rzwiob86caFs3cedJVu3rk9rayVmHU3ULd+MU4t76b4wB/MD9qSHo9InDH7YNI+qiy83ZJbmbVcOgaybzELmjangkot2RKCMJHbSgYAANCEeQBgGP6+EdZPPHUsYWy6RcGxwH5F89d7gncbbFUkcTonEFl+V9yPd081KNBlrLfXu00VtRl1WchayIKtMWIzjTds1vM5BNmcQb8z9P09Q8/XFBVxTNs7IVquT2J1D+W83YkxlWNBLOcaWtRH+iGjGrK+TqQD+DsDxH3I+LJTV1HhklpODVNK0CnQuxh9SpKhfiWwx2dTMQ9YMhjOAAoCcIAAzAPHPrzBhpN90aUlph01V/cZe7eUdeyp81ES5SK2k7aWqwIHyoPfxMH6cfX9SNj5WwVDzJJcSHwsFrZsASc7748lg1pljaGs9kZPpmyyLSaSmK+bqdt3c+8vkDS7TIw5GSazqF4DjDjBjOV+i6N0fHDMfYAXh3Rxt28ZKG1mnur62tg/kVIufKUBJnrdGAgxabMg0JjgAagoOMwGg5hZh+UfOzFFYaStO1D6pNM7pTtYSUNbrSlTLSGB8RyBzCYs5OQeMkYPUaVumGiwn73RhEMqO31wdHNN1HTia47W6n1I7J0RXilXMwtDsA3hqT04/wAWWD9CHv8Aod3t92v45WwRB0jnZidfRbDrkXyBzG97jyV72Y4fU8Rq46GED87Gq/skAm//AK2OwucjmtUp6HtrUFoHSm32iKcPn5bLZs+8kCUmKUEKDzeZPkDDMhOVvCGAfQMkAie9GP74vlINVz3tztTqDnW5NRt5lPrGhK2KNtQ3DLFIZQ1cpzJOFlmfvg+eGM3346uhKgri86gVlqprA9chqslaSjWOKscwNy38e3svzQzyA73wdfcjQNxtIVI6WtK1fVtz3lDW69uTth7ucVtlok6pQUQeWkKl2MijBgz7Ysu72IrOzdbTPjDi43voDLCw2z0F8X02ON1d9uuCVnBqz8PNYh95C+5zcuAGc4F975JO1llqkEtIXHlS1A3Xvf5A06wk/wAWIzWFQqLnv+lOU5h9EAZozB+kH3MAdyNf32sfaOyGhqsXKyfLuvlJJpKV1PJWBUocE43JPL2wOmZXnmDAHAHVEO0zaZaI1S6VSE1QGnNdRUm9uLWzPpJW4aWn4gO2TwT8xxWR4+jj0dwYIpuqaLuXpp8qrKOFx6OqqnKsK5JYxNL6A1SUp6eVWFoR+lJVANLKHgDPPHD3Bg6SWRtVP3Ucmksdcs5GxuSCB9cGy4hjTDHrc2+oYPS/9+S0VpOtDaq9ujIlsvAlJJQsL06iRO8jQplLUXuBNMGWoF2A5DFnn0z8+cZXrVnt7al5e6cs1f3y3bKkSGtjm2lM5pZahP2gZnfi5wihelAeDsDD7medvJtJesS41AU7Z1RTCCiKIYZb5xDg8E4LlphgzTlh4E4zhjEEY+gA+yEAI6ukNN9MVNc4mwloX5Q9nppFqK5rnZltpkxZnsUIewAOXQDtjNODn7NP14smjikkc6XUCSdIsWtHVx+GAbk2GcLwsc9rAGWti/M+n7nHork8HFZ5Q4qDr1VCnDMhoSjpqmpC4cPX8tUg+36KX6ZH+9G/Y6WkqVYqJpttpGmEBKNqaUpaJGQVLzFlgljKUd1HKVlSauYyH3en/Nz6kq8gi7mMMSEIRFW1IQhBEhCEESEIQRIQhBEhFaPGo6wtO1UsoiorzUQ11EhNLIUNrg+pkygswcgiADAY+OWIwxPGl7ZX1LzTK7ol5H5xKeA0H+kM4WNrkIufCEVpfG+dA6f6EPr6vHLZJlPZSIy5y5hwUT44EkA9Yxfl+EMhCF5gzjJjHSODGC5PILFzgwanbLvrg3NoC17YQ9XDq9qp5CoVloyjnFYAkswwcp8AcRfDIQvsx3TK+MdQthDzT7widUJ8p7KtIcA4sz6gwdM48Pr9X6rnUPWx9bVeo2CE+4Q2NxJ3ydtTe4D4x9GZnfx+AAARihrh1za9y8d24rB1pxd894uWDKLM/aA7B32wDjqG9mHmEEvs/mCMfJVH8XbqNm3C9z7hW8pK59HudF1szkubU7E7JxMw+f6QDALuDCLqCPuzjH7DVl0tB1R+Rdx5Laqs8vVcGeoiw8TG7PuGS7IDffL7BvbJwMzJHV1pPCj3CYdlsvBSKKqUM5cPGLbMCVb/AGXsjv8AVRte22oPT7qWY1DJT9QNrrzpMyVtPOxMilMy++EaY32gfjBmD4orZaSp4eCyoj1Rnpy8weR+RUpk8NSQ6J1nf3jzVV6htLttNZlOorm2xqhrIqLZ2k7wTLdTLiwT/FlYe2AYBZB98rzgGCfYlldpYNWVi6UqKwtx7b1W927qNvVNX8XoTnghqMGDgSsSHEZzAAI5AHsiw49XQEcaaqLSNcuzb6fX2kKtfFUzupXSLsfxRqPX0EGjyDIPDslnSHhx6BlR96e16yo9xJpPU5bF8oB7mLamr5QfJG/SMGfbB+xGoiTTVEzYu6htKwZAPtN57X5dbELXLAwu1P8AA479Csd2zqXUWotNLT1p6o+qN9a4qVtVuTeSNKZJSPEvk+YHgBMEBRZQR9YB55g7nXaSbR6p086a68ru9yjx4coJRnl063LNotEo5gJQFMleAvT4njD0AwwEIHpeMd5qWsbba/8AUcr1aWrnU7+EDaLPWsZLmBCsWS7BakgIxANTKO714gFj3B5zHWA9St3vwX1jpo1Lt75I92bjCGZ3d0YylidaD0pADxjB6YgZpYA7/cyzzGX1gnvtxKLTEBpcR3jSDq3zknI6EWNsLVTzS8MmbM1zmvZ7DgcA2wR0+fmpZYfTaw38sHWFSWhcFzFVKhWop7KozwKipJ9goRxIBpygbO8EyQBmYDHhkDvjiDuo9S1irX1HYS+9Hvh9AvjeYiRrDZ8+naVJfpEpxCgnMACN0BWZA8ejsAB2B8S2GpWt7RWNQWesUznqKwqNUpenJwSIxqjEW/iWSmIKAAeZ+0WAYx4dGWHtM8J/ZDTWQmrVDevW5X6JEoIO51tYqidwGui0ztg3wDGIWIe1sA6x98AOwPCGli4Qx7C1rYdV2i13Ei2RkdNzdSOIcTrOPTtqKqR0kpFiScAdPT4KFUmPVius8x6fLJWxrhpRKOYcn93m3HIPGKk8zLZkrOwASQEqZQO314i+b7ektLehamdPwZXive9Mxr6yFTWkFSMCW1svDzzOGaOQQDNDwn19AAfvxLav8IDb8Tl5J2SpCori1HOUtolGiOKL/TmDGaiWPxlBB8cR9Hpz1F6lHFO+anqwOpWnCDZGk0kxnA3Z/RmMAhgK9fbzNN+MERpqyofGQ4CFjsn+p1/mfgB1K1R08TXAgl5G3QL4XJvtX+qOoldi9MJCghkDxJqWrjihlJ05E+2Dj2wZ+f0ftTfgLyGLSNkrIUlYiiU9F0immKc/TOTgdKUlDgon2jjJ+f8ARiDshD0yjqHustPekyiETI4uTHQ7IRx5JuKlOZ6ifHrGAoGRpwvVmPqn704yHd/wqDkokc22SoeSImX/ADxUUt0z+rSFD/vj+xEKKlnrm91SMIj6nmepO3uGB7873zRU51zO8XTp6BeialalQJjlS5SSQSRLiaabPaACX1pxE6Iu9a+469zbaBr5kqNS07fOlNqwCnl5j44ccOPmnwF92PE65V57qXeUzVXOr90e+M+M0hp3yMufwJwYFA+5HAtzcirrU1qhr6gHjkXRB/ZmF98kYO+ULvg//QEWY7MO7ol0nj5Yx8Soh4uA4Wbj5r32hFGaX9UNEalaR8YMwiUFRNUgBeWSZ3E1KZPh6Qv3yBdwf2YvOOZlikgeY5BYjkrZj2yNDmnBSEcVavSN5HMuC8hOT+U04wJYP9IorldqW05NzwTT6u+tBTdj1JaQpFJ/SGKN0yeIAbYR5S4znGABOwWatCEIR4iQhCCJFCaztRAdMtjXOvkLcJY9rzJNbEXsiMIk4GFjmAZ3D5sASxDn6s8ce9F9xVmoix1M6jLTvlp6oPORp3ORZpC0krdNRqCx5gOAGfm9cuHr6gCEH8sbIi0SDXtzWLr2xuv89jy6ulQOa57f3A9cudlZq1YrO9ooUGGZjGP4hij8Nq5U0KvGLO4noT5fPJDhlGffB1x6aq/AtJZ/ydqPUEftqUCZ/dVAjqFXgXall/J+o5sP/bUqMv8A+UOOk/iNKRbVj0KrPw0xWN6Q1d6oKInLyYvxWBH5dpY5DXl/cV5gi6Kb8KhqYQppNtbN9E1ui4cDinZo2jDPtFCAD9yLCc/A0XeTednvNR63/K0SlN/cziHuHgi9VSGXFM8W5XfsXhX/AO6lBGLpKCQ3NvhZZaalq55OtLRzcCXC82jIhpPOl6Zxo1YAsyfx4A5f++KOyLt74Pi68wytjqlX0AunLj4vrJJtpiv0bpoSQ/7QOKifvBr6z2ec5StAS6kS+ebn1CZ+4M0Av3IrWptLGpij5/x/YetyP1xLCcqL++UEYIkRyBuIJiPK9x8HXC1viLv8SMH5fRaUrHQJqDp5LJ8oohjuIxz9gsphyAYZt+/tG4f6rdigHdnqaiHvxc/tDrTj2hN3yClZJyBYWZ75eeAwRX9N1pcu0D3NRS9T1JRDp/iis5AZ/WA6M/txoum/COXcUtwaavjSFIXfpuU/Y1C2gKWSl+rUFBwCL49oY4nx11UweMB48vCfuPgQoz6SJ2GktPnlXBYjwj11LdSJZLrpzq3p7hwkfvB8apS/2wulT/W9fxx6H0BdOzGpKijnKl1zZVTUKciFzerThmYmMnPhtnpzewLzz/JwFw6cpR5XEqdDt8JyDS1YPliajUcP4uqL5exGG/q1YBZkh+M0YAfBHBdLWajNLL2hug0b5CIj8Tq2mFYF7UpL/WGh6NofuKAAziBUUNFxA3gPdy9CLXPpt/pN/IrayeppP8Qam9d16SVZoK0z1OAXL0QfTwjfX4jcjkpf9jIW1+5EAcfBr0Qel8WtV5K5TIZeySHEtxxRf2eXBHZ6S9dVNX0kjoKvpk07XoivRSlPgjdfjTzF2DfpJH5/cmPgKQNbxRzT19FJ3crjcdc/Am6sImU87e8YBb+91jNo8GtSLfKSYd7K4kRP2xSIluTbn8/ycUTOl/B6aaadlxcKfdaj/Uuzudy//ZypgJ/cjTMZ61P6vqB04t021ROTzWC0rdQshBsvRh4e2VD+ZK/fH3JT6phxjqq6peI4nEk9AB9F7JHBE3U8C3mrAXrLM6caJOcTyadomnEPDPaIAlLn5uOIAFhyNMnw8wAyEMU4wffvwm9Tv+/TlgkMqea/Y+PXEkBiw34yCewT9vMfwAijFafU/rdrU6opN62opJ/NI2XyVmaSu+AsYx7RPx9Yzh4d+OSopLSFZHz3nu8uuZUSfhvUxbv0qMsz3D3AeAR9XuCAP4Ivqfh1JRHXWO7yX+kZ+I3Pvsq91TPU4gGlvXZUurXVNXFScy4KHWo6jdjfbHbypYp/vjHF3UBoT1LVum8ZKKQIo5q473jGqFnIbZf7HrUA+2AEdG6+ETqSkW89l002gom0zUf5ubJSAXuhnxmHmhwmL64BxnmvLx3fvO58a+uPUdXnnz4ySKlgzS5fs04PRA+wCLB1fUuFoWBgHMm5+Ax8ytDKSP8A7hLj5LY6mx2im0/Cd8NXhFRLSTOJrTRiTmfSe4MZXMCB9rajqztWOgy3IJfgp0lOlXryJeiV1krBtmT9+QRiUf3ARl2mdNeoWr5k+TFiK+XEfnvESksr74wABFnMvg5NZ7xKU5WZORET+dcHhuK4fY38v3IgSy68TzE+WoAfKyktjDRaOP45+qnr14VO+CVJ4qthb+3VAoPUSU3tIzjS/wCkYwFf6qKarDWxq0rj/wCoL8VUQR+abjgNf+6ABFzNPgkdWDjLioV0C1/5W+qJ/wD4Uo4lzT4G29CiXGobu0ShO9fyMhWq/eEEqIwloIj4SPr+626al26wa+vz7U6rxnU70ve1H55xWDVGffNEOOuw/THpMj8C5U3/ADhqHayf2NLGm/8AygR26HwLSaX8oajlB/7GlZFf31Y42DiFKBbV8isXU0zt1ePg2tUTnf8AtMppWshKFFYUJJOjWLDZCnNwRGSFyqgY/wA76MYR/Vz78bFih9JulOmNKVEOdJsL6c9rnZw55a6HowFGGTkDEsGIJ8MQB9X1he9F8RzdQY3SuMWys2atI1bpCEI0rJIQhBEhCEESEIQRIRVlR6g7c0veFlsm6qlkqifSSjk8yk/Egvc3cAjH3BC2Rebh+UP0xaAxxi17XXDTthb5aaaBrHysLQ8Xbcbja48rhda903TlTpOVf6fQupH5pYkAaD7g4pOtdBukOvd3xzZCnUR53nmc0BG2Gf7MIEftVrAoVBXRFsFtEV6VVKkMuXavFAJmGy2xG9EwmzBPoAPvd2OewasLXOFek2yfiagpOoz8Ap0dQtokvMTHPgDAfEQOru9XV54xZWMYfA+2bbqY7gXEbajA62nVtfw/1f8Aj57LMVwvA6Wjd5mqLZXOqmnD58fROJJLmnL/AJpeiN/fFFRNuirwgmlhWc42Jq9DUTVM3ia3tTiHaVld+Z7etwJHP8nSMY/jj1SfH1hpVkV1FUDsmbGxAVM5UrVmSLLKLl3hjF6oqxo1FDrQgblbC1FbVg1BNmEp2TEpECJR3eJIlygkRoePHrCCYf0xPPE5Y/DIb+RF1Ah4ZJUtMsTLNG5uAB5Fxs2/le/ReZ784WprJ7IZ7524ddM9yxHfJ3wluUF004qPfMTi60Yspy9IUIQA9sY43xpovTc1AoabO6i05HlCpJ/4NVakOAoa6rTALy4lqAdAz5A4j4TwGMHXhLgOJaz3voi6laH2ErW0FRNjoa3mLjm6p21IajOTA6ZjyAaaAYcumOWjsTaS0jM6ujElPpulU+46OLIUeMxnKmT6SakhMPjyhodvOQ0+119c8pyja/irK2HQ/IG3Mj3nPq03HvWufhU3D5mh7bOcAbXBDgdjg2PqFwNRF8aoo+Se29maZPqq5T6TvJERcuKdqTT6eeXDF0ElccsMxBzGGcu6OPOJyHayiq2X+P8AxrqdvQtO31jQx7prEjUf40oKDurxA9woG10YDwxj0PpJHZrVrSK97QKHs6llzgYS8Mm6ND4xUgAD8eEULdODhiHbGPawwBh0RLH5zttplormaetaegp1IQYctlS7Qn20ZRfDiM4ARgFP1z88pC7IoxpeJx00N4cAjJ5n38h5C3mSvZeFVDqr8LKw94DbSeR6WO5Xnk76b/CP6rEpTfXKdqtzR/CXJ08crA1tScvj7MDel3TR4f4x9MWVb/wNVDt8ilFz7yvjsL/orGjJby/qZm7why+7GqKS1VU7XjGdVdDWyuJUTUSaYnmrRtBMpbgO2GQBnhGOf1Qx21utT1prm1AfRTS6rWqp0/mOZHtENCtlPhIQgyLH2xSD5+njGgcYcbNjcGg7W/cqXJwCtiD3SwuOj2uen1HLzJUMozweWkChusizKB6Ol88+nGufH7BwhA/ci9KboWiKQT8vR9IMjGT+abm4pNL/AEADKIRd2/NN2TTSc62pypxtPo5Cdm5IA5MSaOcwgLH6SQwi4y/KDHqD547W1d2Gu7jL5RMFP1CiajywHJFjikAUBaCcxecsOYh8OjvhD2pcI0vqe8foc67lj/D6llKKvuz3RNtXK/T18t+qsGEcFycEbQ3KHJefIkhGSYoONn3CwSyGL/uiC2SvpQ1+6cW1FQR6yZCBXyR5asjZMLN2wGdnj6sTAxgXta4NJyfssGUs0kLqhjCWNIBPIE3sD62NvRWRCEIyWhIQhBEhCEESEIQRIQhBEhCEESPieemTEcwcdskk+uc/NKPtFEaqqym0UGlty0rpEVDcheRSbeKRktwotUMIFB/08AFTH5/fEH6YwkeI2Fx5KVRUrq6pZTs3cd+g5n0AyfIErJmo6nHpwoxl1ks4lBLs6VgYtI/VNfQFoHP4fkpI/rrBR6CUDWTbXlGMdatAJck+N5C4n9EjASFME/q9n+iKQrTRJY9xoB0ZaXpdYidPFxhTcb45XGFkqAF+hHtCN258BSD3Yg/g5bnSe7cudqHdT/GlJrBqEhJ3mM5I4zLH7J+7KfuyGXKIEAdT1GmTGsdf1D97rtOLSU/HOBd/SOc40r7ZaARE/wBkYc6+lwAB8/JRq6jo1MPhIqPenlwRokJLSRM9YqPCUWXKaRcHrGLp7WMcnVEztmpK9FtqUs0qQPa2nRGKagdm40JqdoTmHkCI3DgzmDP0CgQAccvvRxLmJmly8JXSLa6pk6tPNuIJOKMkAwHGaFYIARgF+Xzhn92Oru40PWijUEjvRRDPI6gqsOmQ5tpM9ssowc8jk/uA9W6T+mQwdiURH2DJA72deeoGP7K6CmaDUULoHWqRSflA20udd40nbOkkjkSLEgLs/CF1c61FXtBWLJWKErU6npljjtTlOZoz1fLEfcwOF9YQPdjcLO1NlPtKJlaE5KVChJAkSkl9gsoEsQBl/MGMNa5WD8I1O0VqdtSom9NjUVtLFaSUjeXK3N4g4YZdwo3MI/cz+tGq7H3vpG+lFIqsphan35lAk4t8zuJ6FRwnmWYH6PN0D7wZyFE2md/1curc2I8xbkuW43TO/l6hdC3wRmRsnVshP6hyJAsPKw3UoVUczKq1Q10cWZJzbG1S2Eiy4AmQeYQYPKX1iA/vRANQSmT6kpezycXE+v3sCJYGX/VJHylw+yIkvZ/rwxJHS6DSVdBotU1EeNHhcA9e4yJOlOTWhLLnwOP+ubMBQAS888hC7nnphJStEan731q81R/G9O2+mVS7OUkcjkvy32y07MgYB9vaK9ePovyziRM4FuiO1ybfc/JU/DIJI5BVVeoRxN1A2uRckMsCWj2zexIuL8squ9JKk6ymp+42nhwlIpAvOMWM/n/Nz3SftCRnh/sI1HqN/wAHq5v+Z71/uZsYz1Y22YtLlxrd3qtk3HoUJK/5aTzhykw1QT1YZnCGL0pG6V9iNbXvqZlf9L9eVYzriVDY7UU4noz+PQYWejHtz/pziLTXjjkgdjTf4EXC6PjTGVtZQcZgy2bQHG1jrjLWuuATa4AIznKrjwcv+DtP/OFb/wC3Fe+EdopOwp6RvpTBkmyoUDuU2mKyZ7ZpkpljPIM4/SUIgXD604m/g4HJMfYQ9uTqCd8ioFkzitzrKkMBQg8Q/wA04jmshQp1B1bTGmu1Z4HNejcZOdTLCJbidlL2xlg3x9gI8TDhYdvpD78an54e1o3IFvW4UuB74O28st7Ma95eTsGWOrVyt64vbnZd/q2qPy20NeV5xGJz4ip5yNlL5sZ56UX/AK4tXSV/g0W3/wA303/hFda3GhtpLR2upNvDiQgGytiOX0AIVkYS+6XFiaSFAVGmm3Iiu4xJyfudP/lG5lxW2P8AQPqqeqLHdlg6MWaal1vTu22X51FOBy+nme07cEIV9yXYpgFw82DfwEc4Gfp+Slmg+uYGM46Z5zsFrDr2xx5UiGWpNw9mlOfqwyUpgA/mTmHB/qgRZZtNUXqfv9U4anCJ2pa2KQlmQlJnE0ncdFU9xUduEDAPgABZRXrx8w/XwiktYNpGfTnUVu722rbjkPIO+wqKNWHKt1QD05PUcIY+sstSEX6OEa6gu1fimjDT8tj81acAigMR7PyOIknjJsQNIkNnsOrVfDQ0W07kheicI6KkaqZa2plrq2nz5KG12SgWpzfpLHLKUd7FoCCLhfOnNcxxY8WIwR6JCEI9WKQhCCJCEIIkIQgiQhCCJFdVNYKy9avBtQ1fbGnXVzOlKRqtWiAYbPh8U/PFiwjFzWvFnC63Q1E1M7XA8tO1wbfRRtVQdIqaT8glDCnNp+RAE8m+cvRbYZ5SBw/olEPbtM+n1oVEOjPaCl0S1NPcKOJQgKMBP6cgxakI8dExxBc0G3ks462qhDmxyuaHb2cRf1zlVUbpf09qj+YUWfpc0/17s0Idz7/aiZraJpBypuVHONPoFrHsFkeLlJIDU+2DshwFEihBsbGey0D3L2SuqptPeyudp2u4m3pc49yg1EWctdbpQsVUJRLUxjXl7aiSInbAZL6nZiLPOkzTq/rxvKi1jSQtNl6U1vNOQZ/z8uMEXFCPDDGRp0i3LAwtjOJ10chmZM8PO51OufU3uq1ZrB2dp5kdKdarctJKF7CXJxlMiZhi3bnmDfNFOYzMReeWQv8AxjkUjYqzNCOoXyjLcMLKvLlw3kCMBQ/Vw7sosKEO6jH6RjyCwdxCseHNdM4h2/iOfXOenooFWdk7R185SfK2t+xva2ROxI5wRhNnIH2pR04tMun3kPFk7SU7yPtuW5SW1x+p2YtWEDDGclov6Bes4jWRNEcczg0bAOcAPTKqNFpR05oD+Zb7QU2SL9URE9pKjqTopr8S0jTjUzIfXJM3JAJi/uglKUd/CPWxRsN2NA9y8qOIVdWNM8rnDzcT9SoLW1m7V3FXkuld0E0vqhMVskmryJGzLB1ebq+uKOE1WGs3TzY4MbBbxjQIXUkBKxKkIkUWoAAeUswB80+qLHhHndR31aRfrYLEVtUIxCJXaBsNRsOd7Xt8lXVMWDsvRLyTUVJWwYWR0IliWqRowFDl5sfWH9Ecqt7MWquIvIdK9t+yvqhMVskmr04Tplg+1E7hDuo7adIt6BZGvqzL35ldr21aje3S97qH0JbC31uQKCaEpJsYil0gb5aAmRQB4ZYdMvrjiYQhGbWhg0tFgtEssk7zJK4ucdyTcn3pCEI9WtIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEESEIQRIQhBEhCEEX/9k=', logoRightB64:'', logoAlt:'Arcadia',
+  guideTitle:{ es:'Medidas de Tendencia Central y Dispersión', en:'Measures of Centre and Spread' },
+  courseName:{ es:'Matemáticas · 2° de Secundaria', en:'Mathematics · 2° de Secundaria' }, filePrefix:'mat2_t11_g02', schoolSlug:'arcadia'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_mat2_t11_g02__lang';
+var TX = {
+  es: {
+    'wtitle':'Medidas de Tendencia Central y Dispersión','wcourse':'Matemáticas · 2° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Measures of Centre and Spread','wcourse':'Mathematics · 2° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_mat2_t11_g02__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_mat2_t11_g02__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_mat2_t11_g02__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_mat2_t11_g02__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
+  }
+
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+    // ── SAVE / SHARE — iOS-safe download (LIAXA iOS PDF fix, Rule 12) ─────────
+  //   iOS Safari ignores the <a download> attribute, so a plain download fails
+  //   silently on iPhone/iPad. iOS -> native share sheet (-> "Save to Files"),
+  //   with an inline-open fallback; everything else -> <a download> click.
+  //   Runs synchronously off the tap so iOS accepts navigator.share().
+  var _fname   = 'mat2_t11_g02_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
+  var _pdfBlob = doc.output('blob');
+
+  function _restorePdfBtn(){ btn.innerHTML = '\u2b07 &nbsp;' + t('btn-pdf'); btn.disabled = false; }
+  function _openPdfInline(b){
+    var u = URL.createObjectURL(b);
+    var w = window.open(u, '_blank');
+    if (!w) { window.location.href = u; }
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
+  }
+
+  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (_isIOS) {
+    var _pdfFile = new File([_pdfBlob], _fname, { type:'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files:[_pdfFile] })) {
+      navigator.share({ files:[_pdfFile], title:_fname })
+        .then(_restorePdfBtn)
+        .catch(function(e){
+          if (e && e.name === 'AbortError') { _restorePdfBtn(); return; }
+          _openPdfInline(_pdfBlob); _restorePdfBtn();
+        });
+      return;
+    }
+    _openPdfInline(_pdfBlob); _restorePdfBtn();
+    return;
+  }
+
+  var _dlUrl = URL.createObjectURL(_pdfBlob);
+  var _dlA   = document.createElement('a');
+  _dlA.href  = _dlUrl; _dlA.download = _fname;
+  document.body.appendChild(_dlA); _dlA.click();
+  setTimeout(function(){ document.body.removeChild(_dlA); URL.revokeObjectURL(_dlUrl); }, 200);
+  _restorePdfBtn();
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  var REDRAW = [];
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 230;
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  function d2(v){ return String(Math.round(v*100)/100); }
+  function sumA(a){ var s=0,i; for(i=0;i<a.length;i++) s+=a[i]; return s; }
+  function mediaA(a){ return sumA(a)/a.length; }
+  function ordA(a){ return a.slice().sort(function(x,y){ return x-y; }); }
+  function medianaA(a){ var s=ordA(a), n=s.length; return (n%2) ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2; }
+  function modaA(a){
+    var c={}, best=a[0], bc=0, i, k;
+    for (i=0;i<a.length;i++){ k=String(a[i]); c[k]=(c[k]||0)+1; if (c[k]>bc){ bc=c[k]; best=a[i]; } }
+    return best;
+  }
+  function rangoA(a){ var s=ordA(a); return s[s.length-1]-s[0]; }
+  function desvA(a){ var m=mediaA(a), s=0, i; for(i=0;i<a.length;i++) s+=Math.abs(a[i]-m); return s/a.length; }
+  function lista(a){ return a.join(', '); }
+  function optsN(c, cands, fmt, step){
+    var out = [fmt(c)], i, k = 1, v;
+    for (i=0;i<cands.length && out.length<4;i++){
+      v = cands[i];
+      if (v === null || v === undefined || v < 0) continue;
+      if (out.indexOf(fmt(v)) < 0) out.push(fmt(v));
+    }
+    while (out.length < 4 && k < 90){
+      v = c + k*step; if (out.indexOf(fmt(v)) < 0) out.push(fmt(v));
+      if (out.length < 4){ v = c - k*step; if (v >= 0 && out.indexOf(fmt(v)) < 0) out.push(fmt(v)); }
+      k++;
+    }
+    return out;
+  }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = T(spec.correct);
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ============================================================
+     DATOS CON SEMILLA
+     ============================================================ */
+  var vsel = [], vi, SP, i, z;
+  for (vi=0; vi<10; vi++) vsel.push(Math.floor(rng()*2));
+
+  var CTX5 = [
+    { lead:{ es:'Diego anotó estos puntos en sus últimos 5 partidos de basquetbol',
+             en:'Diego scored these points in his last 5 basketball games' },
+      u:{ es:'puntos', en:'points' }, u1:{ es:'1 punto', en:'1 point' },
+      reg:{ es:'partido', en:'game' } },
+    { lead:{ es:'Sofía anotó los minutos que tardó en llegar a la escuela durante 5 días',
+             en:'Sofia wrote down the minutes she took to get to school over 5 days' },
+      u:{ es:'minutos', en:'minutes' }, u1:{ es:'1 minuto', en:'1 minute' },
+      reg:{ es:'día', en:'day' } },
+    { lead:{ es:'Una panadería anotó los panes que sobraron al cierre durante 5 días',
+             en:'A bakery wrote down the loaves left over at closing time over 5 days' },
+      u:{ es:'panes', en:'loaves' }, u1:{ es:'1 pan', en:'1 loaf' },
+      reg:{ es:'día', en:'day' } }
+  ];
+  var CX = CTX5[Math.floor(rng()*CTX5.length)];
+  function un(){ return T(CX.u); }
+  function fu(v){ return (v === 1) ? T(CX.u1) : d2(v)+' '+un(); }
+
+  var CTX7 = [
+    { lead:{ es:'En una biblioteca se anotó cuántos libros se prestaron cada día durante 7 días',
+             en:'A library wrote down how many books were lent each day over 7 days' },
+      u:{ es:'libros', en:'books' }, u1:{ es:'1 libro', en:'1 book' } },
+    { lead:{ es:'Un puesto de jugos anotó cuántos vasos vendió cada día durante 7 días',
+             en:'A juice stand wrote down how many cups it sold each day over 7 days' },
+      u:{ es:'vasos', en:'cups' }, u1:{ es:'1 vaso', en:'1 cup' } }
+  ];
+  var CY = CTX7[Math.floor(rng()*CTX7.length)];
+  function un7(){ return T(CY.u); }
+  function fu7(v){ return (v === 1) ? T(CY.u1) : d2(v)+' '+un7(); }
+
+  /* lista de 5 registros: la media es un entero exacto */
+  var D5 = [
+    [-3,-1,-1, 2, 3],
+    [-2,-2,-1, 2, 3],
+    [-3,-1,-1, 1, 4],
+    [-3,-2,-2, 3, 4],
+    [-2,-1,-1, 1, 3]
+  ];
+  var b1 = ri(9,15);
+  var S1 = shufA(D5[Math.floor(rng()*D5.length)].map(function(x){ return b1 + x; }));
+  var m1 = mediaA(S1), md1 = medianaA(S1), mo1 = modaA(S1), rg1 = rangoA(S1), dv1 = desvA(S1);
+
+  /* lista de 7 registros */
+  var D7 = [
+    [-4,-2,-2,-1, 1, 3, 5],
+    [-5,-2,-2,-1, 2, 3, 5],
+    [-4,-3,-3, 1, 2, 3, 4],
+    [-6,-2,-1, 1, 1, 3, 4]
+  ];
+  var b2 = ri(14,20);
+  var S2 = shufA(D7[Math.floor(rng()*D7.length)].map(function(x){ return b2 + x; }));
+  var m2 = mediaA(S2), md2 = medianaA(S2), mo2 = modaA(S2), rg2 = rangoA(S2);
+  var S2sin = ordA(S2).slice(0,6);
+  var md2sin = medianaA(S2sin);
+
+  /* dos equipos con la misma media y distinta dispersión */
+  var mT = ri(14,20);
+  var sA = 1 + Math.floor(rng()*2);
+  var sB = 3 + Math.floor(rng()*2);
+  var TA = shufA([-2,-1,0,1,2].map(function(x){ return mT + sA*x; }));
+  var TB = shufA([-2,-1,0,1,2].map(function(x){ return mT + sB*x; }));
+  var rgA = rangoA(TA), rgB = rangoA(TB), dvA = desvA(TA), dvB = desvA(TB);
+
+  /* datos del sexto registro y del ajuste por parejo */
+  var extra6 = b1 + 6;                 /* la media de los 6 registros queda en b1+1 */
+  var addK   = ri(2,4);
+
+  /* distancias ya medidas (cierre) */
+  var DD = [[4,1,0,3,2],[5,3,1,4,2],[2,0,1,1,1],[6,2,3,5,4]];
+  var dist9 = shufA(DD[Math.floor(rng()*DD.length)]);
+  var dm9 = mediaA(dist9);
+
+  /* registros iguales (cierre de desviación media) */
+  var igual = ri(11,18);
+
+  /* rondas del manipulativo de la media */
+  var mdR = [], tg, base, kk;
+  for (i=0;i<3;i++){
+    tg = ri(6,12);
+    base = [tg-2, tg-1, tg, tg+1, tg+2];
+    kk = Math.floor(rng()*5);
+    base[kk] = base[kk] - (2 + Math.floor(rng()*2));
+    mdR.push({ t:tg, v:shufA(base) });
+  }
+
+  /* rondas del manipulativo de la desviación media */
+  var DW = [[-2,-1,-1,1,3],[-1,-1,0,1,1],[-3,-1,-1,2,3],[-4,-2,-1,3,4],[-5,-2,-1,3,5]];
+  var dwPick = shufA([0,1,2,3,4]).slice(0,3), dwR = [];
+  for (i=0;i<3;i++){
+    var bw = ri(9,14);
+    dwR.push(shufA(DW[dwPick[i]].map(function(x){ return bw + x; })));
+  }
+
+  /* objetivos del manipulativo de rango */
+  var rgTargets = shufA([8,12,16,20]).slice(0,3);
+
+  /* valores fijos del manipulativo del dato extremo */
+  var extF = [b1-3, b1-1, b1, b1+1, b1+2, b1+4];
+
+  /* ============================================================
+     IDEA 1: la media como reparto en partes iguales
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'La media: repartir el total en partes iguales', en:'The mean: sharing the total out in equal parts'}),
+      '<p>'+T({
+        es:'La media aritmética responde a una pregunta muy concreta: si todo lo que se registró se repartiera en partes iguales, ¿cuánto le tocaría a cada registro? Por eso la media casi nunca coincide con alguno de los datos de la lista. Es el valor que tendrían todos si ninguno tuviera más ni menos que los demás.',
+        en:'The arithmetic mean answers a very concrete question: if everything that was recorded were shared out in equal parts, how much would each record get? That is why the mean almost never matches one of the values in the list. It is the value they would all have if none had more or less than the others.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Como se construye a partir del total, la media siente cualquier cambio en cualquier dato: si un registro sube, el total sube y la media sube con él. Esa sensibilidad la vuelve muy útil para resumir una lista completa, y al mismo tiempo la hace frágil cuando aparece un dato disparado del resto.',
+        en:'Since it is built from the total, the mean feels any change in any value: if one record goes up, the total goes up and the mean goes up with it. That sensitivity makes it very useful for summarising a whole list, and at the same time it makes it fragile when one value shoots far away from the rest.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Registro',en:'Record'})+'</div><div class="deftxt">'+T({es:'Cada valor anotado en la lista de datos.',en:'Each value written down in the data list.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Total',en:'Total'})+'</div><div class="deftxt">'+T({es:'Lo que se junta al reunir todos los registros.',en:'What you get when all the records are gathered together.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Media',en:'Mean'})+'</div><div class="deftxt">'+T({es:'Lo que le toca a cada registro en un reparto parejo.',en:'What each record gets in an even share out.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Compensación',en:'Trade off'})+'</div><div class="deftxt">'+T({es:'Lo que un registro tiene de más, otro lo tiene de menos.',en:'What one record has too much of, another has too little of.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p>'+T({
+        es:'Conocer la media y saber cuántos registros hay equivale a conocer el total. Por eso, si se pierde un dato de la lista, todavía se puede recuperar.',
+        en:'Knowing the mean and how many records there are is the same as knowing the total. That is why, if one value of the list gets lost, it can still be recovered.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 1: llevar la media al objetivo ---- */
+  (function(){
+    var wrap = widget('media');
+    var st = { r:0, v:mdR[0].v.slice(), done:false, lock:false, hit:false };
+    var MX = 20;
+    function draw(){
+      var cv = document.getElementById('mdCv'); if (!cv) return;
+      var G = fitCv(cv), ctx = G.ctx, W = G.w, H = G.h;
+      var L = 34, Rm = 12, Tp = 14, B = 26;
+      var pw = W-L-Rm, ph = H-Tp-B, n = st.v.length, bw = pw/n, q, y, bh;
+      var col = cssv('--green'), gold = cssv('--gold'), bd = cssv('--border'), tx = cssv('--text3');
+      ctx.font = '500 10px "IBM Plex Sans", sans-serif';
+      ctx.textAlign = 'right'; ctx.fillStyle = tx; ctx.strokeStyle = bd; ctx.lineWidth = 1;
+      for (q=0; q<=4; q++){
+        y = Tp + ph - (q/4)*ph;
+        ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(W-Rm,y); ctx.stroke();
+        ctx.fillText(String(q*MX/4), L-5, y+3);
+      }
+      for (q=0; q<n; q++){
+        bh = Math.max(0, Math.min(st.v[q], MX)/MX)*ph;
+        ctx.fillStyle = col; ctx.globalAlpha = .78;
+        ctx.fillRect(L+q*bw+7, Tp+ph-bh, bw-14, bh);
+        ctx.globalAlpha = 1;
+        ctx.textAlign = 'center'; ctx.fillStyle = tx;
+        ctx.fillText(String(st.v[q]), L+(q+.5)*bw, Tp+ph+15);
+      }
+      if (!st.done){
+        y = Tp + ph - (mdR[st.r].t/MX)*ph;
+        ctx.strokeStyle = gold; ctx.lineWidth = 2; ctx.setLineDash([6,4]);
+        ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(W-Rm,y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.textAlign = 'left'; ctx.fillStyle = gold;
+        ctx.fillText(T({es:'objetivo',en:'target'}), L+3, y-4);
+      }
+      y = Tp + ph - (mediaA(st.v)/MX)*ph;
+      ctx.strokeStyle = col; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(W-Rm,y); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.fillStyle = col;
+      ctx.fillText(T({es:'media',en:'mean'}), W-Rm-3, y-4);
+      ctx.strokeStyle = tx; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(L,Tp+ph); ctx.lineTo(W-Rm,Tp+ph); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(L,Tp); ctx.lineTo(L,Tp+ph); ctx.stroke();
+    }
+    function upd(){
+      var mv = document.getElementById('mdMedia'), fb = document.getElementById('mdFb');
+      if (mv) mv.textContent = d2(mediaA(st.v));
+      var dif = mediaA(st.v) - mdR[st.r].t;
+      if (fb){
+        if (Math.abs(dif) < 0.0001){
+          fb.innerHTML = '<span class="okmsg">'+T({
+            es:'¡La media cayó justo en el objetivo! Fíjate en que subiste unos registros y bajaste otros: lo que se quita de un lado aparece del otro.',
+            en:'The mean landed right on the target! Notice that you raised some records and lowered others: what is taken from one side shows up on the other.'
+          })+'</span>';
+        } else if (dif < 0){
+          fb.textContent = T({ es:'La media va '+d2(-dif)+' por debajo del objetivo. Sube algún registro y observa cómo se levanta la línea verde.',
+                               en:'The mean is '+d2(-dif)+' below the target. Raise some record and watch the green line climb.' });
+        } else {
+          fb.textContent = T({ es:'La media va '+d2(dif)+' por encima del objetivo. Baja algún registro y observa cómo cede la línea verde.',
+                               en:'The mean is '+d2(dif)+' above the target. Lower some record and watch the green line drop.' });
+        }
+      }
+      draw();
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Lleva la media al objetivo', en:'Bring the mean to the target'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Ya lo tienes: la media no depende de un registro suelto, depende del total. Puedes mover los registros como quieras y, mientras el total no cambie, la media se queda donde está.',
+            en:'You have it: the mean does not depend on a single record, it depends on the total. You can move the records around as you like and, as long as the total does not change, the mean stays where it is.'
+          })+'</span></div></div>';
+        return;
+      }
+      var cells = '', q;
+      for (q=0; q<st.v.length; q++){
+        cells += '<div class="mdcell"><button class="mdbtn" onclick="mdAdj('+q+',1)">▲</button>'+
+                 '<button class="mdbtn" onclick="mdAdj('+q+',-1)">▼</button></div>';
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Lleva la media al objetivo', en:'Bring the mean to the target'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Toca las flechas para subir o bajar cada registro. La línea verde es la media de los cinco y la línea dorada punteada es el objetivo. Ajusta hasta que las dos coincidan.',
+            en:'Tap the arrows to raise or lower each record. The green line is the mean of the five and the dashed golden line is the target. Adjust until the two lines meet.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'Objetivo: que la media quede exactamente en ', en:'Goal: get the mean to land exactly on '})+'<b>'+mdR[st.r].t+'</b></div>'+
+          '<canvas class="gcanvas" id="mdCv"></canvas>'+
+          '<div class="mdgrid">'+cells+'</div>'+
+          '<div class="statrow">'+
+            '<div class="statcell"><div class="statlbl">'+T({es:'Media actual',en:'Current mean'})+'</div><div class="statval" id="mdMedia">'+d2(mediaA(st.v))+'</div></div>'+
+            '<div class="statcell"><div class="statlbl">'+T({es:'Objetivo',en:'Target'})+'</div><div class="statval alt">'+mdR[st.r].t+'</div></div>'+
+          '</div>'+
+          '<div class="rfb" id="mdFb"></div>';
+      upd();
+    }
+    window.mdAdj = function(k, s){
+      if (st.done || st.lock) return;
+      var nv = st.v[k] + s;
+      if (nv < 1 || nv > 20) return;
+      st.v[k] = nv;
+      upd();
+      if (Math.abs(mediaA(st.v) - mdR[st.r].t) < 0.0001){
+        st.lock = true;
+        setTimeout(function(){
+          st.r++;
+          if (st.r >= 3){ st.done = true; st.lock = false; render(); return; }
+          st.v = mdR[st.r].v.slice(); st.lock = false; render();
+        }, 1800);
+      }
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P1 ---- */
+  (function(){
+    if (vsel[0] === 0){
+      SP = {
+        title:{es:'El reparto parejo', en:'The even share out'},
+        q:{ es: T(CX.lead)+': '+lista(S1)+'. ¿Cuál es la media de esos registros?',
+            en: T(CX.lead)+': '+lista(S1)+'. What is the mean of those records?' },
+        options: optsN(m1, [md1, mo1, m1+2], fu, 1),
+        correct: fu(m1),
+        hint:{ es:'Reúne todos los registros en un solo total y después repártelo en partes iguales entre la cantidad de registros que hay en la lista.',
+               en:'Gather all the records into a single total and then share it out in equal parts among the number of records in the list.' },
+        exp:{ es:'Al juntar los cinco registros se obtiene un total de '+sumA(S1)+', y al repartirlo en cinco partes iguales a cada una le tocan '+fu(m1)+'.',
+              en:'Putting the five records together gives a total of '+sumA(S1)+', and sharing it out in five equal parts gives '+fu(m1)+' to each one.' },
+        showWork:true
+      };
+    } else {
+      var falta = S1[4], cuatro = S1.slice(0,4);
+      SP = {
+        title:{es:'El registro borrado', en:'The erased record'},
+        q:{ es: T(CX.lead)+', pero uno de los registros se borró: '+lista(cuatro)+'. La media de los 5 registros fue '+m1+'. ¿Cuál era el registro borrado?',
+            en: T(CX.lead)+', but one of the records was erased: '+lista(cuatro)+'. The mean of the 5 records was '+m1+'. What was the erased record?' },
+        options: optsN(falta, [m1, falta+2, falta-2], fu, 1),
+        correct: fu(falta),
+        hint:{ es:'Con la media y la cantidad de registros puedes reconstruir el total de la lista completa; después quítale lo que aportan los registros que sí se conservan.',
+               en:'With the mean and the number of records you can rebuild the total of the whole list; then take away what the records you still have contribute.' },
+        exp:{ es:'El total de los cinco registros tenía que ser '+sumA(S1)+', y los cuatro registros visibles suman '+sumA(cuatro)+', así que el registro borrado era '+fu(falta)+'.',
+              en:'The total of the five records had to be '+sumA(S1)+', and the four visible records add up to '+sumA(cuatro)+', so the erased record was '+fu(falta)+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P2 ---- */
+  (function(){
+    if (vsel[1] === 0){
+      SP = {
+        title:{es:'Un registro más', en:'One more record'},
+        q:{ es: T(CX.lead)+': '+lista(S1)+'. Después se agregó un '+T(CX.reg)+' más con '+extra6+' '+un()+'. ¿Cuál es la media de los seis registros?',
+            en: T(CX.lead)+': '+lista(S1)+'. Then one more '+T(CX.reg)+' was added with '+extra6+' '+un()+'. What is the mean of the six records?' },
+        options: optsN(m1+1, [m1, m1+2, extra6, m1+3], fu, 1),
+        correct: fu(m1+1),
+        hint:{ es:'Vuelve a armar el total con el registro nuevo incluido y recuerda que ahora el reparto se hace entre una cantidad mayor de registros.',
+               en:'Build the total again with the new record included and remember that the share out is now made among a larger number of records.' },
+        exp:{ es:'El total pasa de '+sumA(S1)+' a '+(sumA(S1)+extra6)+', y repartido entre seis registros da '+fu(m1+1)+'. Un solo registro alto empuja la media hacia arriba.',
+              en:'The total goes from '+sumA(S1)+' to '+(sumA(S1)+extra6)+', and shared among six records it gives '+fu(m1+1)+'. A single high record pushes the mean upwards.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'Todos suben lo mismo', en:'Everyone goes up the same'},
+        q:{ es: T(CX.lead)+': '+lista(S1)+'. Se detectó un error de conteo y a cada uno de los cinco registros hay que agregarle '+addK+' '+un()+'. ¿Cuál es la media corregida?',
+            en: T(CX.lead)+': '+lista(S1)+'. A counting mistake was found and each of the five records has to be increased by '+addK+' '+un()+'. What is the corrected mean?' },
+        options: optsN(m1+addK, [m1, m1+5*addK, m1+addK+1], fu, 1),
+        correct: fu(m1+addK),
+        hint:{ es:'Piensa en cuánto crece el total cuando los cinco registros crecen a la vez, y después reparte ese total nuevo entre los mismos cinco registros.',
+               en:'Think about how much the total grows when the five records grow at the same time, and then share that new total among the same five records.' },
+        exp:{ es:'El total sube '+(5*addK)+' porque son cinco registros, y al repartir ese aumento entre los mismos cinco a cada uno le toca '+addK+' de más, así que la media corregida es '+fu(m1+addK)+'.',
+              en:'The total goes up by '+(5*addK)+' because there are five records, and sharing that increase among the same five gives '+addK+' more to each one, so the corrected mean is '+fu(m1+addK)+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 2: mediana y moda
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'El centro por posición y el valor que más se repite', en:'The centre by position and the value that repeats most'}),
+      '<p>'+T({
+        es:'La mediana no se calcula repartiendo nada: se encuentra ordenando. Se acomodan los registros de menor a mayor y se busca el que queda justo en medio, con la misma cantidad de datos a la izquierda que a la derecha. Cuando la cantidad de registros es par no hay un único centro, y entonces la mediana se ubica entre los dos valores centrales.',
+        en:'The median is not worked out by sharing anything: it is found by ordering. The records are lined up from smallest to largest and you look for the one that sits right in the middle, with the same amount of data on the left as on the right. When the number of records is even there is no single centre, and then the median sits between the two central values.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La moda mira otra cosa: cuál es el registro que aparece más veces. Es la única de las tres medidas que también funciona cuando los datos no son números, por ejemplo colores favoritos o medios de transporte, porque para contar repeticiones no hace falta sumar ni ordenar.',
+        en:'The mode looks at something else: which record shows up most often. It is the only one of the three measures that also works when the data are not numbers, for example favourite colours or means of transport, because counting repeats needs neither adding nor ordering.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Mediana',en:'Median'})+'</div><div class="deftxt">'+T({es:'El registro que queda en el centro cuando la lista está ordenada.',en:'The record that sits in the centre once the list is ordered.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Moda',en:'Mode'})+'</div><div class="deftxt">'+T({es:'El registro que aparece más veces en la lista.',en:'The record that shows up most often in the list.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p>'+T({
+        es:'La mediana solo se fija en el lugar que ocupa cada registro, no en su tamaño. Por eso, estirar el dato más alto todavía más alto no la mueve de su sitio.',
+        en:'The median only looks at the place each record occupies, not at its size. That is why stretching the highest value even higher does not move it from its spot.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 2: ordenar para encontrar el centro ---- */
+  (function(){
+    var wrap = widget('centro');
+    var meta = ordA(S2);
+    var start = shufA(S2);
+    if (start.join(',') === meta.join(',')){ var tt=start[0]; start[0]=start[6]; start[6]=tt; }
+    var st = { o:start.slice(), sel:null, tries:0, done:false };
+    function render(){
+      var chips = '', q, cls;
+      for (q=0; q<st.o.length; q++){
+        cls = 'numchip' + (st.sel === q ? ' sel' : '') + (q === 3 ? ' mid' : '') + (st.done ? ' locked' : '');
+        chips += '<div class="'+cls+'" onclick="ceTap('+q+')">'+st.o[q]+'</div>';
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Ordena y encuentra el centro', en:'Order it and find the centre'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Toca dos fichas para intercambiarlas y acomoda los registros de menor a mayor. La ficha con borde verde es la que ocupa la posición central de las siete.',
+            en:'Tap two chips to swap them and line the records up from smallest to largest. The chip with the green border is the one holding the central position of the seven.'
+          })+'</div>'+
+          '<div class="goalbar">'+T(CY.lead)+': '+T({es:'acomoda la lista y observa qué registro queda en el centro.', en:'sort the list and watch which record ends up in the centre.'})+'</div>'+
+          '<div class="chiprow">'+chips+'</div>'+
+          '<button class="rverify-btn" onclick="ceCheck()">'+T({es:'Comprobar el orden', en:'Check the order'})+'</button>'+
+          '<div class="rfb" id="ceFb"></div>';
+    }
+    window.ceTap = function(k){
+      if (st.done) return;
+      if (st.sel === null) st.sel = k;
+      else if (st.sel === k) st.sel = null;
+      else { var t = st.o[st.sel]; st.o[st.sel] = st.o[k]; st.o[k] = t; st.sel = null; }
+      render();
+      var fb = document.getElementById('ceFb');
+      if (fb && st.sel === null) fb.textContent = T({
+        es:'Ahora el registro del centro es '+st.o[3]+'. Mientras la lista no esté ordenada, ese número todavía no es la mediana.',
+        en:'The centre record is now '+st.o[3]+'. While the list is not ordered, that number is not the median yet.'
+      });
+    };
+    window.ceCheck = function(){
+      if (st.done) return;
+      var fb = document.getElementById('ceFb');
+      var bad = -1, q;
+      for (q=0; q<st.o.length-1; q++){ if (st.o[q] > st.o[q+1]){ bad = q; break; } }
+      if (bad < 0){
+        st.done = true; render();
+        document.getElementById('ceFb').innerHTML = '<span class="okmsg">'+T({
+          es:'¡Orden correcto! El registro que quedó en el centro es '+meta[3]+', y ese es el valor de la mediana: tres registros quedan por debajo y tres por encima.',
+          en:'Correct order! The record left in the centre is '+meta[3]+', and that is the value of the median: three records sit below it and three above it.'
+        })+'</span>';
+        return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.o = meta.slice(); st.done = true; render();
+        document.getElementById('ceFb').innerHTML = T({
+          es:'Este es el orden correcto. El centro quedó en '+meta[3]+': cuenta cuántos registros hay de cada lado y verás que son tres y tres.',
+          en:'This is the correct order. The centre landed on '+meta[3]+': count how many records there are on each side and you will see three and three.'
+        });
+        return;
+      }
+      if (fb) fb.textContent = T({
+        es:'Todavía no. En la posición '+(bad+1)+' está el '+st.o[bad]+' y le sigue el '+st.o[bad+1]+', que es menor: esa pareja está al revés.',
+        en:'Not yet. Position '+(bad+1)+' holds '+st.o[bad]+' and next comes '+st.o[bad+1]+', which is smaller: that pair is the wrong way round.'
+      });
+    };
+    render();
+  })();
+
+  /* ---- P3 ---- */
+  (function(){
+    if (vsel[2] === 0){
+      SP = {
+        title:{es:'El valor del centro', en:'The centre value'},
+        q:{ es: T(CY.lead)+': '+lista(S2)+'. ¿Cuál es la mediana de esos registros?',
+            en: T(CY.lead)+': '+lista(S2)+'. What is the median of those records?' },
+        options: optsN(md2, [m2, mo2, md2+2], fu7, 1),
+        correct: fu7(md2),
+        hint:{ es:'Acomoda primero los siete registros de menor a mayor y después cuenta desde los extremos hacia adentro hasta llegar a la posición que tiene la misma cantidad de datos de cada lado.',
+               en:'First line the seven records up from smallest to largest and then count inwards from both ends until you reach the position with the same amount of data on each side.' },
+        exp:{ es:'Ordenados quedan así: '+lista(ordA(S2))+'. El registro del centro, con tres a cada lado, es '+fu7(md2)+'.',
+              en:'Once ordered they look like this: '+lista(ordA(S2))+'. The centre record, with three on each side, is '+fu7(md2)+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'El registro repetido', en:'The repeated record'},
+        q:{ es: T(CY.lead)+': '+lista(S2)+'. ¿Cuál es la moda de esos registros?',
+            en: T(CY.lead)+': '+lista(S2)+'. What is the mode of those records?' },
+        options: optsN(mo2, [md2, m2, mo2+2], fu7, 1),
+        correct: fu7(mo2),
+        hint:{ es:'No hace falta sumar ni ordenar: recorre la lista y lleva la cuenta de cuántas veces aparece cada valor distinto.',
+               en:'There is no need to add or to order: go through the list and keep count of how many times each different value shows up.' },
+        exp:{ es:'Al contar las repeticiones, el único valor que aparece dos veces es '+fu7(mo2)+'; los demás aparecen una sola vez.',
+              en:'Counting the repeats, the only value that shows up twice is '+fu7(mo2)+'; all the others show up just once.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P4 ---- */
+  (function(){
+    if (vsel[3] === 0){
+      var oA = T({ es:['La mediana','La media','El rango','La desviación media'],
+                   en:['The median','The mean','The range','The mean deviation'] });
+      SP = {
+        title:{es:'La medida que no se mueve', en:'The measure that does not move'},
+        q:{ es:'En una lista ordenada de nueve registros, el más alto se cambia por otro mucho más alto todavía y los demás se quedan igual. ¿Cuál de estas medidas conserva el mismo valor que antes?',
+            en:'In an ordered list of nine records, the highest one is replaced by another that is much higher still and the rest stay the same. Which of these measures keeps the same value as before?' },
+        options: oA,
+        correct: T({es:'La mediana', en:'The median'}),
+        hint:{ es:'Revisa cuál de las medidas se construye contando posiciones y cuáles se construyen usando el tamaño de los valores.',
+               en:'Check which of the measures is built by counting positions and which ones are built using the size of the values.' },
+        exp:{ es:'La mediana solo depende del lugar central de la lista ordenada, y ese lugar sigue ocupado por el mismo registro. Las otras tres medidas usan el tamaño del valor cambiado, así que todas se mueven.',
+              en:'The median only depends on the central place of the ordered list, and that place is still held by the same record. The other three measures use the size of the changed value, so all of them move.' },
+        showWork:false
+      };
+    } else {
+      var oB = T({ es:['La moda','La media','La mediana','El rango'],
+                   en:['The mode','The mean','The median','The range'] });
+      SP = {
+        title:{es:'Datos que no son números', en:'Data that are not numbers'},
+        q:{ es:'Se preguntó a 30 estudiantes cuál es su medio de transporte favorito para llegar a la escuela y se anotaron respuestas como camión, bicicleta o caminando. ¿Cuál de estas medidas se puede obtener con esas respuestas?',
+            en:'30 students were asked which is their favourite way of getting to school and answers such as bus, bicycle or walking were written down. Which of these measures can be obtained from those answers?' },
+        options: oB,
+        correct: T({es:'La moda', en:'The mode'}),
+        hint:{ es:'Pregúntate qué operación necesita cada medida y cuál de ellas se puede obtener sin sumar los datos ni acomodarlos de menor a mayor.',
+               en:'Ask yourself which operation each measure needs and which one can be obtained without adding the data or lining them up from smallest to largest.' },
+        exp:{ es:'Las respuestas no se pueden sumar ni acomodar de menor a mayor, así que solo queda contar repeticiones: la respuesta que más veces aparece es la moda.',
+              en:'The answers cannot be added or lined up from smallest to largest, so all that is left is counting repeats: the answer that shows up most often is the mode.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 3: el dato disparado y la medida que conviene
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'Cuando un registro se dispara', en:'When one record shoots away'}),
+      '<p>'+T({
+        es:'En muchas listas casi todos los registros son parecidos entre sí y aparece uno muy alejado del resto. Ese dato disparado no es un error: puede ser un día extraordinario, una lesión o una venta enorme. Lo importante es saber qué le hace a cada medida.',
+        en:'In many lists almost all the records look alike and one shows up far away from the rest. That runaway value is not a mistake: it can be an extraordinary day, an injury or a huge sale. What matters is knowing what it does to each measure.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La media entra al reparto con todo su tamaño, así que un registro disparado la jala hacia él y la deja lejos de lo que ocurre casi siempre. La mediana solo cuenta posiciones, de modo que apenas se inmuta. Por eso, cuando se quiere describir lo típico de un grupo desparejo, suele reportarse la mediana.',
+        en:'The mean joins the share out with its full size, so a runaway record drags it towards itself and leaves it far from what usually happens. The median only counts positions, so it hardly reacts. That is why, when the aim is to describe what is typical in an uneven group, the median is usually the one reported.'
+      })+'</p>'+
+      '<div class="callout"><p>'+T({
+        es:'Media y mediana no compiten: cuando las dos están cerca, la lista es pareja; cuando se separan mucho, hay al menos un registro tirando de la media.',
+        en:'Mean and median do not compete: when the two sit close together the list is even; when they drift far apart there is at least one record pulling on the mean.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 3: el dato disparado ---- */
+  (function(){
+    var wrap = widget('extremo');
+    var st = { x:b1, goal:0, done:false, lock:false };
+    var LO = 0, HI = 64;
+    function datos(){ return extF.concat([st.x]); }
+    function draw(){
+      var cv = document.getElementById('exCv'); if (!cv) return;
+      var G = fitCv(cv), ctx = G.ctx, W = G.w, H = G.h;
+      var L = 22, Rm = 22, yl = H-48, q, px;
+      var pw = W-L-Rm;
+      var col = cssv('--green'), gold = cssv('--gold'), bd = cssv('--border'), tx = cssv('--text3');
+      function X(v){ return L + (v-LO)/(HI-LO)*pw; }
+      ctx.font = '500 10px "IBM Plex Sans", sans-serif';
+      ctx.strokeStyle = tx; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(L,yl); ctx.lineTo(W-Rm,yl); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.fillStyle = tx; ctx.strokeStyle = bd;
+      for (q=0; q<=60; q+=10){
+        px = X(q);
+        ctx.beginPath(); ctx.moveTo(px,yl); ctx.lineTo(px,yl+5); ctx.stroke();
+        ctx.fillText(String(q), px, yl+17);
+      }
+      var dd = datos();
+      for (q=0; q<dd.length; q++){
+        px = X(dd[q]);
+        ctx.beginPath(); ctx.arc(px, yl-13, (q===6?8:6), 0, 6.2832);
+        ctx.fillStyle = (q===6) ? gold : col; ctx.globalAlpha = (q===6) ? 1 : .72;
+        ctx.fill(); ctx.globalAlpha = 1;
+      }
+      var me = mediaA(dd), mn = medianaA(dd);
+      function marca(v, c, txt, dy){
+        var x = X(v);
+        ctx.strokeStyle = c; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, yl-34); ctx.lineTo(x, yl+2); ctx.stroke();
+        ctx.fillStyle = c; ctx.textAlign = 'center';
+        ctx.fillText(txt, x, yl-38+dy);
+      }
+      marca(mn, gold, T({es:'mediana',en:'median'}), 0);
+      marca(me, col, T({es:'media',en:'mean'}), -12);
+    }
+    function meta(){
+      var dd = datos(), dif = mediaA(dd) - medianaA(dd);
+      return (st.goal === 0) ? (dif > 3) : (Math.abs(dif) < 0.5);
+    }
+    function upd(){
+      var dd = datos(), me = mediaA(dd), mn = medianaA(dd), dif = me - mn;
+      var a = document.getElementById('exVal'), b = document.getElementById('exMedia'), c = document.getElementById('exMediana'), d = document.getElementById('exDif');
+      if (a) a.textContent = String(st.x);
+      if (b) b.textContent = d2(me);
+      if (c) c.textContent = d2(mn);
+      if (d) d.textContent = d2(Math.round(Math.abs(dif)*100)/100);
+      var fb = document.getElementById('exFb');
+      if (fb && !st.lock){
+        if (meta()){
+          fb.innerHTML = '<span class="okmsg">'+(st.goal === 0 ? T({
+            es:'Ahí está: el registro dorado se llevó a la media consigo y la mediana casi no se movió, porque sigue ocupando la misma posición.',
+            en:'There it is: the golden record took the mean along with it and the median hardly moved, because it still holds the same position.'
+          }) : T({
+            es:'Perfecto: sin un registro disparado, media y mediana vuelven a coincidir casi por completo.',
+            en:'Perfect: with no runaway record, mean and median come back to almost the same place.'
+          }))+'</span>';
+        } else if (st.goal === 0){
+          fb.textContent = T({
+            es:'La media va '+d2(Math.abs(dif))+' arriba de la mediana. Arrastra el registro dorado hacia la derecha y observa cuál de las dos marcas lo persigue.',
+            en:'The mean is '+d2(Math.abs(dif))+' above the median. Drag the golden record to the right and watch which of the two marks chases it.'
+          });
+        } else {
+          fb.textContent = T({
+            es:'Todavía hay '+d2(Math.abs(dif))+' de distancia entre las dos marcas. Regresa el registro dorado hacia el montón para que la media deje de estar estirada.',
+            en:'There are still '+d2(Math.abs(dif))+' between the two marks. Bring the golden record back towards the group so the mean stops being stretched.'
+          });
+        }
+      }
+      draw();
+      if (meta() && !st.lock && !st.done){
+        st.lock = true;
+        setTimeout(function(){
+          st.lock = false;
+          if (st.goal === 0){ st.goal = 1; render(); }
+          else { st.done = true; render(); }
+        }, 2200);
+      }
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'El registro disparado', en:'The runaway record'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Conclusión del experimento: la media persigue al registro extremo y la mediana se queda cuidando el centro. Cuando las dos se separan mucho, conviene desconfiar de la media como retrato de lo típico.',
+            en:'Conclusion of the experiment: the mean chases the extreme record and the median stays looking after the centre. When the two drift far apart, it is wise to distrust the mean as a portrait of what is typical.'
+          })+'</span></div></div>';
+        return;
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'El registro disparado', en:'The runaway record'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Reto',en:'Challenge'})+' '+(st.goal+1)+' / 2</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Seis registros están fijos y el dorado se mueve con la barra. Las dos marcas verticales muestran dónde caen la media y la mediana en cada momento.',
+            en:'Six records are fixed and the golden one moves with the slider. The two vertical marks show where the mean and the median land at each moment.'
+          })+'</div>'+
+          '<div class="goalbar">'+(st.goal === 0 ? T({
+            es:'Reto: mueve el registro dorado hasta que la media quede más de 3 unidades arriba de la mediana.',
+            en:'Challenge: move the golden record until the mean sits more than 3 units above the median.'
+          }) : T({
+            es:'Reto: ahora regresa el registro dorado hasta que media y mediana queden a menos de 0.5 de distancia.',
+            en:'Challenge: now bring the golden record back until mean and median are less than 0.5 apart.'
+          }))+'</div>'+
+          '<canvas class="gcanvas" id="exCv"></canvas>'+
+          '<div class="krow">'+
+            '<input type="range" min="4" max="60" step="1" value="'+st.x+'" oninput="exSlide(this.value)">'+
+            '<div class="kval">'+T({es:'registro: ',en:'record: '})+'<span id="exVal">'+st.x+'</span></div>'+
+          '</div>'+
+          '<div class="statrow">'+
+            '<div class="statcell"><div class="statlbl">'+T({es:'Media',en:'Mean'})+'</div><div class="statval" id="exMedia">0</div></div>'+
+            '<div class="statcell"><div class="statlbl">'+T({es:'Mediana',en:'Median'})+'</div><div class="statval alt" id="exMediana">0</div></div>'+
+            '<div class="statcell"><div class="statlbl">'+T({es:'Distancia',en:'Gap'})+'</div><div class="statval" id="exDif">0</div></div>'+
+          '</div>'+
+          '<div class="rfb" id="exFb"></div>';
+      upd();
+    }
+    window.exSlide = function(v){
+      if (st.done || st.lock) return;
+      st.x = parseInt(v,10) || 4;
+      upd();
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P5 ---- */
+  (function(){
+    if (vsel[4] === 0){
+      var oA = T({
+        es:['La mediana, porque el registro disparado casi no la mueve de su lugar',
+            'La media, porque toma en cuenta a todos los registros de la lista',
+            'El rango, porque muestra la distancia entre el registro mayor y el menor',
+            'La moda, porque señala el registro que aparece más veces en la lista'],
+        en:['The median, because the runaway record hardly moves it from its place',
+            'The mean, because it takes every record in the list into account',
+            'The range, because it shows the distance between the highest and lowest record',
+            'The mode, because it points at the record that shows up most often']
+      });
+      SP = {
+        title:{es:'Retratar lo típico', en:'Picturing the typical'},
+        q:{ es:'En un taller, siete personas tienen sueldos parecidos entre sí y una octava persona gana muchísimo más que todas las demás. ¿Qué medida describe mejor el sueldo típico de quienes trabajan ahí?',
+            en:'In a workshop, seven people have similar wages and an eighth person earns far more than all the rest. Which measure best describes the typical wage of the people who work there?' },
+        options: oA,
+        correct: T({ es:'La mediana, porque el registro disparado casi no la mueve de su lugar',
+                     en:'The median, because the runaway record hardly moves it from its place' }),
+        hint:{ es:'Imagina que el sueldo más alto crece todavía más y pregúntate cuál de las cuatro medidas se quedaría prácticamente donde estaba.',
+               en:'Imagine the highest wage growing even more and ask yourself which of the four measures would stay practically where it was.' },
+        exp:{ es:'El sueldo altísimo entra completo al total y estira la media hacia arriba, de modo que la media queda por encima de lo que gana casi todo el mundo. La mediana solo mira la posición central y sigue representando al grupo.',
+              en:'The very high wage enters the total in full and stretches the mean upwards, so the mean ends up above what nearly everyone earns. The median only looks at the central position and keeps representing the group.' },
+        showWork:false
+      };
+    } else {
+      var oB = T({
+        es:['Sube y se aleja de los registros que se repiten casi siempre',
+            'No cambia, porque los demás registros la sostienen en su lugar',
+            'Baja, porque el total se tiene que repartir entre más registros',
+            'Cambia solo si el registro que se repite también se hace más grande'],
+        en:['It goes up and drifts away from the records that repeat nearly always',
+            'It does not change, because the other records hold it in place',
+            'It goes down, because the total has to be shared among more records',
+            'It changes only if the repeated record also becomes larger']
+      });
+      SP = {
+        title:{es:'Qué le pasa a la media', en:'What happens to the mean'},
+        q:{ es:'Una lista de nueve registros parecidos entre sí se modifica: uno solo de ellos se sustituye por un valor muchísimo más grande y los otros ocho se quedan igual. ¿Qué le ocurre a la media de la lista?',
+            en:'A list of nine similar records is modified: just one of them is replaced by a much larger value and the other eight stay the same. What happens to the mean of the list?' },
+        options: oB,
+        correct: T({ es:'Sube y se aleja de los registros que se repiten casi siempre',
+                     en:'It goes up and drifts away from the records that repeat nearly always' }),
+        hint:{ es:'Piensa en qué le pasa al total cuando un registro crece y recuerda que la media se arma repartiendo ese total entre la misma cantidad de datos.',
+               en:'Think about what happens to the total when one record grows and remember that the mean is built by sharing that total among the same amount of data.' },
+        exp:{ es:'El total crece y se sigue repartiendo entre nueve, así que la media sube. Como los otros ocho registros no cambiaron, la media termina describiendo mal a la mayoría del grupo.',
+              en:'The total grows and is still shared among nine, so the mean goes up. Since the other eight records did not change, the mean ends up describing most of the group badly.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 4: el rango
+     ============================================================ */
+  sec(T({es:'Idea 4', en:'Idea 4'}),
+      T({es:'Dos listas con el mismo centro no son la misma lista', en:'Two lists with the same centre are not the same list'}),
+      '<p>'+T({
+        es:'Hasta aquí todas las medidas buscaban el centro de los datos. Pero dos listas pueden tener exactamente la misma media y la misma mediana y describir situaciones muy distintas: en una, los registros están apretados alrededor del centro; en la otra, andan desparramados. Para notar esa diferencia hace falta una medida de dispersión.',
+        en:'So far every measure was hunting for the centre of the data. But two lists can have exactly the same mean and the same median and describe very different situations: in one, the records are packed around the centre; in the other, they are scattered. To notice that difference a measure of spread is needed.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'La más sencilla es el rango: la distancia que hay entre el registro mayor y el menor. Un rango pequeño avisa que todos los datos se parecen; un rango grande avisa que hay mucha diferencia entre los extremos. Su límite es que solo consulta a esos dos registros y no sabe nada de lo que ocurre en medio.',
+        en:'The simplest one is the range: the distance between the highest and the lowest record. A small range warns that all the data look alike; a large range warns that there is a lot of difference between the extremes. Its limit is that it only asks those two records and knows nothing about what happens in between.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Dispersión',en:'Spread'})+'</div><div class="deftxt">'+T({es:'Qué tan separados están los registros entre sí.',en:'How far apart the records are from one another.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Rango',en:'Range'})+'</div><div class="deftxt">'+T({es:'La distancia entre el registro mayor y el menor.',en:'The distance between the highest and the lowest record.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p>'+T({
+        es:'Reportar solo el centro de una lista deja fuera la mitad de la historia. El centro dice alrededor de qué valor giran los datos; la dispersión dice qué tan confiable es ese retrato.',
+        en:'Reporting only the centre of a list leaves out half the story. The centre says which value the data revolve around; the spread says how trustworthy that portrait is.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 4: mismo centro, distinta dispersión ---- */
+  (function(){
+    var wrap = widget('rango');
+    var st = { s:0, r:0, done:false, lock:false };
+    function equipoB(){ return [-2,-1,0,1,2].map(function(x){ return mT + st.s*x; }); }
+    function draw(){
+      var cv = document.getElementById('rgCv'); if (!cv) return;
+      var G = fitCv(cv), ctx = G.ctx, W = G.w, H = G.h;
+      var L = 22, Rm = 22, q, px;
+      var pw = W-L-Rm, LO = mT-12, HI = mT+12;
+      var yA = 46, yB = H-56;
+      var col = cssv('--green'), gold = cssv('--gold'), bd = cssv('--border'), tx = cssv('--text3');
+      function X(v){ return L + (v-LO)/(HI-LO)*pw; }
+      ctx.font = '500 10px "IBM Plex Sans", sans-serif';
+      ctx.strokeStyle = bd; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(L,yA); ctx.lineTo(W-Rm,yA); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(L,yB); ctx.lineTo(W-Rm,yB); ctx.stroke();
+      ctx.strokeStyle = gold; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.moveTo(X(mT), 18); ctx.lineTo(X(mT), H-30); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = gold; ctx.textAlign = 'center';
+      ctx.fillText(T({es:'media de los dos equipos',en:'mean of both teams'}), X(mT), 13);
+      var A = TA, B = equipoB();
+      ctx.fillStyle = col;
+      for (q=0; q<A.length; q++){ px = X(A[q]); ctx.globalAlpha = .75; ctx.beginPath(); ctx.arc(px, yA-9, 6.5, 0, 6.2832); ctx.fill(); }
+      for (q=0; q<B.length; q++){ px = X(B[q]); ctx.globalAlpha = .75; ctx.beginPath(); ctx.arc(px, yB-9, 6.5, 0, 6.2832); ctx.fill(); }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = tx; ctx.textAlign = 'left';
+      ctx.fillText(T({es:'Equipo A',en:'Team A'}), L, yA+14);
+      ctx.fillText(T({es:'Equipo B',en:'Team B'}), L, yB+14);
+      ctx.textAlign = 'center';
+      for (q=LO+2; q<=HI-2; q+=4){ ctx.fillText(String(q), X(q), H-8); }
+    }
+    function upd(){
+      var B = equipoB(), rb = rangoA(B);
+      var a = document.getElementById('rgB'), b = document.getElementById('rgMB'), c = document.getElementById('rgVal');
+      if (a) a.textContent = String(rb);
+      if (b) b.textContent = d2(mediaA(B));
+      if (c) c.textContent = String(st.s);
+      var fb = document.getElementById('rgFb');
+      var meta = rgTargets[st.r];
+      if (fb && !st.lock){
+        if (rb === meta){
+          fb.innerHTML = '<span class="okmsg">'+T({
+            es:'¡Justo! Y fíjate en algo que no cambió en todo el ajuste: la media del equipo B siguió siendo la misma que la del equipo A.',
+            en:'Spot on! And notice something that never changed while you adjusted: the mean of team B stayed the same as that of team A.'
+          })+'</span>';
+        } else if (rb < meta){
+          fb.textContent = T({ es:'El rango del equipo B es '+rb+' y buscas '+meta+'. Separa más los registros y observa que la marca dorada no se mueve.',
+                               en:'The range of team B is '+rb+' and you want '+meta+'. Spread the records further apart and notice the golden mark does not move.' });
+        } else {
+          fb.textContent = T({ es:'El rango del equipo B es '+rb+' y buscas '+meta+'. Junta más los registros hacia el centro.',
+                               en:'The range of team B is '+rb+' and you want '+meta+'. Pull the records closer to the centre.' });
+        }
+      }
+      draw();
+      if (rb === meta && !st.lock && !st.done){
+        st.lock = true;
+        setTimeout(function(){
+          st.lock = false; st.r++;
+          if (st.r >= 3){ st.done = true; }
+          render();
+        }, 1900);
+      }
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Mismo centro, distinta dispersión', en:'Same centre, different spread'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Lo comprobaste tres veces: el equipo B cambió de rango una y otra vez sin que su media se moviera ni un poco. Centro y dispersión son dos informaciones independientes.',
+            en:'You checked it three times: team B changed its range again and again without its mean moving even slightly. Centre and spread are two independent pieces of information.'
+          })+'</span></div></div>';
+        return;
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Mismo centro, distinta dispersión', en:'Same centre, different spread'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'El equipo A no se toca. Con la barra separas o juntas los registros del equipo B alrededor de la línea dorada, que marca la media que comparten los dos equipos.',
+            en:'Team A is not touched. With the slider you spread out or pull together the records of team B around the golden line, which marks the mean the two teams share.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'Reto: deja el rango del equipo B exactamente en ', en:'Challenge: leave the range of team B exactly at '})+'<b>'+rgTargets[st.r]+'</b></div>'+
+          '<canvas class="gcanvas" id="rgCv"></canvas>'+
+          '<div class="krow">'+
+            '<input type="range" min="0" max="5" step="1" value="'+st.s+'" oninput="rgSlide(this.value)">'+
+            '<div class="kval">'+T({es:'separación: ',en:'spacing: '})+'<span id="rgVal">'+st.s+'</span></div>'+
+          '</div>'+
+          '<div class="statrow">'+
+            '<div class="statcell"><div class="statlbl">'+T({es:'Rango A',en:'Range A'})+'</div><div class="statval">'+rgA+'</div></div>'+
+            '<div class="statcell"><div class="statlbl">'+T({es:'Rango B',en:'Range B'})+'</div><div class="statval" id="rgB">0</div></div>'+
+            '<div class="statcell"><div class="statlbl">'+T({es:'Media B',en:'Mean B'})+'</div><div class="statval alt" id="rgMB">0</div></div>'+
+          '</div>'+
+          '<div class="rfb" id="rgFb"></div>';
+      upd();
+    }
+    window.rgSlide = function(v){
+      if (st.done || st.lock) return;
+      st.s = parseInt(v,10) || 0;
+      upd();
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P6 ---- */
+  (function(){
+    if (vsel[5] === 0){
+      SP = {
+        title:{es:'La distancia entre los extremos', en:'The distance between the extremes'},
+        q:{ es:'El equipo B anotó estos puntos en sus cinco partidos: '+lista(TB)+'. ¿Cuál es el rango de esos registros?',
+            en:'Team B scored these points in its five games: '+lista(TB)+'. What is the range of those records?' },
+        options: optsN(rgB, [rgA, mT, rgB+2], function(v){ return d2(v)+' '+T({es:'puntos',en:'points'}); }, 1),
+        correct: d2(rgB)+' '+T({es:'puntos',en:'points'}),
+        hint:{ es:'Localiza el registro más alto y el más bajo de la lista y fíjate en qué tan lejos está uno del otro.',
+               en:'Find the highest and the lowest record of the list and look at how far one is from the other.' },
+        exp:{ es:'El registro mayor es '+ordA(TB)[4]+' y el menor es '+ordA(TB)[0]+', de modo que la distancia entre los extremos es de '+rgB+' puntos.',
+              en:'The highest record is '+ordA(TB)[4]+' and the lowest is '+ordA(TB)[0]+', so the distance between the extremes is '+rgB+' points.' },
+        showWork:true
+      };
+    } else {
+      var men = ordA(TA)[0];
+      SP = {
+        title:{es:'Reconstruir el extremo', en:'Rebuilding the extreme'},
+        q:{ es:'De la lista de puntos de otro equipo solo se conservan dos datos: el registro menor fue '+men+' puntos y el rango de la lista fue '+rgB+' puntos. ¿Cuál fue el registro mayor?',
+            en:'Only two facts survive from the points list of another team: the lowest record was '+men+' points and the range of the list was '+rgB+' points. What was the highest record?' },
+        options: optsN(men+rgB, [rgB, men, men+rgB+2], function(v){ return d2(v)+' '+T({es:'puntos',en:'points'}); }, 1),
+        correct: d2(men+rgB)+' '+T({es:'puntos',en:'points'}),
+        hint:{ es:'El rango es la distancia que separa a los dos extremos, así que partiendo del menor puedes avanzar esa distancia sobre la recta numérica.',
+               en:'The range is the distance separating the two extremes, so starting from the lowest one you can move that distance along the number line.' },
+        exp:{ es:'Avanzando '+rgB+' puntos desde el registro menor, que era '+men+', se llega a '+(men+rgB)+' puntos, y ese tiene que ser el registro mayor.',
+              en:'Moving '+rgB+' points up from the lowest record, which was '+men+', you reach '+(men+rgB)+' points, and that has to be the highest record.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P7 ---- */
+  (function(){
+    if (vsel[6] === 0){
+      var oA = T({
+        es:['Los registros del equipo A están más parejos entre sí',
+            'El equipo A anotó más puntos en total que el equipo B',
+            'El equipo B tuvo una media de puntos más alta que la del equipo A',
+            'Los dos equipos tuvieron partidos igual de parejos entre sí'],
+        en:['The records of team A are more even among themselves',
+            'Team A scored more points in total than team B',
+            'Team B had a higher mean of points than team A',
+            'The two teams had equally even games among themselves']
+      });
+      SP = {
+        title:{es:'Leer dos rangos', en:'Reading two ranges'},
+        q:{ es:'Dos equipos jugaron cinco partidos cada uno y los dos terminaron con la misma media de puntos. El rango del equipo A fue '+rgA+' y el del equipo B fue '+rgB+'. ¿Qué se puede afirmar con esa información?',
+            en:'Two teams played five games each and both ended with the same mean of points. The range of team A was '+rgA+' and that of team B was '+rgB+'. What can be stated with that information?' },
+        options: oA,
+        correct: T({ es:'Los registros del equipo A están más parejos entre sí',
+                     en:'The records of team A are more even among themselves' }),
+        hint:{ es:'Traduce cada rango a una distancia entre el mejor y el peor partido de cada equipo y compara cuál de las dos distancias es más corta.',
+               en:'Turn each range into a distance between the best and the worst game of each team and compare which of the two distances is shorter.' },
+        exp:{ es:'Un rango más chico significa que el mejor y el peor partido del equipo A quedaron más cerca uno del otro. La media es la misma en los dos equipos, así que el total y el centro no distinguen nada: lo que cambia es la dispersión.',
+              en:'A smaller range means that the best and the worst game of team A ended up closer to each other. The mean is the same in both teams, so the total and the centre tell them apart in no way: what changes is the spread.' },
+        showWork:false
+      };
+    } else {
+      var oB = T({
+        es:['Qué tan separados están el registro mayor y el menor',
+            'Cuál es el registro que aparece más veces en la lista',
+            'Cuántos registros se anotaron en cada una de las listas',
+            'Cuál es el valor que queda al centro al ordenar la lista'],
+        en:['How far apart the highest and the lowest record are',
+            'Which record shows up most often in the list',
+            'How many records were written down in each of the lists',
+            'Which value is left in the centre once the list is ordered']
+      });
+      SP = {
+        title:{es:'Lo que el centro no cuenta', en:'What the centre does not tell'},
+        q:{ es:'Dos listas de datos tienen exactamente la misma media y la misma mediana. ¿Qué información añade el rango que esas dos medidas no dan?',
+            en:'Two data lists have exactly the same mean and the same median. What information does the range add that those two measures do not give?' },
+        options: oB,
+        correct: T({ es:'Qué tan separados están el registro mayor y el menor',
+                     en:'How far apart the highest and the lowest record are' }),
+        hint:{ es:'Recuerda que la media y la mediana buscan el centro de los datos y pregúntate qué aspecto de la lista queda sin describir cuando solo se conoce ese centro.',
+               en:'Remember that mean and median hunt for the centre of the data and ask yourself which feature of the list stays undescribed when only that centre is known.' },
+        exp:{ es:'Media y mediana solo ubican el centro de la lista. El rango describe otra cosa: el ancho que ocupan los datos, medido entre el registro mayor y el menor.',
+              en:'Mean and median only locate the centre of the list. The range describes something else: the width the data occupy, measured between the highest and the lowest record.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 5: la desviación media
+     ============================================================ */
+  sec(T({es:'Idea 5', en:'Idea 5'}),
+      T({es:'Qué tan lejos vive cada registro de la media', en:'How far each record lives from the mean'}),
+      '<p>'+T({
+        es:'El rango solo escucha a dos registros. La desviación media escucha a todos: mide la distancia de cada dato a la media de la lista y después reparte esas distancias en partes iguales. El resultado se lee como una frase completa: en promedio, cada registro se aleja tanto del centro.',
+        en:'The range only listens to two records. The mean deviation listens to all of them: it measures the distance from each value to the mean of the list and then shares those distances out in equal parts. The result reads like a full sentence: on average, each record sits this far from the centre.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Las distancias se toman siempre como cantidades positivas, sin importar si el registro quedó arriba o abajo de la media, porque lo que interesa es cuánto se alejó y no hacia qué lado. Una desviación media pequeña describe una lista pareja; una grande, una lista desparramada; y cuando vale cero, todos los registros son idénticos.',
+        en:'The distances are always taken as positive amounts, no matter whether the record ended up above or below the mean, because what matters is how far it moved and not towards which side. A small mean deviation describes an even list; a large one, a scattered list; and when it is zero, every record is identical.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Distancia a la media',en:'Distance to the mean'})+'</div><div class="deftxt">'+T({es:'Cuánto se aleja del centro un registro, sin signo.',en:'How far a record moves from the centre, with no sign.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Desviación media',en:'Mean deviation'})+'</div><div class="deftxt">'+T({es:'El reparto parejo de todas esas distancias.',en:'The even share out of all those distances.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p>'+T({
+        es:'Dos listas pueden tener el mismo rango y desviaciones medias muy distintas, porque el rango solo mira los extremos y la desviación media toma en cuenta a cada registro de la lista.',
+        en:'Two lists can have the same range and very different mean deviations, because the range only looks at the extremes and the mean deviation takes every record of the list into account.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 5: la banda de distancias ---- */
+  (function(){
+    var wrap = widget('banda');
+    var st = { r:0, k:5, tries:0, done:false, lock:false };
+    function datos(){ return dwR[st.r]; }
+    function draw(){
+      var cv = document.getElementById('bnCv'); if (!cv) return;
+      var G = fitCv(cv), ctx = G.ctx, W = G.w, H = G.h;
+      var dd = datos(), m = mediaA(dd), o = ordA(dd);
+      var L = 26, Rm = 26, yl = H-42, q, px;
+      var pw = W-L-Rm, LO = o[0]-2, HI = o[4]+2, w = st.k/10;
+      var col = cssv('--green'), gold = cssv('--gold'), bd = cssv('--border'), tx = cssv('--text3');
+      function X(v){ return L + (v-LO)/(HI-LO)*pw; }
+      ctx.font = '500 10px "IBM Plex Sans", sans-serif';
+      ctx.fillStyle = gold; ctx.globalAlpha = .18;
+      ctx.fillRect(X(m-w), 20, X(m+w)-X(m-w), yl-20);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = gold; ctx.lineWidth = 1.6;
+      ctx.strokeRect(X(m-w), 20, X(m+w)-X(m-w), yl-20);
+      ctx.strokeStyle = tx; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(L,yl); ctx.lineTo(W-Rm,yl); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.fillStyle = tx; ctx.strokeStyle = bd;
+      for (q=Math.ceil(LO); q<=Math.floor(HI); q++){
+        px = X(q);
+        ctx.beginPath(); ctx.moveTo(px,yl); ctx.lineTo(px,yl+5); ctx.stroke();
+        ctx.fillText(String(q), px, yl+17);
+      }
+      ctx.strokeStyle = col; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(X(m), 16); ctx.lineTo(X(m), yl+2); ctx.stroke();
+      ctx.fillStyle = col; ctx.fillText(T({es:'media ',en:'mean '})+d2(m), X(m), 12);
+      for (q=0; q<dd.length; q++){
+        px = X(dd[q]);
+        ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.globalAlpha = .55;
+        ctx.beginPath(); ctx.moveTo(px, yl-22); ctx.lineTo(X(m), yl-22); ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = col; ctx.globalAlpha = .8;
+        ctx.beginPath(); ctx.arc(px, yl-22, 6.5, 0, 6.2832); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = tx;
+        ctx.fillText(T({es:'dist ',en:'dist '})+d2(Math.abs(dd[q]-m)), px, yl-34);
+      }
+    }
+    function upd(){
+      var a = document.getElementById('bnVal');
+      if (a) a.textContent = d2(st.k/10);
+      draw();
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'La banda de las distancias', en:'The band of distances'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Eso es la desviación media: el ancho que tendría cada distancia si todas midieran lo mismo. Una banda angosta significa registros apretados alrededor del centro; una banda ancha, registros regados.',
+            en:'That is the mean deviation: the width each distance would have if they all measured the same. A narrow band means records packed around the centre; a wide band, records scattered about.'
+          })+'</span></div></div>';
+        return;
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'La banda de las distancias', en:'The band of distances'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Cada punto muestra su distancia a la media. Mueve la barra para abrir o cerrar la banda dorada alrededor del centro y déjala en el ancho que le tocaría a cada distancia en un reparto parejo.',
+            en:'Each dot shows its distance to the mean. Move the slider to open or close the golden band around the centre and leave it at the width each distance would get in an even share out.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({
+            es:'Reto: ajusta el ancho de la banda hasta que valga la desviación media de estos cinco registros.',
+            en:'Challenge: adjust the width of the band until it is worth the mean deviation of these five records.'
+          })+'</div>'+
+          '<canvas class="gcanvas" id="bnCv"></canvas>'+
+          '<div class="krow">'+
+            '<input type="range" min="0" max="50" step="1" value="'+st.k+'" oninput="bnSlide(this.value)">'+
+            '<div class="kval">'+T({es:'ancho: ',en:'width: '})+'<span id="bnVal">'+d2(st.k/10)+'</span></div>'+
+          '</div>'+
+          '<button class="rverify-btn" onclick="bnCheck()">'+T({es:'Comprobar el ancho', en:'Check the width'})+'</button>'+
+          '<div class="rfb" id="bnFb"></div>';
+      upd();
+    }
+    function avanza(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.lock = false; st.r++; st.tries = 0; st.k = 5;
+        if (st.r >= 3){ st.done = true; }
+        render();
+      }, ms);
+    }
+    window.bnSlide = function(v){
+      if (st.done || st.lock) return;
+      st.k = parseInt(v,10) || 0;
+      upd();
+    };
+    window.bnCheck = function(){
+      if (st.done || st.lock) return;
+      var dd = datos(), dm = desvA(dd), meta = Math.round(dm*10);
+      var fb = document.getElementById('bnFb'); if (!fb) return;
+      if (st.k === meta){
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'¡Ese es el ancho! Las cinco distancias juntas suman '+d2(dm*5)+', y repartidas en partes iguales le tocan '+d2(dm)+' a cada una.',
+          en:'That is the width! The five distances together add up to '+d2(dm*5)+', and shared out in equal parts each one gets '+d2(dm)+'.'
+        })+'</span>';
+        avanza(2400); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.k = meta; upd();
+        fb.innerHTML = T({
+          es:'Este es el ancho correcto: '+d2(dm)+'. Suma las cinco distancias que ves sobre los puntos y repártelas entre los cinco registros.',
+          en:'This is the correct width: '+d2(dm)+'. Add the five distances you can see above the dots and share them among the five records.'
+        });
+        avanza(3000); return;
+      }
+      fb.textContent = (st.k > meta)
+        ? T({ es:'Tu banda es más ancha que el reparto parejo de las distancias. Ciérrala un poco y vuelve a comprobar.',
+              en:'Your band is wider than the even share out of the distances. Close it a little and check again.' })
+        : T({ es:'Tu banda es más angosta que el reparto parejo de las distancias. Ábrela un poco y vuelve a comprobar.',
+              en:'Your band is narrower than the even share out of the distances. Open it a little and check again.' });
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P8 ---- */
+  (function(){
+    if (vsel[7] === 0){
+      SP = {
+        title:{es:'El reparto de las distancias', en:'Sharing out the distances'},
+        q:{ es: T(CX.lead)+': '+lista(S1)+'. La media de esa lista es '+m1+'. ¿Cuál es la desviación media de esos registros?',
+            en: T(CX.lead)+': '+lista(S1)+'. The mean of that list is '+m1+'. What is the mean deviation of those records?' },
+        options: optsN(dv1, [dv1+1, rg1, dv1+2], fu, 0.4),
+        correct: fu(dv1),
+        hint:{ es:'Mide cuánto se aleja del centro cada uno de los cinco registros, tomando todas esas distancias como cantidades positivas, y después repártelas en partes iguales.',
+               en:'Measure how far each of the five records moves from the centre, taking all those distances as positive amounts, and then share them out in equal parts.' },
+        exp:{ es:'Las distancias de los registros a la media son '+lista(S1.map(function(v){ return Math.abs(v-m1); }))+', que juntas dan '+d2(dv1*5)+'. Repartidas entre los cinco registros toca '+fu(dv1)+' a cada uno.',
+              en:'The distances from the records to the mean are '+lista(S1.map(function(v){ return Math.abs(v-m1); }))+', which together give '+d2(dv1*5)+'. Shared among the five records, each one gets '+fu(dv1)+'.' },
+        showWork:true
+      };
+    } else {
+      var fr = function(v){ return (v === 1) ? T({es:'1 refresco',en:'1 drink'}) : d2(v)+' '+T({es:'refrescos',en:'drinks'}); };
+      SP = {
+        title:{es:'Cinco registros idénticos', en:'Five identical records'},
+        q:{ es:'Durante 5 días seguidos, una tienda vendió exactamente la misma cantidad de refrescos: '+igual+' refrescos cada día. ¿Cuál es la desviación media de esos cinco registros?',
+            en:'For 5 days in a row, a shop sold exactly the same amount of drinks: '+igual+' drinks each day. What is the mean deviation of those five records?' },
+        options: optsN(0, [igual, 5, 1], fr, 2),
+        correct: fr(0),
+        hint:{ es:'Averigua primero dónde queda el centro de una lista en la que todos los registros valen lo mismo y después mide cuánto se aleja cada uno de ese centro.',
+               en:'First work out where the centre of a list falls when every record is worth the same and then measure how far each one moves from that centre.' },
+        exp:{ es:'La media de la lista es '+igual+', el mismo valor de cada registro, así que ningún dato se aleja del centro: todas las distancias valen cero y su reparto también.',
+              en:'The mean of the list is '+igual+', the same value as every record, so no value moves away from the centre: all the distances are worth zero and so is their share out.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P9 ---- */
+  (function(){
+    var fp = function(v){ return d2(v)+' '+T({es:'puntos',en:'points'}); };
+    if (vsel[8] === 0){
+      SP = {
+        title:{es:'El grupo más parejo', en:'The most even group'},
+        q:{ es:'Dos grupos de cinco registros terminaron con la misma media de puntos. El grupo A anotó: '+lista(TA)+'. El grupo B anotó: '+lista(TB)+'. ¿Cuál es la desviación media del grupo cuyos registros están más parejos entre sí?',
+            en:'Two groups of five records ended with the same mean of points. Group A scored: '+lista(TA)+'. Group B scored: '+lista(TB)+'. What is the mean deviation of the group whose records are the most even among themselves?' },
+        options: optsN(dvA, [dvB, rgA, dvA+1], fp, 0.4),
+        correct: fp(dvA),
+        hint:{ es:'Compara primero qué tan estirada está cada lista para decidir cuál es la más pareja, y después trabaja solo con esa: mide la distancia de cada registro al centro y repártelas.',
+               en:'First compare how stretched each list is to decide which is the most even, and then work only with that one: measure the distance of each record to the centre and share them out.' },
+        exp:{ es:'Los registros del grupo A son los que quedan más juntos. Sus distancias a la media suman '+d2(dvA*5)+', y repartidas entre los cinco registros dan '+fp(dvA)+'.',
+              en:'The records of group A are the ones that stay closest together. Their distances to the mean add up to '+d2(dvA*5)+', and shared among the five records they give '+fp(dvA)+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'De las distancias al promedio', en:'From the distances to the average'},
+        q:{ es:'De una lista de cinco registros ya se midió qué tan lejos quedó cada uno de la media. Las cinco distancias fueron: '+lista(dist9)+' puntos. ¿Cuál es la desviación media de esa lista?',
+            en:'For a list of five records it has already been measured how far each one ended up from the mean. The five distances were: '+lista(dist9)+' points. What is the mean deviation of that list?' },
+        options: optsN(dm9, [sumA(dist9), dm9+1, ordA(dist9)[4]], fp, 1),
+        correct: fp(dm9),
+        hint:{ es:'Las distancias ya están medidas, así que solo falta el reparto parejo: júntalas en un total y divídelo entre la cantidad de registros de la lista.',
+               en:'The distances are already measured, so only the even share out is missing: gather them into a total and divide it among the number of records in the list.' },
+        exp:{ es:'Las cinco distancias juntas dan '+sumA(dist9)+', y al repartirlas en partes iguales entre los cinco registros a cada uno le corresponden '+fp(dm9)+'.',
+              en:'The five distances together give '+sumA(dist9)+', and sharing them out in equal parts among the five records gives '+fp(dm9)+' to each one.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P10 ---- */
+  (function(){
+    if (vsel[9] === 0){
+      var oA = T({
+        es:['Una medida de dispersión, como el rango o la desviación media',
+            'La moda de cada grupo, para saber qué registro se repite más',
+            'La media de cada grupo otra vez, usando solo los registros altos',
+            'La cantidad de registros que se anotaron en cada uno de los grupos'],
+        en:['A measure of spread, such as the range or the mean deviation',
+            'The mode of each group, to know which record repeats most',
+            'The mean of each group again, using only the high records',
+            'The amount of records written down in each of the groups']
+      });
+      SP = {
+        title:{es:'Qué falta por calcular', en:'What is left to work out'},
+        q:{ es:'De dos grupos solo se conoce la media y las dos medias resultaron iguales. Antes de afirmar que los grupos se comportaron de la misma manera, ¿qué conviene calcular?',
+            en:'Only the mean is known for two groups and the two means turned out to be equal. Before stating that the groups behaved in the same way, what is worth working out?' },
+        options: oA,
+        correct: T({ es:'Una medida de dispersión, como el rango o la desviación media',
+                     en:'A measure of spread, such as the range or the mean deviation' }),
+        hint:{ es:'Piensa en qué parte de la historia de una lista queda sin contar cuando solo se conoce el valor alrededor del cual giran los datos.',
+               en:'Think about which part of the story of a list stays untold when only the value the data revolve around is known.' },
+        exp:{ es:'Dos grupos con la misma media pueden ser muy distintos: en uno los registros pueden estar apretados y en el otro regados. Solo una medida de dispersión distingue esos dos casos.',
+              en:'Two groups with the same mean can be very different: in one the records may be packed together and in the other scattered about. Only a measure of spread tells those two cases apart.' },
+        showWork:false
+      };
+    } else {
+      var oB = T({
+        es:['Sus registros se alejan más del centro que los de la otra lista',
+            'Su centro quedó más arriba que el centro de la otra lista',
+            'Tiene más registros anotados que la otra lista',
+            'Su registro más repetido es mayor que el de la otra lista'],
+        en:['Its records move further from the centre than those of the other list',
+            'Its centre ended up higher than the centre of the other list',
+            'It has more records written down than the other list',
+            'Its most repeated record is larger than that of the other list']
+      });
+      SP = {
+        title:{es:'Leer una desviación grande', en:'Reading a large deviation'},
+        q:{ es:'Dos listas tienen la misma media y la misma mediana, pero la desviación media de la primera es mucho mayor que la de la segunda. ¿Qué se puede afirmar de la primera lista?',
+            en:'Two lists have the same mean and the same median, but the mean deviation of the first is much larger than that of the second. What can be stated about the first list?' },
+        options: oB,
+        correct: T({ es:'Sus registros se alejan más del centro que los de la otra lista',
+                     en:'Its records move further from the centre than those of the other list' }),
+        hint:{ es:'Recuerda qué distancia es exactamente la que se reparte al obtener una desviación media y qué significa entonces que ese reparto salga grande.',
+               en:'Recall which distance is exactly the one being shared out when a mean deviation is obtained and what it then means for that share out to come out large.' },
+        exp:{ es:'La desviación media reparte las distancias de cada registro al centro. Si ese reparto es mayor, los registros de esa lista están, en promedio, más lejos del centro, aunque el centro sea el mismo en las dos.',
+              en:'The mean deviation shares out the distances from each record to the centre. If that share out is larger, the records of that list are, on average, further from the centre, even though the centre is the same in both.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* los canvas se dibujan de nuevo cuando la pantalla ya es visible */
+  setTimeout(function(){
+    for (var q=0; q<REDRAW.length; q++){ try { REDRAW[q](); } catch(e){} }
+  }, 220);
+}
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbykkuJ_apGq3vALIFd4mr3acu81c7K4OKxW-DZ-i52Ceyl3lOanXMdvbS9SIXPrLQBm/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Medidas de Tendencia Central y Dispersión';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>
