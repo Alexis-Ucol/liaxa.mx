@@ -1,0 +1,2164 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valor de una Variable en Función de las Otras</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS: INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── INTERACTIVE WIDGETS ── */
+.iwrap { background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--gold); border-radius:12px; padding:1.1rem 1.1rem 1.2rem; }
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:700; margin-bottom:.4rem; }
+.iw-goal { font-size:.92rem; color:var(--text); font-weight:600; margin-bottom:.5rem; }
+.iw-sub { font-size:.79rem; color:var(--text3); margin-bottom:.75rem; }
+.ivcanvas { display:block; width:100%; height:250px; background:var(--surface); }
+.iw-read { font-family:'IBM Plex Mono',monospace; font-size:.8rem; color:var(--green-dark); background:var(--green-bg); border-radius:8px; padding:.5rem .7rem; text-align:center; margin-top:.7rem; }
+.iw-pad { display:flex; flex-wrap:wrap; gap:.5rem; margin:.7rem 0 .2rem; }
+.iw-btn { min-height:44px; padding:.5rem .9rem; border:1.5px solid var(--border); background:var(--surface2); color:var(--text2); border-radius:9px; font-size:.8rem; font-weight:600; cursor:pointer; font-family:inherit; }
+.iw-btn:hover { border-color:var(--green); color:var(--green); }
+.rverify-btn { margin-top:.85rem; min-height:44px; padding:.55rem 1.25rem; border:none; border-radius:9px; background:var(--green); color:#fff; font-size:.86rem; font-weight:600; cursor:pointer; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.rfb { min-height:1.35rem; margin-top:.6rem; font-size:.85rem; color:var(--text2); }
+
+/* sliders del constructor de cuerpos */
+.sl-row { display:flex; align-items:center; gap:.6rem; margin:.4rem 0; }
+.sl-row input[type=range] { flex:1; min-width:0; accent-color:var(--green); min-height:34px; }
+.sl-name { font-size:.74rem; color:var(--text3); width:58px; flex-shrink:0; }
+.sl-val { font-family:'IBM Plex Mono',monospace; font-size:.78rem; font-weight:700; color:var(--green-dark); width:56px; text-align:right; flex-shrink:0; }
+
+/* taller de despeje */
+.eqbox { border:1.5px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--text); padding:.9rem .7rem; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:1.02rem; font-weight:600; overflow-x:auto; }
+.op-chips { display:flex; flex-wrap:wrap; gap:.5rem; margin:.8rem 0 .2rem; }
+.op-chip { border:1.5px solid var(--gold); background:var(--gold-bg); color:var(--text); border-radius:20px; padding:.45rem .9rem; font-size:.79rem; font-family:inherit; cursor:pointer; min-height:40px; }
+.op-chip:hover { border-color:var(--green); }
+.op-chip.used { border-color:var(--green); background:var(--green-bg); color:var(--green-dark); font-weight:700; }
+
+/* empareja el despeje */
+.mt-cols { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin:.7rem 0 .2rem; }
+.mt-col { display:flex; flex-direction:column; gap:.5rem; min-width:0; }
+.mt-head { font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); font-weight:700; }
+.mt-chip { border:1.5px solid var(--border); border-radius:10px; background:var(--surface2); color:var(--text); padding:.6rem .7rem; font-size:.8rem; font-family:inherit; text-align:left; cursor:pointer; min-height:44px; overflow-wrap:break-word; }
+.mt-chip:hover { border-color:var(--green); }
+.mt-chip.sel { border-color:var(--gold); background:var(--gold-bg); }
+.mt-chip.done { border-color:var(--ok); background:var(--ok-bg); cursor:default; }
+.mt-exp { text-align:center; font-family:'IBM Plex Mono',monospace; font-size:.9rem; font-weight:600; }
+.mt-reveal { display:flex; flex-direction:column; gap:.5rem; margin-top:.5rem; }
+.mt-pair { display:flex; align-items:center; gap:.7rem; border:1.5px solid var(--ok); background:var(--ok-bg); border-radius:10px; padding:.55rem .7rem; font-family:'IBM Plex Mono',monospace; font-weight:600; }
+.mt-pair-txt { font-family:'IBM Plex Sans',sans-serif; font-weight:400; font-size:.78rem; color:var(--text2); }
+.cls-done { font-weight:700; color:var(--ok); text-align:center; padding:.7rem; font-size:1.05rem; }
+.reflect-prompt { font-size:.92rem; color:var(--text2); margin:.4rem 0 .85rem; }
+.mcopt.pending { border-color:var(--gold); background:var(--gold-bg); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--gold-bg); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 38px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ivcanvas { height: 230px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+  .ivcanvas { height: 210px; }
+  .iwrap { padding: .85rem .8rem 1rem; }
+  .mt-cols { grid-template-columns: 1fr; }
+  .op-chip { font-size: .75rem; padding: .42rem .7rem; }
+  .eqbox { font-size: .92rem; padding: .75rem .5rem; }
+  .sl-name { width: 50px; font-size: .7rem; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from the rebrand step -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Eventos Complementarios y Mutuamente Excluyentes</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 3° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 2A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Eventos Complementarios y Mutuamente Excluyentes</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ <span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. The downstream build substitutes these exact
+   fields (BRAND_FIELDS / RGB_FIELDS / logo*); :root/dark stay as fallback.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#1a3a6b', primaryDark:'#0f2444', primaryBg:'#e8edf5',
+  accent:'#c9a84c', accentBg:'#f7f1e3',
+  darkPrimary:'#4a78bf', darkPrimaryDark:'#7aa2e0', darkPrimaryBg:'#0e1f38',
+  darkAccent:'#d4b86a', darkAccentBg:'#241e0e',
+  pBR:26, pBG:58, pBB:107, pAR:201, pAG:168, pAB:76,
+  logoLeftB64:'data:image/png;base64,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', logoRightB64:'', logoAlt:'LIAXA',
+  guideTitle:{ es:'Valor de una Variable en Función de las Otras', en:'The Value of One Variable in Terms of the Others' },
+  courseName:{ es:'Matemáticas · 3° de Secundaria', en:'Mathematics · Grade 3 Secondary' },
+  filePrefix:'mat3_valor_variable', schoolSlug:'liaxa'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10): ES/EN, full rebuild + answer replay.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'mat3_valor_variable__lang';
+var TX = {
+  es: {
+    'wtitle':'Valor de una Variable en Función de las Otras','wcourse':'Matemáticas · 3° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'The Value of One Variable in Terms of the Others','wcourse':'Mathematics · Grade 3 Secondary',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'mat3_valor_variable__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'mat3_valor_variable__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'mat3_valor_variable__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'mat3_valor_variable__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+  if (typeof window.redrawWidgets === 'function') window.redrawWidgets();
+}
+(function() {
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  if (!tb) return;
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER: two-tap confirmation (Rule 6)
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm, used by restoreSession and setLang to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD ONE CARD: inline construction, per-problem showWork branch (Rule 5)
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF (Rule 12)
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF...';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString(LANG === 'es' ? 'es-MX' : 'en-US', { dateStyle:'long', timeStyle:'short' });
+
+  var att = currentAttempt(name, group);
+  var raw = name + '|' + group + '|' + att + '|' + total;
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  var L = (LANG === 'es')
+    ? { student:'ALUMNO', group:'GRUPO', of:' correcta(s) de ', qs:' preguntas', summary:'RESUMEN DE PROBLEMAS',
+        cont:'RESUMEN DE PROBLEMAS (continuacion)', prob:'Problema ', pOf:' de ', ok:'Correcto', bad:'Incorrecto',
+        question:'PREGUNTA', work:'TRABAJO DEL ALUMNO', chose:'Alumno: ', corr:'Correcto: ', sol:'Solucion: ', codeLbl:'Codigo: ', page:'Pagina ' }
+    : { student:'STUDENT', group:'GROUP', of:' correct out of ', qs:' questions', summary:'PROBLEM SUMMARY',
+        cont:'PROBLEM SUMMARY (continued)', prob:'Problem ', pOf:' of ', ok:'Correct', bad:'Incorrect',
+        question:'QUESTION', work:'STUDENT WORK', chose:'Student: ', corr:'Correct: ', sol:'Solution: ', codeLbl:'Code: ', page:'Page ' };
+
+  // ── PDF COLORS: from SCHOOL (Rule 16) ──
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/→/g,'->').replace(/−/g,'-').replace(/²/g,'^2')
+      .replace(/³/g,'^3').replace(/×/g,'x').replace(/÷/g,'/')
+      .replace(/≠/g,'!=').replace(/≤/g,'<=').replace(/≥/g,'>=')
+      .replace(/√/g,'sqrt').replace(/π/g,'pi').replace(/…/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   The rebrand step fills these and uncomments the addImage calls.
+  // var logoLeftB64  = SCHOOL.logoLeftB64;
+  // var logoRightB64 = SCHOOL.logoRightB64;
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA mark, right side of the white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text(L.student, M+4, 79); doc.text(L.group, 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+L.of+total+L.qs, PW/2, 131, {align:'center'});
+
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text(L.summary, M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text(L.cont, M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'x':'-', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(L.prob+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?L.ok:L.bad, PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text(L.prob+(i+1)+L.pOf+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(L.question, M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize(L.chose+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize(L.corr+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize(L.sol+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'x':'-', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text(L.work, M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer with verification code on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  '+L.codeLbl+code+'  ·  '+L.page+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save(SCHOOL.filePrefix + '_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ ' + t('btn-pdf');
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ════════════════════════════════════════════════════════════════════════
+   GUIDE CONTENT: geometry helpers, manipulatives and buildLesson
+   ════════════════════════════════════════════════════════════════════════ */
+var WIDGET_REDRAW = [];
+window.redrawWidgets = function(){ WIDGET_REDRAW.forEach(function(f){ try { f(); } catch(e){} }); };
+
+function cssVar(n){ var v=''; try { v = getComputedStyle(document.documentElement).getPropertyValue(n); } catch(e){} return (v||'').trim(); }
+
+function addSection(tag, title, html){
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+html;
+  document.getElementById('lessonBody').appendChild(d);
+}
+
+function shuffleOpts(opts, correct, rng){
+  var a = opts.slice();
+  for (var i = a.length-1; i > 0; i--){ var j = Math.floor(rng()*(i+1)); var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+  return { opts:a, idx:a.indexOf(correct) };
+}
+
+function fitCanvas(cv, hh){
+  var dpr = window.devicePixelRatio || 1;
+  var w = cv.clientWidth || 320;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(hh*dpr);
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return { ctx:ctx, w:w, h:hh };
+}
+
+/* stacked fraction (Rule 13: never an inline slash) */
+function fx(n, d){
+  return '<span class="mf-outer"><span class="mf-num">'+n+'</span><span class="mf-den">'+d+'</span></span>';
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MANIPULATIVE 1 - Constructor de cuerpos
+   Three sliders build a rectangular prism that redraws while the student
+   moves them. The round fixes one measurement and a target volume, so the
+   student discovers that once two measurements are set, the third one is
+   no longer free.
+   ══════════════════════════════════════════════════════════════════════ */
+function buildCaja(rng){
+  var es = (LANG === 'es');
+  var POOL = [ {a:4,V:96}, {a:5,V:120}, {a:3,V:72}, {a:6,V:144}, {a:4,V:80}, {a:5,V:150} ];
+  var rounds = shuffle(POOL, rng).slice(0,3);
+  var st = { L:3, W:2, H:2, r:0, tries:0, lock:false, done:false };
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap section';
+  wrap.setAttribute('data-widget','caja');
+  wrap.id = 'wCaja';
+  wrap.innerHTML =
+    '<div class="iw-tag">'+(es?'Constructor de cuerpos':'Solid builder')+'</div>'+
+    '<div class="iw-goal" id="cajaGoal"></div>'+
+    '<div class="iw-sub">'+(es
+      ? 'Mueve las tres barras y observa cómo cambia la caja al momento. El área de la base y el volumen se recalculan solos mientras arrastras.'
+      : 'Move the three sliders and watch the box change as you go. The base area and the volume recalculate on their own while you drag.')+'</div>'+
+    '<div class="cvwrap"><canvas class="ivcanvas" id="cajaCv"></canvas></div>'+
+    '<div class="sl-row"><span class="sl-name">'+(es?'largo':'length')+'</span>'+
+      '<input type="range" min="1" max="10" step="1" value="3" id="cajaSL" oninput="cajaSet(\'L\',this.value)">'+
+      '<span class="sl-val" id="cajaVL">3 cm</span></div>'+
+    '<div class="sl-row"><span class="sl-name">'+(es?'ancho':'width')+'</span>'+
+      '<input type="range" min="1" max="10" step="1" value="2" id="cajaSW" oninput="cajaSet(\'W\',this.value)">'+
+      '<span class="sl-val" id="cajaVW">2 cm</span></div>'+
+    '<div class="sl-row"><span class="sl-name">'+(es?'altura':'height')+'</span>'+
+      '<input type="range" min="1" max="10" step="1" value="2" id="cajaSH" oninput="cajaSet(\'H\',this.value)">'+
+      '<span class="sl-val" id="cajaVH">2 cm</span></div>'+
+    '<div class="iw-read" id="cajaRead"></div>'+
+    '<button class="rverify-btn" onclick="cajaCheck()">'+(es?'Verificar':'Check')+'</button>'+
+    '<div class="rfb" id="cajaFb"></div>';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function cur(){ return rounds[Math.min(st.r, rounds.length-1)]; }
+
+  function solveRound(c){
+    var q = c.V / c.a, best = null;
+    for (var b = 1; b <= 10; b++){
+      if (q % b === 0){
+        var h = q / b;
+        if (h >= 1 && h <= 10){
+          var gap = Math.abs(b - h);
+          if (!best || gap < best.gap) best = { b:b, h:h, gap:gap };
+        }
+      }
+    }
+    return best || { b:1, h:q };
+  }
+
+  function draw(){
+    var cv = document.getElementById('cajaCv'); if (!cv) return;
+    var f = fitCanvas(cv, cv.clientHeight || 250), ctx = f.ctx, w = f.w, h = f.h;
+    ctx.clearRect(0,0,w,h);
+    var u = Math.min(24, (w - 96) / (st.L + 0.55*st.W), (h - 60) / (st.H + 0.45*st.W));
+    if (!(u > 3)) u = 3;
+    var bw = st.L*u, bh = st.H*u, dx = 0.55*st.W*u, dy = -0.45*st.W*u;
+    var x0 = Math.max(30, (w - (bw + dx))/2);
+    var y0 = (h + bh - dy)/2 - 8;
+    var yt = y0 - bh;
+    var green = cssVar('--green'), gdark = cssVar('--green-dark'), text3 = cssVar('--text3');
+    /* top face */
+    ctx.beginPath();
+    ctx.moveTo(x0, yt); ctx.lineTo(x0+dx, yt+dy); ctx.lineTo(x0+bw+dx, yt+dy); ctx.lineTo(x0+bw, yt); ctx.closePath();
+    ctx.fillStyle = cssVar('--gold-bg'); ctx.fill();
+    ctx.strokeStyle = cssVar('--gold'); ctx.lineWidth = 1.8; ctx.stroke();
+    /* right face */
+    ctx.beginPath();
+    ctx.moveTo(x0+bw, yt); ctx.lineTo(x0+bw+dx, yt+dy); ctx.lineTo(x0+bw+dx, y0+dy); ctx.lineTo(x0+bw, y0); ctx.closePath();
+    ctx.fillStyle = cssVar('--surface2'); ctx.fill();
+    ctx.strokeStyle = cssVar('--border'); ctx.lineWidth = 1.6; ctx.stroke();
+    /* front face */
+    ctx.beginPath(); ctx.rect(x0, yt, bw, bh);
+    ctx.fillStyle = cssVar('--green-bg'); ctx.fill();
+    ctx.strokeStyle = green; ctx.lineWidth = 2.2; ctx.stroke();
+    /* labels */
+    ctx.font = '11px "IBM Plex Mono", monospace';
+    ctx.fillStyle = gdark; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(st.L + ' cm', x0 + bw/2, y0 + 7);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(st.H + ' cm', x0 - 6, yt + bh/2);
+    ctx.fillStyle = text3; ctx.textAlign = 'left';
+    ctx.fillText(st.W + ' cm', x0 + bw + dx/2 + 6, yt + dy/2);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = text3; ctx.font = '11px "IBM Plex Sans", sans-serif';
+    ctx.fillText((es?'la cara verde es la base':'the green face is the base'), 6, 6);
+  }
+  WIDGET_REDRAW.push(draw);
+
+  function goal(){
+    var el = document.getElementById('cajaGoal'); if (!el) return;
+    if (st.done){ el.innerHTML = (es?'Las tres cajas quedaron armadas.':'All three boxes are built.'); return; }
+    var c = cur();
+    el.innerHTML = (es?'Caja ':'Box ')+(st.r+1)+(es?' de 3: consigue un volumen de exactamente <b>':' of 3: reach a volume of exactly <b>')+c.V+' cm³</b>'+
+      (es?', con el largo fijo en <b>':', with the length parked on <b>')+c.a+' cm</b>.';
+  }
+  function readout(){
+    var el = document.getElementById('cajaRead'); if (!el) return;
+    var base = st.L*st.W, vol = base*st.H, tot = 2*(st.L*st.W + st.L*st.H + st.W*st.H);
+    el.innerHTML = (es?'base: ':'base: ')+base+' cm²&nbsp;&nbsp;·&nbsp;&nbsp;'+(es?'volumen: ':'volume: ')+vol+
+      ' cm³&nbsp;&nbsp;·&nbsp;&nbsp;'+(es?'área total: ':'total area: ')+tot+' cm²';
+  }
+  function sync(){
+    var sl = document.getElementById('cajaSL'), sw = document.getElementById('cajaSW'), sh = document.getElementById('cajaSH');
+    if (sl) sl.value = String(st.L);
+    if (sw) sw.value = String(st.W);
+    if (sh) sh.value = String(st.H);
+    var vl = document.getElementById('cajaVL'), vw = document.getElementById('cajaVW'), vh = document.getElementById('cajaVH');
+    if (vl) vl.textContent = st.L + ' cm';
+    if (vw) vw.textContent = st.W + ' cm';
+    if (vh) vh.textContent = st.H + ' cm';
+    goal(); readout(); draw();
+  }
+
+  window.cajaSet = function(which, v){
+    if (st.lock || st.done) return;
+    st[which] = parseInt(v, 10) || 1;
+    sync();
+    var fb = document.getElementById('cajaFb'); if (fb) fb.innerHTML = '';
+  };
+
+  window.cajaCheck = function(){
+    if (st.lock || st.done) return;
+    var c = cur(), fb = document.getElementById('cajaFb'), vol = st.L*st.W*st.H;
+    if (st.L === c.a && vol === c.V){
+      st.r++; st.tries = 0;
+      if (st.r >= rounds.length){
+        st.done = true; goal();
+        fb.innerHTML = '<span style="color:var(--ok);font-weight:700;">🎉 '+(es
+          ? 'Tres cajas exactas. En las tres, el largo y el ancho decidieron por completo cuánto podía medir la altura.'
+          : 'Three exact boxes. In all three, the length and the width completely decided how tall the box could be.')+'</span>';
+        return;
+      }
+      st.lock = true;
+      fb.innerHTML = '<span style="color:var(--ok);font-weight:700;">✓ '+(es
+        ? 'Volumen exacto. Va la siguiente caja.'
+        : 'Exact volume. Next box coming.')+'</span>';
+      setTimeout(function(){ st.lock = false; st.L = 3; st.W = 2; st.H = 2; var f2 = document.getElementById('cajaFb'); if (f2) f2.innerHTML = ''; sync(); }, 1200);
+      return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      var s = solveRound(c);
+      st.lock = true; st.L = c.a; st.W = s.b; st.H = s.h; sync();
+      fb.innerHTML = (es
+        ? 'Así queda: con el largo en '+c.a+' cm y el ancho en '+s.b+' cm, la altura ya no puede elegirse, porque solo '+s.h+' cm completan los '+c.V+' cm³.'
+        : 'Here it is: with the length on '+c.a+' cm and the width on '+s.b+' cm, the height can no longer be chosen, because only '+s.h+' cm complete the '+c.V+' cm³.');
+      setTimeout(function(){
+        st.lock = false; st.tries = 0; st.r++; st.L = 3; st.W = 2; st.H = 2;
+        if (st.r >= rounds.length) st.done = true;
+        var f3 = document.getElementById('cajaFb'); if (f3) f3.innerHTML = '';
+        sync();
+      }, 3000);
+      return;
+    }
+    if (st.L !== c.a){
+      fb.innerHTML = (es
+        ? 'El largo va en '+st.L+' cm y esta caja lo pide en '+c.a+' cm: ese dato no se negocia, acomódalo primero.'
+        : 'The length sits at '+st.L+' cm and this box asks for '+c.a+' cm: that measurement is fixed, set it first.');
+      return;
+    }
+    fb.innerHTML = (vol < c.V)
+      ? (es ? 'Vas en '+vol+' cm³ y todavía te faltan '+(c.V-vol)+' cm³: sube el ancho o la altura.'
+            : 'You are at '+vol+' cm³ and still '+(c.V-vol)+' cm³ short: raise the width or the height.')
+      : (es ? 'Vas en '+vol+' cm³ y te pasaste por '+(vol-c.V)+' cm³: baja el ancho o la altura.'
+            : 'You are at '+vol+' cm³ and overshot by '+(vol-c.V)+' cm³: lower the width or the height.');
+  };
+
+  sync();
+  setTimeout(draw, 60);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MANIPULATIVE 2 - Taller de despeje
+   The student taps operations and the equation rewrites itself on screen.
+   Every order that is mathematically valid is accepted; an operation that
+   does not free the target answers with the reason it fails.
+   ══════════════════════════════════════════════════════════════════════ */
+function buildDespeje(rng){
+  var es = (LANG === 'es');
+  var OPS = {
+    div_a:  { es:'dividir entre a',        en:'divide by a' },
+    div_b:  { es:'dividir entre b',        en:'divide by b' },
+    div_2:  { es:'dividir entre 2',        en:'divide by 2' },
+    mul_2:  { es:'multiplicar por 2',      en:'multiply by 2' },
+    sub_b:  { es:'restar b',               en:'subtract b' },
+    add_b:  { es:'sumar b',                en:'add b' },
+    div_pi: { es:'dividir entre π',        en:'divide by π' },
+    div_r:  { es:'dividir entre r',        en:'divide by r' },
+    div_r2: { es:'dividir entre r²',       en:'divide by r²' },
+    div_6:  { es:'dividir entre 6',        en:'divide by 6' },
+    mul_6:  { es:'multiplicar por 6',      en:'multiply by 6' },
+    raiz:   { es:'sacar raíz cuadrada',    en:'take the square root' }
+  };
+  var POOL = [
+    { id:'prisma',
+      goal:{ es:'Deja sola la altura <b>c</b> de un prisma rectangular.', en:'Get the height <b>c</b> of a rectangular prism on its own.' },
+      map:{ '': 'V = a · b · c',
+            'div_a': fx('V','a')+' = b · c',
+            'div_b': fx('V','b')+' = a · c',
+            'div_a|div_b': fx('V','a · b')+' = c' },
+      solved:'div_a|div_b',
+      chips:['div_a','div_b','mul_2','add_b'],
+      wrong:{ mul_2:{ es:'Aquí no hay ningún 2 estorbando: multiplicar por 2 solo agranda los dos lados y deja a la c igual de acompañada.',
+                      en:'There is no 2 in the way here: multiplying by 2 only enlarges both sides and leaves c just as crowded.' },
+              add_b:{ es:'La b está multiplicando, no sumando, así que sumarle b a los dos lados no la despega de la c.',
+                      en:'The b is multiplying, not adding, so adding b to both sides does not pull it away from c.' } },
+      why:{ es:'La altura queda sola cuando se deshacen las dos multiplicaciones que la acompañan, sin importar en qué orden lo hagas.',
+            en:'The height stands alone once the two multiplications beside it are undone, no matter which order you use.' } },
+    { id:'triangulo',
+      goal:{ es:'Deja sola la altura <b>h</b> de un triángulo.', en:'Get the height <b>h</b> of a triangle on its own.' },
+      map:{ '': 'A = '+fx('b · h','2'),
+            'mul_2': '2 · A = b · h',
+            'div_b': fx('A','b')+' = '+fx('h','2'),
+            'div_b|mul_2': fx('2 · A','b')+' = h' },
+      solved:'div_b|mul_2',
+      chips:['mul_2','div_b','div_2','sub_b'],
+      wrong:{ div_2:{ es:'Ese lado ya venía partido a la mitad: dividir otra vez entre 2 lo parte de nuevo en lugar de repararlo.',
+                      en:'That side was already cut in half: dividing by 2 again cuts it once more instead of repairing it.' },
+              sub_b:{ es:'La b multiplica a la altura, y lo que multiplica no se quita restando.',
+                      en:'The b multiplies the height, and what multiplies is not removed by subtracting.' } },
+      why:{ es:'Primero se repara la mitad y después se retira la base, o al revés: las dos rutas llegan al mismo despeje.',
+            en:'First the half is repaired and then the base is removed, or the other way round: both routes reach the same result.' } },
+    { id:'cilindro',
+      goal:{ es:'Deja sola la altura <b>h</b> de un cilindro.', en:'Get the height <b>h</b> of a cylinder on its own.' },
+      map:{ '': 'V = π · r² · h',
+            'div_pi': fx('V','π')+' = r² · h',
+            'div_r2': fx('V','r²')+' = π · h',
+            'div_pi|div_r2': fx('V','π · r²')+' = h' },
+      solved:'div_pi|div_r2',
+      chips:['div_pi','div_r2','div_r','mul_2'],
+      wrong:{ div_r:{ es:'El radio viene elevado al cuadrado, así que quitar una sola r deja todavía otra r pegada a la altura.',
+                      en:'The radius comes squared, so removing a single r still leaves another r stuck to the height.' },
+              mul_2:{ es:'Ese 2 del exponente no es un factor que puedas cancelar multiplicando: pertenece al radio.',
+                      en:'That 2 in the exponent is not a factor you can cancel by multiplying: it belongs to the radius.' } },
+      why:{ es:'El área de la base carga a π y al radio al cuadrado, y hasta que los dos se retiran la altura queda libre.',
+            en:'The base area carries π and the squared radius, and only once both are removed is the height free.' } },
+    { id:'perimetro',
+      goal:{ es:'Deja sola la altura <b>h</b> de un rectángulo del que conoces el perímetro.', en:'Get the height <b>h</b> of a rectangle whose perimeter you know on its own.' },
+      map:{ '': 'P = 2 · (b + h)',
+            'div_2': fx('P','2')+' = b + h',
+            'div_2|sub_b': fx('P','2')+' − b = h' },
+      solved:'div_2|sub_b',
+      chips:['div_2','sub_b','mul_2','div_b'],
+      wrong:{ sub_b:{ es:'Mientras el paréntesis siga multiplicado por 2, restar b se lleva una sola b de las dos que hay adentro.',
+                      en:'While the bracket is still multiplied by 2, subtracting b only removes one of the two b that live inside.' },
+              div_b:{ es:'Dentro del paréntesis la b está sumando, y lo que suma no se retira dividiendo.',
+                      en:'Inside the bracket the b is adding, and what adds is not removed by dividing.' },
+              mul_2:{ es:'Multiplicar por 2 aleja todavía más a la altura de quedarse sola.',
+                      en:'Multiplying by 2 pushes the height even further from standing alone.' } },
+      why:{ es:'Primero se deshace la multiplicación que envuelve a todo el paréntesis y solo después se descuenta la base.',
+            en:'First the multiplication wrapping the whole bracket is undone and only then is the base taken off.' } },
+    { id:'cubo',
+      goal:{ es:'Deja sola la arista <b>a</b> de un cubo del que conoces el área total.', en:'Get the edge <b>a</b> of a cube whose total area you know on its own.' },
+      map:{ '': 'A = 6 · a²',
+            'div_6': fx('A','6')+' = a²',
+            'div_6|raiz': '√'+fx('A','6')+' = a' },
+      solved:'div_6|raiz',
+      chips:['div_6','raiz','mul_6','div_2'],
+      wrong:{ raiz:{ es:'La raíz de 6 por a² no reparte bien mientras el 6 siga ahí: quita primero el factor.',
+                     en:'The root of 6 times a² does not split cleanly while the 6 is still there: remove the factor first.' },
+              mul_6:{ es:'Ese 6 ya multiplica del otro lado, y volver a multiplicar por 6 lo aleja todavía más.',
+                      en:'That 6 already multiplies on the other side, and multiplying by 6 again pushes it further away.' },
+              div_2:{ es:'Las caras del cubo son seis, no dos, así que el 2 no corresponde a nada de esta figura.',
+                      en:'The cube has six faces, not two, so the 2 matches nothing in this figure.' } },
+      why:{ es:'Primero se reparte el área entre las seis caras y después se deshace el cuadrado con una raíz.',
+            en:'First the area is shared among the six faces and then the square is undone with a root.' } }
+  ];
+  var rounds = shuffle(POOL, rng).slice(0,3);
+  var st = { r:0, applied:[], tries:0, lock:false, done:false };
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap section';
+  wrap.setAttribute('data-widget','despeje');
+  wrap.id = 'wDesp';
+  wrap.innerHTML =
+    '<div class="iw-tag">'+(es?'Taller de despeje':'Rearranging workshop')+'</div>'+
+    '<div class="iw-goal" id="despGoal"></div>'+
+    '<div class="iw-sub">'+(es
+      ? 'Cada operación que toques se aplica a los dos lados a la vez y la igualdad se reescribe al instante. Si un paso no te convence, puedes deshacerlo.'
+      : 'Every operation you tap is applied to both sides at once and the equality rewrites itself instantly. If a step does not convince you, you can undo it.')+'</div>'+
+    '<div class="eqbox" id="despEq"></div>'+
+    '<div class="op-chips" id="despChips"></div>'+
+    '<div class="iw-pad"><button class="iw-btn" onclick="despUndo()">'+(es?'↩ Deshacer':'↩ Undo')+'</button></div>'+
+    '<div class="rfb" id="despFb"></div>';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function cur(){ return rounds[Math.min(st.r, rounds.length-1)]; }
+  function keyOf(list){ return list.slice().sort().join('|'); }
+
+  function render(){
+    var g = document.getElementById('despGoal'), eq = document.getElementById('despEq'), ch = document.getElementById('despChips');
+    if (!g || !eq || !ch) return;
+    if (st.done){
+      g.innerHTML = (es?'Los tres despejes quedaron listos.':'All three rearrangements are done.');
+      eq.innerHTML = (es?'Cada fórmula guarda tantos despejes como letras tiene.':'Every formula holds as many rearrangements as it has letters.');
+      ch.innerHTML = '';
+      return;
+    }
+    var c = cur();
+    g.innerHTML = (es?'Despeje ':'Rearrangement ')+(st.r+1)+(es?' de 3: ':' of 3: ')+c.goal[LANG];
+    eq.innerHTML = c.map[keyOf(st.applied)] || c.map[''];
+    ch.innerHTML = c.shownChips.map(function(op){
+      var used = st.applied.indexOf(op) >= 0;
+      return '<button class="op-chip'+(used?' used':'')+'" onclick="despTap(\''+op+'\')">'+OPS[op][LANG]+'</button>';
+    }).join('');
+  }
+
+  function startRound(){
+    var c = cur();
+    if (!c.shownChips) c.shownChips = shuffle(c.chips, rng);
+    st.applied = []; st.tries = 0;
+    render();
+  }
+
+  window.despUndo = function(){
+    if (st.lock || st.done) return;
+    if (!st.applied.length){
+      document.getElementById('despFb').innerHTML = (es?'Todavía no hay pasos que deshacer.':'There are no steps to undo yet.');
+      return;
+    }
+    st.applied.pop(); render();
+    document.getElementById('despFb').innerHTML = (es?'Paso retirado. La igualdad regresó a como estaba.':'Step removed. The equality is back the way it was.');
+  };
+
+  window.despTap = function(op){
+    if (st.lock || st.done) return;
+    var c = cur(), fb = document.getElementById('despFb');
+    if (st.applied.indexOf(op) >= 0){
+      fb.innerHTML = (es?'Esa operación ya está aplicada en los dos lados.':'That operation is already applied on both sides.');
+      return;
+    }
+    var next = st.applied.concat([op]);
+    var k = keyOf(next);
+    if (c.map[k]){
+      st.applied = next; render();
+      if (k === c.solved){
+        st.lock = true;
+        fb.innerHTML = '<span style="color:var(--ok);font-weight:700;">✓ '+(es?'Despejada. ':'Solved. ')+c.why[LANG]+'</span>';
+        setTimeout(function(){
+          st.lock = false; st.r++;
+          if (st.r >= rounds.length){ st.done = true; render();
+            var f4 = document.getElementById('despFb');
+            if (f4) f4.innerHTML = '<span style="color:var(--ok);font-weight:700;">🎉 '+(es
+              ? 'Tres fórmulas distintas y la misma idea: se deshace lo que acompaña a la letra que quieres sola.'
+              : 'Three different formulas and the same idea: you undo whatever keeps company with the letter you want alone.')+'</span>';
+            return; }
+          document.getElementById('despFb').innerHTML = '';
+          startRound();
+        }, 2200);
+        return;
+      }
+      fb.innerHTML = (es?'Buen paso. La letra que buscas ya quedó con menos compañía.':'Good step. The letter you want now has less company.');
+      return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      st.lock = true;
+      st.applied = c.solved.split('|'); render();
+      fb.innerHTML = (es?'Así se despeja: ':'This is how it comes out: ')+c.why[LANG];
+      setTimeout(function(){
+        st.lock = false; st.r++;
+        if (st.r >= rounds.length){ st.done = true; render(); return; }
+        document.getElementById('despFb').innerHTML = '';
+        startRound();
+      }, 3200);
+      return;
+    }
+    var msg = c.wrong[op];
+    fb.innerHTML = msg ? msg[LANG] : (es
+      ? 'Esa operación no acerca a la letra a quedarse sola: fíjate en qué la está acompañando ahora mismo.'
+      : 'That operation does not bring the letter closer to standing alone: look at what is keeping it company right now.');
+  };
+
+  startRound();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MANIPULATIVE 3 - Empareja el despeje
+   A situation on the left, an expression on the right. The student pairs
+   them by tapping; a wrong pair answers with the reason it does not fit.
+   ══════════════════════════════════════════════════════════════════════ */
+function buildMatch(rng){
+  var es = (LANG === 'es');
+  var POOL = [
+    { L:{ es:'Conoces el área A de un rectángulo y su base b, y buscas la altura.',
+          en:'You know the area A of a rectangle and its base b, and you want the height.' },
+      R: fx('A','b'),
+      n:{ es:'En un rectángulo el área es base por altura, así que para regresar a la altura basta con deshacer una multiplicación.',
+          en:'In a rectangle the area is base times height, so getting back to the height only means undoing one multiplication.' } },
+    { L:{ es:'Conoces el área A de un triángulo y su base b, y buscas la altura.',
+          en:'You know the area A of a triangle and its base b, and you want the height.' },
+      R: fx('2 · A','b'),
+      n:{ es:'El área del triángulo se quedó a la mitad, y al despejar esa mitad tiene que reaparecer arriba.',
+          en:'The area of the triangle was halved, and when you rearrange, that half has to reappear on top.' } },
+    { L:{ es:'Conoces el volumen V de un prisma y el área B de su base, y buscas la altura.',
+          en:'You know the volume V of a prism and the area B of its base, and you want the height.' },
+      R: fx('V','B'),
+      n:{ es:'El volumen del prisma es el área de la base multiplicada por la altura, y aquí la base ya viene medida de una sola vez.',
+          en:'The volume of a prism is the base area times the height, and here the base already arrives measured in one go.' } },
+    { L:{ es:'Conoces el perímetro P de un rectángulo y su base b, y buscas la altura.',
+          en:'You know the perimeter P of a rectangle and its base b, and you want the height.' },
+      R: fx('P','2')+' − b',
+      n:{ es:'El perímetro recorre dos bases y dos alturas: primero se toma la mitad de todo y después se descuenta la base.',
+          en:'The perimeter walks two bases and two heights: first you take half of everything and then you discount the base.' } },
+    { L:{ es:'Conoces el volumen V de un cilindro y su altura h, y buscas el área de su base.',
+          en:'You know the volume V of a cylinder and its height h, and you want the area of its base.' },
+      R: fx('V','h'),
+      n:{ es:'El volumen del cilindro es el área de la base por la altura, sin ningún factor extra que quitar.',
+          en:'The volume of a cylinder is the base area times the height, with no extra factor to remove.' } },
+    { L:{ es:'Conoces el área total A de un cubo y buscas el área de una de sus caras.',
+          en:'You know the total area A of a cube and you want the area of one of its faces.' },
+      R: fx('A','6'),
+      n:{ es:'El cubo tiene seis caras iguales y todas cargan la misma porción del área total.',
+          en:'A cube has six equal faces and all of them carry the same portion of the total area.' } }
+  ];
+  var items = shuffle(POOL, rng).slice(0,4);
+  var st = { lOrder: shuffle(items.map(function(_,i){ return i; }), rng),
+             rOrder: shuffle(items.map(function(_,i){ return i; }), rng),
+             sel:null, solved:[], tries:0, done:false, revealed:false };
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap section';
+  wrap.setAttribute('data-widget','match');
+  wrap.id = 'wMatch';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  function render(){
+    var head = '<div class="iw-tag">'+(es?'Empareja el despeje':'Match the rearrangement')+'</div>'+
+      '<div class="iw-goal">'+(es?'Une cada situación con la expresión que entrega la medida que falta.':'Join each situation with the expression that delivers the missing measurement.')+'</div>'+
+      '<div class="iw-sub">'+(es
+        ? 'Toca primero una situación y después una expresión. Puedes cambiar de opinión antes de decidir: mientras no coincidan, nada se queda fijo.'
+        : 'Tap a situation first and then an expression. You can change your mind before deciding: while they do not match, nothing gets locked.')+'</div>';
+    if (st.done){
+      wrap.innerHTML = head + (st.revealed
+        ? '<div class="mt-reveal">'+items.map(function(it){
+            return '<div class="mt-pair">'+it.R+'<span class="mt-pair-txt">'+it.L[LANG]+'</span></div>';
+          }).join('')+'<div class="rfb">'+(es
+            ? 'Así quedan unidas. En todas, la expresión es lo que sobra cuando se retira lo que acompañaba a la medida buscada.'
+            : 'This is how they pair up. In all of them, the expression is what remains once whatever accompanied the wanted measurement is removed.')+'</div></div>'
+        : '<div class="cls-done">🎉 '+(es
+            ? 'Todas emparejadas. Cada expresión salió de despejar la letra que la pregunta pedía.'
+            : 'All matched. Every expression came from isolating the letter the question asked for.')+'</div>');
+      return;
+    }
+    var left = st.lOrder.map(function(i){
+      var done = st.solved.indexOf(i) >= 0;
+      var cls = 'mt-chip'+(done?' done':'')+(st.sel === i ? ' sel' : '');
+      return '<button class="'+cls+'" onclick="mtL('+i+')">'+items[i].L[LANG]+'</button>';
+    }).join('');
+    var right = st.rOrder.map(function(i){
+      var done = st.solved.indexOf(i) >= 0;
+      return '<button class="mt-chip mt-exp'+(done?' done':'')+'" onclick="mtR('+i+')">'+items[i].R+'</button>';
+    }).join('');
+    wrap.innerHTML = head +
+      '<div class="mt-cols">'+
+        '<div class="mt-col"><div class="mt-head">'+(es?'Lo que sabes':'What you know')+'</div>'+left+'</div>'+
+        '<div class="mt-col"><div class="mt-head">'+(es?'La medida que falta':'The missing measurement')+'</div>'+right+'</div>'+
+      '</div>'+
+      '<div class="rfb" id="mtFb"></div>';
+  }
+
+  window.mtL = function(i){
+    if (st.done || st.solved.indexOf(i) >= 0) return;
+    st.sel = (st.sel === i) ? null : i;
+    render();
+  };
+  window.mtR = function(i){
+    if (st.done || st.solved.indexOf(i) >= 0) return;
+    if (st.sel === null){
+      render();
+      document.getElementById('mtFb').innerHTML = (es?'Elige primero una situación de la izquierda.':'Choose a situation on the left first.');
+      return;
+    }
+    var chosen = st.sel;
+    if (chosen === i){
+      st.solved.push(i); st.sel = null;
+      if (st.solved.length >= items.length){ st.done = true; render(); return; }
+      render();
+      document.getElementById('mtFb').innerHTML = '<span style="color:var(--ok);font-weight:700;">✓ '+(es?'Van juntas. ':'They belong together. ')+'</span>'+items[i].n[LANG];
+      return;
+    }
+    st.tries++;
+    if (st.tries >= 3){
+      items.forEach(function(_, k){ if (st.solved.indexOf(k) < 0) st.solved.push(k); });
+      st.done = true; st.revealed = true; render();
+      return;
+    }
+    st.sel = null; render();
+    document.getElementById('mtFb').innerHTML = (es?'Todavía no. ':'Not yet. ')+items[chosen].n[LANG];
+  };
+
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MANIPULATIVE 4 - Cuaderno de la figura
+   Open notebook: the student writes or sketches. No verdict, no score.
+   ══════════════════════════════════════════════════════════════════════ */
+function buildReflect(rng){
+  var es = (LANG === 'es');
+  var PROMPTS = [
+    { es:'Dibuja una caja con forma de prisma y escribe junto a cada arista la letra que usarías para su medida. Después explica con tus palabras cómo obtendrías la altura si te dieran el volumen y el área de la base.',
+      en:'Draw a box shaped like a prism and write next to each edge the letter you would use for its measurement. Then explain in your own words how you would obtain the height if you were given the volume and the base area.' },
+    { es:'Inventa un envase que deba contener siempre la misma cantidad de líquido y describe qué le pasa a su altura si decides hacerlo más ancho. Apoya tu explicación con un dibujo.',
+      en:'Invent a container that must always hold the same amount of liquid and describe what happens to its height if you decide to make it wider. Back your explanation up with a drawing.' },
+    { es:'Elige una fórmula de área o de volumen que hayas usado hoy y escribe las tres preguntas distintas que se pueden responder con ella según cuál sea la letra desconocida.',
+      en:'Choose an area or volume formula you used today and write the three different questions it can answer depending on which letter is the unknown one.' },
+    { es:'Explica a alguien que no estuvo en clase por qué una fórmula con cuatro letras no obliga a conocer las cuatro medidas. Usa un ejemplo dibujado.',
+      en:'Explain to someone who was not in class why a formula with four letters does not force you to know all four measurements. Use a drawn example.' }
+  ];
+  var p = PROMPTS[Math.floor(rng()*PROMPTS.length)];
+
+  var wrap = document.createElement('div');
+  wrap.className = 'iwrap section';
+  wrap.setAttribute('data-widget','reflect');
+  wrap.id = 'wRefl';
+  wrap.innerHTML =
+    '<div class="iw-tag">'+(es?'Cuaderno de la figura':'Figure notebook')+'</div>'+
+    '<div class="iw-sub">'+(es
+      ? 'Aquí no hay una sola respuesta buena: importa cómo la sostienes. Puedes corregir cuanto quieras antes de guardar.'
+      : 'There is no single good answer here: what matters is how you back it up. You can correct as much as you like before saving.')+'</div>'+
+    '<div class="reflect-prompt">'+p[LANG]+'</div>'+
+    '<div class="wtabs">'+
+      '<button class="wtab active" id="reflTabT" onclick="reflTab(\'type\',this)">'+t('tab-type')+'</button>'+
+      '<button class="wtab" id="reflTabD" onclick="reflTab(\'draw\',this)">'+t('tab-draw')+'</button>'+
+    '</div>'+
+    '<div class="wpanel active" id="refl_type"><textarea class="wtextarea" id="reflTa" placeholder="'+(es?'Tu respuesta':'Your answer')+'"></textarea></div>'+
+    '<div class="wpanel" id="refl_draw">'+
+      '<div class="cvwrap">'+
+        '<canvas class="dcanvas" id="reflCv"></canvas>'+
+        '<div class="ctoolbar">'+
+          '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>'+
+          '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>'+
+          '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>'+
+          '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>'+
+          '<div class="cdot" data-color="#1a1a16" style="background:#1a1a16"></div>'+
+          '<div class="cdot" data-color="#8b2500" style="background:#8b2500"></div>'+
+          '<div class="cdot" data-color="#1d4e89" style="background:#1d4e89"></div>'+
+          '<button class="clrbtn">'+t('btn-clear')+'</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<button class="rverify-btn" onclick="reflSave()">'+(es?'Guardar en el cuaderno':'Save to the notebook')+'</button>'+
+    '<div class="rfb" id="reflFb"></div>';
+  document.getElementById('lessonBody').appendChild(wrap);
+
+  window.reflTab = function(which, btn){
+    ['type','draw'].forEach(function(k){
+      var pnl = document.getElementById('refl_'+k);
+      if (pnl) pnl.classList.toggle('active', k === which);
+    });
+    wrap.querySelectorAll('.wtab').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    if (which === 'draw') setTimeout(function(){ var c = document.getElementById('reflCv'); if (c && !c.width) initCanvas(c); }, 60);
+  };
+  window.reflSave = function(){
+    var ta = document.getElementById('reflTa');
+    var n = ta ? ta.value.trim().length : 0;
+    var fb = document.getElementById('reflFb');
+    fb.innerHTML = '<span style="color:var(--ok);font-weight:600;">✓ '+(n > 60
+      ? (es ? 'Guardado. Tu explicación ya distingue qué medidas mandan y cuál queda determinada.' : 'Saved. Your explanation already tells which measurements command and which one is left determined.')
+      : (n > 0
+        ? (es ? 'Guardado. Si le agregas un ejemplo con números, tu idea se sostiene sola.' : 'Saved. If you add an example with numbers, your idea holds up on its own.')
+        : (es ? 'Guardado. Lo que dibujaste también cuenta como respuesta.' : 'Saved. What you drew also counts as an answer.')))+'</span>';
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   GRADED PROBLEM BUILDER (inline, one card at a time)
+   ══════════════════════════════════════════════════════════════════════ */
+function addProblem(rng, spec){
+  var sh = shuffleOpts(spec.options, spec.correct, rng);
+  problems.push({
+    title: spec.title,
+    questionText: spec.q,
+    fn: '',
+    options: sh.opts,
+    correctIdx: sh.idx,
+    hint: spec.hint,
+    explanation: spec.exp,
+    showWork: !!spec.showWork,
+    studentChoice: null,
+    pendingChoice: null
+  });
+  var idx = problems.length - 1;
+  buildOneCard(problems[idx], idx);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   buildLesson: concept, manipulative, graded problem, interleaved
+   ══════════════════════════════════════════════════════════════════════ */
+function buildLesson(rng) {
+  problems = [];
+  WIDGET_REDRAW = [];
+  var lb = document.getElementById('lessonBody');
+  lb.innerHTML = '';
+  var es = (LANG === 'es');
+  var C  = es ? 'Concepto ' : 'Concept ';
+
+  /* ── CONCEPT 1 ───────────────────────────────────────────────── */
+  addSection(C + '1',
+    es ? 'Toda la figura cabe en una igualdad' : 'The whole figure fits into one equality',
+    (es
+    ? '<p>Cuando una figura se describe con letras, cada letra guarda el lugar de una medida que todavía no tiene número. El área de un rectángulo se obtiene multiplicando su base por su altura, y esa misma idea sostiene el volumen de un prisma: el área de la base, multiplicada por lo alto que sea el cuerpo. Escribirlo con letras no complica nada, al contrario, permite hablar de todos los rectángulos y de todos los prismas al mismo tiempo.</p>'
+    + '<p>Lo interesante aparece cuando se mira la igualdad completa. Dentro de una fórmula conviven varias variables amarradas por un mismo signo igual, y eso significa que no todas pueden elegirse libremente. Si conoces todas menos una, la que falta ya no tiene margen: su valor queda decidido por las demás. Un envase de volumen fijo lo muestra bien, porque en cuanto se fijan el largo y el ancho, la altura deja de ser una decisión y pasa a ser una consecuencia.</p>'
+    : '<p>When a figure is described with letters, each letter holds the place of a measurement that has no number yet. The area of a rectangle comes from multiplying its base by its height, and that same idea supports the volume of a prism: the area of the base, multiplied by how tall the solid is. Writing it with letters complicates nothing; on the contrary, it lets you speak about every rectangle and every prism at the same time.</p>'
+    + '<p>The interesting part appears when you look at the whole equality. Inside a formula several variables live tied together by one equals sign, and that means they cannot all be chosen freely. If you know all of them but one, the missing one has no room left: its value is decided by the others. A container with a fixed volume shows this well, because as soon as the length and the width are set, the height stops being a decision and becomes a consequence.</p>')
+    + '<div class="rules-grid">'
+    + '<div class="rcard"><div class="rname">'+(es?'Rectángulo':'Rectangle')+'</div><div class="rform">A = b · h</div><div class="rnote">'+(es?'La base y la altura deciden el área.':'The base and the height decide the area.')+'</div></div>'
+    + '<div class="rcard"><div class="rname">'+(es?'Triángulo':'Triangle')+'</div><div class="rform">A = '+fx('b · h','2')+'</div><div class="rnote">'+(es?'La mitad del rectángulo que lo envuelve.':'Half of the rectangle that wraps it.')+'</div></div>'
+    + '<div class="rcard"><div class="rname">'+(es?'Prisma':'Prism')+'</div><div class="rform">V = B · h</div><div class="rnote">'+(es?'El área de la base, repetida a lo alto.':'The base area, repeated upwards.')+'</div></div>'
+    + '<div class="rcard"><div class="rname">'+(es?'Cilindro':'Cylinder')+'</div><div class="rform">V = π · r² · h</div><div class="rnote">'+(es?'La base circular, repetida a lo alto.':'The circular base, repeated upwards.')+'</div></div>'
+    + '</div>'
+    + '<div class="callout"><p><strong>'+(es?'Lo que conviene notar:':'Worth noticing:')+'</strong> '+(es
+      ? 'una fórmula no obliga a conocer todas sus letras. Basta con conocer todas menos una para que la última quede determinada.'
+      : 'a formula does not force you to know all of its letters. Knowing all but one is enough for the last one to be determined.')+'</p></div>');
+
+  buildCaja(rng);
+
+  /* ── PROBLEM 1 ── escribir la expresión que representa la figura ── */
+  var P1V = [
+    { es:{ t:'La caja sin tapa',
+           q:'Una caja de cartón sin tapa tiene el fondo rectangular, de x cm de largo por y cm de ancho, y sus paredes miden h cm de alto. ¿Cuál expresión representa el área de cartón que se necesita para armarla?',
+           o:['xy + 2xh + 2yh','2xy + 2xh + 2yh','xy + 4xh','xy + xh + yh'],
+           a:'xy + 2xh + 2yh',
+           h:'La caja tiene un fondo y cuatro paredes. Dos de esas paredes son iguales entre sí y miden x por h, y las otras dos miden y por h. Suma el fondo con las cuatro paredes.',
+           e:'El fondo aporta xy. Las dos paredes largas aportan xh cada una y las dos paredes cortas aportan yh cada una, así que el cartón necesario es xy + 2xh + 2yh. La expresión con dos veces xy correspondería a una caja que además llevara tapa.' },
+      en:{ t:'The box with no lid',
+           q:'A cardboard box with no lid has a rectangular bottom, x cm long by y cm wide, and its walls are h cm tall. Which expression represents the area of cardboard needed to build it?',
+           o:['xy + 2xh + 2yh','2xy + 2xh + 2yh','xy + 4xh','xy + xh + yh'],
+           a:'xy + 2xh + 2yh',
+           h:'The box has a bottom and four walls. Two of those walls are equal to each other and measure x by h, and the other two measure y by h. Add the bottom to the four walls.',
+           e:'The bottom contributes xy. The two long walls contribute xh each and the two short walls contribute yh each, so the cardboard needed is xy + 2xh + 2yh. The expression with two lots of xy would belong to a box that also carried a lid.' } },
+    { es:{ t:'El prisma de base triangular',
+           q:'Un prisma recto tiene como base un triángulo cuya base mide b cm y cuya altura mide a cm. El prisma tiene L cm de largo. ¿Cuál expresión representa su volumen?',
+           o:[fx('b · a · L','2'),'b · a · L',fx('b · a','2'),fx('(b + a) · L','2')],
+           a:fx('b · a · L','2'),
+           h:'El volumen de un prisma es el área de su base multiplicada por lo largo que sea el cuerpo. Aquí la base es un triángulo, así que primero calcula el área de ese triángulo.',
+           e:'El área del triángulo de la base es b por a repartido entre dos. Al multiplicar esa área por el largo L se obtiene el volumen del prisma, que es b por a por L repartido entre dos. La expresión sin el dos correspondería a un prisma de base rectangular.' },
+      en:{ t:'The prism with a triangular base',
+           q:'A right prism has as its base a triangle whose base measures b cm and whose height measures a cm. The prism is L cm long. Which expression represents its volume?',
+           o:[fx('b · a · L','2'),'b · a · L',fx('b · a','2'),fx('(b + a) · L','2')],
+           a:fx('b · a · L','2'),
+           h:'The volume of a prism is the area of its base multiplied by how long the solid is. Here the base is a triangle, so first work out the area of that triangle.',
+           e:'The area of the triangular base is b times a shared between two. Multiplying that area by the length L gives the volume of the prism, which is b times a times L shared between two. The expression without the two would belong to a prism with a rectangular base.' } },
+    { es:{ t:'La lata completa',
+           q:'Una lata tiene forma de cilindro, con radio r cm y altura h cm, y está cerrada por arriba y por abajo. ¿Cuál expresión representa el área total de lámina que la cubre?',
+           o:['2πr² + 2πrh','πr² + 2πrh','2πr² + πrh','πr² + πrh'],
+           a:'2πr² + 2πrh',
+           h:'La lámina cubre dos círculos iguales y una pared curva. Si esa pared se desenrollara quedaría un rectángulo cuya base es el contorno del círculo y cuya altura es la de la lata.',
+           e:'Cada tapa circular aporta πr² y son dos tapas, de modo que aportan 2πr². La pared desenrollada es un rectángulo de base 2πr y altura h, es decir 2πrh. Sumadas, la lámina total es 2πr² + 2πrh.' },
+      en:{ t:'The complete can',
+           q:'A can has the shape of a cylinder, with radius r cm and height h cm, and it is closed at the top and at the bottom. Which expression represents the total area of metal sheet covering it?',
+           o:['2πr² + 2πrh','πr² + 2πrh','2πr² + πrh','πr² + πrh'],
+           a:'2πr² + 2πrh',
+           h:'The sheet covers two equal circles and one curved wall. If that wall were unrolled it would leave a rectangle whose base is the outline of the circle and whose height is the height of the can.',
+           e:'Each circular lid contributes πr² and there are two lids, so they contribute 2πr². The unrolled wall is a rectangle with base 2πr and height h, that is 2πrh. Added together, the total sheet is 2πr² + 2πrh.' } }
+  ];
+  var p1 = P1V[Math.floor(rng()*P1V.length)][LANG];
+  addProblem(rng, { title:p1.t, q:p1.q, hint:p1.h, exp:p1.e, options:p1.o, correct:p1.a, showWork:false });
+
+  /* ── PROBLEM 2 ── medida que falta en un prisma ── */
+  var P2P = [ {a:8,b:5,c:6}, {a:9,b:4,c:7}, {a:12,b:5,c:4}, {a:7,b:6,c:5} ];
+  var n2 = P2P[Math.floor(rng()*P2P.length)];
+  var V2 = n2.a*n2.b*n2.c;
+  var p2v = (rng() < 0.5) ? 'alt' : 'anc';
+  var p2o, p2c;
+  if (p2v === 'alt'){
+    p2c = n2.c + ' cm';
+    p2o = [ p2c, (n2.b*n2.c) + ' cm', (n2.a*n2.c) + ' cm', (V2 - n2.a*n2.b) + ' cm' ];
+  } else {
+    p2c = n2.b + ' cm';
+    p2o = [ p2c, (n2.b*n2.c) + ' cm', (n2.a*n2.b) + ' cm', (V2 - n2.a*n2.c) + ' cm' ];
+  }
+  addProblem(rng, {
+    title: es ? 'La caja de la mudanza' : 'The moving box',
+    q: (p2v === 'alt'
+      ? (es
+        ? 'Una caja con forma de prisma rectangular mide '+n2.a+' cm de largo y '+n2.b+' cm de ancho. Su volumen es de '+V2+' cm³. ¿Cuánto mide su altura?'
+        : 'A box shaped like a rectangular prism is '+n2.a+' cm long and '+n2.b+' cm wide. Its volume is '+V2+' cm³. How tall is it?')
+      : (es
+        ? 'Una caja con forma de prisma rectangular mide '+n2.a+' cm de largo y '+n2.c+' cm de alto. Su volumen es de '+V2+' cm³. ¿Cuánto mide su ancho?'
+        : 'A box shaped like a rectangular prism is '+n2.a+' cm long and '+n2.c+' cm tall. Its volume is '+V2+' cm³. How wide is it?')),
+    hint: es
+      ? 'El volumen de un prisma sale de multiplicar tres medidas. Si ya conoces dos de ellas, multiplícalas primero y pregúntate por cuál número habría que multiplicar ese producto para llegar al volumen.'
+      : 'The volume of a prism comes from multiplying three measurements. If you already know two of them, multiply those first and ask yourself which number that product would have to be multiplied by to reach the volume.',
+    exp: (p2v === 'alt'
+      ? (es
+        ? 'Las dos medidas conocidas forman una cara de '+n2.a+' por '+n2.b+', es decir '+(n2.a*n2.b)+' cm². El volumen es esa cara repetida a lo alto, así que la altura es el cociente del volumen entre esa área y mide '+n2.c+' cm.'
+        : 'The two known measurements form a face of '+n2.a+' by '+n2.b+', that is '+(n2.a*n2.b)+' cm². The volume is that face repeated upwards, so the height is the volume divided by that area and measures '+n2.c+' cm.')
+      : (es
+        ? 'Las dos medidas conocidas forman una cara de '+n2.a+' por '+n2.c+', es decir '+(n2.a*n2.c)+' cm². El volumen es esa cara repetida hacia el fondo, así que el ancho es el cociente del volumen entre esa área y mide '+n2.b+' cm.'
+        : 'The two known measurements form a face of '+n2.a+' by '+n2.c+', that is '+(n2.a*n2.c)+' cm². The volume is that face repeated towards the back, so the width is the volume divided by that area and measures '+n2.b+' cm.')),
+    options: p2o, correct: p2c, showWork: true
+  });
+
+  /* ── CONCEPT 2 ───────────────────────────────────────────────── */
+  addSection(C + '2',
+    es ? 'Despejar es deshacer, en el orden contrario' : 'Rearranging is undoing, in reverse order',
+    (es
+    ? '<p>Despejar una letra significa dejarla sola de un lado de la igualdad, sin nada que la acompañe. La única regla es que todo lo que se haga de un lado tiene que hacerse también del otro, porque de lo contrario la igualdad se rompe. A partir de ahí se trata de deshacer: lo que multiplica se retira dividiendo, lo que divide se retira multiplicando, lo que suma se retira restando y lo que está elevado al cuadrado se retira con una raíz.</p>'
+    + '<p>El orden importa cuando hay una operación envolviendo a otra. En el área de un rectángulo, la base y la altura solo se multiplican, así que retirar cualquiera de las dos funciona igual de bien. En cambio, en un perímetro escrito como dos por la suma de la base y la altura, ese dos envuelve a toda la suma, y hay que deshacerlo antes de tocar lo que está adentro. Conviene mirar la fórmula de afuera hacia adentro y preguntarse qué operación es la última que se aplicó.</p>'
+    : '<p>Isolating a letter means leaving it alone on one side of the equality, with nothing keeping it company. The only rule is that whatever is done on one side must also be done on the other, because otherwise the equality breaks. From there it is a matter of undoing: what multiplies is removed by dividing, what divides is removed by multiplying, what adds is removed by subtracting and what is squared is removed with a root.</p>'
+    + '<p>Order matters when one operation wraps another. In the area of a rectangle the base and the height only multiply, so removing either of the two works equally well. In a perimeter written as two times the sum of the base and the height, however, that two wraps the whole sum, and it has to be undone before touching what is inside. It helps to read the formula from the outside inwards and ask which operation was the last one applied.</p>')
+    + '<div class="callout"><p><strong>'+(es?'Antes de mover nada:':'Before moving anything:')+'</strong> '+(es
+      ? 'mira qué está acompañando a la letra que quieres sola y con qué operación llegó ahí. Esa operación es la que hay que deshacer.'
+      : 'look at what is keeping company with the letter you want alone and which operation brought it there. That operation is the one to undo.')+'</p></div>');
+
+  buildDespeje(rng);
+
+  /* ── PROBLEM 3 ── elegir la expresión despejada ── */
+  var P3V = [
+    { es:{ t:'La altura del triángulo',
+           q:'De un triángulo se conocen el área A y la base b, y se quiere calcular su altura. ¿Cuál expresión entrega esa altura?',
+           o:[fx('2 · A','b'),fx('A','b'),fx('A','2 · b'),'2 · A · b'],
+           a:fx('2 · A','b'),
+           h:'El área de un triángulo es la mitad del producto de la base por la altura. Deshaz primero esa mitad y después retira la base.',
+           e:'Al multiplicar el área por dos desaparece la mitad y queda el producto de la base por la altura. Como la base multiplica a la altura, se retira dividiendo, de manera que la altura es el doble del área repartido entre la base.' },
+      en:{ t:'The height of the triangle',
+           q:'For a triangle the area A and the base b are known, and its height is wanted. Which expression delivers that height?',
+           o:[fx('2 · A','b'),fx('A','b'),fx('A','2 · b'),'2 · A · b'],
+           a:fx('2 · A','b'),
+           h:'The area of a triangle is half the product of the base and the height. Undo that half first and then remove the base.',
+           e:'Multiplying the area by two makes the half disappear and leaves the product of base and height. Since the base multiplies the height, it is removed by dividing, so the height is twice the area shared by the base.' } },
+    { es:{ t:'La altura de la lata',
+           q:'De un cilindro se conocen el volumen V y el radio r, y se quiere calcular su altura. ¿Cuál expresión entrega esa altura?',
+           o:[fx('V','π · r²'),fx('V','2 · π · r'),fx('V','π · r'),'V · π · r²'],
+           a:fx('V','π · r²'),
+           h:'El volumen de un cilindro es el área de su base circular multiplicada por la altura. Escribe primero cuánto vale esa área de la base y después retírala.',
+           e:'La base circular tiene área π por el radio al cuadrado, y esa área multiplica a la altura para dar el volumen. Como multiplica, se retira dividiendo, de modo que la altura es el volumen repartido entre π por el radio al cuadrado.' },
+      en:{ t:'The height of the can',
+           q:'For a cylinder the volume V and the radius r are known, and its height is wanted. Which expression delivers that height?',
+           o:[fx('V','π · r²'),fx('V','2 · π · r'),fx('V','π · r'),'V · π · r²'],
+           a:fx('V','π · r²'),
+           h:'The volume of a cylinder is the area of its circular base multiplied by the height. Write down what that base area is worth first and then remove it.',
+           e:'The circular base has area π times the radius squared, and that area multiplies the height to give the volume. Since it multiplies, it is removed by dividing, so the height is the volume shared by π times the radius squared.' } },
+    { es:{ t:'La altura desde el perímetro',
+           q:'De un rectángulo se conocen el perímetro P y la base b, y se quiere calcular su altura. ¿Cuál expresión entrega esa altura?',
+           o:[fx('P','2')+' − b',fx('P − b','2'),fx('P','2 · b'),'P − 2 · b'],
+           a:fx('P','2')+' − b',
+           h:'El perímetro recorre dos bases y dos alturas. Ese dos envuelve a toda la suma, así que hay que deshacerlo antes de descontar la base.',
+           e:'Al repartir el perímetro entre dos queda la suma de una base y una altura. De esa suma se descuenta la base y aparece la altura sola. Restar la base antes de repartir entre dos deja mal la cuenta, porque el perímetro contiene dos bases y no una.' },
+      en:{ t:'The height from the perimeter',
+           q:'For a rectangle the perimeter P and the base b are known, and its height is wanted. Which expression delivers that height?',
+           o:[fx('P','2')+' − b',fx('P − b','2'),fx('P','2 · b'),'P − 2 · b'],
+           a:fx('P','2')+' − b',
+           h:'The perimeter walks two bases and two heights. That two wraps the whole sum, so it must be undone before discounting the base.',
+           e:'Sharing the perimeter between two leaves the sum of one base and one height. From that sum the base is discounted and the height appears alone. Subtracting the base before sharing between two spoils the count, because the perimeter contains two bases and not one.' } }
+  ];
+  var p3 = P3V[Math.floor(rng()*P3V.length)][LANG];
+  addProblem(rng, { title:p3.t, q:p3.q, hint:p3.h, exp:p3.e, options:p3.o, correct:p3.a, showWork:false });
+
+  /* ── PROBLEM 4 ── medida que falta en un triángulo ── */
+  var P4B = [ {b:12,h:14,A:84}, {b:16,h:9,A:72}, {b:20,h:13,A:130}, {b:8,h:15,A:60} ];
+  var P4H = [ {b:15,h:12,A:90}, {b:9,h:16,A:72}, {b:13,h:20,A:130}, {b:7,h:8,A:28} ];
+  var p4v = (rng() < 0.5) ? 'base' : 'alt';
+  var n4 = (p4v === 'base') ? P4B[Math.floor(rng()*P4B.length)] : P4H[Math.floor(rng()*P4H.length)];
+  var p4c, p4o;
+  if (p4v === 'base'){
+    p4c = n4.b + ' cm';
+    p4o = [ p4c, (n4.A/n4.h) + ' cm', (n4.A/(2*n4.h)) + ' cm', (n4.A - n4.h) + ' cm' ];
+  } else {
+    p4c = n4.h + ' cm';
+    p4o = [ p4c, (n4.A/n4.b) + ' cm', (n4.A/(2*n4.b)) + ' cm', (n4.A - n4.b) + ' cm' ];
+  }
+  addProblem(rng, {
+    title: es ? 'El triángulo del taller' : 'The triangle in the workshop',
+    q: (p4v === 'base'
+      ? (es
+        ? 'Una pieza triangular de madera tiene un área de '+n4.A+' cm² y su altura mide '+n4.h+' cm. ¿Cuánto mide su base?'
+        : 'A triangular piece of wood has an area of '+n4.A+' cm² and its height measures '+n4.h+' cm. How long is its base?')
+      : (es
+        ? 'Una pieza triangular de madera tiene un área de '+n4.A+' cm² y su base mide '+n4.b+' cm. ¿Cuánto mide su altura?'
+        : 'A triangular piece of wood has an area of '+n4.A+' cm² and its base measures '+n4.b+' cm. How tall is it?')),
+    hint: es
+      ? 'El área de un triángulo se quedó a la mitad del producto de sus dos medidas. Repara esa mitad antes de retirar la medida que ya conoces.'
+      : 'The area of a triangle stayed at half the product of its two measurements. Repair that half before removing the measurement you already know.',
+    exp: (p4v === 'base'
+      ? (es
+        ? 'Al duplicar el área se recupera el producto completo de base por altura, que vale '+(2*n4.A)+'. Al repartir ese producto entre la altura de '+n4.h+' cm queda la base, que mide '+n4.b+' cm.'
+        : 'Doubling the area recovers the complete product of base and height, worth '+(2*n4.A)+'. Sharing that product by the height of '+n4.h+' cm leaves the base, which measures '+n4.b+' cm.')
+      : (es
+        ? 'Al duplicar el área se recupera el producto completo de base por altura, que vale '+(2*n4.A)+'. Al repartir ese producto entre la base de '+n4.b+' cm queda la altura, que mide '+n4.h+' cm.'
+        : 'Doubling the area recovers the complete product of base and height, worth '+(2*n4.A)+'. Sharing that product by the base of '+n4.b+' cm leaves the height, which measures '+n4.h+' cm.')),
+    options: p4o, correct: p4c, showWork: true
+  });
+
+  /* ── CONCEPT 3 ───────────────────────────────────────────────── */
+  addSection(C + '3',
+    es ? 'De la letra al número, sin perder nada en el camino' : 'From letter to number, without losing anything on the way',
+    (es
+    ? '<p>Una vez que la letra quedó sola, entra la parte más silenciosa del trabajo: sustituir los datos y operar sin perder ninguno. Los tropiezos más frecuentes no están en la fórmula sino en el traslado. Se olvida el dos del triángulo, se divide entre una medida que no era la indicada, o se resta cuando en realidad había que repartir. Conviene escribir el despeje antes de tocar la calculadora y solo entonces poner los números en su lugar.</p>'
+    + '<p>Las unidades ayudan a detectar errores sin necesidad de revisar toda la cuenta. Una longitud se mide en centímetros, un área en centímetros cuadrados y un volumen en centímetros cúbicos. Si al buscar una altura el resultado aparece acompañado de centímetros cuadrados, algo se quedó a medio camino, porque ese número seguramente es el área de la base y no la medida que se estaba buscando.</p>'
+    : '<p>Once the letter is alone, the quietest part of the work begins: substituting the data and operating without losing any of it. The most frequent slips are not in the formula but in the transfer. The two of the triangle gets forgotten, a division is made by the wrong measurement, or a subtraction happens where sharing was needed. It helps to write the rearrangement down before touching the calculator and only then put the numbers in their place.</p>'
+    + '<p>Units help you catch errors without reviewing the whole calculation. A length is measured in centimetres, an area in square centimetres and a volume in cubic centimetres. If while looking for a height the result turns up carrying square centimetres, something stopped halfway, because that number is most likely the base area and not the measurement you were after.</p>')
+    + '<div class="callout"><p><strong>'+(es?'Prueba rápida:':'Quick test:')+'</strong> '+(es
+      ? 'toma el resultado y regrésalo a la fórmula original. Si la igualdad se cumple, la medida encontrada es la correcta.'
+      : 'take the result and put it back into the original formula. If the equality holds, the measurement you found is the right one.')+'</p></div>');
+
+  buildMatch(rng);
+
+  /* ── PROBLEM 5 ── altura a partir del perímetro ── */
+  var P5P = [ {P:46,b:15,h:8}, {P:58,b:19,h:10}, {P:64,b:13,h:19}, {P:72,b:25,h:11} ];
+  var n5 = P5P[Math.floor(rng()*P5P.length)];
+  var p5c = n5.h + ' cm';
+  var p5o = [ p5c, (n5.P - n5.b) + ' cm', (n5.P/2) + ' cm', (n5.P - 2*n5.b) + ' cm' ];
+  addProblem(rng, {
+    title: es ? 'El marco de la fotografía' : 'The photograph frame',
+    q: (es
+      ? 'Un marco rectangular necesita '+n5.P+' cm de moldura para rodear la fotografía por completo, y la base del marco mide '+n5.b+' cm. ¿Cuánto mide su altura?'
+      : 'A rectangular frame needs '+n5.P+' cm of moulding to surround the photograph completely, and the base of the frame measures '+n5.b+' cm. How tall is it?'),
+    hint: es
+      ? 'La moldura recorre dos bases y dos alturas. Quítale al total lo que se llevan las dos bases y fíjate en cuántas alturas quedan repartidas en lo que sobra.'
+      : 'The moulding walks two bases and two heights. Take away from the total what the two bases carry off and notice how many heights are shared in what is left.',
+    exp: (es
+      ? 'Las dos bases se llevan '+(2*n5.b)+' cm de la moldura. Los '+(n5.P - 2*n5.b)+' cm restantes se reparten entre las dos alturas iguales, de modo que cada altura mide '+n5.h+' cm.'
+      : 'The two bases carry off '+(2*n5.b)+' cm of the moulding. The remaining '+(n5.P - 2*n5.b)+' cm are shared between the two equal heights, so each height measures '+n5.h+' cm.'),
+    options: p5o, correct: p5c, showWork: true
+  });
+
+  /* ── PROBLEM 6 ── base menor de un trapecio ── */
+  var P6P = [ {A:90,h:9,B:12,b:8}, {A:96,h:8,B:15,b:9}, {A:120,h:10,B:15,b:9}, {A:105,h:7,B:18,b:12} ];
+  var n6 = P6P[Math.floor(rng()*P6P.length)];
+  var p6c = n6.b + ' cm';
+  var p6o = [ p6c, (2*n6.A/n6.h) + ' cm', (n6.A/n6.h) + ' cm', (2*n6.A/n6.h + n6.B) + ' cm' ];
+  addProblem(rng, {
+    title: es ? 'El terreno con forma de trapecio' : 'The trapezium shaped plot',
+    q: (es
+      ? 'Un terreno con forma de trapecio tiene un área de '+n6.A+' cm² en el plano, una altura de '+n6.h+' cm y su base mayor mide '+n6.B+' cm. ¿Cuánto mide su base menor?'
+      : 'A trapezium shaped plot has an area of '+n6.A+' cm² on the plan, a height of '+n6.h+' cm and its longer base measures '+n6.B+' cm. How long is its shorter base?'),
+    hint: es
+      ? 'El área de un trapecio toma las dos bases juntas, las promedia y multiplica por la altura. Recupera primero cuánto suman las dos bases y después descuenta la que ya conoces.'
+      : 'The area of a trapezium takes both bases together, averages them and multiplies by the height. Recover first how much the two bases add up to and then discount the one you already know.',
+    exp: (es
+      ? 'Al duplicar el área y repartir entre la altura se recupera la suma de las dos bases, que vale '+(2*n6.A/n6.h)+' cm. Como la base mayor mide '+n6.B+' cm, a la base menor le corresponden '+n6.b+' cm.'
+      : 'Doubling the area and sharing by the height recovers the sum of the two bases, worth '+(2*n6.A/n6.h)+' cm. Since the longer base measures '+n6.B+' cm, the shorter base is left with '+n6.b+' cm.'),
+    options: p6o, correct: p6c, showWork: true
+  });
+
+  /* ── CONCEPT 4 ───────────────────────────────────────────────── */
+  addSection(C + '4',
+    es ? 'Cuando una medida crece, otra tiene que ceder' : 'When one measurement grows, another has to give way',
+    (es
+    ? '<p>Hay situaciones en las que el resultado no cambia aunque las medidas sí. Un envase que siempre debe contener la misma cantidad de líquido tiene el volumen amarrado, y esa amarra obliga a las demás medidas a acomodarse entre ellas. Si el envase se hace más ancho, tiene que hacerse más bajo, porque de otro modo cabría más líquido del permitido. La misma escena ocurre en un rectángulo de área fija: alargar la base obliga a recortar la altura.</p>'
+    + '<p>El acomodo no siempre es parejo, y eso depende de cómo aparece cada letra en la fórmula. Una medida que aparece multiplicando una sola vez influye de manera directa, mientras que una medida elevada al cuadrado pesa mucho más, porque cualquier cambio suyo se aplica dos veces. Por eso, en un cilindro, tocar el radio sacude el volumen bastante más que tocar la altura, aunque ambas parezcan medidas del mismo tipo.</p>'
+    : '<p>There are situations where the result does not change even though the measurements do. A container that must always hold the same amount of liquid has its volume tied down, and that tie forces the other measurements to settle among themselves. If the container is made wider, it has to become shorter, because otherwise more liquid than allowed would fit. The same scene happens in a rectangle of fixed area: lengthening the base forces the height to be trimmed.</p>'
+    + '<p>The settling is not always even, and that depends on how each letter appears in the formula. A measurement that appears multiplying only once influences things directly, while a squared measurement weighs much more, because any change of its own is applied twice. That is why, in a cylinder, touching the radius shakes the volume considerably more than touching the height, even though both look like measurements of the same kind.</p>')
+    + '<div class="callout"><p><strong>'+(es?'Para tenerlo a la mano:':'Worth keeping close:')+'</strong> '+(es
+      ? 'antes de calcular, pregúntate qué queda fijo en la situación. Lo que se mantiene igual es lo que obliga a las demás medidas a moverse.'
+      : 'before calculating, ask yourself what stays fixed in the situation. What stays the same is what forces the other measurements to move.')+'</p></div>');
+
+  buildReflect(rng);
+
+  /* ── PROBLEM 7 ── cómo responde el resultado a un cambio ── */
+  var P7V = [
+    { es:{ t:'El radio que se duplica',
+           q:'Una fábrica cambia el diseño de una lata cilíndrica: duplica el radio y deja la altura tal como estaba. ¿Qué le ocurre al volumen de la lata?',
+           o:['Se multiplica por cuatro','Se multiplica por dos','Se multiplica por ocho','Se multiplica por dieciséis'],
+           a:'Se multiplica por cuatro',
+           h:'En el volumen de un cilindro el radio aparece elevado al cuadrado, así que su cambio se aplica dos veces mientras la altura permanece intacta.',
+           e:'El área de la base depende del radio al cuadrado, de modo que al duplicar el radio esa área queda cuatro veces mayor. Como la altura no cambió, el volumen crece exactamente en esa misma proporción y queda multiplicado por cuatro.' },
+      en:{ t:'The radius that doubles',
+           q:'A factory changes the design of a cylindrical can: it doubles the radius and leaves the height exactly as it was. What happens to the volume of the can?',
+           o:['It is multiplied by four','It is multiplied by two','It is multiplied by eight','It is multiplied by sixteen'],
+           a:'It is multiplied by four',
+           h:'In the volume of a cylinder the radius appears squared, so its change is applied twice while the height stays untouched.',
+           e:'The base area depends on the radius squared, so doubling the radius makes that area four times larger. Since the height did not change, the volume grows in exactly that same proportion and ends up multiplied by four.' } },
+    { es:{ t:'La arista que se triplica',
+           q:'Un cubo de madera se rehace con una arista tres veces más larga que la original. ¿Qué le ocurre a su área total?',
+           o:['Se multiplica por nueve','Se multiplica por tres','Se multiplica por veintisiete','Se multiplica por seis'],
+           a:'Se multiplica por nueve',
+           h:'El área total de un cubo depende del área de una cara, y esa cara es un cuadrado cuya medida cambia en las dos direcciones a la vez.',
+           e:'Cada cara es un cuadrado, así que al triplicar la arista su área queda nueve veces mayor. Como el cubo sigue teniendo seis caras iguales, el área total también queda multiplicada por nueve. El veintisiete correspondería al volumen, donde el cambio se aplica tres veces.' },
+      en:{ t:'The edge that triples',
+           q:'A wooden cube is remade with an edge three times longer than the original one. What happens to its total area?',
+           o:['It is multiplied by nine','It is multiplied by three','It is multiplied by twenty seven','It is multiplied by six'],
+           a:'It is multiplied by nine',
+           h:'The total area of a cube depends on the area of one face, and that face is a square whose measurement changes in both directions at once.',
+           e:'Each face is a square, so tripling the edge makes its area nine times larger. Since the cube still has six equal faces, the total area is also multiplied by nine. Twenty seven would belong to the volume, where the change is applied three times.' } },
+    { es:{ t:'Las tres medidas que se duplican',
+           q:'Una caja con forma de prisma rectangular se rehace duplicando su largo, su ancho y su altura. ¿Qué le ocurre a su volumen?',
+           o:['Se multiplica por ocho','Se multiplica por dos','Se multiplica por cuatro','Se multiplica por seis'],
+           a:'Se multiplica por ocho',
+           h:'El volumen de un prisma reúne las tres medidas en un mismo producto, y aquí las tres cambiaron al mismo tiempo.',
+           e:'El volumen es el producto de las tres medidas, y cada una quedó al doble, así que el producto queda multiplicado por dos tres veces seguidas, es decir por ocho. El cuatro correspondería a duplicar solo dos de las tres medidas.' },
+      en:{ t:'The three measurements that double',
+           q:'A box shaped like a rectangular prism is remade by doubling its length, its width and its height. What happens to its volume?',
+           o:['It is multiplied by eight','It is multiplied by two','It is multiplied by four','It is multiplied by six'],
+           a:'It is multiplied by eight',
+           h:'The volume of a prism gathers the three measurements into one product, and here all three changed at the same time.',
+           e:'The volume is the product of the three measurements, and each one was doubled, so the product is multiplied by two three times over, that is by eight. Four would belong to doubling only two of the three measurements.' } }
+  ];
+  var p7 = P7V[Math.floor(rng()*P7V.length)][LANG];
+  addProblem(rng, { title:p7.t, q:p7.q, hint:p7.h, exp:p7.e, options:p7.o, correct:p7.a, showWork:false });
+
+  /* ── PROBLEM 8 ── lado de una base cuadrada ── */
+  var P8P = [ {s:10,h:5,V:500}, {s:6,h:7,V:252}, {s:8,h:6,V:384}, {s:12,h:3,V:432} ];
+  var n8 = P8P[Math.floor(rng()*P8P.length)];
+  var p8c = n8.s + ' cm';
+  var p8o = [ p8c, (n8.s*n8.s) + ' cm', (2*n8.s) + ' cm', (n8.s*n8.s/2) + ' cm' ];
+  addProblem(rng, {
+    title: es ? 'La torre de base cuadrada' : 'The tower with a square base',
+    q: (es
+      ? 'Una torre de juguete tiene forma de prisma con base cuadrada y mide '+n8.h+' cm de alto. Su volumen es de '+n8.V+' cm³. ¿Cuánto mide el lado de su base?'
+      : 'A toy tower has the shape of a prism with a square base and stands '+n8.h+' cm tall. Its volume is '+n8.V+' cm³. How long is the side of its base?'),
+    hint: es
+      ? 'Reparte primero el volumen entre la altura: ese cociente es el área de la base. Como la base es un cuadrado, su área es el lado multiplicado por sí mismo.'
+      : 'Share the volume by the height first: that quotient is the base area. Since the base is a square, its area is the side multiplied by itself.',
+    exp: (es
+      ? 'Al repartir el volumen entre la altura queda el área de la base, que vale '+(n8.s*n8.s)+' cm². Como esa base es un cuadrado, el lado es el número que multiplicado por sí mismo da '+(n8.s*n8.s)+', es decir '+n8.s+' cm.'
+      : 'Sharing the volume by the height leaves the base area, worth '+(n8.s*n8.s)+' cm². Since that base is a square, the side is the number which multiplied by itself gives '+(n8.s*n8.s)+', that is '+n8.s+' cm.'),
+    options: p8o, correct: p8c, showWork: true
+  });
+
+  /* ── PROBLEM 9 ── qué le pasa a la otra variable ── */
+  var P9V = [
+    { es:{ t:'La lata de siempre',
+           q:'Una lata cilíndrica debe contener siempre la misma cantidad de jugo. En un rediseño se decide fabricarla con un radio mayor. ¿Qué ocurre entonces con su altura?',
+           o:['Tiene que disminuir para que quepa la misma cantidad de jugo','Tiene que aumentar para que quepa la misma cantidad de jugo','Se queda igual, porque la cantidad de jugo no cambió','Se duplica, sin importar cuánto creció el radio'],
+           a:'Tiene que disminuir para que quepa la misma cantidad de jugo',
+           h:'El volumen quedó amarrado y es el producto del área de la base por la altura. Piensa qué debe pasar con uno de los factores cuando el otro crece y el producto no puede moverse.',
+           e:'Al crecer el radio, la base de la lata abarca más superficie. Como el volumen es el producto de esa base por la altura y ese producto debe seguir valiendo lo mismo, la altura tiene que bajar para compensar el crecimiento de la base.' },
+      en:{ t:'The same old can',
+           q:'A cylindrical can must always hold the same amount of juice. In a redesign it is decided to manufacture it with a larger radius. What happens then to its height?',
+           o:['It has to decrease so that the same amount of juice fits','It has to increase so that the same amount of juice fits','It stays the same, because the amount of juice did not change','It doubles, no matter how much the radius grew'],
+           a:'It has to decrease so that the same amount of juice fits',
+           h:'The volume is tied down and it is the product of the base area and the height. Think about what must happen to one factor when the other grows and the product cannot move.',
+           e:'As the radius grows, the base of the can covers more surface. Since the volume is the product of that base and the height and that product must keep the same worth, the height has to come down to compensate for the growth of the base.' } },
+    { es:{ t:'El cartel de área fija',
+           q:'Un cartel rectangular debe tener siempre la misma área impresa. Para colocarlo en otro muro se decide alargar su base. ¿Qué ocurre entonces con su altura?',
+           o:['Tiene que disminuir para que el área siga siendo la misma','Tiene que aumentar para que el área siga siendo la misma','Se queda igual, porque el área no cambió','Se reduce a la mitad, sin importar cuánto creció la base'],
+           a:'Tiene que disminuir para que el área siga siendo la misma',
+           h:'El área quedó amarrada y es el producto de la base por la altura. Piensa qué debe pasar con uno de los factores cuando el otro crece y el producto no puede moverse.',
+           e:'El área del cartel es la base multiplicada por la altura, y ese producto no puede cambiar. Si la base se alarga, la altura tiene que reducirse en la proporción justa para que el producto siga valiendo lo mismo.' },
+      en:{ t:'The poster with a fixed area',
+           q:'A rectangular poster must always have the same printed area. To place it on another wall it is decided to lengthen its base. What happens then to its height?',
+           o:['It has to decrease so that the area stays the same','It has to increase so that the area stays the same','It stays the same, because the area did not change','It is cut in half, no matter how much the base grew'],
+           a:'It has to decrease so that the area stays the same',
+           h:'The area is tied down and it is the product of the base and the height. Think about what must happen to one factor when the other grows and the product cannot move.',
+           e:'The area of the poster is the base multiplied by the height, and that product cannot change. If the base is lengthened, the height has to be reduced in the right proportion so that the product keeps the same worth.' } },
+    { es:{ t:'El depósito de siempre',
+           q:'Un depósito con forma de prisma de base cuadrada debe almacenar siempre la misma cantidad de agua. Se decide construirlo con un lado de base mayor. ¿Qué ocurre entonces con su altura?',
+           o:['Tiene que disminuir para que quepa la misma cantidad de agua','Tiene que aumentar para que quepa la misma cantidad de agua','Se queda igual, porque la cantidad de agua no cambió','Se triplica, sin importar cuánto creció el lado de la base'],
+           a:'Tiene que disminuir para que quepa la misma cantidad de agua',
+           h:'El volumen quedó amarrado y es el producto del área de la base por la altura. Piensa qué debe pasar con uno de los factores cuando el otro crece y el producto no puede moverse.',
+           e:'Al crecer el lado, la base cuadrada abarca más superficie. Como el volumen es esa base multiplicada por la altura y debe seguir valiendo lo mismo, la altura tiene que bajar para compensar el crecimiento de la base.' },
+      en:{ t:'The same old tank',
+           q:'A tank shaped like a prism with a square base must always store the same amount of water. It is decided to build it with a longer base side. What happens then to its height?',
+           o:['It has to decrease so that the same amount of water fits','It has to increase so that the same amount of water fits','It stays the same, because the amount of water did not change','It triples, no matter how much the base side grew'],
+           a:'It has to decrease so that the same amount of water fits',
+           h:'The volume is tied down and it is the product of the base area and the height. Think about what must happen to one factor when the other grows and the product cannot move.',
+           e:'As the side grows, the square base covers more surface. Since the volume is that base multiplied by the height and it must keep the same worth, the height has to come down to compensate for the growth of the base.' } }
+  ];
+  var p9 = P9V[Math.floor(rng()*P9V.length)][LANG];
+  addProblem(rng, { title:p9.t, q:p9.q, hint:p9.h, exp:p9.e, options:p9.o, correct:p9.a, showWork:false });
+
+  /* ── PROBLEM 10 ── cadena completa sobre un cubo ── */
+  var P10P = [ {a:4,A:96,V:64}, {a:5,A:150,V:125}, {a:7,A:294,V:343}, {a:8,A:384,V:512} ];
+  var n10 = P10P[Math.floor(rng()*P10P.length)];
+  var p10v = (rng() < 0.5) ? 'vol' : 'area';
+  var p10c, p10o;
+  if (p10v === 'vol'){
+    p10c = n10.V + ' cm³';
+    p10o = [ p10c, (n10.a*n10.a) + ' cm³', (2*n10.a*n10.a) + ' cm³', (12*n10.a) + ' cm³' ];
+  } else {
+    p10c = n10.A + ' cm²';
+    p10o = [ p10c, (n10.a*n10.a) + ' cm²', (4*n10.a*n10.a) + ' cm²', (12*n10.a) + ' cm²' ];
+  }
+  addProblem(rng, {
+    title: es ? 'El cubo de la vitrina' : 'The cube in the display case',
+    q: (p10v === 'vol'
+      ? (es
+        ? 'Un cubo de acrílico está forrado por completo y el forro cubre '+n10.A+' cm² de superficie. ¿Cuál es el volumen del cubo?'
+        : 'An acrylic cube is completely covered and the cover takes up '+n10.A+' cm² of surface. What is the volume of the cube?')
+      : (es
+        ? 'Un cubo de acrílico tiene un volumen de '+n10.V+' cm³. ¿Cuánta superficie cubre el forro que lo envuelve por completo?'
+        : 'An acrylic cube has a volume of '+n10.V+' cm³. How much surface does the cover that wraps it completely take up?')),
+    hint: (p10v === 'vol'
+      ? (es
+        ? 'Un cubo tiene seis caras cuadradas iguales. Reparte la superficie entre esas caras para conocer el área de una sola, deduce de ahí cuánto mide la arista y solo entonces arma el volumen.'
+        : 'A cube has six equal square faces. Share the surface among those faces to know the area of a single one, work out the edge from there and only then build the volume.')
+      : (es
+        ? 'En un cubo las tres medidas son iguales, así que la arista es el número que multiplicado por sí mismo tres veces da el volumen. Con esa arista calcula el área de una cara y recuerda que las caras son seis.'
+        : 'In a cube the three measurements are equal, so the edge is the number which multiplied by itself three times gives the volume. With that edge work out the area of one face and remember there are six faces.')),
+    exp: (p10v === 'vol'
+      ? (es
+        ? 'Al repartir la superficie entre las seis caras queda '+(n10.a*n10.a)+' cm² por cara. Como cada cara es un cuadrado, la arista mide '+n10.a+' cm, y al multiplicar esa arista por sí misma tres veces resulta un volumen de '+n10.V+' cm³.'
+        : 'Sharing the surface among the six faces leaves '+(n10.a*n10.a)+' cm² per face. Since each face is a square, the edge measures '+n10.a+' cm, and multiplying that edge by itself three times gives a volume of '+n10.V+' cm³.')
+      : (es
+        ? 'La arista es el número que multiplicado por sí mismo tres veces da el volumen, es decir '+n10.a+' cm. Cada cara mide entonces '+(n10.a*n10.a)+' cm², y como el cubo tiene seis caras iguales el forro cubre '+n10.A+' cm².'
+        : 'The edge is the number which multiplied by itself three times gives the volume, that is '+n10.a+' cm. Each face then measures '+(n10.a*n10.a)+' cm², and since the cube has six equal faces the cover takes up '+n10.A+' cm².')),
+    options: p10o, correct: p10c, showWork: true
+  });
+}
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbykkuJ_apGq3vALIFd4mr3acu81c7K4OKxW-DZ-i52Ceyl3lOanXMdvbS9SIXPrLQBm/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Valor de una Variable en Función de las Otras';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>

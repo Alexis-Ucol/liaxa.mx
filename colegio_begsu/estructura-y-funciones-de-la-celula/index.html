@@ -53,7 +53,7 @@
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; text-align: justify; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
 
 /* ── WELCOME ── */
 #welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
@@ -893,15 +893,20 @@ async function generatePDF() {
   doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
   doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
 
-  if (SCHOOL.logoLeftB64) {
-    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
-    try { doc.addImage(SCHOOL.logoLeftB64, fmtL, M, 4, 48, 22); } catch(e) {}
-  }
-  if (SCHOOL.logoRightB64) {
-    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
-    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 130, 4, 48, 22); } catch(e) {}
-  }
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
 
+  // LIAXA logo — right side of white strip
   var lx = PW - M - 36;
   var ly = 10;
   doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
@@ -1059,46 +1064,9 @@ async function generatePDF() {
       PW/2, PH-5, {align:'center'});
   }
 
-    // ── SAVE / SHARE — iOS-safe download (LIAXA iOS PDF fix, Rule 12) ─────────
-  //   iOS Safari ignores the <a download> attribute, so a plain download fails
-  //   silently on iPhone/iPad. iOS -> native share sheet (-> "Save to Files"),
-  //   with an inline-open fallback; everything else -> <a download> click.
-  //   Runs synchronously off the tap so iOS accepts navigator.share().
-  var _fname   = 'bio1_t08_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
-  var _pdfBlob = doc.output('blob');
-
-  function _restorePdfBtn(){ btn.innerHTML = '\u2b07 &nbsp;' + t('btn-pdf'); btn.disabled = false; }
-  function _openPdfInline(b){
-    var u = URL.createObjectURL(b);
-    var w = window.open(u, '_blank');
-    if (!w) { window.location.href = u; }
-    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
-  }
-
-  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-  if (_isIOS) {
-    var _pdfFile = new File([_pdfBlob], _fname, { type:'application/pdf' });
-    if (navigator.canShare && navigator.canShare({ files:[_pdfFile] })) {
-      navigator.share({ files:[_pdfFile], title:_fname })
-        .then(_restorePdfBtn)
-        .catch(function(e){
-          if (e && e.name === 'AbortError') { _restorePdfBtn(); return; }
-          _openPdfInline(_pdfBlob); _restorePdfBtn();
-        });
-      return;
-    }
-    _openPdfInline(_pdfBlob); _restorePdfBtn();
-    return;
-  }
-
-  var _dlUrl = URL.createObjectURL(_pdfBlob);
-  var _dlA   = document.createElement('a');
-  _dlA.href  = _dlUrl; _dlA.download = _fname;
-  document.body.appendChild(_dlA); _dlA.click();
-  setTimeout(function(){ document.body.removeChild(_dlA); URL.revokeObjectURL(_dlUrl); }, 200);
-  _restorePdfBtn();
+  doc.save('bio1_t08_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
 }
 
 /* ================================================
@@ -1394,8 +1362,8 @@ function wMembrane(rng, host){
   host.innerHTML =
     '<div class="gw-h iw-tag">' + L({ es:'El portero de la membrana', en:'The membrane doorkeeper' }) + '</div>' +
     '<div class="gw-mini iw-sub">' + L({
-      es:'En cada turno aparece una sustancia que llega a la orilla de la célula. Tú juegas el papel de la membrana y pulsas uno de los tres botones: <b>Dejar entrar</b> (la sustancia entra al citoplasma), <b>Sacar</b> (sale del interior al exterior) o <b>No dejar pasar</b> (se queda fuera). La barra de "Estado de la célula" sube cuando aciertas y baja cuando te equivocas. Lo que hayas dejado entrar aparece en la caja del citoplasma.',
-      en:'In each turn a substance arrives at the edge of the cell. You play the role of the membrane and press one of the three buttons: <b>Let it in</b> (the substance enters the cytoplasm), <b>Push it out</b> (it leaves from inside to outside) or <b>Keep it out</b> (it stays outside). The "State of the cell" bar goes up when you are right and down when you are wrong. Whatever you have let in appears in the cytoplasm box.'
+      es:'Llega algo a la orilla de la célula y tú decides qué hace la membrana. Mira cómo cambian el estado de la célula y lo que hay en el citoplasma después de cada decisión.',
+      en:'Something arrives at the edge of the cell and you decide what the membrane does. Watch how the state of the cell and the contents of the cytoplasm change after each decision.'
     }) + '</div>' +
     '<div class="nlbl">' + L({ es:'Estado de la célula', en:'State of the cell' }) + '</div>' +
     '<div class="mbar"><div class="mbarf" data-r="bar"></div></div>' +
@@ -1504,8 +1472,8 @@ function wNucleus(rng, host){
   host.innerHTML =
     '<div class="gw-h iw-tag">' + L({ es:'Reparte las instrucciones', en:'Share out the instructions' }) + '</div>' +
     '<div class="gw-mini iw-sub">' + L({
-      es:'La célula madre tiene un número de cromosomas. Para dividirse sin perder información tiene que: <b>1) Copiar primero</b> todo el material (pulsa "Copiar el material" — por un momento habrá el doble). <b>2) Repartir</b> los cromosomas entre las dos células hijas usando el control deslizante, hasta que cada una reciba exactamente los mismos que tenía la madre. <b>3) Pulsar "Dividir"</b> cuando el reparto sea justo. Puedes deshacer y volver a empezar cuantas veces quieras.',
-      en:'The mother cell has a certain number of chromosomes. To divide without losing information it must: <b>1) Copy first</b> all the material (press "Copy the material" — for a moment there will be double the amount). <b>2) Share out</b> the chromosomes between the two daughter cells using the slider, until each one receives exactly the same number the mother had. <b>3) Press "Divide"</b> when the share-out is even. You can undo and start again as often as you like.'
+      es:'El núcleo de esta célula guarda sus instrucciones en cromosomas. Prepárala para dividirse y reparte lo que hay entre las dos células hijas. Puedes deshacer y volver a repartir cuantas veces quieras.',
+      en:'The nucleus of this cell keeps its instructions in chromosomes. Get it ready to divide and share out what is there between the two daughter cells. You can undo and share again as often as you like.'
     }) + '</div>' +
     '<div class="nbox"><div class="nlbl">' + L({ es:'Núcleo de la célula madre', en:'Nucleus of the mother cell' }) + '</div><div data-r="madre"></div><div class="nlbl" data-r="madren"></div></div>' +
     '<div class="gw-row" style="margin-top:.6rem">' +
@@ -2264,8 +2232,8 @@ function buildLesson(rng){
       en:'Almost at the centre of the cell there is a rounded body that stands out well under the microscope: the nucleus. Inside is the material that works as a complete instruction booklet for the cell, organised into chromosomes. That booklet says how each part is built and how the tasks are done, and it only makes sense if it is kept complete.'
     }) + '</p>' +
     '<p>' + L({
-      es:'El problema de guardar ese instructivo es que cada vez que la célula se reproduce tiene que dar una copia completa a cada célula nueva. Si repartiera el original en dos, cada hija recibiría solo la mitad de las instrucciones y no podría funcionar. Por eso la célula hace algo muy ordenado: primero copia todo el material del núcleo —de modo que por un momento hay el doble— y solo entonces lo reparte en partes iguales. Así cada célula hija recibe un instructivo completo, igual al de la célula madre. En eso consiste la función de reproducción, y de ahí sale también la herencia: los hijos se parecen a sus padres porque reciben copias de ese material, no porque copien lo que ven.',
-      en:'The challenge of keeping that instruction booklet is that every time the cell reproduces it has to hand a complete copy to each new cell. If it just split the original in two, each daughter would only get half the instructions and could not function. So the cell does something very orderly: it first copies all the material of the nucleus — so that for a moment there is double the amount — and only then shares it out in equal parts. That way each daughter cell receives a complete booklet, the same as the mother cell. That is what the function of reproduction consists of, and inheritance comes out of it too: children resemble their parents because they receive copies of that material, not because they copy what they see.'
+      es:'Cuando una célula va a formar dos células nuevas hace algo muy ordenado: primero copia todo el material del núcleo, de modo que por un momento hay el doble, y después lo reparte en partes iguales. Así cada célula hija recibe un instructivo completo, igual al de la célula madre. En eso consiste la función de reproducción, y de ahí sale también la herencia: los hijos se parecen a sus padres porque reciben copias de ese material, no porque copien lo que ven.',
+      en:'When a cell is going to form two new cells it does something very orderly: first it copies all the material of the nucleus, so that for a moment there is double the amount, and then it shares it out in equal parts. That way each daughter cell receives a complete booklet, the same as the mother cell. That is what the function of reproduction consists of, and inheritance comes out of it too: children resemble their parents because they receive copies of that material, not because they copy what they see.'
     }) + '</p>' +
     '<div class="rules-grid">' +
       rcard(L({ es:'Membrana', en:'Membrane' }), L({ es:'nutrición y relación', en:'nutrition and relation' }), L({ es:'decide qué entra y qué sale', en:'decides what comes in and what goes out' })) +

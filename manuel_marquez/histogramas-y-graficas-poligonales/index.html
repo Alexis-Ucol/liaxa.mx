@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Histogramas y Gráficas Poligonales</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS — INJECTION BLOCK ──────────────────────────────────────
+   To brand this guide for an institution, change ONLY the 5 lines below.
+   Derive from 2 institution colors:
+     PRIMARY  = main dark color  (nav, buttons, progress bar, PDF band)
+     ACCENT   = highlight color  (tags, hints, PDF stripe, wcard top line)
+   ──────────────────────────────────────────────────────────────────────── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;   /* ACCENT       */
+  --gold-bg:    #faf3e0;   /* ACCENT tint  (lighten ~85%) */
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;
+  --green-dark: #7aaae0;
+  --green-bg:   #0e1e38;
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:100px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── GRAPH CARD ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (graph toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.28rem .7rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--surface); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos img { height: 76px; }
+  .wtitle { font-size: 1.35rem; }
+  .htitle { display: none; }
+  .stickybar { padding: .5rem .6rem; gap: .4rem; }
+  .tbtn, .lang-btn { padding: .24rem .45rem; font-size: .72rem; }
+  .hlogos img { height: 20px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .lbody { padding: 1.2rem .7rem 3rem; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+.sc-line { font-size:1.6rem; font-weight:700; color:var(--green-dark); margin-bottom:.3rem; }
+
+/* ── GUIDE-SPECIFIC: manipulativos de datos ── */
+.iw-tag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.4rem; }
+.iw-box { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:1rem; }
+.iw-instr { font-size:.88rem; color:var(--text2); margin-bottom:.7rem; }
+.rondas { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--text3); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.45rem; }
+.rfb { font-size:.84rem; margin-top:.6rem; min-height:1.35rem; color:var(--text2); }
+.rfb b { color:var(--green-dark); }
+.okmsg { color:var(--ok); font-weight:700; }
+.rverify-btn { background:var(--green); color:#fff; border:none; border-radius:8px; padding:.6rem 1.2rem; font-size:.86rem; font-weight:600; cursor:pointer; min-height:44px; margin-top:.7rem; font-family:inherit; }
+.rverify-btn:hover { background:var(--green-dark); }
+.goalbar { font-size:.83rem; color:var(--text2); background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.45rem .7rem; margin-bottom:.65rem; }
+.gcanvas { display:block; width:100%; height:250px; border:1px solid var(--border); border-radius:8px; background:var(--surface); touch-action:manipulation; cursor:pointer; }
+.krow { display:flex; align-items:center; gap:.6rem; margin-top:.7rem; flex-wrap:wrap; }
+.krow input[type=range] { flex:1; min-width:150px; accent-color:var(--green); height:34px; }
+.kval { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.95rem; color:var(--green); min-width:72px; text-align:right; }
+.livelbl { margin-top:.55rem; font-size:.88rem; color:var(--text2); }
+.livelbl b { color:var(--green-dark); }
+.statline { margin-top:.35rem; font-size:.84rem; color:var(--text3); }
+.binrow { display:grid; grid-template-columns:repeat(5,1fr); gap:.4rem; margin-top:.7rem; }
+.binbtn { min-height:44px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.78rem; font-weight:600; cursor:pointer; font-family:inherit; padding:.35rem .2rem; }
+.binbtn:hover { border-color:var(--green); color:var(--green); }
+.datachip { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:.82rem; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.15rem .45rem; margin:.12rem; color:var(--text2); }
+.datachip.hot { background:var(--gold-bg); border-color:var(--gold); color:var(--text); font-weight:700; }
+.datachip.used { opacity:.45; }
+.bigval { font-family:'IBM Plex Mono',monospace; font-size:1.5rem; font-weight:700; color:var(--green-dark); text-align:center; margin:.4rem 0; }
+.dtable { width:100%; border-collapse:collapse; margin:.7rem 0; font-size:.83rem; }
+.dtable th, .dtable td { border:1px solid var(--border); padding:.35rem .5rem; text-align:center; }
+.dtable th { background:var(--surface2); color:var(--text3); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+.dtable td { color:var(--text2); font-family:'IBM Plex Mono',monospace; }
+.defgrid { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin:1rem 0; }
+.defcell { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.75rem; border-top:3px solid var(--green); }
+.defname { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.25rem; }
+.deftxt { font-size:.82rem; color:var(--text2); }
+.stepslist { margin:.9rem 0 0; padding-left:1.1rem; }
+.stepslist li { font-size:.86rem; color:var(--text2); margin-bottom:.35rem; }
+@media (max-width:600px) {
+  .defgrid { grid-template-columns:1fr; }
+  .binrow { grid-template-columns:repeat(2,1fr); }
+  .gcanvas { height:220px; }
+  .dtable th, .dtable td { padding:.28rem .25rem; font-size:.76rem; }
+}
+</style>
+<body>
+
+<!-- WELCOME -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <!-- LOGO: replace src with base64 from LOGOS_MASTER.HTML -->
+      <img id="logo-left" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="wtitle" id="wtitle-el">Histogramas y Gráficas Poligonales</div>
+    <div class="wcourse" id="wcourse-el">Matemáticas · 2° de Secundaria</div>
+    <label class="flabel" id="lbl-name-el" for="sName">Nombre completo</label>
+    <input class="finput" id="sName" type="text" placeholder="Tu nombre completo" autocomplete="name" oninput="checkForSavedSession()">
+    <label class="flabel" id="lbl-group-el" for="sGroup">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A" autocomplete="off" oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar →</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreMsg">📂 Saved session found</strong><br>
+      <span id="restoreSub">Would you like to continue where you left off?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Resume session</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Start over</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="196" height="48" viewBox="0 0 140 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-wf">
+        <style>
+          .liaxa-wf .lw-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-wf .lw-acc  { fill:var(--gold); }
+          .liaxa-wf .lw-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-wf .lw-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lw-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lw-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lw-bar"/>
+        <text x="42" y="22" class="lw-txt">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- LESSON -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <!-- LOGO: single institution logo, mirrors the welcome screen -->
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle">Histogramas y Gráficas Poligonales</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 100 34" xmlns="http://www.w3.org/2000/svg" class="liaxa-hdr">
+        <style>
+          .liaxa-hdr .lh-line { stroke:var(--green); stroke-width:2; fill:none; }
+          .liaxa-hdr .lh-acc  { fill:var(--gold); }
+          .liaxa-hdr .lh-bar  { stroke:var(--gold); stroke-width:2; }
+          .liaxa-hdr .lh-txt  { font-family:'Crimson Pro',serif; font-weight:700; letter-spacing:.08em; fill:var(--green); font-size:16px; }
+        </style>
+        <polyline points="4,24 10,18 16,20 22,10" class="lh-line"/>
+        <circle cx="22" cy="10" r="2.5" class="lh-acc"/>
+        <line x1="32" y1="6" x2="32" y2="28" class="lh-bar"/>
+        <text x="42" y="22" class="lh-txt">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle"><button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button><button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button></div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <!-- RESULTS SECTION (always in DOM, revealed by showResults) -->
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="sbtn" id="dlBtn" onclick="generatePDF()" style="max-width:280px;margin:0 auto;">⬇ &nbsp;<span id="pdfBtnLbl">Descargar Resultados PDF</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTRALIZED SCHOOL CONFIG (Rule 16) — ships UNBRANDED (Rule 11).
+   The ONLY rebranding point. build_all.py substitutes these exact fields
+   (BRAND_FIELDS / RGB_FIELDS / logo*) downstream; :root/dark stay as fallback.
+   Neutral defaults below == the static :root/dark values, so unbranded == no-op.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:'#545484', primaryDark:'#202033', primaryBg:'#ececf1',
+  accent:'#e43c3c', accentBg:'#fbdfdf',
+  darkPrimary:'#6f6f9a', darkPrimaryDark:'#9a9ac0', darkPrimaryBg:'#1b1b2b',
+  darkAccent:'#ea5454', darkAccentBg:'#280909',
+  pBR:84, pBG:84, pBB:132, pAR:228, pAG:60, pAB:60,
+  logoLeftB64:'data:image/jpeg;base64,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', logoRightB64:'', logoAlt:'Manuel Marquez',
+  guideTitle:{ es:'Histogramas y Gráficas Poligonales', en:'Histograms and Frequency Polygons' },
+  courseName:{ es:'Matemáticas · 2° de Secundaria', en:'Mathematics · 2° de Secundaria' }, filePrefix:'mat2_t10_g01', schoolSlug:'manuel_marquez'
+};
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+';}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+';}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+/* ================================================
+   BILINGUAL (Rule 10) - ES/EN, full rebuild + answer replay.
+   Content resolves to LANG at build time; setLang rebuilds with the SAME seed
+   (deterministic variants + option order) then replays answered state.
+   ================================================ */
+var LANG = 'es';
+var LANG_KEY = 'liaxa_mat2_t10_g01__lang';
+var TX = {
+  es: {
+    'wtitle':'Histogramas y Gráficas Poligonales','wcourse':'Matemáticas · 2° de Secundaria',
+    'lbl-name':'Nombre completo','lbl-group':'Grupo','btn-start':'Comenzar →',
+    'err-fields':'Por favor llena ambos campos.','fillboth':'Por favor llena ambos campos.','btn-pdf':'Descargar Resultados PDF',
+    'restore-msg':'📂 Tienes una sesión guardada.','restore-sub':'¿Deseas continuar donde la dejaste?',
+    'btn-restore':'Continuar','btn-dismiss':'Nueva sesión',
+    'btn-hint':'💡 Mostrar pista','btn-hint-hide':'💡 Ocultar pista','lbl-answer':'Selecciona tu respuesta:',
+    'tab-draw':'✏️ Dibujar','tab-type':'⌨️ Escribir','tab-photo':'📷 Imagen','btn-clear':'🗑 Limpiar',
+    'btn-pen':'🖊 Pluma','btn-marker':'🖌 Marcador','btn-eraser':'⬜ Borrador',
+    'ph-work':'Escribe tus pasos aquí...','ph-photo':'Toca para elegir una imagen o tomar foto',
+    'fb-correct':'✓ ¡Correcto!','fb-wrong':'✗ Incorrecto.'
+  },
+  en: {
+    'wtitle':'Histograms and Frequency Polygons','wcourse':'Mathematics · 2° de Secundaria',
+    'lbl-name':'Full name','lbl-group':'Group','btn-start':'Start →',
+    'err-fields':'Please fill in both fields.','fillboth':'Please fill in both fields.','btn-pdf':'Download Results PDF',
+    'restore-msg':'📂 You have a saved session.','restore-sub':'Would you like to continue where you left off?',
+    'btn-restore':'Continue','btn-dismiss':'New session',
+    'btn-hint':'💡 Show hint','btn-hint-hide':'💡 Hide hint','lbl-answer':'Select your answer:',
+    'tab-draw':'✏️ Draw','tab-type':'⌨️ Type','tab-photo':'📷 Photo','btn-clear':'🗑 Clear',
+    'btn-pen':'🖊 Pen','btn-marker':'🖌 Marker','btn-eraser':'⬜ Eraser',
+    'ph-work':'Show your steps here...','ph-photo':'Tap to choose an image or take a photo',
+    'fb-correct':'✓ Correct!','fb-wrong':'✗ Incorrect.'
+  }
+};
+function t(k){ return (TX[LANG][k] || TX.es[k] || k); }
+function applyUIStrings(){
+  var map = { 'wtitle-el':'wtitle','wcourse-el':'wcourse','lbl-name-el':'lbl-name','lbl-group-el':'lbl-group',
+    'startBtn':'btn-start','pdfBtnLbl':'btn-pdf','restoreMsg':'restore-msg','restoreSub':'restore-sub',
+    'restoreBtn':'btn-restore','dismissBtn':'btn-dismiss' };
+  Object.keys(map).forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=t(map[id]); });
+  var ht=document.querySelector('.htitle'); if(ht) ht.textContent=t('wtitle');
+}
+function setLang(l){
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e){}
+  var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', l==='es');
+  var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', l==='en');
+  document.documentElement.setAttribute('lang', l);
+  applyUIStrings();
+  if (studentData.name && document.getElementById('lessonScreen').style.display !== 'none') {
+    var prev = problems.map(function(p){ return p.studentChoice; });
+    problems = []; answeredCount = 0; correctCount = 0;
+    document.getElementById('lessonBody').innerHTML = '';
+    var res = document.getElementById('s_results'); res.style.display='none'; res.classList.remove('vis');
+    buildLesson(seededRng(studentData.name + studentData.group + currentAttempt(studentData.name, studentData.group)));
+    var obs = new IntersectionObserver(function(entries){ entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('vis'); }); }, { threshold:0.05 });
+    document.querySelectorAll('.section').forEach(function(s){ obs.observe(s); });
+    prev.forEach(function(ch, idx){ if(ch!==null && ch!==undefined) confirmMC(idx, ch); });
+    if (answeredCount === problems.length && problems.length > 0) {
+      res.style.display='block'; setTimeout(function(){ res.classList.add('vis'); }, 50);
+    }
+  }
+}
+/* ── Attempt counter + seed (Rule 4): seed = name+group+attempt ── */
+function getAttemptKey(name, group){ return 'liaxa_mat2_t10_g01__att__' + (name+'__'+group).replace(/\s+/g,'_'); }
+function nextAttempt(name, group){ var k=getAttemptKey(name,group),n=0; try{n=parseInt(localStorage.getItem(k)||'0',10)||0;}catch(e){} n++; try{localStorage.setItem(k,String(n));}catch(e){} return n; }
+function currentAttempt(name, group){ var k=getAttemptKey(name,group); try{return parseInt(localStorage.getItem(k)||'1',10)||1;}catch(e){return 1;} }
+/* ================================================
+   STATE
+   ================================================ */
+var studentData   = {};
+var problems      = [];
+
+/* ================================================
+   SESSION PERSISTENCE  (localStorage)
+   ================================================ */
+function lsKey() {
+  var n = (studentData.name  || '').trim();
+  var g = (studentData.group || '').trim();
+  return 'liaxa_mat2_t10_g01__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+
+function loadSession(name, group) {
+  var key = 'liaxa_mat2_t10_g01__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) {
+      saved.drawings.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var dc = document.getElementById('dc' + i);
+        if (!dc || !dc.width) return;
+        var img = new Image();
+        img.onload = function() {
+          var dpr = window.devicePixelRatio || 1;
+          dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        };
+        img.src = dataUrl;
+      });
+    }
+    if (saved.texts) {
+      saved.texts.forEach(function(text, i) {
+        if (!text) return;
+        var ta = document.getElementById('ta' + i);
+        if (ta) ta.value = text;
+      });
+    }
+    if (saved.photos) {
+      saved.photos.forEach(function(dataUrl, i) {
+        if (!dataUrl) return;
+        var pp = document.getElementById('pp' + i);
+        if (!pp) return;
+        pp.src = dataUrl; pp.style.display = 'block';
+        var pz = document.getElementById('pz' + i);
+        if (pz) pz.style.opacity = '0.4';
+      });
+    }
+  }, 300);
+}
+
+function dismissRestore() {
+  document.getElementById('restoreBar').style.display = 'none';
+}
+
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c){ return c !== null; })) ? 'block' : 'none';
+}
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ================================================
+   THEME
+   ================================================ */
+var THEME_KEY = 'liaxa_mat2_t10_g01__theme';
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+}
+(function() {
+  // Always default to light; only apply stored preference if explicitly set for THIS guide
+  document.documentElement.setAttribute('data-theme', 'light');
+  try {
+    var t = localStorage.getItem(THEME_KEY);
+    if (t === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ================================================
+   SEEDED RNG
+   ================================================ */
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t = s ^ (s >>> 16);
+    t = Math.imul(t, 0x21f0aaad);
+    t ^= (t >>> 15);
+    t = Math.imul(t, 0x735a2d97);
+    return ((t ^ (t >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+/* ================================================
+   START
+   ================================================ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('fillboth'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0;
+  correctCount  = 0;
+  var att = nextAttempt(name, group);
+  buildLesson(seededRng(name + group + att));
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ================================================
+   CANVAS
+   ================================================ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = '#0f2d5a';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e)  { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e)  { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p[0],p[1]); ctx.stroke(); lx=p[0]; ly=p[1]; }
+  function onUp()     { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  });
+}
+
+/* ================================================
+   TABS
+   ================================================ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+/* ================================================
+   PHOTO
+   ================================================ */
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+/* ================================================
+   HINT
+   ================================================ */
+function toggleHint(idx) {
+  var box = document.getElementById('hint' + idx);
+  box.classList.toggle('show');
+  var b = document.getElementById('hintbtn' + idx);
+  if (b) b.textContent = box.classList.contains('show') ? t('btn-hint-hide') : t('btn-hint');
+}
+
+/* ================================================
+   SHOW RESULTS
+   ================================================ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ================================================
+   ANSWER HANDLER — two-tap confirmation (Rule 8)
+   Prevents accidental answer selection while scrolling on mobile.
+   First tap highlights in gold (pending). Second tap on same option confirms.
+   ================================================ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+
+  // Second tap on same option → confirm
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+
+  // First tap → highlight as pending, clear any previous pending
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+
+// Direct confirm — used by restoreSession to bypass two-tap
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = (isOk ? '<strong>'+t('fb-correct')+'</strong> ' : '<strong>'+t('fb-wrong')+'</strong> ') + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ================================================
+   BUILD PROBLEM CARDS  (called from buildLesson)
+   ================================================ */
+/* ================================================
+   BUILD ONE CARD — inline construction, per-problem showWork branch
+   Replaces the removed batch card renderer (Rule 1 / §5 lint: batch renderer
+   absent; cards built inline). Contradiction A (Record §3.A):
+   showWork:true  -> Draw/Type/Photo work area + canvas init.
+   showWork:false -> pure recall/conceptual MC: no .wtabs, no canvas, no init.
+   Called inline from buildLesson(), appended to #lessonBody.
+   ================================================ */
+function buildOneCard(prob, globalIdx) {
+  var i = globalIdx;
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+
+  var workArea = '';
+  if (prob.showWork) {
+    workArea =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">'+t('tab-draw')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">'+t('tab-type')+'</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">'+t('tab-photo')+'</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">'+t('btn-pen')+'</button>' +
+              '<button class="tbtn2 bmarker">'+t('btn-marker')+'</button>' +
+              '<button class="tbtn2 beraser">'+t('btn-eraser')+'</button>' +
+              '<div class="cdot sel" data-color="#0f2d5a" style="background:#0f2d5a"></div>' +
+              '<div class="cdot"     data-color="#1a1a16" style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500" style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89" style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">'+t('btn-clear')+'</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="'+t('ph-work')+'" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">'+t('ph-photo')+'</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="student work">' +
+        '</div>' +
+      '</div>';
+  }
+
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i+1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn||'') + '</span></div>' +
+      workArea +
+      '<button class="hintbtn" id="hintbtn'+i+'" onclick="toggleHint(' + i + ')">'+t('btn-hint')+'</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint||'') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">'+t('lbl-answer')+'</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+
+  if (prob.showWork) setTimeout(function() {
+    var c = document.getElementById('dc' + i);
+    if (c) initCanvas(c);
+  }, 80);
+}
+
+/* ================================================
+   PDF
+   ================================================ */
+async function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = 'Generando PDF…';
+  btn.disabled = true;
+
+  var jspdf   = window.jspdf;
+  var doc     = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW      = 215.9;
+  var M       = 18;
+  var TW      = PW - M * 2;
+  var PH      = doc.internal.pageSize.height;
+  var name    = studentData.name;
+  var group   = studentData.group;
+  var total   = problems.length;
+  var pct     = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString('es-MX', { dateStyle:'long', timeStyle:'short' });
+
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  // ── PDF COLORS — INJECTION BLOCK ─────────────────────────────────────────
+  //   Match these RGB values to --green and --gold above.
+  //   PRIMARY  → pBR, pBG, pBB
+  //   ACCENT   → pAR, pAG, pAB
+  // ──────────────────────────────────────────────────────────────────────────
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;  // PRIMARY (from SCHOOL, Rule 16)
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;   // ACCENT (from SCHOOL, Rule 16)
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/\u2192/g,'->').replace(/\u2212/g,'-').replace(/\u00b2/g,'^2')
+      .replace(/\u00b3/g,'^3').replace(/\u00d7/g,'x').replace(/\u00f7/g,'/')
+      .replace(/\u2260/g,'!=').replace(/\u2264/g,'<=').replace(/\u2265/g,'>=')
+      .replace(/\u221a/g,'sqrt').replace(/\u03c0/g,'pi').replace(/\u2026/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  // ── PORTADA: orange line / white logo strip / orange line / blue band ──
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');   // top accent line
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');                               // white logo strip
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');  // bottom accent line
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');       // blue header band
+
+  // ── PDF LOGO INJECTION BLOCK ─────────────────────────────────────────────
+  //   When injecting logos, replace the two placeholder lines below with:
+  //     var logoLeftB64  = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //     var logoRightB64 = 'data:image/png;base64,...';   // from LOGOS_MASTER.HTML
+  //   Then uncomment the two doc.addImage() calls.
+  //   Left logo  → Facultad / department logo  (x=M,   y=4,  w=48, h=22)
+  //   Right logo → University logo             (x=130, y=4,  w=48, h=22)
+  // var logoLeftB64  = '{{LOGO_LEFT_B64}}';
+  // var logoRightB64 = '{{LOGO_RIGHT_B64}}';
+  // doc.addImage(logoLeftB64,  'PNG', M,   4, 48, 22);
+  // doc.addImage(logoRightB64, 'PNG', 130, 4, 48, 22);
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // LIAXA logo — right side of white strip
+  var lx = PW - M - 36;
+  var ly = 10;
+  doc.setDrawColor(pBR,pBG,pBB); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(pAR,pAG,pAB); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(pAR,pAG,pAB); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  // Guide title + date inside the blue band
+  doc.setTextColor(232,238,247); doc.setFontSize(19); doc.setFont('helvetica','bold');
+  doc.text(t('wtitle'), M, 49);
+  doc.setTextColor(150,165,200); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  // ── Student info card (name + group only — código goes to footer) ──
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text('ALUMNO', M+4, 79); doc.text('GRUPO', 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  // ── Score box ──
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' correcta(s) de '+total+' preguntas', PW/2, 131, {align:'center'});
+
+  // ── Problem summary table ──
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS', M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text('RESUMEN DE PROBLEMAS (continuación)', M+4, sy+6);
+      sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'✓':'✗', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Problema '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?'Correcto':'Incorrecto', PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  // ── Per-problem pages ──
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage();
+    var wy = 0;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(t('wcourse')+'  ·  '+t('wtitle'), M, 10);
+    doc.setTextColor(232,238,247); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text('Problema '+(i+1)+' de '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text('PREGUNTA', M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'-') : '-';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize('Alumno: '+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize('Correcto: '+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize('Solución: '+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'✓':'✗', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); });
+    ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+    doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.rect(M,wy,TW,8,'F'); doc.text('TRABAJO DEL ALUMNO', M+4, wy+5.5);
+    wy += 11;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar   = dc.height / dc.width;
+        var iw   = TW;
+        var ih   = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih);
+        wy += ih + 4;
+      } catch(e) {}
+    }
+
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      });
+      wy += 2;
+    }
+
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  // ── Footer on every page ──
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  Código: '+code+'  ·  Página '+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  doc.save('mat2_t10_g01_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf');
+  btn.innerHTML = '⬇ &nbsp;Descargar Resultados PDF';
+  btn.disabled  = false;
+}
+
+/* ================================================
+   LOGO LAYOUT INIT
+   Single logo: centered, no separator.
+   Two logos: separator visible between them.
+   ================================================ */
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored) LANG = stored; } catch(e){}
+  document.addEventListener('DOMContentLoaded', function() {
+    var uri = SCHOOL.logoLeftB64 || '';
+    ['logo-left','hlogo-left'].forEach(function(id){
+      var im = document.getElementById(id);
+      if (!im) return;
+      if (uri) { im.src = uri; if (SCHOOL.logoAlt) im.alt = SCHOOL.logoAlt; im.style.display = 'inline-block'; }
+      else { im.style.display = 'none'; }
+    });
+    var be=document.getElementById('btn-es'); if(be) be.classList.toggle('active', LANG==='es');
+    var bn=document.getElementById('btn-en'); if(bn) bn.classList.toggle('active', LANG==='en');
+    document.documentElement.setAttribute('lang', LANG);
+    applyUIStrings();
+  });
+})();
+
+/* ================================================
+   buildLesson — OVERRIDE IN EACH GUIDE
+   ================================================ */
+function buildLesson(rng) {
+  var LB = document.getElementById('lessonBody');
+  LB.innerHTML = '';
+  problems = [];
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function T(o){
+    if (o === undefined || o === null) return '';
+    if (typeof o === 'string' || typeof o === 'number') return o;
+    if (Object.prototype.toString.call(o) === '[object Array]') return o;
+    return (o[LANG] !== undefined ? o[LANG] : o.es);
+  }
+  function ri(a,b){ return a + Math.floor(rng()*(b-a+1)); }
+  function shufA(arr){
+    var a = arr.slice(), i, j, t;
+    for (i=a.length-1;i>0;i--){ j=Math.floor(rng()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+  function sumA(a){ var t=0,i; for(i=0;i<a.length;i++) t+=a[i]; return t; }
+  var REDRAW = [];
+  function sec(tag, title, html){
+    var d = document.createElement('div');
+    d.className = 'section';
+    d.innerHTML = '<div class="stag">'+tag+'</div><h2>'+title+'</h2>'+(html||'');
+    LB.appendChild(d);
+    return d;
+  }
+  function widget(kind){
+    var d = document.createElement('div');
+    d.className = kind + 'wrap section';
+    d.setAttribute('data-widget', kind);
+    d.id = 'w' + kind;
+    LB.appendChild(d);
+    return d;
+  }
+  function cssv(n){
+    try { var v = getComputedStyle(document.documentElement).getPropertyValue(n); return v ? v.trim() : ''; }
+    catch(e){ return ''; }
+  }
+  function fitCv(cv){
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 320, h = cv.clientHeight || 240;
+    cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    return { ctx:ctx, w:w, h:h };
+  }
+  function opts4(c, cands){
+    var out=[c], i, v, k=1;
+    for (i=0;i<cands.length && out.length<4;i++){ v=cands[i]; if (v>=0 && out.indexOf(v)<0) out.push(v); }
+    while (out.length<4){
+      if (c+k>=0 && out.indexOf(c+k)<0) out.push(c+k);
+      if (out.length<4 && c-k>=0 && out.indexOf(c-k)<0) out.push(c-k);
+      k++;
+    }
+    return out.map(String);
+  }
+  function addProb(spec){
+    var so  = shufA(T(spec.options));
+    var cor = T(spec.correct);
+    problems.push({
+      title: T(spec.title),
+      questionText: T(spec.q),
+      fn: '',
+      hint: T(spec.hint),
+      explanation: T(spec.exp),
+      options: so,
+      correctIdx: so.indexOf(cor),
+      showWork: !!spec.showWork,
+      studentChoice: null,
+      pendingChoice: null
+    });
+    buildOneCard(problems[problems.length-1], problems.length-1);
+  }
+
+  /* ---- histograma en canvas (compartido por tres manipulativos) ---- */
+  function drawHist(cv, edges, counts, o){
+    o = o || {};
+    var g = fitCv(cv), ctx = g.ctx, W = g.w, H = g.h;
+    var L = 34, Rm = 12, Tp = 14, B = 26;
+    var n = counts.length, pw = W-L-Rm, ph = H-Tp-B, i, v, y;
+    var mx = 1;
+    for (i=0;i<n;i++) if (counts[i]>mx) mx = counts[i];
+    if (o.mxMin && o.mxMin>mx) mx = o.mxMin;
+    var bw = pw/n;
+    var col = cssv('--green'), colA = cssv('--gold'), bd = cssv('--border');
+    var tx = cssv('--text3'), sf = cssv('--surface');
+    ctx.font = '500 10px "IBM Plex Sans", sans-serif';
+    ctx.textAlign = 'right'; ctx.fillStyle = tx; ctx.strokeStyle = bd; ctx.lineWidth = 1;
+    var stp = mx<=9 ? 1 : (mx<=18 ? 2 : 5);
+    for (v=0; v<=mx; v+=stp){
+      y = Tp+ph-(v/mx)*ph;
+      ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(W-Rm,y); ctx.stroke();
+      ctx.fillText(String(v), L-5, y+3);
+    }
+    for (i=0;i<n;i++){
+      var bh = (counts[i]/mx)*ph;
+      ctx.fillStyle = (o.hi===i) ? colA : col;
+      ctx.globalAlpha = o.ghost ? 0.28 : ((o.hi===i) ? 0.95 : 0.78);
+      ctx.fillRect(L+i*bw, Tp+ph-bh, bw, bh);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = sf; ctx.lineWidth = 1;
+      ctx.strokeRect(L+i*bw, Tp+ph-bh, bw, bh);
+    }
+    ctx.strokeStyle = tx; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(L,Tp+ph); ctx.lineTo(W-Rm,Tp+ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(L,Tp); ctx.lineTo(L,Tp+ph); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillStyle = tx;
+    if (o.centers){
+      for (i=0;i<n;i++) ctx.fillText(String((edges[i]+edges[i+1])/2), L+(i+0.5)*bw, Tp+ph+13);
+    } else {
+      var every = n<=6 ? 1 : (n<=10 ? 2 : 3);
+      for (i=0;i<=n;i++) if (i%every===0 || i===n) ctx.fillText(String(edges[i]), L+i*bw, Tp+ph+13);
+    }
+    return { ctx:ctx, W:W, H:H, L:L, Tp:Tp, ph:ph, bw:bw, mx:mx, n:n };
+  }
+
+  /* ============================================================
+     VALORES CON SEMILLA (en orden fijo)
+     ============================================================ */
+  var vsel = [], vi, SP;
+  for (vi=0; vi<10; vi++) vsel.push(Math.floor(rng()*2));
+
+  var CTXS = [
+    { u:{es:'minutos', en:'minutes'},
+      reg:function(n){ return {es:'los minutos que tardaron '+n+' alumnos en llegar a la escuela',
+                               en:'the minutes '+n+' students took to get to school'}; } },
+    { u:{es:'puntos', en:'points'},
+      reg:function(n){ return {es:'los puntos que obtuvieron '+n+' alumnos en una prueba',
+                               en:'the points '+n+' students scored on a test'}; } },
+    { u:{es:'páginas', en:'pages'},
+      reg:function(n){ return {es:'las páginas que leyeron '+n+' alumnos en una semana',
+                               en:'the pages '+n+' students read in one week'}; } }
+  ];
+  var C = CTXS[Math.floor(rng()*CTXS.length)];
+
+  var w  = [6,8,10][Math.floor(rng()*3)];
+  var s  = w * ri(2,4);
+  var peak = ri(1,3);
+  var f = [], i, k;
+  for (i=0;i<5;i++) f.push(i===peak ? 5+ri(0,2) : ri(1,4));
+  var raw = [];
+  for (i=0;i<5;i++) for (k=0;k<f[i];k++) raw.push(s + i*w + 1 + Math.floor(rng()*(w-1)));
+  raw = shufA(raw);
+  var N = sumA(f), span = 5*w;
+  var E5 = []; for (i=0;i<=5;i++) E5.push(s+i*w);
+  function eLo(i){ return s + i*w; }
+  function eHi(i){ return s + (i+1)*w; }
+  function mcv(i){ return s + i*w + w/2; }
+  function clsL(i){ return {es:'de '+eLo(i)+' a '+eHi(i), en:'from '+eLo(i)+' to '+eHi(i)}; }
+  function tblHTML(){
+    var h = (LANG==='es') ? '<tr><th>Intervalo</th><th>Frecuencia</th></tr>'
+                          : '<tr><th>Interval</th><th>Frequency</th></tr>';
+    var r = '', j, sep = (LANG==='es') ? ' a ' : ' to ';
+    for (j=0;j<5;j++) r += '<tr><td>'+eLo(j)+sep+eHi(j)+'</td><td>'+f[j]+'</td></tr>';
+    return '<table class="dtable">'+h+r+'</table>';
+  }
+  var listTxt = raw.join(', ');
+
+  /* datos de la gráfica de línea */
+  var MON = { es:['enero','febrero','marzo','abril','mayo','junio'],
+              en:['January','February','March','April','May','June'] };
+  var LCTXS = [
+    { n:{es:'los libros que se prestaron cada mes en una biblioteca escolar', en:'the books lent each month at a school library'}, u:{es:'libros',en:'books'} },
+    { n:{es:'las botellas que se juntaron cada mes para reciclar', en:'the bottles collected each month for recycling'}, u:{es:'botellas',en:'bottles'} },
+    { n:{es:'los kilogramos de papel que se reunieron cada mes', en:'the kilograms of paper gathered each month'}, u:{es:'kilogramos',en:'kilograms'} }
+  ];
+  var LC = LCTXS[Math.floor(rng()*LCTXS.length)];
+  var ld = shufA(shufA([-4,-3,-2,-1]).slice(0,2).concat(shufA([1,2,3,4,5,6]).slice(0,2)).concat([0]));
+  var lv = [ri(18,28)];
+  for (i=0;i<5;i++) lv.push(lv[i]+ld[i]);
+  function ltblHTML(){
+    var a='<tr>', b='<tr>', j;
+    for (j=0;j<6;j++){ a += '<th>'+MON[LANG][j]+'</th>'; b += '<td>'+lv[j]+'</td>'; }
+    return '<table class="dtable">'+a+'</tr>'+b+'</tr></table>';
+  }
+  var lUp = 0, lDn = 0;
+  for (i=1;i<5;i++){ if (ld[i]>ld[lUp]) lUp=i; if (ld[i]<ld[lDn]) lDn=i; }
+  function pairL(j){ return {es:'de '+MON.es[j]+' a '+MON.es[j+1], en:'from '+MON.en[j]+' to '+MON.en[j+1]}; }
+
+  /* selecciones para los problemas */
+  var q1  = ri(0,4);
+  var p1b = shufA([0,1,2,3,4].filter(function(x){ return x!==peak; })).slice(0,3).concat([peak]);
+  var k2  = ri(2,3);
+  var a3  = [5,10,15,20][Math.floor(rng()*4)];
+  var k3  = ri(4,6);
+  var lo3 = 10*ri(1,6);
+  var hi3 = lo3 + a3*k3;
+  var p5  = ri(0,4);
+  var lowIdx = 0;
+  for (i=1;i<5;i++) if (f[i]<f[lowIdx]) lowIdx = i;
+  var p7opts = shufA([0,1,2,3,4].filter(function(x){ return x!==lUp && x!==lDn; })).slice(0,2);
+
+  /* ============================================================
+     IDEA 1
+     ============================================================ */
+  sec(T({es:'Idea 1', en:'Idea 1'}),
+      T({es:'De la lista de datos al histograma', en:'From the list of data to the histogram'}),
+      '<p>'+T({
+        es:'Cuando anotas una medición de todo un grupo, la lista queda larga y desordenada: se ve cada dato por separado, pero no se ve el conjunto. Para verlo se parte el recorrido de los datos en intervalos del mismo ancho y se cuenta cuántos datos caen en cada uno. Ese conteo es la frecuencia del intervalo.',
+        en:'When you record one measurement for a whole group, the list ends up long and messy: you see each single value, but you do not see the whole. To see it, the range of the data is cut into intervals of equal width and you count how many values fall in each one. That count is the frequency of the interval.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'El histograma dibuja ese conteo: una barra por intervalo y una altura igual a su frecuencia. Las barras van pegadas, sin espacio entre ellas, porque cada intervalo continúa justo donde termina el anterior. Por eso un histograma no es una gráfica de barras cualquiera: ahí las categorías están separadas y las barras también.',
+        en:'The histogram draws that count: one bar per interval and a height equal to its frequency. The bars touch, with no gap between them, because each interval continues right where the previous one ends. That is why a histogram is not just any bar chart: there the categories are separate and so are the bars.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Intervalo de clase',en:'Class interval'})+'</div><div class="deftxt">'+T({es:'Un tramo de valores con el mismo ancho que todos los demás.',en:'A stretch of values with the same width as all the others.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Frecuencia',en:'Frequency'})+'</div><div class="deftxt">'+T({es:'Cuántos datos de la lista caen dentro de ese intervalo.',en:'How many values from the list fall inside that interval.'})+'</div></div>'+
+      '</div>'+
+      '<div class="callout"><p>'+T({
+        es:'Cuando un dato cae justo sobre el límite entre dos intervalos hace falta una regla fija para decidir a cuál pertenece. En esta guía ningún dato cae sobre un límite, así que cada valor tiene un solo lugar posible.',
+        en:'When a value falls exactly on the boundary between two intervals, a fixed rule is needed to decide where it belongs. In this guide no value falls on a boundary, so each one has a single possible place.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 1: reparte los datos ---- */
+  (function(){
+    var wrap = widget('conteo');
+    var PICKS = shufA(raw).slice(0, Math.min(6, raw.length));
+    var counts = [0,0,0,0,0];
+    var st = { i:0, tries:0, done:false, lock:false };
+    function binOf(v){ return Math.max(0, Math.min(4, Math.floor((v-s)/w))); }
+    function draw(){
+      var cv = document.getElementById('cnCv'); if (!cv) return;
+      drawHist(cv, E5, counts, { mxMin:3 });
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Reparte los datos', en:'Sort the data'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Así se arma un histograma: cada dato entra en un solo intervalo y la barra crece de uno en uno hasta llegar a la frecuencia.',
+            en:'That is how a histogram is built: each value enters one single interval and the bar grows one step at a time until it reaches the frequency.'
+          })+'</span></div></div>';
+        return;
+      }
+      var v = PICKS[st.i], b = '', j;
+      for (j=0;j<5;j++) b += '<button class="binbtn" onclick="cnPick('+j+')">'+eLo(j)+(LANG==='es'?' a ':' to ')+eHi(j)+'</button>';
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Reparte los datos', en:'Sort the data'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Dato',en:'Value'})+' '+(st.i+1)+' / '+PICKS.length+'</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Toca el intervalo al que pertenece el dato que aparece abajo y observa cómo crece su barra.',
+            en:'Tap the interval the value below belongs to and watch its bar grow.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({es:'Coloca este dato en su intervalo.', en:'Place this value in its interval.'})+'</div>'+
+          '<div class="bigval">'+v+' '+T(C.u)+'</div>'+
+          '<canvas class="gcanvas" id="cnCv"></canvas>'+
+          '<div class="binrow">'+b+'</div>'+
+          '<div class="rfb" id="cnFb"></div>'+
+        '</div>';
+      draw();
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.i++; st.tries = 0; st.lock = false;
+        if (st.i >= PICKS.length) st.done = true;
+        render();
+      }, ms);
+    }
+    window.cnPick = function(bi){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('cnFb'); if (!fb) return;
+      var v = PICKS[st.i], c = binOf(v);
+      if (bi === c){
+        counts[c]++; draw();
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Correcto: '+v+' está entre '+eLo(c)+' y '+eHi(c)+', y la barra de ese intervalo subió un escalón.',
+          en:'Correct: '+v+' lies between '+eLo(c)+' and '+eHi(c)+', and that interval bar went up one step.'
+        })+'</span>';
+        adv(1200); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        counts[c]++; draw();
+        fb.innerHTML = T({
+          es:'Aquí va: '+v+' es mayor que '+eLo(c)+' y menor que '+eHi(c)+', así que pertenece a ese intervalo.',
+          en:'Here it goes: '+v+' is greater than '+eLo(c)+' and smaller than '+eHi(c)+', so it belongs to that interval.'
+        });
+        adv(2400); return;
+      }
+      fb.textContent = (bi < c)
+        ? T({ es:'Todavía no: '+v+' es mayor que '+eHi(bi)+', el límite superior del intervalo que tocaste. Busca más a la derecha.',
+              en:'Not yet: '+v+' is greater than '+eHi(bi)+', the upper end of the interval you tapped. Look further right.' })
+        : T({ es:'Todavía no: '+v+' es menor que '+eLo(bi)+', el límite inferior del intervalo que tocaste. Busca más a la izquierda.',
+              en:'Not yet: '+v+' is smaller than '+eLo(bi)+', the lower end of the interval you tapped. Look further left.' });
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P1 ---- */
+  (function(){
+    var inC = [], j;
+    for (j=0;j<raw.length;j++) if (raw[j]>eLo(q1) && raw[j]<eHi(q1)) inC.push(raw[j]);
+    inC.sort(function(a,b){ return a-b; });
+    if (vsel[0] === 0){
+      SP = {
+        title:{es:'Frecuencia de un intervalo', en:'Frequency of an interval'},
+        q:{ es:'La siguiente lista muestra '+C.reg(N).es+': '+listTxt+'. Los datos se agrupan en intervalos de ancho '+w+' a partir de '+s+'. ¿Cuántos alumnos quedan en el intervalo de '+eLo(q1)+' a '+eHi(q1)+'?',
+            en:'The list below shows '+C.reg(N).en+': '+listTxt+'. The data are grouped into intervals of width '+w+' starting at '+s+'. How many students fall in the interval from '+eLo(q1)+' to '+eHi(q1)+'?' },
+        options: opts4(f[q1], [f[q1]+1, f[q1]-1, f[(q1+1)%5], f[(q1+4)%5]]),
+        correct: String(f[q1]),
+        hint:{ es:'Recorre la lista una sola vez y marca los valores mayores que '+eLo(q1)+' y menores que '+eHi(q1)+'. La cantidad de valores marcados es la frecuencia del intervalo.',
+               en:'Go through the list once and mark the values greater than '+eLo(q1)+' and smaller than '+eHi(q1)+'. The number of marked values is the frequency of the interval.' },
+        exp:{ es:'Los valores de la lista que caen en ese intervalo son '+inC.join(', ')+'. Frecuencia = '+f[q1]+'.',
+              en:'The values from the list that fall in that interval are '+inC.join(', ')+'. Frequency = '+f[q1]+'.' },
+        showWork:true
+      };
+    } else {
+      var op = { es:[], en:[] };
+      for (j=0;j<4;j++){ op.es.push(clsL(p1b[j]).es); op.en.push(clsL(p1b[j]).en); }
+      SP = {
+        title:{es:'El intervalo más concurrido', en:'The busiest interval'},
+        q:{ es:'La siguiente lista muestra '+C.reg(N).es+': '+listTxt+'. Los datos se agrupan en intervalos de ancho '+w+' a partir de '+s+'. ¿Cuál de estos intervalos reúne la mayor cantidad de datos?',
+            en:'The list below shows '+C.reg(N).en+': '+listTxt+'. The data are grouped into intervals of width '+w+' starting at '+s+'. Which of these intervals gathers the largest amount of data?' },
+        options: op,
+        correct: clsL(peak),
+        hint:{ es:'Cuenta cuántos valores caen en cada uno de los cuatro intervalos que se ofrecen y compara los conteos; el mayor conteo señala la barra más alta del histograma.',
+               en:'Count how many values fall in each of the four intervals offered and compare the counts; the largest count marks the tallest bar of the histogram.' },
+        exp:{ es:'Al contar los datos de cada intervalo, el que va de '+eLo(peak)+' a '+eHi(peak)+' reúne '+f[peak]+' valores, más que cualquier otro, y por eso su barra es la más alta.',
+              en:'Counting the data in each interval, the one from '+eLo(peak)+' to '+eHi(peak)+' gathers '+f[peak]+' values, more than any other, and that is why its bar is the tallest.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P2 ---- */
+  (function(){
+    var lim = s + k2*w, below = 0, above = 0, j;
+    for (j=0;j<k2;j++) below += f[j];
+    for (j=k2;j<5;j++) above += f[j];
+    var sb = [], sa = [];
+    for (j=0;j<k2;j++) sb.push(f[j]);
+    for (j=k2;j<5;j++) sa.push(f[j]);
+    if (vsel[1] === 0){
+      SP = {
+        title:{es:'Lectura acumulada', en:'Cumulative reading'},
+        q:{ es:'La tabla resume '+C.reg(N).es+'.'+tblHTML()+'¿Cuántos alumnos quedan por debajo de '+lim+' '+C.u.es+'?',
+            en:'The table summarizes '+C.reg(N).en+'.'+tblHTML()+'How many students are below '+lim+' '+C.u.en+'?' },
+        options: opts4(below, [below+1, below-1, above, f[0]]),
+        correct: String(below),
+        hint:{ es:'Ubica los intervalos que terminan en ese valor o antes y suma sus frecuencias; los demás intervalos no cuentan.',
+               en:'Find the intervals that end at that value or earlier and add their frequencies; the remaining intervals do not count.' },
+        exp:{ es:'Se suman las frecuencias de los intervalos que terminan en '+lim+' o antes: '+sb.join(' + ')+' = '+below+'.',
+              en:'Add the frequencies of the intervals that end at '+lim+' or earlier: '+sb.join(' + ')+' = '+below+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'Lectura acumulada', en:'Cumulative reading'},
+        q:{ es:'La tabla resume '+C.reg(N).es+'.'+tblHTML()+'¿Cuántos alumnos alcanzan '+lim+' '+C.u.es+' o más?',
+            en:'The table summarizes '+C.reg(N).en+'.'+tblHTML()+'How many students reach '+lim+' '+C.u.en+' or more?' },
+        options: opts4(above, [above+1, above-1, below, f[4]]),
+        correct: String(above),
+        hint:{ es:'Ubica los intervalos que empiezan en ese valor o después y suma sus frecuencias; los intervalos anteriores no cuentan.',
+               en:'Find the intervals that start at that value or later and add their frequencies; the earlier intervals do not count.' },
+        exp:{ es:'Se suman las frecuencias de los intervalos que empiezan en '+lim+' o después: '+sa.join(' + ')+' = '+above+'.',
+              en:'Add the frequencies of the intervals that start at '+lim+' or later: '+sa.join(' + ')+' = '+above+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 2
+     ============================================================ */
+  sec(T({es:'Idea 2', en:'Idea 2'}),
+      T({es:'El ancho de los intervalos decide lo que se ve', en:'The interval width decides what you see'}),
+      '<p>'+T({
+        es:'Los mismos datos pueden dar histogramas muy distintos, y el responsable es el ancho de los intervalos. Con intervalos muy angostos aparecen muchas barras diminutas, con huecos entre ellas, y la forma del conjunto se pierde entre los picos. Con intervalos demasiado anchos todo se resume en dos o tres barras enormes que ya no dicen nada del detalle.',
+        en:'The same data can give very different histograms, and the culprit is the interval width. With very narrow intervals you get many tiny bars, with gaps between them, and the shape of the whole is lost among the spikes. With intervals that are too wide, everything shrinks into two or three huge bars that no longer say anything about the detail.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Por eso el ancho se elige, no se adivina. Primero se mide el recorrido, que es la distancia entre el dato mayor y el dato menor. Después se decide en cuántos intervalos se quiere repartir ese recorrido, y el ancho sale de repartirlo en partes iguales. Para un grupo escolar suelen bastar entre cinco y ocho intervalos.',
+        en:'That is why the width is chosen, not guessed. First you measure the range, the distance between the largest and the smallest value. Then you decide how many intervals that range should be split into, and the width comes from splitting it into equal parts. For a school group, five to eight intervals is usually enough.'
+      })+'</p>'+
+      '<div class="callout"><p>'+T({
+        es:'Al duplicar el ancho, cada par de intervalos vecinos se funde en uno solo, así que la cantidad de intervalos se reduce a la mitad y las barras se vuelven más altas.',
+        en:'When the width is doubled, each pair of neighbouring intervals merges into one, so the number of intervals is halved and the bars become taller.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 2: cambia el ancho ---- */
+  (function(){
+    var wrap = widget('ancho');
+    var WL = [], d, nb;
+    for (d=2; d<=span/2; d++){ if (span%d===0){ nb = span/d; if (nb>=2 && nb<=12) WL.push(d); } }
+    var BARS = WL.map(function(x){ return span/x; });
+    var TG = shufA(BARS.slice()).slice(0,3);
+    var st = { r:0, idx:0, tries:0, done:false, lock:false };
+    function tIdx(){ return BARS.indexOf(TG[st.r]); }
+    function startIdx(){ return (tIdx() + Math.max(1, Math.floor(WL.length/2))) % WL.length; }
+    st.idx = startIdx();
+    function countsFor(dd){
+      var m = span/dd, c = [], j;
+      for (j=0;j<m;j++) c.push(0);
+      for (j=0;j<raw.length;j++) c[Math.max(0, Math.min(m-1, Math.floor((raw[j]-s)/dd)))]++;
+      return c;
+    }
+    function edgesFor(dd){ var m = span/dd, e = [], j; for (j=0;j<=m;j++) e.push(s+j*dd); return e; }
+    function draw(){
+      var cv = document.getElementById('anCv'); if (!cv) return;
+      var dd = WL[st.idx];
+      drawHist(cv, edgesFor(dd), countsFor(dd), {});
+    }
+    function upd(){
+      var a = document.getElementById('anSv'); if (a) a.textContent = T({es:'ancho ',en:'width '})+WL[st.idx];
+      var b = document.getElementById('anVal'); if (b) b.textContent = BARS[st.idx];
+      var rg = document.getElementById('anRng'); if (rg) rg.value = st.idx;
+      draw();
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Cambia el ancho', en:'Change the width'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'Los datos nunca cambiaron: lo único que cambió fue el ancho, y con él la cantidad de barras y la forma del histograma.',
+            en:'The data never changed: the only thing that changed was the width, and with it the number of bars and the shape of the histogram.'
+          })+'</span></div></div>';
+        return;
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Cambia el ancho', en:'Change the width'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Mueve el control y observa cómo los mismos datos se reacomodan en más barras angostas o en menos barras anchas.',
+            en:'Move the control and watch the same data rearrange into more narrow bars or fewer wide bars.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({
+            es:'Deja el histograma repartido en exactamente '+TG[st.r]+' intervalos.',
+            en:'Leave the histogram split into exactly '+TG[st.r]+' intervals.'
+          })+'</div>'+
+          '<canvas class="gcanvas" id="anCv"></canvas>'+
+          '<div class="krow"><input type="range" id="anRng" min="0" max="'+(WL.length-1)+'" value="'+st.idx+'" oninput="anSlide(this.value)"><span class="kval" id="anSv">'+T({es:'ancho ',en:'width '})+WL[st.idx]+'</span></div>'+
+          '<div class="livelbl">'+T({es:'Intervalos que se forman: ', en:'Intervals formed: '})+'<b id="anVal">'+BARS[st.idx]+'</b></div>'+
+          '<button class="rverify-btn" onclick="anChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="anFb"></div>'+
+        '</div>';
+      draw();
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.tries = 0; st.lock = false;
+        if (st.r >= 3) st.done = true; else st.idx = startIdx();
+        render();
+      }, ms);
+    }
+    window.anSlide = function(val){
+      if (st.done || st.lock) return;
+      st.idx = parseInt(val,10) || 0;
+      upd();
+    };
+    window.anChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('anFb'); if (!fb) return;
+      if (BARS[st.idx] === TG[st.r]){
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Correcto: con un ancho de '+WL[st.idx]+' el recorrido de '+span+' unidades se reparte en '+TG[st.r]+' intervalos iguales.',
+          en:'Correct: with a width of '+WL[st.idx]+' the range of '+span+' units splits into '+TG[st.r]+' equal intervals.'
+        })+'</span>';
+        adv(1700); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.idx = tIdx(); upd();
+        fb.innerHTML = T({
+          es:'Así queda: el ancho '+WL[st.idx]+' cabe exactamente '+TG[st.r]+' veces en el recorrido.',
+          en:'Here it is: the width '+WL[st.idx]+' fits exactly '+TG[st.r]+' times into the range.'
+        });
+        adv(2600); return;
+      }
+      fb.textContent = (BARS[st.idx] > TG[st.r])
+        ? T({ es:'Todavía no: ahora se forman '+BARS[st.idx]+' intervalos y son demasiados. Un ancho mayor deja menos intervalos.',
+              en:'Not yet: right now there are '+BARS[st.idx]+' intervals and that is too many. A larger width leaves fewer intervals.' })
+        : T({ es:'Todavía no: ahora se forman '+BARS[st.idx]+' intervalos y son muy pocos. Un ancho menor deja más intervalos.',
+              en:'Not yet: right now there are '+BARS[st.idx]+' intervals and that is too few. A smaller width leaves more intervals.' });
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P3 ---- */
+  (function(){
+    if (vsel[2] === 0){
+      SP = {
+        title:{es:'Ancho de cada intervalo', en:'Width of each interval'},
+        q:{ es:'En otro grupo los datos van de '+lo3+' a '+hi3+' y se quieren repartir en '+k3+' intervalos del mismo ancho. ¿Cuánto mide cada intervalo?',
+            en:'In another group the data run from '+lo3+' to '+hi3+' and are to be split into '+k3+' intervals of the same width. How wide is each interval?' },
+        options: opts4(a3, [a3+5, a3-5, hi3-lo3, k3]),
+        correct: String(a3),
+        hint:{ es:'Calcula primero el recorrido, que es la diferencia entre el dato mayor y el menor, y después reparte ese recorrido entre la cantidad de intervalos pedida.',
+               en:'First work out the range, the difference between the largest and the smallest value, and then split that range among the requested number of intervals.' },
+        exp:{ es:'El recorrido va de '+lo3+' a '+hi3+', es decir '+(hi3-lo3)+' unidades, y al repartirlo en partes iguales cada intervalo mide '+(hi3-lo3)+' ÷ '+k3+' = '+a3+'.',
+              en:'The range runs from '+lo3+' to '+hi3+', that is '+(hi3-lo3)+' units, and splitting it into equal parts each interval measures '+(hi3-lo3)+' ÷ '+k3+' = '+a3+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'Cuántos intervalos se forman', en:'How many intervals appear'},
+        q:{ es:'En otro grupo los datos van de '+lo3+' a '+hi3+' y se agrupan con intervalos de ancho '+a3+'. ¿Cuántos intervalos se forman?',
+            en:'In another group the data run from '+lo3+' to '+hi3+' and are grouped with intervals of width '+a3+'. How many intervals appear?' },
+        options: opts4(k3, [k3+1, k3-1, a3, hi3-lo3]),
+        correct: String(k3),
+        hint:{ es:'Calcula primero el recorrido, que es la diferencia entre el dato mayor y el menor, y después averigua cuántas veces cabe el ancho dado dentro de ese recorrido.',
+               en:'First work out the range, the difference between the largest and the smallest value, and then find how many times the given width fits inside that range.' },
+        exp:{ es:'El recorrido va de '+lo3+' a '+hi3+', es decir '+(hi3-lo3)+' unidades, y el ancho cabe '+(hi3-lo3)+' ÷ '+a3+' = '+k3+' veces.',
+              en:'The range runs from '+lo3+' to '+hi3+', that is '+(hi3-lo3)+' units, and the width fits '+(hi3-lo3)+' ÷ '+a3+' = '+k3+' times.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P4 ---- */
+  (function(){
+    if (vsel[3] === 0){
+      SP = {
+        title:{es:'Si el ancho se duplica', en:'If the width doubles'},
+        q:{ es:'Un histograma de otro conjunto de datos se dibujó con intervalos de ancho '+a3+'. Después se rehízo con intervalos del doble de ancho, sobre el mismo recorrido. ¿Qué le ocurre a la cantidad de intervalos?',
+            en:'A histogram of another set of data was drawn with intervals of width '+a3+'. Then it was redrawn with intervals twice as wide, over the same range. What happens to the number of intervals?' },
+        options:{ es:['Se reduce a la mitad', 'Se duplica', 'Se mantiene igual que antes', 'Aumenta en dos intervalos'],
+                  en:['It is cut in half', 'It doubles', 'It stays the same as before', 'It grows by two intervals'] },
+        correct:{ es:'Se reduce a la mitad', en:'It is cut in half' },
+        hint:{ es:'El recorrido no cambió. Si cada intervalo abarca el doble de valores, hacen falta la mitad de intervalos para cubrir el mismo tramo.',
+               en:'The range did not change. If each interval covers twice as many values, half as many intervals are needed to cover the same stretch.' },
+        exp:{ es:'Con el mismo recorrido y el doble de ancho, cada dos intervalos vecinos se funden en uno, así que quedan la mitad de intervalos y las barras se ven más altas.',
+              en:'With the same range and twice the width, every two neighbouring intervals merge into one, so half as many intervals remain and the bars look taller.' },
+        showWork:false
+      };
+    } else {
+      SP = {
+        title:{es:'Un histograma lleno de picos', en:'A histogram full of spikes'},
+        q:{ es:'Con estos mismos datos alguien dibujó un histograma con intervalos de ancho 1: casi ninguna barra pasa de un dato y la mayoría quedan vacías. ¿Qué conviene hacer para que se aprecie la forma del conjunto?',
+            en:'With these same data someone drew a histogram with intervals of width 1: hardly any bar goes above one value and most of them are empty. What is worth doing so the shape of the whole can be seen?' },
+        options:{ es:['Usar menos intervalos, cada uno más ancho', 'Usar más intervalos, cada uno más angosto', 'Dejar el mismo ancho y borrar las barras vacías', 'Dejar el mismo ancho y ordenar las barras de mayor a menor'],
+                  en:['Use fewer intervals, each one wider', 'Use more intervals, each one narrower', 'Keep the same width and delete the empty bars', 'Keep the same width and sort the bars from tallest to shortest'] },
+        correct:{ es:'Usar menos intervalos, cada uno más ancho', en:'Use fewer intervals, each one wider' },
+        hint:{ es:'Los picos aparecen cuando cada intervalo recibe muy pocos datos. Al agrupar varios intervalos vecinos en uno solo, las frecuencias se juntan y la silueta se vuelve legible.',
+               en:'Spikes appear when each interval receives very few values. Grouping several neighbouring intervals into one merges the frequencies and the outline becomes readable.' },
+        exp:{ es:'Con intervalos tan angostos casi cada dato forma su propia barra y no hay forma que leer. Al ensanchar los intervalos las frecuencias se acumulan y aparece la zona donde se concentran los datos.',
+              en:'With such narrow intervals nearly every value forms its own bar and there is no shape to read. Widening the intervals accumulates the frequencies and the zone where the data pile up appears.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 3
+     ============================================================ */
+  sec(T({es:'Idea 3', en:'Idea 3'}),
+      T({es:'Del histograma al polígono de frecuencias', en:'From the histogram to the frequency polygon'}),
+      '<p>'+T({
+        es:'El polígono de frecuencias es el histograma dicho con puntos y segmentos. Cada intervalo aporta un solo punto, colocado justo a la mitad del intervalo, en el valor que se llama marca de clase, y a la altura de su frecuencia. Al unir esos puntos con segmentos aparece una silueta que sube y baja.',
+        en:'The frequency polygon is the histogram told with points and segments. Each interval contributes a single point, placed right in the middle of the interval, at the value called the class mark, and at the height of its frequency. Joining those points with segments draws an outline that rises and falls.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Esa silueta responde preguntas que las barras contestan con más trabajo: dónde se concentran los datos, si el grupo está repartido de forma pareja o cargado hacia un lado, y entre qué intervalos ocurre el salto más grande. Además, como el polígono es una línea delgada, se pueden dibujar dos grupos en la misma cuadrícula y compararlos sin que las barras se estorben.',
+        en:'That outline answers questions the bars answer with more effort: where the data pile up, whether the group is spread evenly or leans to one side, and between which intervals the biggest jump happens. Besides, since the polygon is a thin line, two groups can be drawn on the same grid and compared without the bars getting in the way.'
+      })+'</p>'+
+      '<div class="defgrid">'+
+        '<div class="defcell"><div class="defname">'+T({es:'Marca de clase',en:'Class mark'})+'</div><div class="deftxt">'+T({es:'El valor que queda a la mitad del intervalo; ahí se apoya el vértice.',en:'The value halfway along the interval; the vertex rests there.'})+'</div></div>'+
+        '<div class="defcell"><div class="defname">'+T({es:'Vértice',en:'Vertex'})+'</div><div class="deftxt">'+T({es:'El punto del polígono; su altura es la frecuencia del intervalo.',en:'The point of the polygon; its height is the frequency of the interval.'})+'</div></div>'+
+      '</div>');
+
+  /* ---- MANIPULATIVO 3: coloca los vértices ---- */
+  (function(){
+    var wrap = widget('poligono');
+    var ORD = shufA([0,1,2,3,4]).slice(0,3);
+    var placed = {}, G = null;
+    var st = { r:0, tries:0, done:false, lock:false, pt:null };
+    function known(){
+      var o = {}, j;
+      for (j=0;j<5;j++) if (ORD.indexOf(j) < 0) o[j] = f[j];
+      for (j in placed) o[j] = placed[j];
+      return o;
+    }
+    function draw(){
+      var cv = document.getElementById('pgCv'); if (!cv) return;
+      var mxTop = 0, j;
+      for (j=0;j<5;j++) if (f[j]>mxTop) mxTop = f[j];
+      G = drawHist(cv, E5, f, { ghost:true, centers:true, mxMin:mxTop+1, hi:(st.done?-1:ORD[st.r]) });
+      var ctx = G.ctx, pts = known(), colA = cssv('--gold'), dk = cssv('--green-dark');
+      if (!st.done && st.pt) pts[st.pt.i] = st.pt.v;
+      function px(j){ return G.L + (j+0.5)*G.bw; }
+      function py(v){ return G.Tp + G.ph - (v/G.mx)*G.ph; }
+      ctx.strokeStyle = dk; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+      var prev = -1;
+      for (j=0;j<5;j++){
+        if (pts[j] === undefined) { prev = -1; continue; }
+        if (prev >= 0 && prev === j-1){
+          ctx.beginPath(); ctx.moveTo(px(prev), py(pts[prev])); ctx.lineTo(px(j), py(pts[j])); ctx.stroke();
+        }
+        prev = j;
+      }
+      for (j=0;j<5;j++){
+        if (pts[j] === undefined) continue;
+        ctx.fillStyle = (st.pt && st.pt.i===j && placed[j]===undefined) ? colA : dk;
+        ctx.beginPath(); ctx.arc(px(j), py(pts[j]), 5, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Coloca los vértices', en:'Place the vertices'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'El polígono quedó completo: cada vértice se apoya en la marca de clase y sube hasta la frecuencia de su intervalo.',
+            en:'The polygon is complete: each vertex rests on the class mark and rises to the frequency of its interval.'
+          })+'</span></div>'+
+          '<canvas class="gcanvas" id="pgCv"></canvas></div>';
+        setTimeout(draw, 20);
+        return;
+      }
+      var tgt = ORD[st.r];
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Coloca los vértices', en:'Place the vertices'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Vértice',en:'Vertex'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Toca la cuadrícula donde debe ir el vértice que falta. El punto se acomoda solo y la línea se vuelve a trazar al instante.',
+            en:'Tap the grid where the missing vertex should go. The point snaps into place and the line is redrawn at once.'
+          })+'</div>'+
+          '<div class="goalbar">'+T({
+            es:'Falta el vértice del intervalo de '+eLo(tgt)+' a '+eHi(tgt)+'.',
+            en:'The vertex of the interval from '+eLo(tgt)+' to '+eHi(tgt)+' is missing.'
+          })+'</div>'+
+          '<canvas class="gcanvas" id="pgCv"></canvas>'+
+          '<div class="statline" id="pgStat">'+T({es:'Aún no has colocado el punto.', en:'You have not placed the point yet.'})+'</div>'+
+          '<button class="rverify-btn" onclick="pgChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="pgFb"></div>'+
+        '</div>';
+      draw();
+      var cv = document.getElementById('pgCv');
+      if (cv) cv.onclick = function(ev){
+        if (st.done || st.lock || !G) return;
+        var r = cv.getBoundingClientRect();
+        var cx = ev.clientX - r.left, cy = ev.clientY - r.top;
+        var ii = Math.max(0, Math.min(4, Math.floor((cx-G.L)/G.bw)));
+        var vv = Math.round(((G.Tp+G.ph-cy)/G.ph)*G.mx);
+        vv = Math.max(0, Math.min(G.mx, vv));
+        st.pt = { i:ii, v:vv };
+        draw();
+        var sl = document.getElementById('pgStat');
+        if (sl) sl.textContent = T({
+          es:'Punto sobre '+mcv(ii)+', a la altura '+vv+'.',
+          en:'Point over '+mcv(ii)+', at height '+vv+'.'
+        });
+      };
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.tries = 0; st.pt = null; st.lock = false;
+        if (st.r >= 3) st.done = true;
+        render();
+      }, ms);
+    }
+    window.pgChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('pgFb'); if (!fb) return;
+      var tgt = ORD[st.r];
+      if (!st.pt){ fb.textContent = T({es:'Primero toca la cuadrícula para colocar el punto.', en:'Tap the grid first to place the point.'}); return; }
+      if (st.pt.i === tgt && st.pt.v === f[tgt]){
+        placed[tgt] = f[tgt]; st.pt = null; draw();
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Correcto: sobre la marca de clase '+mcv(tgt)+' y a la altura '+f[tgt]+', que es la frecuencia de ese intervalo.',
+          en:'Correct: over the class mark '+mcv(tgt)+' and at height '+f[tgt]+', which is the frequency of that interval.'
+        })+'</span>';
+        adv(1700); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        placed[tgt] = f[tgt]; st.pt = null; draw();
+        fb.innerHTML = T({
+          es:'Aquí va: el vértice se apoya en '+mcv(tgt)+', la mitad del intervalo, y sube hasta '+f[tgt]+'.',
+          en:'Here it goes: the vertex rests on '+mcv(tgt)+', the middle of the interval, and rises to '+f[tgt]+'.'
+        });
+        adv(2600); return;
+      }
+      if (st.pt.i !== tgt){
+        fb.textContent = (st.pt.i < tgt)
+          ? T({ es:'Ese punto quedó sobre otro intervalo, más a la izquierda. Muévelo hacia la derecha, hasta la mitad del intervalo pedido.',
+                en:'That point landed on another interval, further left. Move it to the right, to the middle of the requested interval.' })
+          : T({ es:'Ese punto quedó sobre otro intervalo, más a la derecha. Muévelo hacia la izquierda, hasta la mitad del intervalo pedido.',
+                en:'That point landed on another interval, further right. Move it to the left, to the middle of the requested interval.' });
+        return;
+      }
+      fb.textContent = (st.pt.v < f[tgt])
+        ? T({ es:'La posición horizontal ya es la correcta, pero el punto se quedó corto: la barra de ese intervalo llega más arriba.',
+              en:'The horizontal position is right, but the point fell short: the bar of that interval reaches higher.' })
+        : T({ es:'La posición horizontal ya es la correcta, pero el punto se pasó de alto: la barra de ese intervalo no llega tan arriba.',
+              en:'The horizontal position is right, but the point went too high: the bar of that interval does not reach that far.' });
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P5 ---- */
+  (function(){
+    if (vsel[4] === 0){
+      SP = {
+        title:{es:'Dónde se apoya el vértice', en:'Where the vertex rests'},
+        q:{ es:'En el polígono de frecuencias de estos datos, ¿sobre qué valor del eje horizontal se coloca el vértice del intervalo de '+eLo(p5)+' a '+eHi(p5)+'?',
+            en:'In the frequency polygon of these data, over which value of the horizontal axis is the vertex of the interval from '+eLo(p5)+' to '+eHi(p5)+' placed?' },
+        options: opts4(mcv(p5), [eLo(p5), eHi(p5), eLo(p5)+eHi(p5)]),
+        correct: String(mcv(p5)),
+        hint:{ es:'El vértice no se apoya en ninguno de los dos extremos del intervalo, sino en el punto medio: suma los dos extremos y toma la mitad.',
+               en:'The vertex does not rest on either end of the interval, but on the midpoint: add the two ends and take half.' },
+        exp:{ es:'La marca de clase es el punto medio del intervalo: ('+eLo(p5)+' + '+eHi(p5)+') ÷ 2 = '+mcv(p5)+'.',
+              en:'The class mark is the midpoint of the interval: ('+eLo(p5)+' + '+eHi(p5)+') ÷ 2 = '+mcv(p5)+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'De la marca al intervalo', en:'From the mark back to the interval'},
+        q:{ es:'En un polígono de frecuencias un vértice quedó sobre el valor '+mcv(p5)+' del eje horizontal y todos los intervalos miden '+w+'. ¿En qué valor empieza ese intervalo?',
+            en:'In a frequency polygon a vertex landed on the value '+mcv(p5)+' of the horizontal axis and every interval measures '+w+'. At which value does that interval start?' },
+        options: opts4(eLo(p5), [mcv(p5), eHi(p5), mcv(p5)+w]),
+        correct: String(eLo(p5)),
+        hint:{ es:'Ese valor es el punto medio del intervalo, así que el inicio queda media anchura antes y el final media anchura después.',
+               en:'That value is the midpoint of the interval, so the start lies half a width before it and the end half a width after it.' },
+        exp:{ es:'El vértice se apoya a la mitad del intervalo, y la mitad del ancho es '+(w/2)+', así que el intervalo empieza en '+mcv(p5)+' − '+(w/2)+' = '+eLo(p5)+'.',
+              en:'The vertex rests halfway along the interval, and half the width is '+(w/2)+', so the interval starts at '+mcv(p5)+' − '+(w/2)+' = '+eLo(p5)+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P6 ---- */
+  (function(){
+    var dif = f[peak]-f[lowIdx], tot = f[peak]+f[lowIdx];
+    if (vsel[5] === 0){
+      SP = {
+        title:{es:'Dos vértices comparados', en:'Two vertices compared'},
+        q:{ es:'La tabla resume '+C.reg(N).es+'.'+tblHTML()+'En el polígono de frecuencias, ¿cuántos datos más reúne el intervalo de '+eLo(peak)+' a '+eHi(peak)+' que el intervalo de '+eLo(lowIdx)+' a '+eHi(lowIdx)+'?',
+            en:'The table summarizes '+C.reg(N).en+'.'+tblHTML()+'In the frequency polygon, how many more values does the interval from '+eLo(peak)+' to '+eHi(peak)+' gather than the interval from '+eLo(lowIdx)+' to '+eHi(lowIdx)+'?' },
+        options: opts4(dif, [dif+1, dif-1, tot, f[peak]]),
+        correct: String(dif),
+        hint:{ es:'La altura de cada vértice es la frecuencia de su intervalo. Réstalas para saber cuánto más alto queda uno que el otro.',
+               en:'The height of each vertex is the frequency of its interval. Subtract them to see how much higher one sits than the other.' },
+        exp:{ es:'Un vértice está a la altura '+f[peak]+' y el otro a la altura '+f[lowIdx]+', así que la diferencia es '+f[peak]+' − '+f[lowIdx]+' = '+dif+'.',
+              en:'One vertex sits at height '+f[peak]+' and the other at height '+f[lowIdx]+', so the difference is '+f[peak]+' − '+f[lowIdx]+' = '+dif+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'Dos vértices juntos', en:'Two vertices together'},
+        q:{ es:'La tabla resume '+C.reg(N).es+'.'+tblHTML()+'En el polígono de frecuencias, ¿cuántos datos reúnen entre los dos el intervalo de '+eLo(peak)+' a '+eHi(peak)+' y el intervalo de '+eLo(lowIdx)+' a '+eHi(lowIdx)+'?',
+            en:'The table summarizes '+C.reg(N).en+'.'+tblHTML()+'In the frequency polygon, how many values do the interval from '+eLo(peak)+' to '+eHi(peak)+' and the interval from '+eLo(lowIdx)+' to '+eHi(lowIdx)+' gather between them?' },
+        options: opts4(tot, [tot+1, tot-1, dif, f[peak]]),
+        correct: String(tot),
+        hint:{ es:'La altura de cada vértice es la frecuencia de su intervalo. Súmalas para saber cuántos datos hay en los dos intervalos juntos.',
+               en:'The height of each vertex is the frequency of its interval. Add them to find how many values the two intervals hold together.' },
+        exp:{ es:'Un vértice está a la altura '+f[peak]+' y el otro a la altura '+f[lowIdx]+', así que entre los dos reúnen '+f[peak]+' + '+f[lowIdx]+' = '+tot+'.',
+              en:'One vertex sits at height '+f[peak]+' and the other at height '+f[lowIdx]+', so together they gather '+f[peak]+' + '+f[lowIdx]+' = '+tot+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     IDEA 4
+     ============================================================ */
+  sec(T({es:'Idea 4', en:'Idea 4'}),
+      T({es:'La gráfica de línea: lo que cambia con el tiempo', en:'The line graph: what changes over time'}),
+      '<p>'+T({
+        es:'La gráfica de línea se parece al polígono, pero el eje horizontal ya no lleva intervalos de datos: lleva momentos ordenados, como meses, semanas u horas. Cada punto es el valor medido en ese momento y los segmentos que los unen muestran qué pasó entre una medición y la siguiente.',
+        en:'The line graph looks like the polygon, but the horizontal axis no longer carries data intervals: it carries ordered moments, such as months, weeks or hours. Each point is the value measured at that moment and the segments joining them show what happened between one measurement and the next.'
+      })+'</p>'+
+      '<p>'+T({
+        es:'Un segmento que sube dice que el valor creció en ese periodo, uno que baja dice que disminuyó y uno horizontal dice que se mantuvo. La inclinación mide qué tan brusco fue el cambio: cuanto más parado el segmento, mayor el salto en un mismo periodo. Por eso conviene cuando interesa la evolución y no el reparto: el orden de los puntos no se puede alterar.',
+        en:'A segment going up says the value grew in that period, one going down says it fell and a flat one says it held steady. The slope measures how abrupt the change was: the steeper the segment, the bigger the jump in the same period. That is why it suits questions about evolution rather than distribution: the order of the points cannot be altered.'
+      })+'</p>'+
+      '<div class="callout"><p>'+T({
+        es:'Un polígono de frecuencias agrupa una sola medición de muchos individuos; una gráfica de línea sigue una misma medición a lo largo del tiempo. Se dibujan igual y se leen distinto.',
+        en:'A frequency polygon groups one single measurement of many individuals; a line graph follows one same measurement over time. They are drawn alike and read differently.'
+      })+'</p></div>');
+
+  /* ---- MANIPULATIVO 4: sigue la línea ---- */
+  (function(){
+    var wrap = widget('linea');
+    var GOALS = shufA(['up','down','flat']);
+    function mkRound(){
+      var dd = shufA(shufA([-4,-3,-2,-1]).slice(0,2).concat(shufA([1,2,3,4,5,6]).slice(0,2)).concat([0]));
+      var vv = [ri(16,26)], j;
+      for (j=0;j<5;j++) vv.push(vv[j]+dd[j]);
+      return { d:dd, v:vv };
+    }
+    var st = { r:0, tries:0, done:false, lock:false, sel:null, data:mkRound() };
+    var GG = null;
+    function goalIdx(){
+      var d = st.data.d, g = GOALS[st.r], b = 0, j;
+      for (j=1;j<5;j++){
+        if (g==='up'   && d[j] > d[b]) b = j;
+        if (g==='down' && d[j] < d[b]) b = j;
+      }
+      if (g === 'flat'){ for (j=0;j<5;j++) if (d[j]===0) return j; }
+      return b;
+    }
+    function draw(){
+      var cv = document.getElementById('lnCv'); if (!cv) return;
+      var g = fitCv(cv), ctx = g.ctx, W = g.w, H = g.h;
+      var L = 34, Rm = 14, Tp = 16, B = 26, pw = W-L-Rm, ph = H-Tp-B;
+      var v = st.data.v, j;
+      var mn = Math.min.apply(null, v), mx = Math.max.apply(null, v);
+      var lo = mn-2, hi = mx+2;
+      var col = cssv('--green'), colA = cssv('--gold'), bd = cssv('--border'), tx = cssv('--text3'), dk = cssv('--green-dark');
+      function px(j){ return L + j*(pw/5); }
+      function py(val){ return Tp + ph - ((val-lo)/(hi-lo))*ph; }
+      ctx.font = '500 10px "IBM Plex Sans", sans-serif';
+      ctx.strokeStyle = bd; ctx.lineWidth = 1; ctx.fillStyle = tx; ctx.textAlign = 'right';
+      var stp = Math.max(2, Math.round((hi-lo)/5)), val;
+      for (val=lo; val<=hi; val+=stp){
+        var y = py(val);
+        ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(W-Rm,y); ctx.stroke();
+        ctx.fillText(String(val), L-5, y+3);
+      }
+      ctx.strokeStyle = tx; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(L,Tp+ph); ctx.lineTo(W-Rm,Tp+ph); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(L,Tp); ctx.lineTo(L,Tp+ph); ctx.stroke();
+      ctx.lineCap = 'round';
+      for (j=0;j<5;j++){
+        ctx.strokeStyle = (st.sel===j) ? colA : col;
+        ctx.lineWidth = (st.sel===j) ? 5 : 2.5;
+        ctx.beginPath(); ctx.moveTo(px(j), py(v[j])); ctx.lineTo(px(j+1), py(v[j+1])); ctx.stroke();
+      }
+      for (j=0;j<6;j++){
+        ctx.fillStyle = dk;
+        ctx.beginPath(); ctx.arc(px(j), py(v[j]), 4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = tx; ctx.textAlign = 'center';
+        ctx.fillText(String(j+1), px(j), Tp+ph+13);
+      }
+      GG = { L:L, pw:pw };
+    }
+    function goalTxt(){
+      var g = GOALS[st.r];
+      if (g === 'up')   return T({es:'Toca el tramo donde la línea sube más.', en:'Tap the segment where the line rises the most.'});
+      if (g === 'down') return T({es:'Toca el tramo donde la línea baja más.', en:'Tap the segment where the line falls the most.'});
+      return T({es:'Toca el único tramo donde el valor se mantiene igual.', en:'Tap the only segment where the value stays the same.'});
+    }
+    function selTxt(){
+      if (st.sel === null) return T({es:'Aún no has elegido un tramo.', en:'You have not chosen a segment yet.'});
+      var d = st.data.d[st.sel];
+      var nm = (st.sel+1)+' '+T({es:'a',en:'to'})+' '+(st.sel+2);
+      if (d > 0) return T({es:'Tramo '+nm+': sube '+d+'.', en:'Segment '+nm+': rises '+d+'.'});
+      if (d < 0) return T({es:'Tramo '+nm+': baja '+(-d)+'.', en:'Segment '+nm+': falls '+(-d)+'.'});
+      return T({es:'Tramo '+nm+': se mantiene igual.', en:'Segment '+nm+': stays the same.'});
+    }
+    function render(){
+      if (st.done){
+        wrap.innerHTML =
+          '<div class="iw-tag">'+T({es:'Sigue la línea', en:'Follow the line'})+'</div>'+
+          '<div class="iw-box"><div class="rfb"><span class="okmsg">'+T({
+            es:'La inclinación de cada tramo cuenta la historia: mientras más parado, más cambió el valor en ese periodo.',
+            en:'The slope of each segment tells the story: the steeper it is, the more the value changed in that period.'
+          })+'</span></div></div>';
+        return;
+      }
+      wrap.innerHTML =
+        '<div class="iw-tag">'+T({es:'Sigue la línea', en:'Follow the line'})+'</div>'+
+        '<div class="iw-box">'+
+          '<div class="rondas">'+T({es:'Ronda',en:'Round'})+' '+(st.r+1)+' / 3</div>'+
+          '<div class="iw-instr iw-sub">'+T({
+            es:'Toca un tramo de la línea para resaltarlo; abajo aparece cuánto cambió el valor en ese periodo.',
+            en:'Tap a segment of the line to highlight it; below you can read how much the value changed in that period.'
+          })+'</div>'+
+          '<div class="goalbar">'+goalTxt()+'</div>'+
+          '<canvas class="gcanvas" id="lnCv"></canvas>'+
+          '<div class="statline" id="lnStat">'+selTxt()+'</div>'+
+          '<button class="rverify-btn" onclick="lnChk()">'+T({es:'Verificar',en:'Check'})+'</button>'+
+          '<div class="rfb" id="lnFb"></div>'+
+        '</div>';
+      draw();
+      var cv = document.getElementById('lnCv');
+      if (cv) cv.onclick = function(ev){
+        if (st.done || st.lock || !GG) return;
+        var r = cv.getBoundingClientRect();
+        var cx = ev.clientX - r.left;
+        st.sel = Math.max(0, Math.min(4, Math.floor((cx-GG.L)/(GG.pw/5))));
+        draw();
+        var sl = document.getElementById('lnStat'); if (sl) sl.textContent = selTxt();
+      };
+    }
+    function adv(ms){
+      st.lock = true;
+      setTimeout(function(){
+        st.r++; st.tries = 0; st.sel = null; st.lock = false;
+        if (st.r >= 3) st.done = true; else st.data = mkRound();
+        render();
+      }, ms);
+    }
+    window.lnChk = function(){
+      if (st.done || st.lock) return;
+      var fb = document.getElementById('lnFb'); if (!fb) return;
+      if (st.sel === null){ fb.textContent = T({es:'Primero toca un tramo de la línea.', en:'Tap a segment of the line first.'}); return; }
+      var gi = goalIdx(), d = st.data.d, g = GOALS[st.r];
+      if (st.sel === gi){
+        fb.innerHTML = '<span class="okmsg">'+T({
+          es:'Correcto: ese es el tramo más inclinado en el sentido que se pedía.',
+          en:'Correct: that is the steepest segment in the direction that was asked for.'
+        })+'</span>';
+        adv(1700); return;
+      }
+      st.tries++;
+      if (st.tries >= 3){
+        st.sel = gi; draw();
+        var sl = document.getElementById('lnStat'); if (sl) sl.textContent = selTxt();
+        fb.innerHTML = T({
+          es:'Este era: el tramo '+(gi+1)+' a '+(gi+2)+', el de mayor inclinación en ese sentido.',
+          en:'This was it: segment '+(gi+1)+' to '+(gi+2)+', the one with the steepest slope in that direction.'
+        });
+        adv(2600); return;
+      }
+      if (g === 'flat'){
+        fb.textContent = T({ es:'Ese tramo sí cambia de altura. Busca el que quede horizontal, con los dos extremos a la misma altura.',
+                             en:'That segment does change height. Look for the flat one, with both ends at the same height.' });
+      } else if (g === 'up'){
+        fb.textContent = (d[st.sel] <= 0)
+          ? T({ es:'Ese tramo no sube. Busca uno que vaya hacia arriba de izquierda a derecha.', en:'That segment does not rise. Look for one that goes upward from left to right.' })
+          : T({ es:'Ese tramo sube '+d[st.sel]+', pero hay otro que sube todavía más.', en:'That segment rises '+d[st.sel]+', but there is another that rises even more.' });
+      } else {
+        fb.textContent = (d[st.sel] >= 0)
+          ? T({ es:'Ese tramo no baja. Busca uno que vaya hacia abajo de izquierda a derecha.', en:'That segment does not fall. Look for one that goes downward from left to right.' })
+          : T({ es:'Ese tramo baja '+(-d[st.sel])+', pero hay otro que baja todavía más.', en:'That segment falls '+(-d[st.sel])+', but there is another that falls even more.' });
+      }
+    };
+    render();
+    REDRAW.push(draw);
+  })();
+
+  /* ---- P7 ---- */
+  (function(){
+    var tgt = (vsel[6] === 0) ? lUp : lDn;
+    var idxs = shufA([tgt, p7opts[0], p7opts[1], (vsel[6]===0 ? lDn : lUp)]);
+    var op = { es:[], en:[] }, j;
+    for (j=0;j<4;j++){ op.es.push(pairL(idxs[j]).es); op.en.push(pairL(idxs[j]).en); }
+    if (vsel[6] === 0){
+      SP = {
+        title:{es:'El mayor aumento', en:'The largest rise'},
+        q:{ es:'La tabla muestra, de enero a junio, '+LC.n.es+'.'+ltblHTML()+'¿Entre qué dos meses consecutivos hubo el mayor aumento?',
+            en:'The table shows, from January to June, '+LC.n.en+'.'+ltblHTML()+'Between which two consecutive months was the largest rise?' },
+        options: op,
+        correct: pairL(lUp),
+        hint:{ es:'Compara cada mes con el siguiente y anota cuánto creció; el tramo con la subida más grande es el que responde.',
+               en:'Compare each month with the next one and note how much it grew; the segment with the biggest rise is the answer.' },
+        exp:{ es:'De '+MON.es[lUp]+' a '+MON.es[lUp+1]+' el valor pasa de '+lv[lUp]+' a '+lv[lUp+1]+', un aumento de '+ld[lUp]+', el mayor de todos los tramos.',
+              en:'From '+MON.en[lUp]+' to '+MON.en[lUp+1]+' the value goes from '+lv[lUp]+' to '+lv[lUp+1]+', a rise of '+ld[lUp]+', the largest of all the segments.' },
+        showWork:false
+      };
+    } else {
+      SP = {
+        title:{es:'El mayor descenso', en:'The largest drop'},
+        q:{ es:'La tabla muestra, de enero a junio, '+LC.n.es+'.'+ltblHTML()+'¿Entre qué dos meses consecutivos hubo el mayor descenso?',
+            en:'The table shows, from January to June, '+LC.n.en+'.'+ltblHTML()+'Between which two consecutive months was the largest drop?' },
+        options: op,
+        correct: pairL(lDn),
+        hint:{ es:'Compara cada mes con el siguiente y anota cuánto disminuyó; el tramo con la bajada más grande es el que responde.',
+               en:'Compare each month with the next one and note how much it fell; the segment with the biggest drop is the answer.' },
+        exp:{ es:'De '+MON.es[lDn]+' a '+MON.es[lDn+1]+' el valor pasa de '+lv[lDn]+' a '+lv[lDn+1]+', una caída de '+(-ld[lDn])+', la mayor de todos los tramos.',
+              en:'From '+MON.en[lDn]+' to '+MON.en[lDn+1]+' the value goes from '+lv[lDn]+' to '+lv[lDn+1]+', a drop of '+(-ld[lDn])+', the largest of all the segments.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P8 ---- */
+  (function(){
+    var hiV = Math.max.apply(null, lv), loV = Math.min.apply(null, lv);
+    var rangeV = hiV - loV, tri = lv[0]+lv[1]+lv[2];
+    if (vsel[7] === 0){
+      SP = {
+        title:{es:'Del punto más alto al más bajo', en:'From the highest point to the lowest'},
+        q:{ es:'La tabla muestra, de enero a junio, '+LC.n.es+'.'+ltblHTML()+'¿Cuál es la diferencia entre el valor más alto y el más bajo del periodo?',
+            en:'The table shows, from January to June, '+LC.n.en+'.'+ltblHTML()+'What is the difference between the highest and the lowest value of the period?' },
+        options: opts4(rangeV, [Math.abs(lv[5]-lv[0]), rangeV+1, rangeV-1, hiV]),
+        correct: String(rangeV),
+        hint:{ es:'Localiza el punto más alto de la línea y el más bajo, sin importar en qué mes caen, y resta el menor al mayor.',
+               en:'Find the highest point of the line and the lowest one, no matter which month they fall in, and subtract the smaller from the larger.' },
+        exp:{ es:'El valor más alto del periodo es '+hiV+' y el más bajo es '+loV+', así que la diferencia es '+hiV+' − '+loV+' = '+rangeV+'.',
+              en:'The highest value of the period is '+hiV+' and the lowest is '+loV+', so the difference is '+hiV+' − '+loV+' = '+rangeV+'.' },
+        showWork:true
+      };
+    } else {
+      SP = {
+        title:{es:'El acumulado del trimestre', en:'The quarter total'},
+        q:{ es:'La tabla muestra, de enero a junio, '+LC.n.es+'.'+ltblHTML()+'¿Cuánto suman en total los tres primeros meses?',
+            en:'The table shows, from January to June, '+LC.n.en+'.'+ltblHTML()+'What do the first three months add up to?' },
+        options: opts4(tri, [tri+1, tri-1, lv[0]+lv[1], tri+lv[3]]),
+        correct: String(tri),
+        hint:{ es:'Lee en la línea la altura de los tres primeros puntos y súmalas; los meses restantes no entran en la cuenta.',
+               en:'Read the height of the first three points on the line and add them; the remaining months do not count.' },
+        exp:{ es:'Los tres primeros puntos valen '+lv[0]+', '+lv[1]+' y '+lv[2]+', así que '+lv[0]+' + '+lv[1]+' + '+lv[2]+' = '+tri+'.',
+              en:'The first three points are '+lv[0]+', '+lv[1]+' and '+lv[2]+', so '+lv[0]+' + '+lv[1]+' + '+lv[2]+' = '+tri+'.' },
+        showWork:true
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ============================================================
+     CIERRE
+     ============================================================ */
+  sec(T({es:'Cierre', en:'Wrap-up'}),
+      T({es:'Decide en cada caso', en:'Decide in each case'}),
+      '<p>'+T({
+        es:'Las dos preguntas que siguen describen situaciones distintas. Léelas con calma antes de elegir.',
+        en:'The two questions that follow describe different situations. Read them calmly before choosing.'
+      })+'</p>');
+
+  /* ---- P9 ---- */
+  (function(){
+    var opES = ['Un histograma', 'Una gráfica de línea', 'Una gráfica circular', 'Una lista de los datos sin agrupar'];
+    var opEN = ['A histogram', 'A line graph', 'A pie chart', 'A list of the data without grouping'];
+    if (vsel[8] === 0){
+      SP = {
+        title:{es:'Elegir la representación', en:'Choosing the representation'},
+        q:{ es:'Una biblioteca quiere mostrar cómo cambió el número de visitantes mes a mes durante todo un año. ¿Qué representación conviene usar?',
+            en:'A library wants to show how the number of visitors changed month by month over a whole year. Which representation is worth using?' },
+        options:{ es:opES, en:opEN },
+        correct:{ es:'Una gráfica de línea', en:'A line graph' },
+        hint:{ es:'Pregúntate si lo que importa es cómo se reparten los datos en intervalos o cómo evoluciona una misma medición conforme avanza el tiempo.',
+               en:'Ask yourself whether what matters is how the data spread across intervals or how one same measurement evolves as time goes by.' },
+        exp:{ es:'Aquí el eje horizontal lleva momentos ordenados y lo que interesa es la evolución de una misma medición, que es justo lo que muestra una gráfica de línea.',
+              en:'Here the horizontal axis carries ordered moments and what matters is the evolution of one same measurement, which is exactly what a line graph shows.' },
+        showWork:false
+      };
+    } else {
+      SP = {
+        title:{es:'Elegir la representación', en:'Choosing the representation'},
+        q:{ es:'Se midió la estatura de 200 alumnos y se quiere mostrar cómo se reparten esas estaturas en tramos de 5 centímetros. ¿Qué representación conviene usar?',
+            en:'The height of 200 students was measured and the aim is to show how those heights spread over stretches of 5 centimetres. Which representation is worth using?' },
+        options:{ es:opES, en:opEN },
+        correct:{ es:'Un histograma', en:'A histogram' },
+        hint:{ es:'Pregúntate si lo que importa es cómo evoluciona una medición con el tiempo o cuántos datos caen dentro de cada tramo de valores.',
+               en:'Ask yourself whether what matters is how a measurement evolves over time or how many values fall inside each stretch of values.' },
+        exp:{ es:'Los tramos de 5 centímetros son intervalos de clase y lo que se quiere ver es cuántos alumnos caen en cada uno, que es justo lo que muestra un histograma.',
+              en:'The 5 centimetre stretches are class intervals and the aim is to see how many students fall in each one, which is exactly what a histogram shows.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* ---- P10 ---- */
+  (function(){
+    if (vsel[9] === 0){
+      SP = {
+        title:{es:'Barras pegadas', en:'Bars that touch'},
+        q:{ es:'¿Por qué en un histograma las barras se dibujan pegadas una junto a otra?',
+            en:'Why are the bars of a histogram drawn touching one another?' },
+        options:{ es:['Porque cada intervalo continúa justo donde termina el anterior',
+                      'Porque cada barra corresponde a un solo dato de la lista',
+                      'Porque el número de datos de cada intervalo siempre es el mismo',
+                      'Porque el eje vertical empieza siempre en el valor cero'],
+                  en:['Because each interval continues right where the previous one ends',
+                      'Because each bar corresponds to a single value of the list',
+                      'Because the number of values in each interval is always the same',
+                      'Because the vertical axis always starts at the value zero'] },
+        correct:{ es:'Porque cada intervalo continúa justo donde termina el anterior',
+                  en:'Because each interval continues right where the previous one ends' },
+        hint:{ es:'Piensa en el eje horizontal: entre el final de un intervalo y el principio del siguiente no queda ningún valor sin cubrir.',
+               en:'Think of the horizontal axis: between the end of one interval and the start of the next there is no value left uncovered.' },
+        exp:{ es:'Los intervalos cubren el recorrido sin dejar huecos, así que en el eje horizontal no hay espacio vacío entre uno y otro, y las barras tampoco lo tienen.',
+              en:'The intervals cover the range leaving no gaps, so there is no empty space between them on the horizontal axis, and the bars have none either.' },
+        showWork:false
+      };
+    } else {
+      SP = {
+        title:{es:'Lo que el histograma no guarda', en:'What the histogram does not keep'},
+        q:{ es:'Al pasar de la lista de datos al histograma, ¿qué información deja de estar disponible?',
+            en:'When moving from the list of data to the histogram, which information stops being available?' },
+        options:{ es:['El valor exacto de cada dato dentro de su intervalo',
+                      'La cantidad total de datos que se registraron',
+                      'El intervalo en el que se concentra la mayor cantidad de datos',
+                      'El ancho que se eligió para formar los intervalos'],
+                  en:['The exact value of each single item inside its interval',
+                      'The total amount of data that was recorded',
+                      'The interval where the largest amount of data piles up',
+                      'The width that was chosen to form the intervals'] },
+        correct:{ es:'El valor exacto de cada dato dentro de su intervalo',
+                  en:'The exact value of each single item inside its interval' },
+        hint:{ es:'Del histograma puedes recuperar cuántos datos hay en cada intervalo y sumarlos, pero pregúntate si podrías reconstruir la lista original tal cual.',
+               en:'From the histogram you can recover how many values each interval holds and add them, but ask yourself whether you could rebuild the original list as it was.' },
+        exp:{ es:'La barra solo dice cuántos datos cayeron en el intervalo, no cuáles fueron. El total, el intervalo más alto y el ancho siguen siendo legibles en la gráfica.',
+              en:'The bar only says how many values fell in the interval, not which ones they were. The total, the tallest interval and the width can still be read from the graph.' },
+        showWork:false
+      };
+    }
+    addProb(SP);
+  })();
+
+  /* los canvas se dibujan de nuevo cuando la pantalla ya es visible */
+  setTimeout(function(){
+    for (var q=0;q<REDRAW.length;q++){ try { REDRAW[q](); } catch(e){} }
+  }, 220);
+}
+</script>
+
+<!-- LIAXA ANALYTICS -->
+<script>
+(function(){
+  var GAS_URL   = 'https://script.google.com/macros/s/AKfycbykkuJ_apGq3vALIFd4mr3acu81c7K4OKxW-DZ-i52Ceyl3lOanXMdvbS9SIXPrLQBm/exec';
+  var school    = (typeof SCHOOL!=='undefined'&&SCHOOL.schoolSlug) ? SCHOOL.schoolSlug : 'unbranded';
+  var moduleId  = (typeof SCHOOL!=='undefined'&&SCHOOL.filePrefix)  ? SCHOOL.filePrefix  : 'unknown';
+  var moduleTitle = 'Histogramas y Gráficas Poligonales';
+  var sessionId = school+'__'+moduleId+'__'+Math.random().toString(36).slice(2,10);
+  var openedAt  = Date.now();
+  function send(ev){
+    var elapsed = Math.round((Date.now()-openedAt)/1000);
+    var url = GAS_URL+'?action=track&school='+encodeURIComponent(school)+'&event='+encodeURIComponent(ev)+'&module_id='+encodeURIComponent(moduleId)+'&module_title='+encodeURIComponent(moduleTitle)+'&session_id='+encodeURIComponent(sessionId)+'&elapsed_sec='+elapsed;
+    var img = new Image();
+    img.src = url;
+  }
+  send('module_open');
+  var hb=null;
+  function startHB(){if(hb)return;hb=setInterval(function(){if(!document.hidden)send('heartbeat');},60000);}
+  function stopHB(){clearInterval(hb);hb=null;}
+  startHB();
+  document.addEventListener('visibilitychange',function(){document.hidden?stopHB():startHB();});
+  window.addEventListener('pagehide',function(){stopHB();send('module_close');});
+  window.addEventListener('beforeunload',function(){send('module_close');});
+})();
+</script>
+</body>
+</html>
