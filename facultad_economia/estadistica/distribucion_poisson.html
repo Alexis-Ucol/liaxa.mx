@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Distribución de Poisson: contar eventos en el tiempo y el espacio · Estadística</title>
+<link rel="canonical" href="https://liaxa.mx/facultad_economia/distribucion_poisson.html">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS ── fallback only; applyBranding() re-injects from SCHOOL ── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;
+  --gold-bg:    #faf3e0;
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;   /* dark-mode PRIMARY (overridden by applyBranding) */
+  --green-dark: #7aaae0;   /* dark-mode PRIMARY dark */
+  --green-bg:   #0e1e38;   /* dark-mode PRIMARY tint */
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; object-fit:contain; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; min-width:0; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── LANGUAGE TOGGLE ── */
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+.dlist { font-family:'IBM Plex Mono',monospace; font-size:.78rem; color:var(--green-dark); background:var(--surface2); border-radius:8px; padding:.6rem .7rem; margin:.6rem 0; word-break:break-word; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); overflow-x:auto; }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── INTERACTIVE WIDGETS ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.iw-head { display:flex; align-items:baseline; gap:.6rem; margin-bottom:.3rem; flex-wrap:wrap; }
+.iw-tag { font-size:.62rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; }
+.iw-title { font-family:'Crimson Pro',serif; font-size:1.08rem; font-weight:700; }
+.iw-sub { font-size:.8rem; color:var(--text2); margin-bottom:.85rem; }
+.iw-canvas { display:block; width:100%; border-radius:8px; background:var(--surface2); }
+.iw-read { margin-top:.85rem; background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 8px 8px 0; padding:.7rem .85rem; font-size:.82rem; color:var(--text2); }
+.iw-read strong { color:var(--green-dark); }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (widget toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.3rem .7rem; font-size:.76rem; cursor:pointer; color:var(--text2); transition:all .14s; font-family:inherit; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--gold-bg); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos { gap: .9rem; }
+  .wlogos img { height: 38px; max-width: 42%; }
+  .wtitle { font-size: 1.35rem; }
+  .stickybar { padding: .5rem .55rem; gap: .38rem; }
+  .htitle { display: none; }
+  .halexis { display: none; }
+  .hsep { display: none; }
+  .hlogos { gap: .3rem; }
+  .hlogos img { height: 18px; max-width: 60px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 78px; overflow: hidden; text-overflow: ellipsis; }
+  .lang-btn { padding: .26rem .48rem; font-size: .68rem; }
+  .lbody { padding: 1.2rem .7rem 3rem; max-width: 100%; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .gcrd { padding: .9rem .75rem; }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+/* ── Poisson guide: worked examples, tables, widget controls ── */
+.wex{background:var(--surface2);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:0 10px 10px 0;padding:.9rem 1.1rem;margin:1rem 0}
+.wex-t{font-family:'Crimson Pro',serif;font-weight:700;font-size:1.05rem;margin-bottom:.4rem;color:var(--green-dark)}
+.wex p{margin-bottom:.55rem}
+.pz-tbl{overflow-x:auto;margin:.6rem 0;-webkit-overflow-scrolling:touch}
+.ptable,.pz-tbl table{border-collapse:collapse;width:100%;font-size:.82rem;min-width:260px}
+.ptable th,.ptable td,.pz-tbl th,.pz-tbl td{border:1px solid var(--border);padding:.35rem .5rem;text-align:center}
+.ptable th,.pz-tbl th{background:var(--green-bg);color:var(--green-dark);font-weight:600}
+.pz-scn{background:var(--surface2);border-radius:8px;padding:.8rem .9rem;margin:.6rem 0;font-size:.92rem}
+.pz-row{display:flex;flex-wrap:wrap;gap:.5rem;margin:.6rem 0}
+.pz-btn{font:inherit;font-size:.85rem;padding:.5rem .9rem;border:1.5px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;cursor:pointer;min-height:40px}
+.pz-btn:hover{border-color:var(--green)}
+.pz-btn.on{background:var(--green);color:#fff;border-color:var(--green)}
+.pz-btn.pz-ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.pz-btn.pz-bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.pz-inputs{display:flex;flex-wrap:wrap;gap:.7rem;margin:.6rem 0}
+.pz-field{display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--text2)}
+.pz-inp{font:inherit;padding:.45rem .6rem;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);width:9rem;font-size:.9rem}
+.pz-inp.ok{border-color:var(--ok);background:var(--ok-bg)}
+.pz-inp.bad{border-color:var(--bad);background:var(--bad-bg)}
+.pz-chips{display:flex;flex-wrap:wrap;gap:.35rem;margin:.6rem 0}
+.pz-chip{min-width:36px;min-height:36px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;cursor:pointer;font:inherit;font-size:.85rem}
+.pz-chip.on{background:var(--gold);border-color:var(--gold);color:#1a1a16;font-weight:700}
+.pz-legend{font-size:.75rem;color:var(--text2);margin:.4rem 0}
+.pz-ms{list-style:none;margin:.5rem 0 .8rem;padding:0;font-size:.82rem}
+.pz-m{padding:.3rem .5rem;border-radius:6px;color:var(--text2);margin-bottom:.2rem}
+.pz-m.done{background:var(--ok-bg);color:var(--text)}
+.pz-chk{font-size:1rem;margin-right:.3rem}
+.pz-mc{font-weight:600;font-size:.78rem;margin-top:.3rem;color:var(--green-dark)}
+.verify-btn{background:var(--green);color:#fff;border:none;border-radius:8px;padding:.55rem 1.2rem;font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;margin:.3rem .3rem .3rem 0}
+.verify-btn:hover{background:var(--green-dark)}
+.verify-btn:disabled{opacity:.5;cursor:default}
+.be-row{display:flex;align-items:center;gap:.8rem;margin:.6rem 0}
+.be-lbl{font-weight:600;font-size:.9rem;white-space:nowrap}
+.cval{color:var(--green-dark)}
+.be-cell{background:var(--surface2);border-radius:8px;padding:.5rem .7rem;text-align:center}
+.be-clbl{font-size:.7rem;color:var(--text3)}
+.be-cval{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--green-dark)}
+.iw-fb{margin-top:.7rem;font-size:.85rem;padding:.6rem .8rem;border-radius:8px;background:var(--surface2);border-left:4px solid var(--border);color:var(--text)}
+.iw-fb:empty{display:none}
+.iw-fb.good{background:var(--ok-bg);border-left-color:var(--ok)}
+.iw-fb.miss,.iw-fb.bad{background:var(--bad-bg);border-left-color:var(--bad)}
+.iw-fb.warm{background:var(--gold-bg);border-left-color:var(--gold)}
+.wnudge{font-size:.8rem;color:var(--bad);margin:.3rem 0;min-height:0}
+.wnudge:empty{display:none}
+.metric .mlbl{text-transform:none;letter-spacing:.02em}
+.pz-tbl th:first-child{white-space:nowrap}
+.pz-form{font-size:1.15rem;text-align:center;margin:.8rem 0;padding:.9rem .5rem;background:var(--surface2);border-radius:10px;overflow-x:auto}
+.pz-slot{font:inherit;font-size:.95rem;min-width:2.1rem;min-height:2rem;padding:0 .35rem;border:2px dashed var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;vertical-align:middle}
+sup .pz-slot{font-size:.75rem;min-width:1.6rem;min-height:1.5rem}
+.pz-slot.full{border-style:solid;border-color:var(--green);color:var(--green-dark);font-weight:700}
+.pz-slot.foc{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-bg)}
+.pz-slot:disabled{cursor:default}
+.pz-tile{font:inherit;font-size:1rem;min-width:3rem;min-height:2.6rem;padding:0 .8rem;border:1.5px solid var(--green);border-radius:8px;background:var(--green-bg);color:var(--green-dark);font-weight:700;cursor:grab}
+.pz-tile:active{cursor:grabbing}
+.pz-tile:disabled{opacity:.5;cursor:default}
+
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ WELCOME ════════════════════ -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <div style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:700;letter-spacing:.28em;color:#1a4a8a;line-height:1;text-indent:.28em">ALEXIS</div>
+    </div>
+    <div class="wtitle"  id="wtitle-el">Distribución de Poisson: contar eventos en el tiempo y el espacio</div>
+    <div class="wcourse" id="wcourse-el">Estadística</div>
+    <label class="flabel" for="sName"  id="lbl-name-el">Nombre completo</label>
+    <input class="finput" id="sName"  type="text" placeholder="Tu nombre completo" autocomplete="name"  oninput="checkForSavedSession()">
+    <label class="flabel" for="sGroup" id="lbl-group-el">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A"             autocomplete="off"   oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreTitle">Sesión guardada encontrada</strong><br>
+      <span id="restoreMsg">¿Deseas continuar donde la dejaste?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Retomar sesión</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Empezar de nuevo</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="200" height="48" viewBox="-22 0 160 34" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="4,24 10,18 16,20 22,10" fill="none" stroke="#1a4a8a" stroke-width="2"/>
+        <circle cx="22" cy="10" r="2.5" fill="#c9a84c"/>
+        <line x1="32" y1="6" x2="32" y2="28" stroke="#c9a84c" stroke-width="2"/>
+        <text x="42" y="22" font-family="'Crimson Pro',serif" font-weight="700" letter-spacing="3" fill="#1a4a8a" font-size="16">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ LESSON ════════════════════ -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+      <img id="hlogo-right" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle" id="htitle-el">Distribución de Poisson: contar eventos en el tiempo y el espacio</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 120 34" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="4,24 10,18 16,20 22,10" fill="none" stroke="#1a4a8a" stroke-width="2"/>
+        <circle cx="22" cy="10" r="2.5" fill="#c9a84c"/>
+        <line x1="32" y1="6" x2="32" y2="28" stroke="#c9a84c" stroke-width="2"/>
+        <text x="42" y="22" font-family="'Crimson Pro',serif" font-weight="700" letter-spacing="3" fill="#1a4a8a" font-size="16">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button>
+      <button class="lang-btn"        id="btn-en" onclick="setLang('en')">EN</button>
+    </div>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="dlbtn" id="dlBtn" onclick="generatePDF()">Descargar resultados en PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   SCHOOL CONFIG
+   Edit ONLY this block to rebrand for a different school.
+   ════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:         '#1a4a8a',   /* PRIMARY — update when rebranding */
+  primaryDark:     '#0f2d5a',   /* PRIMARY dark */
+  primaryBg:       '#e8edf5',   /* PRIMARY tint */
+  accent:          '#c9a84c',   /* ACCENT */
+  accentBg:        '#faf3e0',   /* ACCENT tint */
+  pBR: 26,  pBG: 74,  pBB: 138,   /* primary RGB ints for PDF */
+  pAR: 201, pAG: 168, pAB: 76,    /* accent  RGB ints for PDF */
+  darkPrimary:     '#4a7abf',   /* dark-mode PRIMARY */
+  darkPrimaryDark: '#7aaae0',   /* dark-mode PRIMARY dark */
+  darkPrimaryBg:   '#0e1e38',   /* dark-mode PRIMARY tint */
+  darkAccent:      '#d4b86a',   /* dark-mode ACCENT */
+  darkAccentBg:    '#241e0e',   /* dark-mode ACCENT tint */
+  logoLeftB64:     '',          /* base64 from LOGOS_MASTER.HTML — leave '' if none */
+  logoRightB64:    '',          /* leave '' for single-logo schools */
+  logoLeftAlt:     'Institucion',
+  logoRightAlt:    'Universidad',
+  guideTitle:      { 'es': 'Distribución de Poisson: contar eventos en el tiempo y el espacio', 'en': 'Poisson Distribution: Counting Events in Time and Space' },
+  courseName:      { 'es': 'Estadística', 'en': 'Statistics' },
+  filePrefix:      'distribucion_poisson'
+};
+/* ════════════════════════════════════════════════════════════════════════ */
+
+/* ── Score reporting ─────────────────────────────────────────────────────
+   Paste your Google Apps Script Web App URL below (one-time setup).
+   Leave as '' to disable reporting — guide works normally either way.
+   ──────────────────────────────────────────────────────────────────────── */
+var SCORE_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIje7cRD7iI77G2-t6LMJEHtvjnwrFOJXsbbLe_4phhI7h9AhjL2HoIil1C-IoEn8T/exec';  /* ← paste Apps Script URL here */
+/* ──────────────────────────────────────────────────────────────────────── */
+
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+'}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+'}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+
+/* ════════════════════════════════════════════════════════════════════════
+   BILINGUAL UI STRINGS
+   ════════════════════════════════════════════════════════════════════════ */
+var TX = {
+  'es': {
+    'lbl-name': 'Nombre completo', 'lbl-group': 'Grupo',
+    'ph-name': 'Tu nombre completo', 'ph-group': 'ej. 3A',
+    'btn-start': 'Comenzar', 'err-fields': 'Por favor llena ambos campos.',
+    'nudge': 'Muestra tu procedimiento antes de responder.', 'btn-pdf': 'Descargar resultados en PDF', 'pdf-busy': 'Generando PDF...',
+    'restore-title': 'Sesión guardada encontrada',
+    'restore-msg': '¿Deseas continuar donde la dejaste?',
+    'btn-restore': 'Retomar sesión', 'btn-dismiss': 'Empezar de nuevo',
+    'lbl-answer': 'Selecciona tu respuesta:',
+    'btn-hint': 'Mostrar pista',
+    'tab-draw': 'Dibujar', 'tab-type': 'Teclear', 'tab-photo': 'Imagen',
+    'tool-pen': 'Lápiz', 'tool-mark': 'Marcador', 'tool-erase': 'Borrador', 'tool-clear': 'Limpiar',
+    'ph-work': 'Muestra tu procedimiento aquí...', 'ph-photo': 'Toca para elegir imagen o tomar foto',
+    'alt-work': 'trabajo del alumno',
+    'fb-correct': 'Correcto.', 'fb-wrong': 'Incorrecto.',
+    'pdf-student': 'ALUMNO', 'pdf-group': 'GRUPO',
+    'pdf-score': 'correcta(s) de', 'pdf-questions': 'preguntas',
+    'pdf-summary': 'RESUMEN DE REACTIVOS', 'pdf-summary2': 'RESUMEN DE REACTIVOS (continuación)',
+    'pdf-item': 'Reactivo', 'pdf-of': 'de', 'pdf-ok': 'Correcto', 'pdf-bad': 'Incorrecto',
+    'pdf-question': 'PREGUNTA', 'pdf-work': 'TRABAJO DEL ALUMNO',
+    'pdf-yours': 'Alumno: ', 'pdf-key': 'Correcto: ', 'pdf-sol': 'Solución: ',
+    'pdf-code': 'Código: ', 'pdf-page': 'Página '
+  },
+  'en': {
+    'lbl-name': 'Full name', 'lbl-group': 'Group',
+    'ph-name': 'Your full name', 'ph-group': 'e.g. 3A',
+    'btn-start': 'Start', 'err-fields': 'Please fill in both fields.',
+    'nudge': 'Show your work before answering.', 'btn-pdf': 'Download results as PDF', 'pdf-busy': 'Generating PDF...',
+    'restore-title': 'Saved session found',
+    'restore-msg': 'Do you want to continue where you left off?',
+    'btn-restore': 'Resume session', 'btn-dismiss': 'Start over',
+    'lbl-answer': 'Select your answer:',
+    'btn-hint': 'Show hint',
+    'tab-draw': 'Draw', 'tab-type': 'Type', 'tab-photo': 'Photo',
+    'tool-pen': 'Pen', 'tool-mark': 'Marker', 'tool-erase': 'Eraser', 'tool-clear': 'Clear',
+    'ph-work': 'Show your steps here...', 'ph-photo': 'Tap to choose an image or take a photo',
+    'alt-work': 'student work',
+    'fb-correct': 'Correct.', 'fb-wrong': 'Incorrect.',
+    'pdf-student': 'STUDENT', 'pdf-group': 'GROUP',
+    'pdf-score': 'correct out of', 'pdf-questions': 'questions',
+    'pdf-summary': 'ITEM SUMMARY', 'pdf-summary2': 'ITEM SUMMARY (continued)',
+    'pdf-item': 'Item', 'pdf-of': 'of', 'pdf-ok': 'Correct', 'pdf-bad': 'Incorrect',
+    'pdf-question': 'QUESTION', 'pdf-work': 'STUDENT WORK',
+    'pdf-yours': 'Student: ', 'pdf-key': 'Correct: ', 'pdf-sol': 'Solution: ',
+    'pdf-code': 'Code: ', 'pdf-page': 'Page '
+  }
+};
+var LANG = 'es';
+var LANG_KEY = 'liaxa_fac_poisson__lang';
+function t(k) { return (TX[LANG] && TX[LANG][k]) || TX.es[k] || k; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════════════════════════ */
+var studentData   = {};
+var problems      = [];
+var sectionDefs   = [];
+var widgets       = [];
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ════════════════════════════════════════════════════════════════════════
+   THEME
+   ════════════════════════════════════════════════════════════════════════ */
+var THEME_KEY = 'liaxa_fac_poisson__theme';
+function applyThemeVars(mode) {
+  var r = document.documentElement.style;
+  if (mode === 'dark') {
+    r.setProperty('--green',      SCHOOL.darkPrimary);
+    r.setProperty('--green-dark', SCHOOL.darkPrimaryDark);
+    r.setProperty('--green-bg',   SCHOOL.darkPrimaryBg);
+    r.setProperty('--gold',       SCHOOL.darkAccent);
+    r.setProperty('--gold-bg',    SCHOOL.darkAccentBg);
+  } else {
+    r.setProperty('--green',      SCHOOL.primary);
+    r.setProperty('--green-dark', SCHOOL.primaryDark);
+    r.setProperty('--green-bg',   SCHOOL.primaryBg);
+    r.setProperty('--gold',       SCHOOL.accent);
+    r.setProperty('--gold-bg',    SCHOOL.accentBg);
+  }
+}
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  applyThemeVars(next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+  widgets.forEach(function(f) { try { f(); } catch(e) {} });
+}
+(function() {
+  document.documentElement.setAttribute('data-theme', 'light');
+  applyThemeVars('light');
+  try {
+    var th = localStorage.getItem(THEME_KEY);
+    if (th === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      applyThemeVars('dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ════════════════════════════════════════════════════════════════════════
+   ATTEMPT COUNTER + SEEDED RNG
+   nextAttempt()    → fresh start: increments counter, new numbers each time
+   currentAttempt() → session restore: reads without incrementing, same numbers
+   ════════════════════════════════════════════════════════════════════════ */
+function getAttemptKey(name, group) {
+  return 'liaxa_fac_poisson__att__' + (name + '__' + group).replace(/\s+/g, '_');
+}
+function nextAttempt(name, group) {
+  var k = getAttemptKey(name, group), n = 0;
+  try { n = parseInt(localStorage.getItem(k) || '0', 10) || 0; } catch(e) {}
+  n++;
+  try { localStorage.setItem(k, String(n)); } catch(e) {}
+  return n;
+}
+function currentAttempt(name, group) {
+  var k = getAttemptKey(name, group);
+  try { return parseInt(localStorage.getItem(k) || '1', 10) || 1; } catch(e) { return 1; }
+}
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t2 = s ^ (s >>> 16);
+    t2 = Math.imul(t2, 0x21f0aaad);
+    t2 ^= (t2 >>> 15);
+    t2 = Math.imul(t2, 0x735a2d97);
+    return ((t2 ^ (t2 >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+/* Shuffles four options once; keeps both language versions aligned.
+   Index 0 of rawEs/rawEn must always be the correct answer. */
+function shuffleOpts(rawEs, rawEn, rng) {
+  var p = shuffle([0, 1, 2, 3], rng);
+  return {
+    es: p.map(function(j) { return rawEs[j]; }),
+    en: p.map(function(j) { return rawEn[j]; }),
+    correctIdx: p.indexOf(0)
+  };
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SESSION PERSISTENCE
+   ════════════════════════════════════════════════════════════════════════ */
+function lsKey() {
+  var n = (studentData.name || '').trim(), g = (studentData.group || '').trim();
+  return 'liaxa_fac_poisson__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    if (dc && dc.width) {
+      var blank = document.createElement('canvas');
+      blank.width = dc.width; blank.height = dc.height;
+      drawings.push(dc.toDataURL() === blank.toDataURL() ? null : dc.toDataURL('image/png'));
+    } else { drawings.push(null); }
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+function loadSession(name, group) {
+  var key = 'liaxa_fac_poisson__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+function dismissRestore() { document.getElementById('restoreBar').style.display = 'none'; }
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = (saved && saved.choices && saved.choices.some(function(c) { return c !== null; })) ? 'block' : 'none';
+}
+function observeSections() {
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   START / RESTORE
+   ════════════════════════════════════════════════════════════════════════ */
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group, startTs: Date.now() };
+  answeredCount = 0; correctCount = 0;
+  var att = nextAttempt(name, group);
+  var rng = seededRng(name + group + att);
+  buildLesson(rng);
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  setTimeout(redrawAll, 60);
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  observeSections();
+}
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group, startTs: Date.now() };
+  answeredCount = 0; correctCount = 0;
+  var att = currentAttempt(name, group);
+  var rng = seededRng(name + group + att);
+  buildLesson(rng);
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  setTimeout(redrawAll, 60);
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  observeSections();
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) saved.drawings.forEach(function(dataUrl, i) {
+      if (!dataUrl) return;
+      var dc = document.getElementById('dc' + i);
+      if (!dc || !dc.width) return;
+      var img = new Image();
+      img.onload = function() {
+        var dpr = window.devicePixelRatio || 1;
+        dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+      };
+      img.src = dataUrl;
+    });
+    if (saved.texts) saved.texts.forEach(function(txt, i) {
+      if (!txt) return;
+      var ta = document.getElementById('ta' + i);
+      if (ta) ta.value = txt;
+    });
+    if (saved.photos) saved.photos.forEach(function(dataUrl, i) {
+      if (!dataUrl) return;
+      var pp = document.getElementById('pp' + i);
+      if (!pp) return;
+      pp.src = dataUrl; pp.style.display = 'block';
+      var pz = document.getElementById('pz' + i);
+      if (pz) pz.style.opacity = '0.4';
+    });
+  }, 300);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SHOW RESULTS + SCORE REPORTING
+   ════════════════════════════════════════════════════════════════════════ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+
+  /* ── Silent score reporting to Google Sheet ── */
+  if (SCORE_ENDPOINT) {
+    try {
+      fetch(SCORE_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:      studentData.name,
+          group:     studentData.group,
+          correct:   correctCount,
+          score:     Math.round(correctCount / problems.length * 100),
+          timestamp: new Date().toLocaleString('es-MX'),
+          guide:     SCHOOL.guideTitle['es'],
+          elapsedSeconds: Math.round((Date.now() - (studentData.startTs || Date.now())) / 1000)
+        })
+      });
+    } catch(e) {}
+  }
+  /* ─────────────────────────────────────────── */
+
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   CANVAS
+   ════════════════════════════════════════════════════════════════════════ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = SCHOOL.primary;
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e) { e.preventDefault(); canvas.dataset.inked = '1'; drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e) { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(p[0], p[1]); ctx.stroke(); lx = p[0]; ly = p[1]; }
+  function onUp() { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr); canvas.dataset.inked = '0';
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   TABS / PHOTO / HINT
+   ════════════════════════════════════════════════════════════════════════ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+function toggleHint(idx) { document.getElementById('hint' + idx).classList.toggle('show'); }
+
+/* ════════════════════════════════════════════════════════════════════════
+   ANSWER HANDLER · two taps to confirm
+   First tap  → highlights in gold (pending).
+   Second tap → confirms, shows feedback, saves.
+   ════════════════════════════════════════════════════════════════════════ */
+function hasWork(i) {
+  var dc = document.getElementById('dc' + i);
+  var ta = document.getElementById('ta' + i);
+  var pp = document.getElementById('pp' + i);
+  var drawn = dc && dc.dataset.inked === '1';
+  var typed = ta && ta.value.trim().length >= 15;
+  var photo = pp && pp.src && pp.src.indexOf('data:') === 0;
+  return !!(drawn || typed || photo);
+}
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  var nd = document.getElementById('nudge' + probIdx);
+  if (prob.showWork && !hasWork(probIdx)) { if (nd) nd.textContent = t('nudge'); return; }
+  if (nd) nd.textContent = '';
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = '<strong>' + (isOk ? t('fb-correct') : t('fb-wrong')) + '</strong> ' + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+/* Direct confirm — used by restoreSession to skip the two-tap requirement. */
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (!prob || prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = '<strong>' + (isOk ? t('fb-correct') : t('fb-wrong')) + '</strong> ' + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   BUILD ONE CARD  (call right after problems.push())
+
+   prob must include:
+     title, questionText, options[], correctIdx, explanation, hint,
+     showWork (bool), fn (string, may be ''),
+     studentChoice: null, pendingChoice: null
+
+   For bilingual guides also include i18n: { title, q, hint, exp, opts }
+   ════════════════════════════════════════════════════════════════════════ */
+function buildOneCard(prob, i) {
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+  var work = '';
+  if (prob.showWork) {
+    work =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">' + t('tab-draw') + '</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">' + t('tab-type') + '</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">' + t('tab-photo') + '</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">' + t('tool-pen') + '</button>' +
+              '<button class="tbtn2 bmarker">' + t('tool-mark') + '</button>' +
+              '<button class="tbtn2 beraser">' + t('tool-erase') + '</button>' +
+              '<div class="cdot sel" data-color="' + SCHOOL.primary      + '" style="background:' + SCHOOL.primary      + '"></div>' +
+              '<div class="cdot"     data-color="#1a1a16"                     style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500"                     style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89"                     style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">' + t('tool-clear') + '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="' + t('ph-work') + '" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">' + t('ph-photo') + '</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="' + t('alt-work') + '">' +
+        '</div>' +
+      '</div>';
+  }
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i + 1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn || '') + '</span></div>' +
+      work +
+      '<button class="hintbtn" onclick="toggleHint(' + i + ')">' + t('btn-hint') + '</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint || '') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">' + t('lbl-answer') + '</div>' +
+        '<div class="wnudge" id="nudge' + i + '"></div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+  if (prob.showWork) setTimeout(function() { var c = document.getElementById('dc' + i); if (c) initCanvas(c); }, 80);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SECTION REGISTRY  (concept text re-renders on language switch)
+   ════════════════════════════════════════════════════════════════════════ */
+function addSection(fn) {
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = fn(LANG);
+  document.getElementById('lessonBody').appendChild(d);
+  sectionDefs.push({ el: d, fn: fn });
+}
+function applySectionLang() {
+  sectionDefs.forEach(function(s) { s.el.innerHTML = s.fn(LANG); });
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   CANVAS PRIMITIVES FOR INTERACTIVE WIDGETS
+   fitCanvas(cv, heightPx) → { ctx, w, h }
+   palette()               → color map from current CSS vars
+   cssv(name)              → read a CSS variable
+   ════════════════════════════════════════════════════════════════════════ */
+function cssv(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function fitCanvas(cv, h) {
+  var dpr = window.devicePixelRatio || 1;
+  var w = Math.max(240, cv.clientWidth || cv.parentNode.clientWidth || 300);
+  cv.style.height = h + 'px';
+  cv.width  = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx: ctx, w: w, h: h };
+}
+function palette() {
+  return {
+    green: cssv('--green'), dark: cssv('--green-dark'), tint: cssv('--green-bg'),
+    gold: cssv('--gold'), bad: cssv('--bad'), border: cssv('--border'),
+    text: cssv('--text'), text2: cssv('--text2'), text3: cssv('--text3')
+  };
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   LANGUAGE SWITCHING
+   ════════════════════════════════════════════════════════════════════════ */
+function applyUIStrings() {
+  var set = function(id, txt) { var e = document.getElementById(id); if (e) e.textContent = txt; };
+  var ph  = function(id, txt) { var e = document.getElementById(id); if (e) e.placeholder  = txt; };
+  set('wtitle-el',    SCHOOL.guideTitle[LANG]);
+  set('wcourse-el',   SCHOOL.courseName[LANG]);
+  set('htitle-el',    SCHOOL.guideTitle[LANG]);
+  set('lbl-name-el',  t('lbl-name'));
+  set('lbl-group-el', t('lbl-group'));
+  set('startBtn',     t('btn-start'));
+  set('restoreTitle', t('restore-title'));
+  set('restoreMsg',   t('restore-msg'));
+  set('restoreBtn',   t('btn-restore'));
+  set('dismissBtn',   t('btn-dismiss'));
+  set('dlBtn',        t('btn-pdf'));
+  ph('sName',  t('ph-name'));
+  ph('sGroup', t('ph-group'));
+}
+function applyProblemLang() {
+  problems.forEach(function(p, i) {
+    var card = document.getElementById('pc' + i);
+    if (!card || !p.i18n) return;
+    p.title        = p.i18n.title[LANG];
+    p.questionText = p.i18n.q[LANG];
+    p.hint         = p.i18n.hint[LANG];
+    p.explanation  = p.i18n.exp[LANG];
+    p.options      = p.i18n.opts[LANG].slice();
+    var ti = card.querySelector('.ptitle'); if (ti) ti.textContent = p.title;
+    var st = card.querySelector('.pstmt');
+    if (st) st.innerHTML = p.questionText + '<span class="pfn">' + (p.fn || '') + '</span>';
+    var hb = card.querySelector('.hintbox'); if (hb) hb.innerHTML = p.hint;
+    var hbtn = card.querySelector('.hintbtn'); if (hbtn) hbtn.textContent = t('btn-hint');
+    card.querySelectorAll('.mcopt').forEach(function(o, oi) {
+      if (p.options[oi] !== undefined) o.innerHTML = p.options[oi];
+    });
+    var tabs = card.querySelectorAll('.wtab');
+    if (tabs.length === 3) {
+      tabs[0].textContent = t('tab-draw');
+      tabs[1].textContent = t('tab-type');
+      tabs[2].textContent = t('tab-photo');
+    }
+    var tools = card.querySelectorAll('.tbtn2');
+    if (tools.length === 3) {
+      tools[0].textContent = t('tool-pen');
+      tools[1].textContent = t('tool-mark');
+      tools[2].textContent = t('tool-erase');
+    }
+    var clr = card.querySelector('.clrbtn'); if (clr) clr.textContent = t('tool-clear');
+    var ta  = card.querySelector('.wtextarea'); if (ta) ta.placeholder = t('ph-work');
+    var pzt = card.querySelector('.pztxt'); if (pzt) pzt.textContent = t('ph-photo');
+    var lab = card.querySelector('.pbody > div:last-child > div:first-child');
+    if (lab) lab.textContent = t('lbl-answer');
+    var fb = card.querySelector('.mcfb');
+    if (fb && fb.classList.contains('show')) {
+      var isOk = (p.studentChoice === p.correctIdx);
+      fb.innerHTML = '<strong>' + (isOk ? t('fb-correct') : t('fb-wrong')) + '</strong> ' + p.explanation;
+    }
+  });
+}
+function setLang(l) {
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e) {}
+  document.documentElement.setAttribute('lang', l);
+  var be = document.getElementById('btn-es'), bn = document.getElementById('btn-en');
+  if (be) be.classList.toggle('active', l === 'es');
+  if (bn) bn.classList.toggle('active', l === 'en');
+  applyUIStrings();
+  applySectionLang();
+  applyProblemLang();
+  widgets.forEach(function(f) { try { f(); } catch(e) {} });
+  document.querySelectorAll('#lessonBody .section').forEach(function(s) { s.classList.add('vis'); });
+}
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored === 'es' || stored === 'en') LANG = stored; } catch(e) {}
+  document.addEventListener('DOMContentLoaded', function() {
+    document.documentElement.setAttribute('lang', LANG);
+    var be = document.getElementById('btn-es'), bn = document.getElementById('btn-en');
+    if (be) be.classList.toggle('active', LANG === 'es');
+    if (bn) bn.classList.toggle('active', LANG === 'en');
+    applyUIStrings();
+  });
+})();
+
+/* ════════════════════════════════════════════════════════════════════════
+   LOGO INJECTION  (runs after DOM ready)
+   ════════════════════════════════════════════════════════════════════════ */
+/* Logo injection — welcome screen uses the ALEXIS text mark.
+   Only the sticky header receives the institution logo(s). */
+document.addEventListener('DOMContentLoaded', function() {
+  var hl = document.getElementById('hlogo-left');
+  if (hl && SCHOOL.logoLeftB64) { hl.src = SCHOOL.logoLeftB64; hl.style.display = 'inline-block'; }
+  var hr = document.getElementById('hlogo-right');
+  if (hr && SCHOOL.logoRightB64) { hr.src = SCHOOL.logoRightB64; hr.style.display = 'inline-block'; }
+});
+
+/* ════════════════════════════════════════════════════════════════════════
+   PDF GENERATION
+   · Synchronous (NOT async) — jsPDF is fully synchronous, and declaring
+     this function async breaks Safari's user-gesture chain on iOS/iPadOS,
+     causing the Share Sheet / window.open to be silently blocked.
+   · iOS/iPadOS: uses navigator.share() → Share Sheet → "Save to Files".
+     Falls back to window.open(blob) if Web Share API unavailable.
+   · Desktop / Android: standard <a download> click.
+   · All text strings go through t() for bilingual support.
+   · Colors come from SCHOOL.pBR/pBG/pBB (primary) and pAR/pAG/pAB (accent).
+   ════════════════════════════════════════════════════════════════════════ */
+function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = t('pdf-busy');
+  btn.disabled = true;
+
+  try {
+  var jspdf = window.jspdf;
+  var doc   = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW    = 215.9, M = 18, TW = PW - M * 2;
+  var PH    = doc.internal.pageSize.height;
+  var name  = studentData.name, group = studentData.group;
+  var total = problems.length;
+  var pct   = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString(LANG === 'es' ? 'es-MX' : 'en-US', { dateStyle:'long', timeStyle:'short' });
+
+  /* Verification code — unique per student+score+date */
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/→/g,'->').replace(/−/g,'-').replace(/²/g,'^2').replace(/³/g,'^3')
+      .replace(/×/g,'x').replace(/÷/g,'/').replace(/≠/g,'!=').replace(/≤/g,'<=')
+      .replace(/≥/g,'>=').replace(/√/g,'sqrt').replace(/π/g,'pi').replace(/…/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  /* ── Cover page ── */
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');
+
+  /* Institution logos */
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64,  fmtL, M,  4.0, 22, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 48, 4.5, 48, 21); } catch(e) {}
+  }
+
+  /* LIAXA mark — always LIAXA brand blue + gold, never school colors */
+  var lx = PW - M - 36, ly = 10;
+  doc.setDrawColor(26,74,138); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(201,168,76); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(201,168,76); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(26,74,138); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  /* Title band */
+  doc.setTextColor(240,244,238); doc.setFontSize(15); doc.setFont('helvetica','bold');
+  doc.text(SCHOOL.guideTitle[LANG], M, 49);
+  doc.setTextColor(198,214,192); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  /* Student card */
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text(t('pdf-student'), M+4, 79); doc.text(t('pdf-group'), 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  /* Score box */
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' '+t('pdf-score')+' '+total+' '+t('pdf-questions'), PW/2, 131, {align:'center'});
+
+  /* Summary bar */
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text(t('pdf-summary'), M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text(t('pdf-summary2'), M+4, sy+6); sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'v':'x', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(t('pdf-item')+' '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?t('pdf-ok'):t('pdf-bad'), PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  /* Per-problem pages */
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage(); var wy = 0;
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(SCHOOL.courseName[LANG]+'  ·  '+SCHOOL.guideTitle[LANG], M, 10);
+    doc.setTextColor(240,244,238); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text(t('pdf-item')+' '+(i+1)+' '+t('pdf-of')+' '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(t('pdf-question'), M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'') : '';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize(t('pdf-yours')+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize(t('pdf-key')+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize(t('pdf-sol')+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'v':'x', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); }); ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); }); ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,wy,TW,8,'F'); doc.text(t('pdf-work'), M+4, wy+5.5); wy += 11;
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar = dc.height / dc.width, iw = TW, ih = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih); wy += ih + 4;
+      } catch(e) {}
+    }
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      }); wy += 2;
+    }
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  /* Footer on every page */
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  '+t('pdf-code')+code+'  ·  '+t('pdf-page')+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  /* ── Cross-platform download ─────────────────────────────────────────────
+     IMPORTANT: this entire function must remain synchronous (not async).
+     Any await before this block would break Safari's user-gesture chain and
+     cause window.open / navigator.share to be silently blocked on iOS.
+
+     iOS/iPadOS strategy (in order of preference):
+       1. navigator.share({ files }) → native Share Sheet → "Save to Files"
+       2. window.open(blobUrl, '_blank') → opens PDF inline in Safari
+       3. location.href = blobUrl → same-tab fallback if popup is blocked
+
+     Desktop / Android: standard <a download> click.
+     ──────────────────────────────────────────────────────────────────────── */
+  var _fn   = SCHOOL.filePrefix + '_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
+  var _blob = doc.output('blob');
+
+  function _restoreBtn() { btn.textContent = t('btn-pdf'); btn.disabled = false; }
+  function _openInline(b) {
+    var u = URL.createObjectURL(b);
+    var w = window.open(u, '_blank');
+    if (!w) { window.location.href = u; }          // popup blocked → same tab
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
+  }
+
+  /* iPadOS 13+ reports platform === 'MacIntel' with touch support */
+  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (_isIOS) {
+    /* Prefer Web Share API with file — triggers "Save to Files" natively */
+    var _file = new File([_blob], _fn, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [_file] })) {
+      navigator.share({ files: [_file], title: _fn })
+        .then(_restoreBtn)
+        .catch(function(e) {
+          if (e && e.name === 'AbortError') { _restoreBtn(); return; } /* user cancelled */
+          _openInline(_blob); _restoreBtn();
+        });
+      return;   /* button state restored inside the promise callbacks above */
+    }
+    /* Older iOS without Web Share API — open blob inline */
+    _openInline(_blob);
+    _restoreBtn();
+    return;
+  }
+
+  /* Desktop + Android — standard anchor-download */
+  var _dlUrl = URL.createObjectURL(_blob);
+  var _dlA   = document.createElement('a');
+  _dlA.href  = _dlUrl; _dlA.download = _fn;
+  document.body.appendChild(_dlA); _dlA.click();
+  setTimeout(function(){ document.body.removeChild(_dlA); URL.revokeObjectURL(_dlUrl); }, 200);
+  _restoreBtn();
+
+  } catch (err) {
+    btn.textContent = t('btn-pdf');
+    btn.disabled = false;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   POISSON GUIDE · numeric + widget helpers
+   ══════════════════════════════════════════════════════════════════════════ */
+function lnFact(n){var s=0;for(var i=2;i<=n;i++)s+=Math.log(i);return s;}
+function pmf(l,k){if(k<0)return 0;return Math.exp(-l+(k>0?k*Math.log(l):0)-lnFact(k));}
+function cdf(l,k){if(k<0)return 0;var s=0;for(var i=0;i<=k;i++)s+=pmf(l,i);return Math.min(1,s);}
+function binomPmf(n,p,k){var lc=0;for(var i=1;i<=k;i++)lc+=Math.log((n-k+i)/i);return Math.exp(lc+k*Math.log(p)+(n-k)*Math.log(1-p));}
+function poisSample(l,rng){var Lm=Math.exp(-l),k=0,p=1;do{k++;p*=rng();}while(p>Lm);return k-1;}
+function fx(x,d){return Number(x).toFixed(d);}
+function pc(x,d){return (x*100).toFixed(d===undefined?1:d)+'%';}
+function clean(x){return String(+Number(x).toFixed(2));}
+function rint(rng,a,b){return a+Math.floor(rng()*(b-a+1));}
+function fr(n,d){return '<span class="mf-outer"><span class="mf-num">'+n+'</span><span class="mf-den">'+d+'</span></span>';}
+function num(v){return parseFloat(String(v).replace(',','.'));}
+function meanOf(a){var s=0;a.forEach(function(x){s+=x;});return s/a.length;}
+function svar(a){var m=meanOf(a),s=0;a.forEach(function(x){s+=(x-m)*(x-m);});return s/(a.length-1);}
+function pvar(a){var m=meanOf(a),s=0;a.forEach(function(x){s+=(x-m)*(x-m);});return s/a.length;}
+function sumOf(a){var s=0;a.forEach(function(x){s+=x;});return s;}
+
+/* Language + feedback helpers */
+function L(o){return (o&&o[LANG]!==undefined)?o[LANG]:(o?o.es:'');}
+function say(host,cls,msg){var e=host.querySelector('.iw-fb');if(!e)return;e.className='iw-fb'+(cls?' '+cls:'');e.innerHTML=msg;}
+function sayB(host,st,cls,es,en){st.fb={cls:cls,es:es,en:en};say(host,cls,LANG==='es'?es:en);}
+function restoreFb(host,st){if(st.fb)say(host,st.fb.cls,LANG==='es'?st.fb.es:st.fb.en);}
+function widgetHost(kind){var d=document.createElement('div');d.className='gcrd section';d.setAttribute('data-widget',kind);document.getElementById('lessonBody').appendChild(d);return d;}
+var redraws=[];   /* canvas-only redraws (resize / start) */
+
+/* Four distinct options; vals[0] = correct; never perturbs the correct value.
+   Guards exact duplicates AND near-duplicates (within 2 %) */
+function distinctN(vals,fmtFn,lo,hi){
+  var outV=[],outS=[];
+  for(var i=0;i<vals.length;i++){
+    var v=vals[i],s=fmtFn(v),tries=0;
+    function dup(vv,ss){
+      if(outS.indexOf(ss)!==-1)return true;
+      for(var j=0;j<outV.length;j++){if(Math.abs(vv-outV[j])<=0.02*Math.max(Math.abs(outV[j]),1e-9))return true;}
+      return false;
+    }
+    while(i>0&&dup(v,s)&&tries<60){
+      tries++;
+      var mag=1+0.06*Math.ceil(tries/2);
+      v=(tries%2)?vals[i]*mag:vals[i]/mag;
+      if(hi!==undefined&&v>hi)v=vals[i]/mag;
+      if(lo!==undefined&&v<lo)v=vals[i]*mag;
+      s=fmtFn(v);
+    }
+    outV.push(v);outS.push(s);
+  }
+  return outS;
+}
+
+/* Bar chart of the Poisson pmf. o: {h,kmax,sel,hi,mean,sd,sim,normal}. Returns geometry. */
+function niceStep(x){var c=[0.005,0.01,0.02,0.025,0.05,0.1,0.2,0.25,0.5,1];for(var i=0;i<c.length;i++)if(c[i]>=x)return c[i];return 1;}
+function tickFmt(v,step){return step>=0.1?v.toFixed(1):(step>=0.01?v.toFixed(2):v.toFixed(3));}
+function drawBars(cv,lam,o){
+  o=o||{};
+  var kmax=(o.kmax!==undefined)?o.kmax:Math.min(40,Math.ceil(lam+5*Math.sqrt(lam)+3));
+  var g=fitCanvas(cv,o.h||200),ctx=g.ctx,W=g.w,H=g.h,P=palette();
+  var ox=56,oy=H-30,rp=10,tp=12,n=kmax+1,bw=(W-ox-rp)/n,k,v;
+  var vals=[],ymax=0.001;
+  for(k=0;k<=kmax;k++){v=pmf(lam,k);vals.push(v);if(v>ymax)ymax=v;if(o.sim&&o.sim[k]>ymax)ymax=o.sim[k];}
+  var step=niceStep(ymax/4),top=Math.ceil(ymax/step-1e-9)*step;
+  function py(y){return oy-(y/top)*(oy-tp);}
+  function px(x){return ox+x*bw;}
+  ctx.font='10px IBM Plex Sans,sans-serif';
+  for(var t=0;t<=top+1e-9;t+=step){
+    ctx.strokeStyle=P.border;ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(ox,py(t));ctx.lineTo(W-rp,py(t));ctx.stroke();
+    ctx.fillStyle=P.text3;ctx.textAlign='right';ctx.fillText(tickFmt(t,step),ox-5,py(t)+3);
+  }
+  if(o.sd){
+    var a=Math.max(0,lam-Math.sqrt(lam)),b=lam+Math.sqrt(lam);
+    ctx.fillStyle=P.tint;ctx.fillRect(px(a)+bw/2,tp,(b-a)*bw,oy-tp);
+  }
+  for(k=0;k<=kmax;k++){
+    var on=(o.sel&&o.sel[k])||(o.hi&&o.hi.indexOf(k)!==-1);
+    ctx.fillStyle=on?P.gold:P.green;
+    var y=py(vals[k]);
+    ctx.fillRect(px(k)+bw*0.1,y,bw*0.8,oy-y);
+    ctx.fillStyle=P.text3;ctx.textAlign='center';ctx.font=(bw<17?'9px':'10px')+' IBM Plex Sans,sans-serif';
+    ctx.fillText(k,px(k)+bw/2,oy+13);
+  }
+  ctx.strokeStyle=P.text3;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ox,tp);ctx.lineTo(ox,oy);ctx.lineTo(W-rp,oy);ctx.stroke();
+  if(o.normal){
+    ctx.strokeStyle=P.text;ctx.lineWidth=1.6;ctx.beginPath();
+    var sg=Math.sqrt(lam),first=true;
+    for(var x=0;x<=kmax;x+=0.2){
+      var d=(x-lam)/sg,yv=Math.exp(-0.5*d*d)/(sg*Math.sqrt(2*Math.PI));
+      var X=px(x)+bw/2,Y=py(Math.min(yv,top));
+      if(first){ctx.moveTo(X,Y);first=false;}else ctx.lineTo(X,Y);
+    }
+    ctx.stroke();
+  }
+  if(o.mean){
+    ctx.setLineDash([4,3]);ctx.strokeStyle=P.bad;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(px(lam)+bw/2,tp);ctx.lineTo(px(lam)+bw/2,oy);ctx.stroke();ctx.setLineDash([]);
+  }
+  if(o.sim){
+    for(k=0;k<=kmax;k++){
+      if(o.sim[k]>0){ctx.fillStyle=P.gold;ctx.strokeStyle=P.text;ctx.lineWidth=1;
+        ctx.beginPath();ctx.arc(px(k)+bw/2,py(o.sim[k]),3.6,0,Math.PI*2);ctx.fill();ctx.stroke();}
+    }
+  }
+  ctx.fillStyle=P.text3;ctx.font='10px IBM Plex Sans,sans-serif';ctx.textAlign='center';
+  ctx.fillText('k',ox+(W-ox-rp)/2,H-3);
+  ctx.save();ctx.translate(11,(tp+oy)/2);ctx.rotate(-Math.PI/2);ctx.fillText('P(X = k)',0,0);ctx.restore();
+  cv._g={ox:ox,bw:bw,kmax:kmax};
+  return cv._g;
+}
+function drawEmpty(cv,msg){
+  var g=fitCanvas(cv,200),ctx=g.ctx,P=palette();
+  ctx.fillStyle=P.text3;ctx.font='12px IBM Plex Sans,sans-serif';ctx.textAlign='center';
+  ctx.fillText(msg,g.w/2,g.h/2);
+}
+/* Dot strip for a small data set; labels every integer tick */
+function drawDots(cv,data){
+  var g=fitCanvas(cv,140),ctx=g.ctx,W=g.w,H=g.h,P=palette();
+  var mn=Math.min.apply(null,data),mx=Math.max.apply(null,data);
+  var lo=Math.max(0,mn-1),hi=mx+1,n=hi-lo+1,ox=18,rp=18,oy=H-26,bw=(W-ox-rp)/n,v;
+  ctx.font=(bw<16?'9px':'10px')+' IBM Plex Sans,sans-serif';ctx.textAlign='center';
+  ctx.strokeStyle=P.text3;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(W-rp,oy);ctx.stroke();
+  for(v=lo;v<=hi;v++){
+    var x=ox+(v-lo+0.5)*bw;
+    ctx.beginPath();ctx.moveTo(x,oy);ctx.lineTo(x,oy+4);ctx.stroke();
+    ctx.fillStyle=P.text3;ctx.fillText(v,x,oy+16);
+  }
+  var cnt={},r=Math.min(8,bw*0.42);
+  data.forEach(function(d){
+    cnt[d]=(cnt[d]||0)+1;
+    var x=ox+(d-lo+0.5)*bw,y=oy-r-(cnt[d]-1)*(2*r+1);
+    ctx.fillStyle=P.green;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  });
+}
+
+/* Dispersion data generator. kind: 'ok' | 'over' | 'under' */
+function genDisp(kind,n,rng){
+  var mu=rint(rng,3,7),tries=0,data,m,v,D=0,i;
+  while(tries<800){
+    tries++;data=[];
+    if(kind==='ok'){for(i=0;i<n;i++)data.push(poisSample(mu,rng));}
+    else if(kind==='over'){
+      var lo=Math.max(1,mu*0.4),hi=mu*1.9;
+      for(i=0;i<n;i++)data.push(poisSample(i%2===0?lo:hi,rng));
+      data=shuffle(data,rng);
+    }else{for(i=0;i<n;i++)data.push(mu+rint(rng,-1,1));}
+    m=meanOf(data);v=svar(data);if(m<=0)continue;D=v/m;
+    if(kind==='ok'&&D>=0.65&&D<=1.5)break;
+    if(kind==='over'&&D>=2.3)break;
+    if(kind==='under'&&D<=0.4&&v>0)break;
+  }
+  return {data:data,mean:m,s2:v,D:D,kind:kind,mu:mu};
+}
+
+/* Add one graded problem card. spec: {t,q,h,e:{es,en}, oEs[], oEn[] (index 0 = correct)} */
+function addProb(spec,rng,showWork){
+  var o=shuffleOpts(spec.oEs,spec.oEn,rng);
+  problems.push({
+    i18n:{title:spec.t,q:spec.q,hint:spec.h,exp:spec.e,opts:{es:o.es,en:o.en}},
+    title:spec.t[LANG],questionText:spec.q[LANG],options:o[LANG].slice(),correctIdx:o.correctIdx,
+    explanation:spec.e[LANG],hint:spec.h[LANG],showWork:!!showWork,fn:'',
+    studentChoice:null,pendingChoice:null
+  });
+  buildOneCard(problems[problems.length-1],problems.length-1);
+}
+
+function fct(n){var r=1;for(var i=2;i<=n;i++)r*=i;return r;}
+function rt(x){return '√<span style="text-decoration:overline">'+x+'</span>';}
+
+/* ══════════════ v2 helpers: parsing, units, lambda rounds ══════════════ */
+function pnum(v){
+  var s=String(v).trim().replace(',','.');
+  if(s==='')return NaN;
+  if(s.indexOf('/')>0){var p=s.split('/'),a=parseFloat(p[0]),b=parseFloat(p[1]);return (isFinite(a)&&isFinite(b)&&b!==0)?a/b:NaN;}
+  return parseFloat(s);
+}
+var RU={
+  hour:{es:'por hora',en:'per hour',u:{es:'hora',en:'hour'}},
+  day:{es:'por día',en:'per day',u:{es:'día',en:'day'}},
+  week:{es:'por semana',en:'per week',u:{es:'semana',en:'week'}},
+  minute:{es:'por minuto',en:'per minute',u:{es:'minuto',en:'minute'}},
+  q15:{es:'cada 15 minutos',en:'every 15 minutes',u:{es:'período de 15 minutos',en:'15-minute period'}},
+  m10:{es:'por cada 10 metros',en:'per 10 meters',u:{es:'bloque de 10 metros',en:'10-meter block'}}
+};
+var WU={
+  min:{es:['minuto','minutos'],en:['minute','minutes']},
+  hour:{es:['hora','horas'],en:['hour','hours']},
+  day:{es:['día','días'],en:['day','days']},
+  meter:{es:['metro','metros'],en:['meter','meters']}
+};
+function wtxt(wv,wk){var n=(wv===1)?0:1;return {es:clean(wv)+' '+WU[wk].es[n],en:clean(wv)+' '+WU[wk].en[n]};}
+var SUBJ=[
+  {es:'Una tienda en línea',en:'An online store',v:{es:'recibe en promedio',en:'receives an average of'},w:{es:'pedidos',en:'orders'}},
+  {es:'Un centro de atención',en:'A contact center',v:{es:'recibe en promedio',en:'receives an average of'},w:{es:'llamadas',en:'calls'}},
+  {es:'Una aseguradora',en:'An insurer',v:{es:'recibe en promedio',en:'receives an average of'},w:{es:'reclamaciones',en:'claims'}},
+  {es:'Una sucursal bancaria',en:'A bank branch',v:{es:'atiende en promedio a',en:'serves an average of'},w:{es:'clientes nuevos',en:'new customers'}},
+  {es:'Un almacén',en:'A warehouse',v:{es:'recibe en promedio',en:'receives an average of'},w:{es:'camiones',en:'trucks'}},
+  {es:'Una fábrica',en:'A factory',v:{es:'registra en promedio',en:'records an average of'},w:{es:'paros de máquina',en:'machine stops'}}
+];
+var SUBJ_SP=[
+  {es:'Una tela',en:'A fabric',v:{es:'tiene en promedio',en:'has an average of'},w:{es:'defectos',en:'flaws'}},
+  {es:'Una carretera',en:'A road',v:{es:'tiene en promedio',en:'has an average of'},w:{es:'baches',en:'potholes'}}
+];
+var LT={
+  hh:{ru:'hour',wu:'hour',f:1,c:[[2,2],[2,3],[3,2],[4,2],[3,3]]},
+  hm:{ru:'hour',wu:'min',f:1/60,c:[[6,20],[6,30],[8,45],[10,30],[12,15],[12,20],[8,30],[6,45],[4,45],[12,30],[9,20]]},
+  dd:{ru:'day',wu:'day',f:1,c:[[1.5,2],[2,3],[2.5,2],[1.5,4],[2,4],[3,2]]},
+  dh:{ru:'day',wu:'hour',f:1/24,c:[[24,6],[16,6],[12,12],[18,8],[20,6],[24,3],[36,4]]},
+  wd:{ru:'week',wu:'day',f:1/7,c:[[7,2],[7,3],[14,2],[10.5,2],[10.5,4],[14,3],[3.5,4]]},
+  mh:{ru:'minute',wu:'hour',f:60,c:[[0.05,1],[0.05,2],[0.1,1],[0.04,1],[0.08,1]]},
+  q15:{ru:'q15',wu:'hour',f:4,c:[[1,1],[1.5,1],[2,1],[0.5,2]]},
+  sp:{ru:'m10',wu:'meter',f:0.1,c:[[2,15],[1.5,20],[4,5],[3,25],[2,35],[1.5,30]],sp:true},
+  s1:{ru:'hour',wu:'min',f:1/60,c:[[3,60],[4,60],[5,60],[6,60]]},
+  s2:{ru:'day',wu:'hour',f:1/24,c:[[2,24],[3,24],[4,24]]}
+};
+function lamRound(rng,ty,pool){
+  var T=LT[ty];
+  if(!pool[ty]||!pool[ty].length)pool[ty]=shuffle(T.c.slice(),rng);
+  var c=pool[ty].shift(),r=c[0],wv=c[1],sk=T.sp?'_p':'_s',src=T.sp?SUBJ_SP:SUBJ;
+  if(!pool[sk]||!pool[sk].length)pool[sk]=shuffle(src.slice(),rng);
+  var sj=pool[sk].shift(),t=wv*T.f;
+  return {ty:ty,r:r,wv:wv,wk:T.wu,rk:T.ru,f:T.f,t:t,lam:r*t,subj:sj,sp:!!T.sp,adj:Math.abs(t-1)>1e-9};
+}
+function rateSent(R){var s=R.subj;return {
+  es:s.es+' '+s.v.es+' <strong>'+clean(R.r)+'</strong> '+s.w.es+' '+RU[R.rk].es+'.',
+  en:s.en+' '+s.v.en+' <strong>'+clean(R.r)+'</strong> '+s.w.en+' '+RU[R.rk].en+'.'};}
+function winTxt(R){var w=wtxt(R.wv,R.wk);return {es:'en '+w.es,en:'in '+w.en};}
+function tWhy(R){
+  var W=clean(R.wv),T=clean(R.t);
+  var m={
+    hh:{es:'La ventana ya está en horas, la misma unidad de la tasa: t = '+W+'.',en:'The window is already in hours, the same unit as the rate: t = '+W+'.'},
+    hm:{es:'Una hora tiene 60 minutos: t = '+fr(W,60)+' = '+T+'.',en:'One hour has 60 minutes: t = '+fr(W,60)+' = '+T+'.'},
+    dd:{es:'La ventana ya está en días, la misma unidad de la tasa: t = '+W+'.',en:'The window is already in days, the same unit as the rate: t = '+W+'.'},
+    dh:{es:'Un día tiene 24 horas: t = '+fr(W,24)+' = '+T+'.',en:'One day has 24 hours: t = '+fr(W,24)+' = '+T+'.'},
+    wd:{es:'Una semana tiene 7 días: t = '+fr(W,7)+' = '+T+'.',en:'One week has 7 days: t = '+fr(W,7)+' = '+T+'.'},
+    mh:{es:'La tasa es por minuto y '+W+' hora(s) equivalen a '+W+' × 60 = '+T+' minutos: t = '+T+'.',en:'The rate is per minute and '+W+' hour(s) equal '+W+' × 60 = '+T+' minutes: t = '+T+'.'},
+    q15:{es:'Cada período dura 15 minutos y '+W+' hora(s) contienen '+W+' × 4 = '+T+' períodos: t = '+T+'.',en:'Each period lasts 15 minutes and '+W+' hour(s) contain '+W+' × 4 = '+T+' periods: t = '+T+'.'},
+    sp:{es:'Cada bloque mide 10 metros: t = '+fr(W,10)+' = '+T+'.',en:'Each block is 10 meters long: t = '+fr(W,10)+' = '+T+'.'},
+    s1:{es:'60 minutos equivalen a 1 hora: t = 1, así que no hay que ajustar.',en:'60 minutes equal 1 hour: t = 1, so no adjustment is needed.'},
+    s2:{es:'24 horas equivalen a 1 día: t = 1, así que no hay que ajustar.',en:'24 hours equal 1 day: t = 1, so no adjustment is needed.'}
+  };
+  return m[R.ty];
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   WIDGET 1 · Classifier (Mode C · 7 cases · three plain conditions)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wClassifier(rng,host){
+  var POOL=[
+   {ans:'p',es:'Llamadas que recibe un centro de atención entre las 10:00 y las 11:00 h, con un promedio estable de 18 por hora.',
+    en:'Calls received by a contact center between 10:00 and 11:00, with a stable average of 18 per hour.',
+    why:{es:'Se cuentan ocurrencias en una ventana de tiempo (una hora), no hay un máximo natural, los clientes llaman por separado y el promedio es estable.',
+         en:'Occurrences are counted in a time window (one hour), there is no natural maximum, customers call separately and the average is stable.'}},
+   {ans:'p',es:'Defectos por metro cuadrado de lámina de acero, con un promedio de 0.8 defectos por metro cuadrado.',
+    en:'Defects per square meter of steel sheet, with an average of 0.8 defects per square meter.',
+    why:{es:'La ventana es un espacio (un metro cuadrado) en lugar de un tiempo. Los defectos aparecen de forma independiente y con densidad constante.',
+         en:'The window is a space (one square meter) instead of a time. Defects appear independently and with constant density.'}},
+   {ans:'p',es:'Transferencias fraudulentas detectadas por día en un banco, con un promedio estable de 4 por día.',
+    en:'Fraudulent transfers detected per day at a bank, with a stable average of 4 per day.',
+    why:{es:'Se cuentan eventos en una ventana de un día, sin tope natural. Si el promedio es estable y los casos son independientes, es Poisson.',
+         en:'Events are counted in a one-day window with no natural cap. If the average is stable and the cases are independent, it is Poisson.'}},
+   {ans:'p',es:'Errores tipográficos por página de un libro, con un promedio de 0.3 errores por página.',
+    en:'Typographical errors per page of a book, with an average of 0.3 errors per page.',
+    why:{es:'Se cuentan ocurrencias por unidad de espacio (una página), sin máximo natural y con errores prácticamente independientes.',
+         en:'Occurrences are counted per unit of space (one page), with no natural maximum and practically independent errors.'}},
+   {ans:'b',es:'De 40 facturas revisadas en una auditoría, cuántas tienen error, si cada una tiene 6% de probabilidad de error.',
+    en:'Of 40 invoices reviewed in an audit, how many contain an error, if each has a 6% chance of error.',
+    why:{es:'Hay un número fijo de intentos (40) y el conteo no puede pasar de 40. Eso es una binomial, no una Poisson.',
+         en:'There is a fixed number of trials (40) and the count cannot exceed 40. That is a binomial, not a Poisson.'}},
+   {ans:'b',es:'De 25 clientes contactados en una campaña, cuántos contratan el servicio, si cada uno contrata con probabilidad 0.12.',
+    en:'Of 25 customers contacted in a campaign, how many sign up for the service, if each signs up with probability 0.12.',
+    why:{es:'El número de intentos está fijado de antemano (25) y cada uno termina en contratar o no contratar. Estructura binomial.',
+         en:'The number of trials is set in advance (25) and each ends in signing up or not. Binomial structure.'}},
+   {ans:'b',es:'De un lote de 50 piezas inspeccionadas, cuántas son defectuosas, si cada pieza lo es con probabilidad 0.03.',
+    en:'Of a lot of 50 inspected parts, how many are defective, if each part is defective with probability 0.03.',
+    why:{es:'Muestra de tamaño fijo (50) con dos resultados posibles por pieza. Hay un máximo natural, así que no es Poisson.',
+         en:'A fixed-size sample (50) with two possible outcomes per part. There is a natural maximum, so it is not Poisson.'}},
+   {ans:'n',es:'Ventas por hora en una tienda de ropa durante todo el día, incluyendo la hora pico de 18:00 a 20:00 y las horas muy tranquilas de la mañana.',
+    en:'Sales per hour in a clothing store across the whole day, including the 18:00 to 20:00 peak and the very quiet morning hours.',
+    why:{es:'El promedio cambia según la hora, así que un solo λ no describe todas las horas. Se puede modelar por franjas donde el promedio sea estable.',
+         en:'The average changes with the hour, so a single λ does not describe every hour. It can be modeled by bands where the average is stable.'}},
+   {ans:'n',es:'Fallas diarias de un sistema informático, donde una falla del servidor principal suele provocar varias fallas más en los minutos siguientes.',
+    en:'Daily failures of a computer system, where a failure of the main server usually triggers several more failures in the following minutes.',
+    why:{es:'Las fallas no son independientes: una provoca otras. Sin independencia, la Poisson no describe bien el conteo.',
+         en:'The failures are not independent: one triggers others. Without independence, the Poisson does not describe the count well.'}},
+   {ans:'n',es:'Minutos que pasan entre la llegada de dos clientes consecutivos a una sucursal.',
+    en:'Minutes that pass between the arrivals of two consecutive customers at a branch.',
+    why:{es:'Es un tiempo, no un conteo. La Poisson cuenta cuántos eventos ocurren dentro de una ventana.',
+         en:'It is a time, not a count. The Poisson counts how many events occur inside a window.'}}
+  ];
+  function take(a,n){return shuffle(POOL.filter(function(x){return x.ans===a;}),rng).slice(0,n);}
+  var seq=shuffle(take('p',3).concat(take('b',2),take('n',2)),rng),N=seq.length;
+  var LAB={p:{es:'Poisson',en:'Poisson'},b:{es:'Binomial',en:'Binomial'},n:{es:'Ninguna de las dos',en:'Neither'}};
+  var st={i:0,tries:0,done:false,lock:false,fb:null,first:0};
+  function hint(ans,pk){
+    if(ans==='p'&&pk==='b')return {es:'Pregúntate si hay un número fijo de intentos. Aquí se cuentan ocurrencias en una ventana y no existe un máximo natural.',en:'Ask yourself whether there is a fixed number of trials. Here occurrences are counted in a window and there is no natural maximum.'};
+    if(ans==='p'&&pk==='n')return {es:'Revisa las condiciones: ¿se cuenta en una ventana?, ¿los eventos son independientes?, ¿el promedio es estable? Aquí las tres se cumplen.',en:'Check the conditions: is it counted in a window? Are events independent? Is the average stable? Here all three hold.'};
+    if(ans==='b'&&pk==='p')return {es:'Fíjate si el número de intentos está fijado de antemano y si el conteo tiene un máximo natural.',en:'Notice whether the number of trials is set in advance and whether the count has a natural maximum.'};
+    if(ans==='b'&&pk==='n')return {es:'Hay un número fijo de intentos y cada uno termina en éxito o fracaso. Piensa qué modelo describe esa estructura.',en:'There is a fixed number of trials and each ends in success or failure. Think about which model describes that structure.'};
+    return {es:'Revisa las condiciones una por una: ¿hay dependencia entre eventos, un promedio que cambia o una variable que no es un conteo?',en:'Check the conditions one by one: is there dependence between events, a changing average or a variable that is not a count?'};
+  }
+  function render(){
+    var head='<div class="iw-head"><span class="iw-tag">'+(st.done?'':L({es:'Situación',en:'Case'})+' '+(st.i+1)+'/'+N)+'</span><span class="iw-title">'+L({es:'¿Poisson, binomial o ninguna?',en:'Poisson, binomial or neither?'})+'</span></div>';
+    if(st.done){
+      host.innerHTML=head+'<div class="iw-fb good">✓ '+L({es:'Clasificaste las '+N+' situaciones ('+st.first+' al primer intento). Regla práctica: si hay un número fijo de intentos, piensa en binomial; si se cuentan eventos en una ventana de tiempo o espacio con promedio estable e independencia, piensa en Poisson.',en:'You classified all '+N+' cases ('+st.first+' on the first try). Rule of thumb: if there is a fixed number of trials, think binomial; if events are counted in a window of time or space with a stable average and independence, think Poisson.'})+'</div>';
+      return;
+    }
+    var sc=seq[st.i];
+    host.innerHTML=head+
+      '<div class="iw-sub">'+L({es:'Lee la situación y toca el modelo que describe el conteo. Si ninguno sirve, toca "Ninguna de las dos".',en:'Read the case and tap the model that describes the count. If neither fits, tap "Neither".'})+'</div>'+
+      '<div class="pz-scn">'+L(sc)+'</div>'+
+      '<div class="pz-row">'+['p','b','n'].map(function(k){return '<button class="pz-btn" data-k="'+k+'">'+L(LAB[k])+'</button>';}).join('')+'</div>'+
+      '<div class="iw-fb"></div>';
+    restoreFb(host,st);
+    host.querySelectorAll('.pz-btn').forEach(function(btn){
+      btn.onclick=function(){
+        if(st.lock)return;
+        var pk=btn.getAttribute('data-k');
+        if(pk===sc.ans){
+          st.lock=true;btn.classList.add('pz-ok');if(st.tries===0)st.first++;
+          sayB(host,st,'good','✓ '+sc.why.es,'✓ '+sc.why.en);advance(sc);
+        }else{
+          st.tries++;btn.classList.add('pz-bad');
+          if(st.tries>=3){
+            st.lock=true;
+            sayB(host,st,'warm','Respuesta: <strong>'+LAB[sc.ans].es+'</strong>. '+sc.why.es,'Answer: <strong>'+LAB[sc.ans].en+'</strong>. '+sc.why.en);advance(sc);
+          }else{var h=hint(sc.ans,pk);sayB(host,st,'miss',h.es,h.en);}
+        }
+      };
+    });
+  }
+  function advance(sc){
+    setTimeout(function(){
+      st.i++;st.tries=0;st.lock=false;
+      st.fb={cls:'',es:'Situación anterior: '+sc.why.es,en:'Previous case: '+sc.why.en};
+      if(st.i>=N){st.done=true;st.fb=null;}
+      render();
+    },1700);
+  }
+  widgets.push(render);render();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   WIDGET 5 · Lambda adjustment  (Mode B · 12 rounds · t and λ)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wLam(rng,host){
+  var SEQ=['hh','hm','dd','hm','dh','wd','mh','sp','q15','s1','hm','s2'],pool={_s:[],_p:[]};
+  var R=SEQ.map(function(ty){return lamRound(rng,ty,pool);}),NR=R.length;
+  var st={i:0,tries:0,done:false,ok:false,tv:'',lv:'',fb:null};
+  function render(){
+    var head='<div class="iw-head"><span class="iw-tag">'+L({es:'Ronda',en:'Round'})+' '+Math.min(st.i+1,NR)+'/'+NR+'</span><span class="iw-title">'+L({es:'Ajuste de λ a la ventana',en:'Adjusting λ to the window'})+'</span></div>';
+    if(st.done){
+      host.innerHTML=head+'<div class="iw-fb good">✓ '+L({es:'Completaste las '+NR+' rondas. En todas hiciste lo mismo: expresar la ventana en la unidad de la tasa (t) y multiplicar λ = r × t. Cuando la ventana equivale a una unidad de la tasa, t = 1 y λ no cambia.',en:'You completed all '+NR+' rounds. In every one you did the same thing: express the window in the unit of the rate (t) and multiply λ = r × t. When the window equals one unit of the rate, t = 1 and λ does not change.'})+'</div>';
+      return;
+    }
+    var q=R[st.i],rs=rateSent(q),wt=winTxt(q);
+    host.innerHTML=head+
+      '<div class="iw-sub">'+L({es:'Paso 1: escribe t, la ventana medida en la unidad de la tasa (puedes usar fracciones como 1/3 o decimales). Paso 2: calcula λ = r × t.',en:'Step 1: enter t, the window measured in the unit of the rate (you may use fractions like 1/3 or decimals). Step 2: compute λ = r × t.'})+'</div>'+
+      '<div class="pz-scn">'+L(rs)+' '+L({es:'Se estudia la ventana <strong>'+wtxt(q.wv,q.wk).es+'</strong>.',en:'The window under study is <strong>'+wtxt(q.wv,q.wk).en+'</strong>.'})+'</div>'+
+      '<div class="pz-legend">'+L({es:'La tasa está dada '+RU[q.rk].es+': la unidad es el/la '+RU[q.rk].u.es+'.',en:'The rate is given '+RU[q.rk].en+': the unit is the '+RU[q.rk].u.en+'.'})+'</div>'+
+      '<div class="pz-inputs">'+
+        '<div class="pz-field"><label>t</label><input class="pz-inp" data-f="t" type="text" inputmode="decimal" autocomplete="off" value="'+st.tv+'"'+(st.ok?' disabled':'')+'></div>'+
+        '<div class="pz-field"><label>λ = r × t</label><input class="pz-inp" data-f="l" type="text" inputmode="decimal" autocomplete="off" value="'+st.lv+'"'+(st.ok?' disabled':'')+'></div>'+
+      '</div>'+
+      '<button class="verify-btn" data-a="vfy"'+(st.ok?' disabled':'')+'>'+L({es:'Verificar',en:'Check'})+'</button> '+
+      (st.ok?'<button class="verify-btn" data-a="next">'+L({es:(st.i+1>=NR?'Terminar':'Siguiente ronda'),en:(st.i+1>=NR?'Finish':'Next round')})+'</button>':'')+
+      '<div class="iw-fb"></div>';
+    restoreFb(host,st);
+    host.querySelectorAll('.pz-inp').forEach(function(inp){inp.oninput=function(){st[inp.getAttribute('data-f')==='t'?'tv':'lv']=inp.value;inp.classList.remove('ok','bad');};});
+    host.querySelector('[data-a="vfy"]').onclick=verify;
+    var nb=host.querySelector('[data-a="next"]');
+    if(nb)nb.onclick=function(){st.i++;st.tries=0;st.ok=false;st.tv='';st.lv='';st.fb=null;if(st.i>=NR)st.done=true;render();};
+  }
+  function verify(){
+    var q=R[st.i],tv=pnum(st.tv),lv=pnum(st.lv);
+    if(!isFinite(tv)||!isFinite(lv)){sayB(host,st,'warm','⚠ Escribe t y λ antes de verificar.','⚠ Enter t and λ before checking.');return;}
+    var ttol=Math.max(0.006,0.004*q.t),tOK=Math.abs(tv-q.t)<=ttol,ltol=0.03*Math.max(1,q.lam),lOK=Math.abs(lv-q.lam)<=ltol;
+    var it=host.querySelector('[data-f="t"]'),il=host.querySelector('[data-f="l"]');
+    it.classList.toggle('ok',tOK);it.classList.toggle('bad',!tOK);il.classList.toggle('ok',lOK);il.classList.toggle('bad',!lOK);
+    var why=tWhy(q);
+    if(tOK&&lOK){
+      st.ok=true;
+      sayB(host,st,'good','✓ Correcto. '+why.es+' Entonces λ = '+clean(q.r)+' × '+clean(q.t)+' = <strong>'+clean(q.lam)+'</strong>.','✓ Correct. '+why.en+' So λ = '+clean(q.r)+' × '+clean(q.t)+' = <strong>'+clean(q.lam)+'</strong>.');
+      render();return;
+    }
+    st.tries++;var es,en;
+    if(!tOK){
+      if(q.f!==1&&Math.abs(tv-q.wv)<=Math.max(0.006,0.004*q.wv)){es='Escribiste la ventana con sus unidades originales. t debe estar en la unidad de la tasa ('+RU[q.rk].u.es+'). Piensa cuántos de esos caben en la ventana.';en='You wrote the window in its original units. t must be in the unit of the rate ('+RU[q.rk].u.en+'). Think about how many of those fit in the window.';}
+      else if(q.t!==1&&Math.abs(tv-1/q.t)<=Math.max(0.006,0.004/q.t)){es='Parece que invertiste la conversión. Si la ventana es más corta que la unidad de la tasa, t debe ser menor que 1; si es más larga, mayor que 1.';en='It looks like you inverted the conversion. If the window is shorter than the unit of the rate, t must be less than 1; if longer, greater than 1.';}
+      else{es='Revisa t: cuántas unidades de la tasa ('+RU[q.rk].u.es+') caben en la ventana. Recuerda las equivalencias: 1 hora = 60 minutos, 1 día = 24 horas, 1 semana = 7 días.';en='Check t: how many units of the rate ('+RU[q.rk].u.en+') fit in the window. Recall the equivalences: 1 hour = 60 minutes, 1 day = 24 hours, 1 week = 7 days.';}
+    }else{
+      if(Math.abs(lv-q.r)<=ltol){es='Usaste la tasa r sin ajustarla. λ = r × t, y aquí t no es 1.';en='You used the rate r without adjusting it. λ = r × t, and here t is not 1.';}
+      else if(Math.abs(lv-q.r*q.wv)<=0.03*Math.max(1,q.r*q.wv)){es='Multiplicaste r por la ventana sin convertirla. Usa t, la ventana en la unidad de la tasa.';en='You multiplied r by the window without converting it. Use t, the window in the unit of the rate.';}
+      else if(Math.abs(lv-q.r/q.t)<=0.03*Math.max(1,q.r/q.t)){es='Dividiste entre t. La fórmula es λ = r × t: multiplicas.';en='You divided by t. The formula is λ = r × t: you multiply.';}
+      else{es='t está bien. Ahora multiplica la tasa r por t.';en='t is right. Now multiply the rate r by t.';}
+    }
+    if(st.tries>=3){
+      st.ok=true;st.tv=clean(q.t);st.lv=clean(q.lam);
+      sayB(host,st,'warm','Solución: '+why.es+' λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(q.lam)+'.','Solution: '+why.en+' λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(q.lam)+'.');
+      render();return;
+    }
+    sayB(host,st,'miss',es,en);
+  }
+  widgets.push(render);render();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   WIDGET 2 and 4 · Formula builder (Mode B · tap or drag tiles into slots)
+   cfg.mixed=false : lambda given, build P(X = k)          (10 rounds)
+   cfg.mixed=true  : decide adjustment, lambda, build, P   (8 rounds)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wFormula(rng,host,cfg){
+  var mixed=cfg.mixed,NR=cfg.NR,pool={_s:[],_p:[]};
+  var mk=function(sEs,sEn,wEs,wEn,pEs,pEn,oEs,oEn,wnEs,wnEn){
+    return function(l,d,k){
+      return {es:sEs+' '+clean(l)+' '+wEs+' '+pEs+', '+oEs.replace('#',d)+'. ¿Cuál es la probabilidad de que el número de '+wEs+' '+wnEs+' sea exactamente '+k+'?',
+              en:sEn+' '+clean(l)+' '+wEn+' '+pEn+', '+oEn.replace('#',d)+'. What is the probability that the number of '+wEn+' '+wnEn+' is exactly '+k+'?'};
+    };
+  };
+  var TPL=shuffle([
+    mk('Una tienda en línea recibe en promedio','An online store receives an average of','pedidos','orders','por hora','per hour','según el registro de las últimas # semanas','according to the record of the last # weeks','en una hora','in one hour'),
+    mk('Un centro de atención registra en promedio','A contact center records an average of','llamadas','calls','por hora','per hour','con datos de # días','with data from # days','en una hora','in one hour'),
+    mk('Una aseguradora recibe en promedio','An insurer receives an average of','reclamaciones','claims','por día','per day','con base en # meses de historial','based on # months of history','en un día','in one day'),
+    mk('Una carretera tiene en promedio','A road has an average of','baches','potholes','por kilómetro','per kilometer','tras inspeccionar # kilómetros','after inspecting # kilometers','en un kilómetro','in one kilometer'),
+    mk('Una fábrica sufre en promedio','A factory suffers an average of','paros de máquina','machine stops','por semana','per week','con registros de # semanas','with records of # weeks','en una semana','in one week'),
+    mk('Un libro tiene en promedio','A book has an average of','errores tipográficos','typographical errors','por página','per page','tras revisar # páginas','after reviewing # pages','en una página','on one page'),
+    mk('Un banco rechaza en promedio','A bank rejects an average of','cheques','checks','por día','per day','según los últimos # días hábiles','according to the last # business days','en un día','in one day'),
+    mk('Un almacén recibe en promedio','A warehouse receives an average of','camiones','trucks','por hora','per hour','con una muestra de # horas','with a sample of # hours','en una hora','in one hour')
+  ],rng);
+  var KB=shuffle([0,1,2,3,3,4,4,5,2,6],rng),SEQ=['hm','s1','dd','hm','dh','sp','s2','wd','q15','hh'];
+  function tilesFor(q,vals){
+    var out=[],seen={};
+    vals.forEach(function(v){var key=String(+v.toFixed(6));if(!seen[key]&&out.length<4){seen[key]=1;out.push(v);}});
+    return shuffle(out,rng);
+  }
+  var R=[],i;
+  for(i=0;i<NR;i++){
+    var q;
+    if(!mixed){
+      var lam=pick([1.5,2,2.5,3,3.5,4,4.5,5],rng),k=KB[i%KB.length];
+      if(k===lam)k=k+1;
+      var d=pick([5,8,10,12,20,24,30,40,50],rng),g=0;
+      while((d===lam||d===k||d===k+1)&&g<30){d=pick([5,8,10,12,20,24,30,40,50],rng);g++;}
+      q={lam:lam,k:k,d:d,r:lam,wv:d,adj:false,scn:TPL[i%TPL.length](lam,d,k)};
+      q.tiles=tilesFor(q,[lam,k,d,k+1,lam+1,k+2]);
+    }else{
+      var lr=lamRound(rng,SEQ[i],pool),l2=lr.lam,k2=Math.max(0,Math.round(l2)+pick([-2,-1,0,1],rng));
+      if(Math.abs(k2-l2)<1e-9)k2++;
+      var sc=rateSent(lr),wt=winTxt(lr);
+      q={lam:l2,k:k2,d:lr.wv,r:lr.r,wv:lr.wv,adj:lr.adj,lr:lr,
+         scn:{es:sc.es+' ¿Cuál es la probabilidad de que el número de '+lr.subj.w.es+' '+wt.es+' sea exactamente '+k2+'?',
+              en:sc.en+' What is the probability that the number of '+lr.subj.w.en+' '+wt.en+' is exactly '+k2+'?'}};
+      q.tiles=tilesFor(q,lr.adj?[l2,lr.r,k2,lr.wv,k2+1,l2+1]:[l2,k2,lr.wv,k2+1,l2+1,k2+2]);
+    }
+    q.truth=pmf(q.lam,q.k);q.ee=Math.exp(-q.lam);q.lk=Math.pow(q.lam,q.k);q.kf=fct(q.k);
+    R.push(q);
+  }
+  var st={i:0,tries:0,done:false,ok:false,slots:[null,null,null,null],focus:null,adj:null,lv:'',pv:'',fb:null};
+  var SN=[{es:'el exponente de e',en:'the exponent of e'},{es:'la base',en:'the base'},{es:'el exponente de la base',en:'the exponent of the base'},{es:'el factorial',en:'the factorial'}];
+  function eq(a,b){return a!==null&&Math.abs(a-b)<1e-9;}
+  function firstEmpty(){for(var j=0;j<4;j++)if(st.slots[j]===null)return j;return -1;}
+  function place(ti,si){
+    if(st.ok)return;
+    var q=R[st.i],target=si;
+    if(target===null||target===undefined)target=(st.focus!==null&&st.slots[st.focus]===null)?st.focus:firstEmpty();
+    if(target<0)return;
+    st.slots[target]=q.tiles[ti];st.focus=null;render();
+  }
+  function slot(j){
+    var v=st.slots[j];
+    return '<button type="button" class="pz-slot'+(v!==null?' full':'')+(st.focus===j?' foc':'')+'" data-s="'+j+'"'+(st.ok?' disabled':'')+'>'+(v===null?'□':clean(v))+'</button>';
+  }
+  function render(){
+    var title=mixed?{es:'Del enunciado a la probabilidad',en:'From the statement to the probability'}:{es:'Arma la fórmula',en:'Build the formula'};
+    var head='<div class="iw-head"><span class="iw-tag">'+L({es:'Ronda',en:'Round'})+' '+Math.min(st.i+1,NR)+'/'+NR+'</span><span class="iw-title">'+L(title)+'</span></div>';
+    if(st.done){
+      host.innerHTML=head+'<div class="iw-fb good">✓ '+L(mixed?
+        {es:'Completaste las '+NR+' rondas. El proceso fue siempre el mismo: decidir si la ventana exige ajustar λ, armar la fórmula con λ (nunca con la tasa original) y evaluar.',en:'You completed all '+NR+' rounds. The process was always the same: decide whether the window requires adjusting λ, build the formula with λ (never with the original rate) and evaluate.'}:
+        {es:'Completaste las '+NR+' rondas. λ va dos veces (en e y en la base), k va dos veces (en el exponente y en el factorial) y los demás números del enunciado no entran en la fórmula.',en:'You completed all '+NR+' rounds. λ goes twice (in e and in the base), k goes twice (in the exponent and in the factorial) and the other numbers in the statement do not enter the formula.'})+'</div>';
+      return;
+    }
+    var q=R[st.i],sub=mixed?
+      {es:'Paso 1: decide si hay que ajustar λ y escribe su valor. Paso 2: arma la fórmula con las fichas. Paso 3: calcula la probabilidad con 4 decimales. Hay fichas que no van en la fórmula.',en:'Step 1: decide whether λ must be adjusted and enter its value. Step 2: build the formula with the tiles. Step 3: compute the probability to 4 decimals. Some tiles do not belong in the formula.'}:
+      {es:'Toca una ficha para colocarla en la siguiente casilla libre, o toca primero una casilla para elegir dónde va (en computadora también puedes arrastrar). Toca una casilla llena para vaciarla. Luego calcula la probabilidad con 4 decimales. Hay fichas que no van en la fórmula.',en:'Tap a tile to place it in the next free slot, or tap a slot first to choose where it goes (on a computer you can also drag). Tap a filled slot to empty it. Then compute the probability to 4 decimals. Some tiles do not belong in the formula.'};
+    var adjRow='';
+    if(mixed){
+      adjRow='<div class="pz-legend">'+L({es:'¿Hay que ajustar λ?',en:'Must λ be adjusted?'})+'</div>'+
+        '<div class="pz-row"><button class="pz-btn'+(st.adj==='y'?' on':'')+'" data-adj="y"'+(st.ok?' disabled':'')+'>'+L({es:'Sí, ajustar',en:'Yes, adjust'})+'</button><button class="pz-btn'+(st.adj==='n'?' on':'')+'" data-adj="n"'+(st.ok?' disabled':'')+'>'+L({es:'No, λ = r',en:'No, λ = r'})+'</button></div>'+
+        '<div class="pz-inputs"><div class="pz-field"><label>λ</label><input class="pz-inp" data-f="l" type="text" inputmode="decimal" autocomplete="off" value="'+st.lv+'"'+(st.ok?' disabled':'')+'></div></div>';
+    }
+    var tiles=q.tiles.map(function(v,ti){return '<button type="button" class="pz-tile" draggable="true" data-t="'+ti+'"'+(st.ok?' disabled':'')+'>'+clean(v)+'</button>';}).join('');
+    host.innerHTML=head+'<div class="iw-sub">'+L(sub)+'</div>'+
+      '<div class="pz-scn">'+L(q.scn)+'</div>'+adjRow+
+      '<div class="pz-form">P(X = k) = '+fr('e<sup>−'+slot(0)+'</sup> · '+slot(1)+'<sup>'+slot(2)+'</sup>',slot(3)+'!')+'</div>'+
+      '<div class="pz-legend">'+L({es:'Fichas disponibles:',en:'Available tiles:'})+'</div>'+
+      '<div class="pz-chips">'+tiles+'<button type="button" class="pz-chip" data-a="clr"'+(st.ok?' disabled':'')+'>'+L({es:'Vaciar todo',en:'Clear all'})+'</button></div>'+
+      '<div class="pz-inputs"><div class="pz-field"><label>P(X = k)</label><input class="pz-inp" data-f="p" type="text" inputmode="decimal" autocomplete="off" value="'+st.pv+'"'+(st.ok?' disabled':'')+'></div></div>'+
+      '<button class="verify-btn" data-a="vfy"'+(st.ok?' disabled':'')+'>'+L({es:'Verificar',en:'Check'})+'</button> '+
+      (st.ok?'<button class="verify-btn" data-a="next">'+L({es:(st.i+1>=NR?'Terminar':'Siguiente ronda'),en:(st.i+1>=NR?'Finish':'Next round')})+'</button>':'')+
+      '<div class="iw-fb"></div>';
+    restoreFb(host,st);
+    host.querySelectorAll('.pz-tile').forEach(function(b){
+      b.onclick=function(){place(parseInt(b.getAttribute('data-t'),10),null);};
+      b.ondragstart=function(e){try{e.dataTransfer.setData('text/plain',b.getAttribute('data-t'));}catch(x){}};
+    });
+    host.querySelectorAll('.pz-slot').forEach(function(b){
+      var j=parseInt(b.getAttribute('data-s'),10);
+      b.onclick=function(){if(st.ok)return;if(st.slots[j]!==null){st.slots[j]=null;st.focus=j;}else{st.focus=(st.focus===j)?null:j;}render();};
+      b.ondragover=function(e){e.preventDefault();};
+      b.ondrop=function(e){e.preventDefault();var t='';try{t=e.dataTransfer.getData('text/plain');}catch(x){}if(t!=='')place(parseInt(t,10),j);};
+    });
+    var cb=host.querySelector('[data-a="clr"]');if(cb)cb.onclick=function(){st.slots=[null,null,null,null];st.focus=null;render();};
+    host.querySelectorAll('[data-adj]').forEach(function(b){b.onclick=function(){if(st.ok)return;st.adj=b.getAttribute('data-adj');render();};});
+    host.querySelectorAll('.pz-inp').forEach(function(inp){inp.oninput=function(){if(inp.getAttribute('data-f')==='l')st.lv=inp.value;else st.pv=inp.value;inp.classList.remove('ok','bad');};});
+    host.querySelector('[data-a="vfy"]').onclick=verify;
+    var nb=host.querySelector('[data-a="next"]');
+    if(nb)nb.onclick=function(){st.i++;st.tries=0;st.ok=false;st.slots=[null,null,null,null];st.focus=null;st.adj=null;st.lv='';st.pv='';st.fb=null;if(st.i>=NR)st.done=true;render();};
+  }
+  function solText(q){
+    var pre=mixed?{es:tWhy(q.lr).es+' λ = '+clean(q.r)+' × '+clean(q.lr.t)+' = '+clean(q.lam)+'. ',en:tWhy(q.lr).en+' λ = '+clean(q.r)+' × '+clean(q.lr.t)+' = '+clean(q.lam)+'. '}:{es:'',en:''};
+    var f=' P(X = '+q.k+') = '+fr('e<sup>−'+clean(q.lam)+'</sup> · '+clean(q.lam)+'<sup>'+q.k+'</sup>',q.k+'!')+' = '+fr(fx(q.ee,5)+' × '+fx(q.lk,3),q.kf)+' = <strong>'+fx(q.truth,4)+'</strong>.';
+    return {es:pre.es+f,en:pre.en+f};
+  }
+  function verify(){
+    var q=R[st.i],sl=st.slots,pv=pnum(st.pv),lv=mixed?pnum(st.lv):q.lam;
+    if(firstEmpty()!==-1||!isFinite(pv)||(mixed&&(st.adj===null||!isFinite(lv)))){
+      sayB(host,st,'warm',mixed?'⚠ Completa los tres pasos antes de verificar: decisión y λ, las cuatro casillas y la probabilidad.':'⚠ Llena las cuatro casillas y escribe la probabilidad antes de verificar.',mixed?'⚠ Complete the three steps before checking: decision and λ, the four slots and the probability.':'⚠ Fill the four slots and enter the probability before checking.');return;
+    }
+    var adjOK=!mixed||((st.adj==='y')===q.adj),ltol=0.03*Math.max(1,q.lam),lOK=!mixed||Math.abs(lv-q.lam)<=ltol;
+    var want=[q.lam,q.lam,q.k,q.k],bad=-1,j;
+    for(j=0;j<4;j++){if(!eq(sl[j],want[j])){bad=j;break;}}
+    var slotsOK=(bad===-1),pOK=Math.abs(pv-q.truth)<=0.0011;
+    var il=host.querySelector('[data-f="l"]');if(il){il.classList.toggle('ok',lOK);il.classList.toggle('bad',!lOK);}
+    var ip=host.querySelector('[data-f="p"]');ip.classList.toggle('ok',pOK);ip.classList.toggle('bad',!pOK);
+    if(adjOK&&lOK&&slotsOK&&pOK){
+      st.ok=true;var sol=solText(q);
+      sayB(host,st,'good','✓ Correcto. '+sol.es+' Interpretación: en aproximadamente '+pc(q.truth,1)+' de las ventanas de ese tamaño habrá exactamente '+q.k+'.','✓ Correct. '+sol.en+' Interpretation: in about '+pc(q.truth,1)+' of windows of that size there will be exactly '+q.k+'.');
+      render();return;
+    }
+    st.tries++;var es,en;
+    if(!adjOK){
+      if(q.adj){es='Sí hay que ajustar: la ventana no es la unidad de la tasa. Exprésala en esa unidad (t) y calcula λ = r × t.';en='Yes, it must be adjusted: the window is not the unit of the rate. Express it in that unit (t) and compute λ = r × t.';}
+      else{es='No hay que ajustar: la ventana equivale exactamente a una unidad de la tasa (t = 1), así que λ = r.';en='No adjustment is needed: the window equals exactly one unit of the rate (t = 1), so λ = r.';}
+    }else if(!lOK){
+      if(Math.abs(lv-q.r)<=ltol&&q.adj){es='Ese valor es la tasa original. λ = r × t, con t = ventana en la unidad de la tasa.';en='That value is the original rate. λ = r × t, with t = window in the unit of the rate.';}
+      else{es='Revisa λ: convierte la ventana a la unidad de la tasa (t) y multiplica λ = r × t.';en='Check λ: convert the window to the unit of the rate (t) and multiply λ = r × t.';}
+    }else if(!slotsOK){
+      var v=sl[bad],lamSlot=(bad<2),nm=SN[bad];
+      if(lamSlot){
+        if(eq(v,q.k)){es='En '+nm.es+' pusiste k. Ahí va λ, el promedio de la ventana; k es el número de eventos que piden.';en='In '+nm.en+' you put k. That is where λ goes, the average of the window; k is the number of events requested.';}
+        else if(mixed&&q.adj&&eq(v,q.r)){es='En '+nm.es+' pusiste la tasa original. Ahí va el λ ya ajustado a la ventana.';en='In '+nm.en+' you put the original rate. That is where the λ already adjusted to the window goes.';}
+        else if(eq(v,q.d)){es='En '+nm.es+' pusiste un dato del enunciado que no interviene en la fórmula. Ahí va λ.';en='In '+nm.en+' you put a number from the statement that does not enter the formula. That is where λ goes.';}
+        else{es='En '+nm.es+' va λ.';en='In '+nm.en+' goes λ.';}
+      }else{
+        if(eq(v,q.lam)){es='En '+nm.es+' pusiste λ. Ahí va k, el número de eventos que piden.';en='In '+nm.en+' you put λ. That is where k goes, the number of events requested.';}
+        else if(eq(v,q.k+1)){es='En '+nm.es+' va k, no k + 1.';en='In '+nm.en+' goes k, not k + 1.';}
+        else{es='En '+nm.es+' va k, el número de eventos que piden.';en='In '+nm.en+' goes k, the number of events requested.';}
+      }
+    }else{
+      if(st.tries===1){es='La fórmula está bien armada. Calcula cada pieza por separado (e<sup>−λ</sup>, λ<sup>k</sup> y k!) y luego combínalas.';en='The formula is built correctly. Compute each piece separately (e<sup>−λ</sup>, λ<sup>k</sup> and k!) and then combine them.';}
+      else{es='Pista numérica: e<sup>−'+clean(q.lam)+'</sup> = '+fx(q.ee,5)+', '+clean(q.lam)+'<sup>'+q.k+'</sup> = '+fx(q.lk,3)+', '+q.k+'! = '+q.kf+'. Ahora multiplica los dos primeros y divide entre el tercero.';en='Numeric clue: e<sup>−'+clean(q.lam)+'</sup> = '+fx(q.ee,5)+', '+clean(q.lam)+'<sup>'+q.k+'</sup> = '+fx(q.lk,3)+', '+q.k+'! = '+q.kf+'. Now multiply the first two and divide by the third.';}
+    }
+    if(st.tries>=3){
+      st.ok=true;st.slots=[q.lam,q.lam,q.k,q.k];st.adj=q.adj?'y':'n';st.lv=clean(q.lam);st.pv=fx(q.truth,4);
+      var sol2=solText(q);
+      sayB(host,st,'warm','Solución: '+sol2.es,'Solution: '+sol2.en);render();return;
+    }
+    sayB(host,st,'miss',es,en);
+  }
+  widgets.push(render);render();
+}
+function wBuild(rng,host){wFormula(rng,host,{mixed:false,NR:10});}
+function wMixed(rng,host){wFormula(rng,host,{mixed:true,NR:10});}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   WIDGET 6 · Event selector (Mode B · 5 rounds · phrase to bars to probability)
+   ══════════════════════════════════════════════════════════════════════════ */
+function wEvent(rng,host){
+  var NOUN=[{es:'solicitudes urgentes',en:'urgent requests'},{es:'reclamaciones',en:'complaints'},{es:'cancelaciones',en:'cancellations'},{es:'fallas del sistema',en:'system failures'},{es:'pedidos de reposición',en:'restocking orders'},{es:'devoluciones',en:'returns'}];
+  var LAMS=[1.5,2,2.5,3,3.5],KM=12;
+  function mk(ty){
+    var lam=pick(LAMS,rng),f=Math.floor(lam),o={lam:lam,ty:ty,noun:pick(NOUN,rng)},m,a,b,k;
+    if(ty==='le'){m=f+pick([0,1],rng);o.test=function(x){return x<=m;};o.es='a lo sumo '+m;o.en='at most '+m;}
+    else if(ty==='ge'){m=Math.max(1,f+pick([0,1,2],rng));o.test=function(x){return x>=m;};o.es='al menos '+m;o.en='at least '+m;}
+    else if(ty==='bt'){a=Math.max(1,f-1);b=f+pick([1,2],rng);o.test=function(x){return x>=a&&x<=b;};o.es='entre '+a+' y '+b+' (ambos incluidos)';o.en='between '+a+' and '+b+' (both included)';}
+    else if(ty==='gt'){m=f+pick([0,1],rng);o.test=function(x){return x>m;};o.es='más de '+m;o.en='more than '+m;}
+    else if(ty==='lt'){m=f+pick([1,2],rng);o.test=function(x){return x<m;};o.es='menos de '+m;o.en='fewer than '+m;}
+    else{a=Math.max(1,f-1);b=f+2;o.test=function(x){return x<a||x>b;};o.es='menos de '+a+' o más de '+b;o.en='fewer than '+a+' or more than '+b;}
+    var tr=0;for(k=0;k<=80;k++)if(o.test(k))tr+=pmf(lam,k);
+    o.truth=tr;o.set=[];for(k=0;k<=KM;k++)if(o.test(k))o.set.push(k);
+    return o;
+  }
+  var R=shuffle(['le','ge','bt','gt','lt'],rng).map(mk),NR=R.length;
+  var st={i:0,tries:0,done:false,ok:false,sel:{},pv:'',fb:null,shown:false};
+  function selArr(){var a=[];for(var k=0;k<=KM;k++)if(st.sel[k])a.push(k);return a;}
+  function draw(){
+    var cv=host.querySelector('canvas');if(!cv||st.done)return;
+    var g=drawBars(cv,R[st.i].lam,{h:190,kmax:KM,sel:st.sel});
+    cv.onclick=function(e){
+      if(st.ok)return;
+      var r=cv.getBoundingClientRect(),x=e.clientX-r.left,k=Math.floor((x-g.ox)/g.bw);
+      if(k>=0&&k<=KM)toggle(k);
+    };
+  }
+  function toggle(k){
+    if(st.ok)return;
+    st.sel[k]=!st.sel[k];
+    var chip=host.querySelector('.pz-chip[data-k="'+k+'"]');if(chip)chip.classList.toggle('on',!!st.sel[k]);
+    var s=host.querySelector('[data-m="selsum"]');if(s)s.textContent=summary();
+    draw();
+  }
+  function summary(){var a=selArr();return L({es:'Barras seleccionadas: ',en:'Selected bars: '})+(a.length?a.join(', '):L({es:'ninguna',en:'none'}));}
+  function render(){
+    var head='<div class="iw-head"><span class="iw-tag">'+L({es:'Ronda',en:'Round'})+' '+Math.min(st.i+1,NR)+'/'+NR+'</span><span class="iw-title">'+L({es:'De la frase al evento',en:'From the phrase to the event'})+'</span></div>';
+    if(st.done){
+      host.innerHTML=head+'<div class="iw-fb good">✓ '+L({es:'Completaste las '+NR+' rondas. Cada frase se tradujo primero a un conjunto de valores de k; después se sumó ese conjunto o, cuando convenía, se usó el complemento.',en:'You completed all '+NR+' rounds. Each phrase was first translated into a set of k values; then that set was summed or, when convenient, the complement was used.'})+'</div>';
+      return;
+    }
+    var q=R[st.i],chips='',tbl1='',tbl2='',k;
+    for(k=0;k<=KM;k++){
+      chips+='<button class="pz-chip'+(st.sel[k]?' on':'')+'" data-k="'+k+'">'+k+'</button>';
+      tbl1+='<th>'+k+'</th>';tbl2+='<td>'+fx(pmf(q.lam,k),4)+'</td>';
+    }
+    host.innerHTML=head+
+      '<div class="iw-sub">'+L({es:'Marca las barras (valores de k) que hacen verdadera la frase, escribe la probabilidad del evento con 3 decimales o más y verifica. Toca una barra o su botón para marcarla o desmarcarla. La tabla da P(X = k); la cola k ≥ 13 es menor que 0.001.',en:'Mark the bars (values of k) that make the phrase true, enter the probability of the event with 3 decimals or more and check. Tap a bar or its button to mark or unmark it. The table gives P(X = k); the tail k ≥ 13 is below 0.001.'})+'</div>'+
+      '<div class="pz-scn">'+L({
+        es:'En una hora, el número de <strong>'+q.noun.es+'</strong> sigue una distribución de Poisson con λ = <strong>'+clean(q.lam)+'</strong>. Evento: se registran <strong>'+q.es+'</strong>.',
+        en:'In one hour, the number of <strong>'+q.noun.en+'</strong> follows a Poisson distribution with λ = <strong>'+clean(q.lam)+'</strong>. Event: <strong>'+q.en+'</strong> are recorded.'})+'</div>'+
+      '<canvas class="iw-canvas" style="cursor:pointer"></canvas>'+
+      '<div class="pz-chips">'+chips+'</div>'+
+      '<div class="pz-tbl"><table><tr><th>k</th>'+tbl1+'</tr><tr><th>P(X = k)</th>'+tbl2+'</tr></table></div>'+
+      '<div class="pz-legend" data-m="selsum">'+summary()+'</div>'+
+      '<div class="pz-inputs"><div class="pz-field"><label>P('+L({es:'evento',en:'event'})+')</label><input class="pz-inp" data-f="p" type="text" inputmode="decimal" autocomplete="off" value="'+st.pv+'"></div></div>'+
+      '<button class="verify-btn" data-a="vfy"'+(st.ok?' disabled':'')+'>'+L({es:'Verificar',en:'Check'})+'</button> '+
+      (st.ok?'<button class="verify-btn" data-a="next">'+L({es:(st.i+1>=NR?'Terminar':'Siguiente ronda'),en:(st.i+1>=NR?'Finish':'Next round')})+'</button>':'')+
+      '<div class="iw-fb"></div>';
+    restoreFb(host,st);
+    host.querySelectorAll('.pz-chip').forEach(function(c){c.onclick=function(){toggle(parseInt(c.getAttribute('data-k'),10));};});
+    host.querySelector('.pz-inp').oninput=function(){st.pv=this.value;this.classList.remove('ok','bad');};
+    host.querySelector('[data-a="vfy"]').onclick=verify;
+    var nb=host.querySelector('[data-a="next"]');
+    if(nb)nb.onclick=function(){st.i++;st.tries=0;st.ok=false;st.sel={};st.pv='';st.fb=null;if(st.i>=NR)st.done=true;render();};
+    setTimeout(draw,30);
+  }
+  function verify(){
+    var q=R[st.i],a=selArr(),ps=num(st.pv);
+    if(!a.length||!isFinite(ps)){sayB(host,st,'warm','⚠ Marca al menos una barra y escribe la probabilidad antes de verificar.','⚠ Mark at least one bar and enter the probability before checking.');return;}
+    var missing=q.set.filter(function(x){return a.indexOf(x)===-1;}),extra=a.filter(function(x){return q.set.indexOf(x)===-1;});
+    var selOK=!missing.length&&!extra.length,pOK=Math.abs(ps-q.truth)<=0.0011,es,en;
+    var inp=host.querySelector('.pz-inp');inp.classList.toggle('ok',pOK);inp.classList.toggle('bad',!pOK);
+    if(selOK&&pOK){
+      st.ok=true;
+      var nSel=q.set.length,nComp=KM+1-nSel;
+      var note=(nSel>nComp+1)?{es:' Nota: sumaste '+nSel+' barras; con el complemento bastaban '+nComp+' (1 menos la suma de las barras no marcadas).',en:' Note: you added '+nSel+' bars; with the complement only '+nComp+' were needed (1 minus the sum of the unmarked bars).'}:{es:'',en:''};
+      sayB(host,st,'good','✓ Correcto. La probabilidad es '+fx(q.truth,4)+'. Interpretación: en aproximadamente '+pc(q.truth,1)+' de las horas se registrarán '+q.es+' '+q.noun.es+'.'+note.es,
+                         '✓ Correct. The probability is '+fx(q.truth,4)+'. Interpretation: in about '+pc(q.truth,1)+' of hours '+q.en+' '+q.noun.en+' will be recorded.'+note.en);
+      render();return;
+    }
+    st.tries++;
+    if(!selOK){
+      if(missing.length+extra.length<=2){es='Tu selección difiere del evento en muy pocas barras. Revisa las fronteras: "al menos" y "a lo sumo" incluyen el valor mencionado; "más de" y "menos de" no lo incluyen.';en='Your selection differs from the event in very few bars. Check the boundaries: "at least" and "at most" include the stated value; "more than" and "fewer than" do not.';}
+      else{es='Traduce la frase a una desigualdad sobre k y marca todos los valores que la cumplen.';en='Translate the phrase into an inequality on k and mark every value that satisfies it.';}
+    }else if(Math.abs(ps-(1-q.truth))<=0.0011){es='Ese valor es la probabilidad del evento contrario. Tu selección es correcta: revisa qué grupo de barras sumaste.';en='That value is the probability of the opposite event. Your selection is correct: check which group of bars you added.';}
+    else if(ps<0||ps>1){es='Una probabilidad debe estar entre 0 y 1. Revisa la suma.';en='A probability must lie between 0 and 1. Recheck the sum.';}
+    else{es='Tu selección es correcta. Suma las probabilidades de las barras marcadas (tabla inferior) o usa el complemento: 1 menos la suma de las barras no marcadas.';en='Your selection is correct. Add the probabilities of the marked bars (table below) or use the complement: 1 minus the sum of the unmarked bars.';}
+    if(st.tries>=3){
+      st.ok=true;st.sel={};q.set.forEach(function(x){st.sel[x]=true;});
+      sayB(host,st,'warm','Solución: las barras del evento son '+q.set.join(', ')+' (y la cola despreciable si el evento es abierto). La probabilidad es '+fx(q.truth,4)+'. Compara con tu selección y con el método de suma o complemento que elegiste.',
+                         'Solution: the bars of the event are '+q.set.join(', ')+' (plus the negligible tail if the event is open ended). The probability is '+fx(q.truth,4)+'. Compare with your selection and with the sum or complement method you chose.');
+      render();return;
+    }
+    sayB(host,st,'miss',es,en);
+  }
+  widgets.push(render);redraws.push(draw);render();
+}
+
+
+function redrawAll(){redraws.forEach(function(f){try{f();}catch(e){}});}
+window.addEventListener('resize',function(){clearTimeout(window._rz);window._rz=setTimeout(redrawAll,120);});
+
+function buildLesson(rng) {
+  /*
+   * CONCEPT ARC
+   * topic        : Distribución de Poisson: contar eventos en el tiempo y el espacio (primera exposición)
+   * prerequisite : El estudiante conoce probabilidad básica y la idea de promedio; la distribución binomial le sirve de contraste.
+   * sequence     : 1. Qué es Poisson y cuándo se usa: conteo en una ventana, independencia, promedio estable (P1)
+   *                2. La fórmula pieza por pieza y cómo armarla con fichas (P2)
+   *                3. Cuando la ventana cambia: λ = r × t, práctica de ajuste y práctica mixta de planteamiento (P3, P4)
+   *                4. Más de un valor: a lo sumo, al menos, entre, con acumuladas y complemento (P5)
+   *                Evaluación final: P6 a P10 exigen todo el proceso (ajustar, plantear, calcular, interpretar)
+   * why_this_order: Primero se decide si el modelo aplica (1), luego se aprende la fórmula aislada con λ ya dado (2), después se agrega la única complicación de unidades (3) y solo al final se pasa de un valor a rangos (4).
+   * time_audit   : reading ~11m (1536 words / 140) + widgets ~49m (7 classify x35s + 10 build x85s + 12 lambda x60s + 10 mixed x85s + 5 events x60s) + problems ~17m (7 gated work problems, 3 conceptual MC) = ~77m (target 70-90m)
+   */
+
+  /* ═══════════════════════ CONCEPT 1 · what Poisson is and when ═══════════════════════ */
+  var story=pick([3,4,5,6],rng),r1=rint(rng,6,15),n1=rint(rng,20,40),p1=pick([0.10,0.12,0.15,0.20],rng);
+  addSection(function(lg){
+    var T=function(a,b){return lg==='es'?a:b;};
+    return ''+
+    '<div class="stag">'+T('Concepto 1 de 4','Concept 1 of 4')+'</div>'+
+    '<h2>'+T('¿Qué es la distribución de Poisson y cuándo se usa?','What is the Poisson distribution and when is it used?')+'</h2>'+
+    '<p>'+T('Imagina que trabajas en el centro de atención de una aseguradora. Por experiencia sabes que en promedio entran <strong>'+story+'</strong> llamadas por hora. Ese promedio no basta para decidir cuántos ejecutivos programar: necesitas saber qué tan probable es que en una hora entren exactamente 6 llamadas, o ninguna, o muchas más de lo normal. La distribución de Poisson responde justo ese tipo de preguntas.',
+             'Imagine you work at the contact center of an insurance company. From experience you know that on average <strong>'+story+'</strong> calls arrive per hour. That average is not enough to decide how many agents to schedule: you need to know how likely it is that exactly 6 calls arrive in an hour, or none, or many more than usual. The Poisson distribution answers exactly this kind of question.')+'</p>'+
+    '<div class="callout"><p><strong>'+T('Poisson en una frase.','Poisson in one sentence.')+'</strong> '+T('Describe cuántas veces ocurre un evento dentro de una ventana fija de tiempo o de espacio. La variable X es ese conteo (0, 1, 2, 3, … sin un máximo natural) y el único dato que necesita es el promedio de eventos en la ventana, llamado <strong>λ</strong> (lambda).',
+      'It describes how many times an event occurs inside a fixed window of time or space. The variable X is that count (0, 1, 2, 3, … with no natural maximum) and the only piece of data it needs is the average number of events in the window, called <strong>λ</strong> (lambda).')+'</p></div>'+
+    '<p>'+T('Otros ejemplos: reclamaciones por día, defectos por metro cuadrado, errores por página. No cualquier conteo es Poisson. Para usarla, revisa tres cosas:','Other examples: claims per day, defects per square meter, errors per page. Not every count is Poisson. To use it, check three things:')+'</p>'+
+    '<div class="rules-grid">'+
+      '<div class="rcard"><div class="rname">'+T('1 · Es un conteo en una ventana','1 · A count in a window')+'</div><div class="rnote">'+T('Se cuenta cuántas veces ocurre algo dentro de un tiempo o espacio, sin un número fijo de intentos.','We count how many times something happens inside a time or space, with no fixed number of trials.')+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+T('2 · Independencia','2 · Independence')+'</div><div class="rnote">'+T('Que ocurra un evento no cambia la probabilidad de que ocurra otro.','One event happening does not change the chance of another happening.')+'</div></div>'+
+      '<div class="rcard"><div class="rname">'+T('3 · Promedio estable','3 · Stable average')+'</div><div class="rnote">'+T('El promedio de eventos por unidad de tiempo o espacio no cambia dentro de la ventana.','The average number of events per unit of time or space does not change inside the window.')+'</div></div>'+
+    '</div>'+
+    '<p>'+T('La confusión más común es con la distribución binomial. La diferencia: en la binomial hay un número fijo de intentos (por ejemplo, de 40 facturas, cuántas tienen error) y el conteo nunca pasa de ese número; en Poisson no hay intentos numerados, solo una ventana, y el conteo puede crecer sin tope.',
+             'The most common confusion is with the binomial distribution. The difference: in the binomial there is a fixed number of trials (for example, of 40 invoices, how many contain an error) and the count never exceeds that number; in the Poisson there are no numbered trials, only a window, and the count can grow without a cap.')+'</p>'+
+    '<div class="wex"><div class="wex-t">'+T('Ejemplo resuelto 1: un caso que sí es Poisson','Worked example 1: a case that is Poisson')+'</div>'+
+      '<p>'+T('Un banco recibe en promedio <strong>'+r1+'</strong> solicitudes de tarjeta de crédito por hora. Cada solicitud viene de un cliente distinto que decide por su cuenta.',
+              'A bank receives an average of <strong>'+r1+'</strong> credit card applications per hour. Each application comes from a different customer who decides on their own.')+'</p>'+
+      '<div class="dlist">'+T('¿Conteo en una ventana? Sí: solicitudes por hora.<br>¿Independencia? Sí: clientes distintos deciden por separado.<br>¿Promedio estable? Sí, en una hora de operación normal.',
+                              'Count in a window? Yes: applications per hour.<br>Independence? Yes: different customers decide separately.<br>Stable average? Yes, during an hour of normal operation.')+'</div>'+
+      '<p>'+T('Conclusión: X, el número de solicitudes en una hora, se modela con Poisson con λ = '+r1+'.','Conclusion: X, the number of applications in one hour, is modeled as a Poisson with λ = '+r1+'.')+'</p></div>'+
+    '<div class="wex"><div class="wex-t">'+T('Ejemplo resuelto 2: un caso que no es Poisson','Worked example 2: a case that is not Poisson')+'</div>'+
+      '<p>'+T('De <strong>'+n1+'</strong> clientes que visitan una sucursal, cada uno contrata un seguro con probabilidad <strong>'+p1+'</strong>. Hay un número fijo de intentos ('+n1+') y el conteo no puede pasar de '+n1+': es una binomial. La Poisson no aplica porque daría probabilidad positiva a valores mayores que '+n1+', que son imposibles.',
+              'Of <strong>'+n1+'</strong> customers who visit a branch, each buys an insurance policy with probability <strong>'+p1+'</strong>. There is a fixed number of trials ('+n1+') and the count cannot exceed '+n1+': it is a binomial. The Poisson does not apply because it would give positive probability to values above '+n1+', which are impossible.')+'</p></div>'+
+    '<p>'+T('Ahora practica el diagnóstico con siete situaciones. Decide qué modelo describe el conteo o si ninguno sirve.','Now practice the diagnosis with seven cases. Decide which model describes the count or whether neither fits.')+'</p>';
+  });
+
+  var h1=widgetHost('model-classifier');
+  wClassifier(rng,h1);
+
+  /* P1 · which situation is Poisson (conceptual, no work area) */
+  (function(){
+    var a=rint(rng,8,20),n=rint(rng,30,60),pp=pick([0.02,0.03,0.04,0.05],rng),c=rint(rng,4,9);
+    var G=[
+      {es:'Un centro de atención cuenta las llamadas que recibe por hora; el promedio histórico es estable en '+a+' por hora y los clientes llaman de forma independiente.',en:'A contact center counts the calls it receives per hour; the historical average is stable at '+a+' per hour and customers call independently.'},
+      {es:'Una tienda cuenta las devoluciones que recibe por día; el promedio es estable en '+c+' por día y cada cliente decide por su cuenta.',en:'A store counts the returns it receives per day; the average is stable at '+c+' per day and each customer decides on their own.'},
+      {es:'Una imprenta cuenta los errores de impresión por pliego; el promedio es de '+(c/10)+' por pliego y los errores aparecen de forma independiente.',en:'A print shop counts the printing errors per sheet; the average is '+(c/10)+' per sheet and errors appear independently.'}
+    ];
+    var good=pick(G,rng);
+    var B={es:'Un auditor revisa exactamente '+n+' facturas y cuenta cuántas tienen error; cada factura tiene probabilidad '+pp+' de error.',en:'An auditor reviews exactly '+n+' invoices and counts how many contain an error; each invoice has probability '+pp+' of error.'};
+    var Rt={es:'Una cafetería cuenta los clientes por hora durante todo el día, pero en el desayuno y en la comida llegan varias veces más clientes que en el resto del día.',en:'A coffee shop counts customers per hour across the whole day, but at breakfast and lunch several times more customers arrive than during the rest of the day.'};
+    var D={es:'Una empresa cuenta las fallas diarias de su sistema; cuando falla el servidor principal, suele provocar una cascada de fallas adicionales.',en:'A company counts the daily failures of its system; when the main server fails, it usually triggers a cascade of additional failures.'};
+    addProb({
+      t:{es:'¿Cuál situación es Poisson?',en:'Which situation is Poisson?'},
+      q:{es:'¿Cuál de las siguientes situaciones puede modelarse con una distribución de Poisson?',en:'Which of the following situations can be modeled with a Poisson distribution?'},
+      h:{es:'Para cada opción pregunta: ¿es un conteo en una ventana sin número fijo de intentos?, ¿los eventos son independientes?, ¿el promedio es estable? Descarta las que fallen alguna.',en:'For each option ask: is it a count in a window with no fixed number of trials? Are the events independent? Is the average stable? Discard those that fail any.'},
+      e:{es:'La situación correcta cuenta eventos en una ventana de tiempo o espacio, con promedio estable e independencia: cumple las tres condiciones. Las otras fallan: el auditor tiene un número fijo de intentos ('+n+'), por lo que es binomial; en la cafetería el promedio cambia según la hora del día; y en la empresa las fallas dependen unas de otras.',
+         en:'The correct situation counts events in a window of time or space, with a stable average and independence: it meets all three conditions. The others fail: the auditor has a fixed number of trials ('+n+'), so it is binomial; in the coffee shop the average changes with the time of day; and in the company the failures depend on one another.'},
+      oEs:[good.es,B.es,Rt.es,D.es],oEn:[good.en,B.en,Rt.en,D.en]
+    },rng,false);
+  })();
+
+  /* ═══════════════════════ CONCEPT 2 · the formula piece by piece ═══════════════════════ */
+  var l2=pick([2,2.5,3,3.5,4],rng),k2=pick([1,2,3,4],rng);
+  if(k2===l2)k2=k2+1;
+  var e2=Math.exp(-l2),lk2=Math.pow(l2,k2),kf2=fct(k2),p2=pmf(l2,k2),s2=pick(SUBJ,rng);
+  addSection(function(lg){
+    var T=function(a,b){return lg==='es'?a:b;};
+    return ''+
+    '<div class="stag">'+T('Concepto 2 de 4','Concept 2 of 4')+'</div>'+
+    '<h2>'+T('La fórmula de Poisson, pieza por pieza','The Poisson formula, piece by piece')+'</h2>'+
+    '<p>'+T('Ya sabes reconocer cuándo un conteo es Poisson. El siguiente paso es la fórmula que da la probabilidad de que ocurran exactamente k eventos en la ventana. Antes de usarla, conviene saber qué es cada símbolo.',
+             'You already know how to recognize when a count is Poisson. The next step is the formula that gives the probability that exactly k events occur in the window. Before using it, it helps to know what each symbol is.')+'</p>'+
+    '<div class="callout" style="text-align:center;font-size:1.05rem"><p>P(X = k) = '+fr('e<sup>−λ</sup> · λ<sup>k</sup>','k!')+'</p></div>'+
+    '<div class="pz-tbl"><table class="ptable"><tr><th>'+T('Símbolo','Symbol')+'</th><th>'+T('Qué es','What it is')+'</th><th>'+T('De dónde sale','Where it comes from')+'</th></tr>'+
+      '<tr><td>X</td><td>'+T('El número de eventos en la ventana','The number of events in the window')+'</td><td>'+T('La variable que se estudia','The variable under study')+'</td></tr>'+
+      '<tr><td>k</td><td>'+T('El número exacto de eventos cuya probabilidad se pide (0, 1, 2, …)','The exact number of events whose probability is requested (0, 1, 2, …)')+'</td><td>'+T('La pregunta del problema','The question of the problem')+'</td></tr>'+
+      '<tr><td>λ</td><td>'+T('El promedio de eventos en la ventana','The average number of events in the window')+'</td><td>'+T('El dato del enunciado','The data of the statement')+'</td></tr>'+
+      '<tr><td>e</td><td>'+T('Constante matemática, aproximadamente 2.71828','Mathematical constant, approximately 2.71828')+'</td><td>'+T('Tecla e<sup>x</sup> de la calculadora','The e<sup>x</sup> key of the calculator')+'</td></tr>'+
+      '<tr><td>k!</td><td>'+T('k factorial: k × (k − 1) × … × 1, y por definición 0! = 1','k factorial: k × (k − 1) × … × 1, and by definition 0! = 1')+'</td><td>'+T('Se calcula a partir de k','Computed from k')+'</td></tr></table></div>'+
+    '<p>'+T('Observa que <strong>λ aparece dos veces</strong> (en e<sup>−λ</sup> y como base de λ<sup>k</sup>) y <strong>k aparece dos veces</strong> (como exponente y en el factorial). El error más frecuente es intercambiarlos. Un caso especial útil: si k = 0, entonces λ<sup>0</sup> = 1 y 0! = 1, así que P(X = 0) = e<sup>−λ</sup>.',
+             'Notice that <strong>λ appears twice</strong> (in e<sup>−λ</sup> and as the base of λ<sup>k</sup>) and <strong>k appears twice</strong> (as an exponent and in the factorial). The most frequent error is swapping them. A useful special case: if k = 0, then λ<sup>0</sup> = 1 and 0! = 1, so P(X = 0) = e<sup>−λ</sup>.')+'</p>'+
+    '<div class="wex"><div class="wex-t">'+T('Ejemplo resuelto: una probabilidad, paso a paso','Worked example: one probability, step by step')+'</div>'+
+      '<p>'+T(s2.es+' '+s2.v.es+' <strong>'+clean(l2)+'</strong> '+s2.w.es+' por hora. ¿Cuál es la probabilidad de que en una hora el número de '+s2.w.es+' sea exactamente <strong>'+k2+'</strong>?',
+              s2.en+' '+s2.v.en+' <strong>'+clean(l2)+'</strong> '+s2.w.en+' per hour. What is the probability that the number of '+s2.w.en+' in one hour is exactly <strong>'+k2+'</strong>?')+'</p>'+
+      '<div class="dlist">'+T('Paso 1: la ventana es una hora, igual que la unidad del promedio, así que λ = '+clean(l2)+' y k = '+k2+'.','Step 1: the window is one hour, the same as the unit of the average, so λ = '+clean(l2)+' and k = '+k2+'.')+'<br>'+
+        T('Paso 2: e','Step 2: e')+'<sup>−'+clean(l2)+'</sup> = '+fx(e2,5)+'<br>'+
+        T('Paso 3: ','Step 3: ')+clean(l2)+'<sup>'+k2+'</sup> = '+fx(lk2,3)+' , &nbsp; '+k2+'! = '+kf2+'<br>'+
+        T('Paso 4: P(X = ','Step 4: P(X = ')+k2+') = '+fr(fx(e2,5)+' × '+fx(lk2,3),kf2)+' = <strong>'+fx(p2,4)+'</strong></div>'+
+      '<p>'+T('Interpretación: en aproximadamente '+pc(p2,1)+' de las horas se registrarán exactamente '+k2+'; en el resto de las horas será otra cantidad. En Excel: <strong>=POISSON.DIST('+k2+', '+clean(l2)+', FALSO)</strong>.',
+              'Interpretation: in about '+pc(p2,1)+' of the hours exactly '+k2+' will be recorded; in the rest of the hours it will be a different number. In Excel: <strong>=POISSON.DIST('+k2+', '+clean(l2)+', FALSE)</strong>.')+'</p></div>'+
+    '<p>'+T('Ahora arma la fórmula tú mismo. En cada ronda colocarás fichas en las casillas y después calcularás la probabilidad.','Now build the formula yourself. In each round you will place tiles in the slots and then compute the probability.')+'</p>';
+  });
+
+  var h2=widgetHost('formula-builder');
+  wBuild(rng,h2);
+
+  /* P2 · exactly k, lambda already in the right unit (gated) */
+  (function(){
+    var lam=pick([2,2.5,3,3.5,4,5],rng),k=Math.max(1,Math.round(lam)+pick([-1,0,1,2],rng)),sj=pick(SUBJ,rng);
+    if(k===lam)k=k+1;
+    var ans=pmf(lam,k),w1=cdf(lam,k),w2=pmf(lam,k+1),w3=pmf(lam,k-1);
+    var o=distinctN([ans,w1,w2,w3],function(v){return fx(v,4);},0.0001,0.9999);
+    addProb({
+      t:{es:'Probabilidad de exactamente k',en:'Probability of exactly k'},
+      q:{es:sj.es+' '+sj.v.es+' '+clean(lam)+' '+sj.w.es+' por hora. ¿Cuál es la probabilidad de que en una hora el número de '+sj.w.es+' sea exactamente '+k+'?',en:sj.en+' '+sj.v.en+' '+clean(lam)+' '+sj.w.en+' per hour. What is the probability that the number of '+sj.w.en+' in one hour is exactly '+k+'?'},
+      h:{es:'La ventana coincide con la unidad del promedio, así que λ es el número dado. Coloca λ en e y en la base, k en el exponente y en el factorial, y evalúa.',en:'The window matches the unit of the average, so λ is the given number. Place λ in e and in the base, k in the exponent and in the factorial, and evaluate.'},
+      e:{es:'La ventana (una hora) coincide con la unidad del promedio, así que λ = '+clean(lam)+' y k = '+k+'. P(X = '+k+') = '+fr('e<sup>−'+clean(lam)+'</sup> · '+clean(lam)+'<sup>'+k+'</sup>',k+'!')+' = '+o[0]+'. Interpretación: en aproximadamente '+pc(ans,1)+' de las horas habrá exactamente '+k+'. Los otros valores acumulan hasta k (P(X ≤ '+k+')) o corresponden a k + 1 y k − 1.',
+         en:'The window (one hour) matches the unit of the average, so λ = '+clean(lam)+' and k = '+k+'. P(X = '+k+') = '+fr('e<sup>−'+clean(lam)+'</sup> · '+clean(lam)+'<sup>'+k+'</sup>',k+'!')+' = '+o[0]+'. Interpretation: in about '+pc(ans,1)+' of the hours there will be exactly '+k+'. The other values accumulate up to k (P(X ≤ '+k+')) or correspond to k + 1 and k − 1.'},
+      oEs:o,oEn:o
+    },rng,true);
+  })();
+
+  /* ═══════════════════════ CONCEPT 3 · adjusting lambda ═══════════════════════ */
+  var poolC={_s:[],_p:[]};
+  var rowsR=['hm','dd','dh'].map(function(ty){return lamRound(rng,ty,poolC);});
+  var xw=lamRound(rng,pick(['hm','hm','dh'],rng),poolC);
+  var kx=Math.max(1,Math.round(xw.lam)+pick([-1,0,1],rng));
+  if(Math.abs(kx-xw.lam)<1e-9)kx++;
+  var ex=Math.exp(-xw.lam),lkx=Math.pow(xw.lam,kx),kfx=fct(kx),px=pmf(xw.lam,kx);
+  var tRows='';
+  rowsR.forEach(function(q){
+    var W=clean(q.wv);
+    var tHt=(q.f===1)?W:fr(W,Math.round(1/q.f));
+    tRows+='<tr><td>'+clean(q.r)+' '+'@RU@'+q.rk+'@</td><td>@W@'+q.wk+'@'+W+'@</td><td>'+tHt+' = '+clean(q.t)+'</td><td><strong>'+clean(q.lam)+'</strong></td></tr>';
+  });
+  function fillRows(html,lg){
+    return html.replace(/@RU@([a-z0-9]+)@/g,function(m,k){return RU[k][lg];}).replace(/@W@([a-z]+)@([0-9.]+)@/g,function(m,k,w){return wtxt(parseFloat(w),k)[lg];});
+  }
+  addSection(function(lg){
+    var T=function(a,b){return lg==='es'?a:b;};
+    var xs=rateSent(xw),xwt=winTxt(xw);
+    return ''+
+    '<div class="stag">'+T('Concepto 3 de 4','Concept 3 of 4')+'</div>'+
+    '<h2>'+T('Cuando la ventana cambia: cómo ajustar λ','When the window changes: how to adjust λ')+'</h2>'+
+    '<p>'+T('Hasta ahora el promedio y la pregunta hablaban de la misma unidad: llamadas por hora y probabilidad en una hora. En la práctica casi nunca coinciden: el dato viene por hora y te preguntan por 20 minutos, o viene por día y te preguntan por una semana. Si usas el promedio original sin ajustarlo, calculas la probabilidad de otra ventana y el resultado es incorrecto.',
+             'So far the average and the question used the same unit: calls per hour and probability in one hour. In practice they rarely match: the data comes per hour and you are asked about 20 minutes, or it comes per day and you are asked about a week. If you use the original average without adjusting it, you compute the probability of a different window and the result is wrong.')+'</p>'+
+    '<div class="callout"><p><strong>λ = r × t</strong> '+T('donde r es la tasa tal como viene en el problema (promedio por unidad) y t es la ventana medida en <em>esa misma unidad</em>. Ejemplo: si la tasa es por hora y la ventana es de 20 minutos, entonces t = ','where r is the rate as it comes in the problem (average per unit) and t is the window measured in <em>that same unit</em>. Example: if the rate is per hour and the window is 20 minutes, then t = ')+fr('20','60')+T(' de hora.',' of an hour.')+'</p></div>'+
+    '<div class="pz-tbl"><table class="ptable"><tr><th>'+T('Tasa r','Rate r')+'</th><th>'+T('Ventana','Window')+'</th><th>t</th><th>λ = r × t</th></tr>'+fillRows(tRows,lg)+'</table></div>'+
+    '<p>'+T('Una comprobación de sentido común: si la ventana es más corta que la unidad de la tasa, λ debe salir menor que r; si es más larga, mayor. Y si la ventana equivale exactamente a una unidad (por ejemplo, 60 minutos con una tasa por hora), entonces t = 1 y λ = r: no hay nada que ajustar.',
+             'A common-sense check: if the window is shorter than the unit of the rate, λ must come out smaller than r; if it is longer, greater. And if the window equals exactly one unit (for example, 60 minutes with a rate per hour), then t = 1 and λ = r: there is nothing to adjust.')+'</p>'+
+    '<div class="wex"><div class="wex-t">'+T('Ejemplo resuelto: del enunciado a la probabilidad','Worked example: from the statement to the probability')+'</div>'+
+      '<p>'+L2(xs,lg)+' '+T('¿Cuál es la probabilidad de que el número de '+xw.subj.w.es+' '+xwt.es+' sea exactamente <strong>'+kx+'</strong>?','What is the probability that the number of '+xw.subj.w.en+' '+xwt.en+' is exactly <strong>'+kx+'</strong>?')+'</p>'+
+      '<div class="dlist">'+T('Paso 1: la tasa es '+RU[xw.rk].es+' y la ventana es '+wtxt(xw.wv,xw.wk).es+', así que hay que ajustar.','Step 1: the rate is '+RU[xw.rk].en+' and the window is '+wtxt(xw.wv,xw.wk).en+', so an adjustment is needed.')+'<br>'+
+        T('Paso 2: ','Step 2: ')+L2(tWhy(xw),lg)+'<br>'+
+        T('Paso 3: λ = r × t = ','Step 3: λ = r × t = ')+clean(xw.r)+' × '+clean(xw.t)+' = <strong>'+clean(xw.lam)+'</strong><br>'+
+        T('Paso 4: P(X = ','Step 4: P(X = ')+kx+') = '+fr('e<sup>−'+clean(xw.lam)+'</sup> · '+clean(xw.lam)+'<sup>'+kx+'</sup>',kx+'!')+' = '+fr(fx(ex,5)+' × '+fx(lkx,3),kfx)+' = <strong>'+fx(px,4)+'</strong></div>'+
+      '<p>'+T('Si hubieras usado λ = '+clean(xw.r)+' sin ajustar, habrías calculado la probabilidad para una ventana distinta y obtenido '+fx(pmf(xw.r,kx),4)+', un resultado que no corresponde a lo que se preguntó.',
+              'If you had used λ = '+clean(xw.r)+' without adjusting, you would have computed the probability for a different window and obtained '+fx(pmf(xw.r,kx),4)+', a result that does not correspond to what was asked.')+'</p></div>'+
+    '<p>'+T('Practica el ajuste doce veces. En cada ronda escribirás t y luego λ, y el mensaje de error te dirá qué conversión falló.','Practice the adjustment twelve times. In each round you will enter t and then λ, and the error message will tell you which conversion failed.')+'</p>';
+  });
+  function L2(o,lg){return (typeof o==='string')?o:o[lg];}
+
+  var h3=widgetHost('lambda-adjuster');
+  wLam(rng,h3);
+
+  /* P3 · what is lambda for a different window (gated) */
+  (function(){
+    var pl={_s:[],_p:[]},q=lamRound(rng,pick(['hm','dh','wd','sp','q15'],rng),pl),rs=rateSent(q),wtx=wtxt(q.wv,q.wk),why=tWhy(q);
+    var o=distinctN([q.lam,q.r,q.r*q.wv,q.r/q.t],function(v){return clean(v);},0.01,1000000);
+    addProb({
+      t:{es:'Valor de λ para otra ventana',en:'Value of λ for a different window'},
+      q:{es:rs.es+' Para modelar el número de '+q.subj.w.es+' en una ventana de '+wtx.es+', ¿cuál es el valor de λ?',en:rs.en+' To model the number of '+q.subj.w.en+' in a window of '+wtx.en+', what is the value of λ?'},
+      h:{es:'Primero expresa la ventana en la unidad de la tasa para obtener t. Después multiplica la tasa por t.',en:'First express the window in the unit of the rate to obtain t. Then multiply the rate by t.'},
+      e:{es:why.es+' Entonces λ = r × t = '+clean(q.r)+' × '+clean(q.t)+' = '+o[0]+'. Los otros valores provienen de usar la tasa sin ajustar ('+clean(q.r)+'), de multiplicar por la ventana sin convertirla ('+clean(q.r*q.wv)+') o de dividir entre t ('+clean(q.r/q.t)+').',
+         en:why.en+' So λ = r × t = '+clean(q.r)+' × '+clean(q.t)+' = '+o[0]+'. The other values come from using the rate without adjusting ('+clean(q.r)+'), from multiplying by the window without converting it ('+clean(q.r*q.wv)+') or from dividing by t ('+clean(q.r/q.t)+').'},
+      oEs:o,oEn:o
+    },rng,true);
+  })();
+
+  /* Bridge to mixed practice */
+  addSection(function(lg){
+    var T=function(a,b){return lg==='es'?a:b;};
+    return '<p>'+T('Ya sabes armar la fórmula y ajustar λ por separado. En la siguiente práctica los dos pasos aparecen juntos, como en un problema real: primero decides si la ventana obliga a ajustar λ (a veces no), luego armas la fórmula con el λ correcto, nunca con la tasa original, y calculas la probabilidad.',
+                   'You now know how to build the formula and adjust λ separately. In the next practice both steps appear together, as in a real problem: first you decide whether the window forces you to adjust λ (sometimes it does not), then you build the formula with the correct λ, never with the original rate, and compute the probability.')+'</p>';
+  });
+
+  var h4=widgetHost('setup-practice');
+  wMixed(rng,h4);
+
+  /* P4 · choose the correct set-up expression (no work area) */
+  (function(){
+    var pl={_s:[],_p:[]},q=lamRound(rng,pick(['hm','dh','wd','q15','dd','hh'],rng),pl),rs=rateSent(q),wt=winTxt(q);
+    var lam=q.lam,k=Math.max(2,Math.round(lam)+pick([-1,0,1],rng));
+    if(Math.abs(k-lam)<1e-9)k++;
+    var ex=function(a,ke,den){return fr('e<sup>'+ke+clean(a)+'</sup> · '+clean(a)+'<sup>'+k+'</sup>',den);};
+    var good=ex(lam,'−',k+'!'),w1=ex(q.r,'−',k+'!'),w2=ex(lam,'−',String(k)),w3=ex(lam,'',k+'!');
+    var why=tWhy(q);
+    addProb({
+      t:{es:'La expresión correcta',en:'The correct expression'},
+      q:{es:rs.es+' ¿Cuál expresión plantea correctamente la probabilidad de que el número de '+q.subj.w.es+' '+wt.es+' sea exactamente '+k+'?',en:rs.en+' Which expression correctly sets up the probability that the number of '+q.subj.w.en+' '+wt.en+' is exactly '+k+'?'},
+      h:{es:'Decide primero cuánto vale λ para esa ventana. Luego revisa la fórmula: e con exponente negativo, λ como base, k como exponente y k! abajo.',en:'First decide the value of λ for that window. Then check the formula: e with a negative exponent, λ as the base, k as the exponent and k! below.'},
+      e:{es:why.es+' Entonces λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+', y la expresión correcta usa λ = '+clean(lam)+', exponente negativo en e y k! en el denominador. Las otras usan la tasa sin ajustar ('+clean(q.r)+'), dividen entre k en lugar de k! o dejan positivo el exponente de e.',
+         en:why.en+' So λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+', and the correct expression uses λ = '+clean(lam)+', a negative exponent on e and k! in the denominator. The others use the rate without adjusting ('+clean(q.r)+'), divide by k instead of k! or leave the exponent of e positive.'},
+      oEs:[good,w1,w2,w3],oEn:[good,w1,w2,w3]
+    },rng,false);
+  })();
+
+  /* ═══════════════════════ CONCEPT 4 · ranges ═══════════════════════ */
+  var l7=pick([3,3.5,4,4.5,5],rng),a7=Math.max(3,Math.round(l7)+pick([0,1],rng)),rows7='',q7;
+  for(q7=0;q7<=9;q7++){rows7+='<tr><td>'+q7+'</td><td>'+fx(pmf(l7,q7),4)+'</td><td>'+fx(cdf(l7,q7),4)+'</td></tr>';}
+  var m7=Math.max(1,Math.round(l7)-1),lo7=Math.max(2,Math.round(l7)-1),hi7=lo7+pick([2,3],rng);
+  addSection(function(lg){
+    var T=function(a,b){return lg==='es'?a:b;};
+    return ''+
+    '<div class="stag">'+T('Concepto 4 de 4','Concept 4 of 4')+'</div>'+
+    '<h2>'+T('Más de un valor: a lo sumo, al menos y entre','More than one value: at most, at least and between')+'</h2>'+
+    '<p>'+T('Hasta aquí siempre pediste "exactamente k". En los negocios las preguntas suelen ser sobre rangos: ¿a lo sumo 3 reclamaciones?, ¿al menos 5 pedidos?, ¿entre 2 y 4 llamadas? Cada una se resuelve sumando las probabilidades exactas de los valores que cumplen la frase. Para no sumar tantas veces se usa la probabilidad acumulada F(k) = P(X ≤ k), que ya suma desde 0 hasta k.',
+             'Until now you always asked for "exactly k". In business the questions are usually about ranges: at most 3 claims? at least 5 orders? between 2 and 4 calls? Each one is solved by adding the exact probabilities of the values that satisfy the phrase. To avoid adding so many times we use the cumulative probability F(k) = P(X ≤ k), which already adds from 0 up to k.')+'</p>'+
+    '<div class="pz-tbl"><table class="ptable"><tr><th>'+T('Frase','Phrase')+'</th><th>'+T('Valores que cumplen','Values that qualify')+'</th><th>'+T('Cálculo','Calculation')+'</th></tr>'+
+      '<tr><td>'+T('A lo sumo k','At most k')+'</td><td>0, 1, …, k</td><td>F(k)</td></tr>'+
+      '<tr><td>'+T('Menos de k','Fewer than k')+'</td><td>0, 1, …, k − 1</td><td>F(k − 1)</td></tr>'+
+      '<tr><td>'+T('Al menos k','At least k')+'</td><td>k, k + 1, k + 2, …</td><td>1 − F(k − 1)</td></tr>'+
+      '<tr><td>'+T('Más de k','More than k')+'</td><td>k + 1, k + 2, …</td><td>1 − F(k)</td></tr>'+
+      '<tr><td>'+T('Entre a y b (ambos incluidos)','Between a and b (both included)')+'</td><td>a, a + 1, …, b</td><td>F(b) − F(a − 1)</td></tr></table></div>'+
+    '<div class="callout"><p><strong>'+T('Por qué el complemento.','Why the complement.')+'</strong> '+T('La Poisson no tiene un valor máximo, así que "al menos k" tendría una suma infinita. En su lugar se calcula 1 menos la probabilidad de todo lo que queda por debajo. En Excel: <strong>=1 − POISSON.DIST(k − 1, λ, VERDADERO)</strong>.',
+      'The Poisson has no maximum value, so "at least k" would be an infinite sum. Instead we compute 1 minus the probability of everything below. In Excel: <strong>=1 − POISSON.DIST(k − 1, λ, TRUE)</strong>.')+'</p></div>'+
+    '<div class="wex"><div class="wex-t">'+T('Ejemplo resuelto: tres preguntas con la misma tabla','Worked example: three questions with the same table')+'</div>'+
+      '<p>'+T('Una tienda recibe en promedio <strong>'+clean(l7)+'</strong> reclamaciones por día, así que λ = '+clean(l7)+'. Esta es la salida de Excel:','A store receives an average of <strong>'+clean(l7)+'</strong> claims per day, so λ = '+clean(l7)+'. This is the Excel output:')+'</p>'+
+      '<div class="pz-tbl"><table class="ptable"><tr><th>k</th><th>P(X = k)</th><th>F(k) = P(X ≤ k)</th></tr>'+rows7+'</table></div>'+
+      '<div class="dlist">'+T('A lo sumo '+m7+': ','At most '+m7+': ')+'F('+m7+') = <strong>'+fx(cdf(l7,m7),4)+'</strong><br>'+
+        T('Al menos '+a7+': ','At least '+a7+': ')+'1 − F('+(a7-1)+') = 1 − '+fx(cdf(l7,a7-1),4)+' = <strong>'+fx(1-cdf(l7,a7-1),4)+'</strong><br>'+
+        T('Entre '+lo7+' y '+hi7+': ','Between '+lo7+' and '+hi7+': ')+'F('+hi7+') − F('+(lo7-1)+') = '+fx(cdf(l7,hi7),4)+' − '+fx(cdf(l7,lo7-1),4)+' = <strong>'+fx(cdf(l7,hi7)-cdf(l7,lo7-1),4)+'</strong></div>'+
+      '<p>'+T('Cuidado con los bordes: "al menos '+a7+'" incluye el '+a7+' y por eso se resta F('+(a7-1)+'); "más de '+a7+'" no lo incluye y sería 1 − F('+a7+') = '+fx(1-cdf(l7,a7),4)+'. En "entre", se resta F('+(lo7-1)+') y no F('+lo7+') para que el '+lo7+' quede dentro.',
+              'Watch the boundaries: "at least '+a7+'" includes '+a7+' and that is why F('+(a7-1)+') is subtracted; "more than '+a7+'" does not include it and would be 1 − F('+a7+') = '+fx(1-cdf(l7,a7),4)+'. In "between", F('+(lo7-1)+') is subtracted and not F('+lo7+') so that '+lo7+' stays inside.')+'</p></div>'+
+    '<p>'+T('Practica la traducción en cinco rondas: primero marca las barras que cumplen la frase y luego escribe la probabilidad del evento.','Practice the translation in five rounds: first mark the bars that satisfy the phrase and then enter the probability of the event.')+'</p>';
+  });
+
+  var h5=widgetHost('event-selector');
+  wEvent(rng,h5);
+
+  /* P5 · fewer than k over an area (gated) */
+  (function(){
+    var pr,tries=0,r,a,lam;
+    while(tries<300){
+      tries++;r=pick([0.5,0.8,1.2,1.5,2],rng);a=pick([2,3,4,5],rng);lam=Math.round(r*a*100)/100;
+      if(lam>=2&&lam<=6)break;
+    }
+    var k=Math.max(2,Math.round(lam)+pick([0,1],rng));
+    var ans=cdf(lam,k-1),w1=cdf(lam,k),w2=1-cdf(lam,k-1),w3=1-cdf(lam,k);
+    var o=distinctN([ans,w1,w2,w3],function(v){return fx(v,4);},0.0001,0.9999);
+    addProb({
+      t:{es:'Menos de k en una superficie',en:'Fewer than k over an area'},
+      q:{es:'En una placa de metal aparecen en promedio '+r+' imperfecciones por metro cuadrado, distribuidas al azar. Una lámina de '+a+' m² se rechaza si se detectan '+k+' o más imperfecciones. ¿Cuál es la probabilidad de que la lámina sea aceptada, es decir, de que tenga menos de '+k+' imperfecciones?',en:'A metal plate shows an average of '+r+' imperfections per square meter, scattered at random. A '+a+' m² sheet is rejected if '+k+' or more imperfections are found. What is the probability that the sheet is accepted, that is, that it has fewer than '+k+' imperfections?'},
+      h:{es:'Calcula λ para la superficie de la lámina. Después escribe la condición de aceptación como una desigualdad entre enteros y decide con qué acumulada se corresponde.',en:'Compute λ for the area of the sheet. Then write the acceptance condition as an inequality between integers and decide which cumulative it corresponds to.'},
+      e:{es:'Para '+a+' m², λ = '+r+' × '+a+' = '+clean(lam)+'. "Menos de '+k+'" significa X ≤ '+(k-1)+', así que la probabilidad es F('+(k-1)+') = '+o[0]+'. Interpretación: aproximadamente '+pc(ans,1)+' de las láminas se aceptan y el resto se rechaza. Los otros valores provienen de incluir el '+k+' (F('+k+')) o de calcular el rechazo con alguna de las dos desigualdades.',
+         en:'For '+a+' m², λ = '+r+' × '+a+' = '+clean(lam)+'. "Fewer than '+k+'" means X ≤ '+(k-1)+', so the probability is F('+(k-1)+') = '+o[0]+'. Interpretation: about '+pc(ans,1)+' of the sheets are accepted and the rest are rejected. The other values come from including '+k+' (F('+k+')) or from computing the rejection with one of the two inequalities.'},
+      oEs:o,oEn:o
+    },rng,true);
+  })();
+
+  /* ═══════════════════════ FINAL ASSESSMENT ═══════════════════════ */
+  addSection(function(lg){
+    var T=function(a,b){return lg==='es'?a:b;};
+    return '<div class="stag">'+T('Evaluación final','Final assessment')+'</div>'+
+    '<h2>'+T('Cinco problemas completos: ajustar, plantear, calcular e interpretar','Five complete problems: adjust, set up, compute and interpret')+'</h2>'+
+    '<p>'+T('Aquí no hay explicaciones previas. Cada problema exige todo el proceso.','There are no explanations here. Each problem requires the whole process.')+'</p>';
+  });
+
+  function scnFor(q,evEs,evEn){
+    var rs=rateSent(q),wt=winTxt(q);
+    return {es:rs.es+' ¿Cuál es la probabilidad de que el número de '+q.subj.w.es+' '+wt.es+' '+evEs+'?',en:rs.en+' What is the probability that the number of '+q.subj.w.en+' '+wt.en+' '+evEn+'?'};
+  }
+  var poolF={_s:[],_p:[]};
+
+  /* P6 · exactly k with a unit conversion (gated) */
+  (function(){
+    var q=lamRound(rng,'hm',poolF),lam=q.lam,k=Math.max(1,Math.round(lam)+pick([-1,0,1],rng));
+    if(Math.abs(k-lam)<1e-9)k++;
+    var ans=pmf(lam,k),w1=pmf(q.r,k),w2=cdf(lam,k),w3=pmf(q.r*60/q.wv,k),sc=scnFor(q,'sea exactamente '+k,'is exactly '+k),why=tWhy(q);
+    var o=distinctN([ans,w1,w2,w3],function(v){return fx(v,4);},0.0001,0.9999);
+    addProb({
+      t:{es:'Exactamente k con otra ventana',en:'Exactly k with a different window'},
+      q:sc,
+      h:{es:'Ajusta primero λ a la ventana del problema. Después evalúa la fórmula de Poisson para el valor de k pedido.',en:'First adjust λ to the window of the problem. Then evaluate the Poisson formula for the requested value of k.'},
+      e:{es:why.es+' Entonces λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+' y P(X = '+k+') = '+fr('e<sup>−'+clean(lam)+'</sup> · '+clean(lam)+'<sup>'+k+'</sup>',k+'!')+' = '+o[0]+'. Interpretación: en aproximadamente '+pc(ans,1)+' de las ventanas de '+wtxt(q.wv,q.wk).es+' habrá exactamente '+k+'. Los otros valores usan la tasa sin ajustar, acumulan hasta '+k+' o convierten las unidades al revés.',
+         en:why.en+' So λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+' and P(X = '+k+') = '+fr('e<sup>−'+clean(lam)+'</sup> · '+clean(lam)+'<sup>'+k+'</sup>',k+'!')+' = '+o[0]+'. Interpretation: in about '+pc(ans,1)+' of '+wtxt(q.wv,q.wk).en+' windows there will be exactly '+k+'. The other values use the rate without adjusting, accumulate up to '+k+' or convert the units the wrong way.'},
+      oEs:o,oEn:o
+    },rng,true);
+  })();
+
+  /* P7 · at most k over several units (gated) */
+  (function(){
+    var q=lamRound(rng,pick(['dd','wd','hh'],rng),poolF),lam=q.lam,k=Math.max(1,Math.round(lam)+pick([-1,0,1],rng));
+    var ans=cdf(lam,k),w1=cdf(lam,k-1),w2=1-cdf(lam,k),w3=cdf(lam,k+1),sc=scnFor(q,'sea a lo sumo '+k,'is at most '+k),why=tWhy(q);
+    var o=distinctN([ans,w1,w2,w3],function(v){return fx(v,4);},0.0001,0.9999);
+    addProb({
+      t:{es:'A lo sumo k',en:'At most k'},
+      q:sc,
+      h:{es:'Obtén λ para la ventana. "A lo sumo k" incluye el valor k y todos los anteriores, desde 0.',en:'Obtain λ for the window. "At most k" includes the value k and all the previous ones, from 0.'},
+      e:{es:why.es+' Entonces λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+'. "A lo sumo '+k+'" es X ≤ '+k+', así que la probabilidad es F('+k+') = '+o[0]+'. Interpretación: en aproximadamente '+pc(ans,1)+' de las ventanas habrá '+k+' o menos. Los otros valores corresponden a "menos de '+k+'", a la cola contraria o a acumular un valor de más.',
+         en:why.en+' So λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+'. "At most '+k+'" is X ≤ '+k+', so the probability is F('+k+') = '+o[0]+'. Interpretation: in about '+pc(ans,1)+' of the windows there will be '+k+' or fewer. The other values correspond to "fewer than '+k+'", to the opposite tail or to accumulating one value too many.'},
+      oEs:o,oEn:o
+    },rng,true);
+  })();
+
+  /* P8 · at least k with the complement (gated) */
+  (function(){
+    var q=lamRound(rng,pick(['q15','hm'],rng),poolF),lam=q.lam,k=Math.max(2,Math.round(lam)+pick([-1,0,1],rng));
+    var ans=1-cdf(lam,k-1),w1=1-cdf(lam,k),w2=cdf(lam,k-1),w3=1-cdf(q.r,k-1),sc=scnFor(q,'sea al menos '+k,'is at least '+k),why=tWhy(q);
+    var o=distinctN([ans,w1,w2,w3],function(v){return fx(v,4);},0.0001,0.9999);
+    addProb({
+      t:{es:'Al menos k con el complemento',en:'At least k with the complement'},
+      q:sc,
+      h:{es:'Ajusta λ. Luego escribe "al menos k" como una desigualdad y usa el complemento: 1 menos la probabilidad de todo lo que queda por debajo.',en:'Adjust λ. Then write "at least k" as an inequality and use the complement: 1 minus the probability of everything below.'},
+      e:{es:why.es+' Entonces λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+'. "Al menos '+k+'" es X ≥ '+k+', así que P = 1 − F('+(k-1)+') = '+o[0]+'. Interpretación: en aproximadamente '+pc(ans,1)+' de las ventanas habrá '+k+' o más. Los otros valores excluyen el '+k+' (1 − F('+k+')), dan la cola contraria o usan la tasa sin ajustar.',
+         en:why.en+' So λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+'. "At least '+k+'" is X ≥ '+k+', so P = 1 − F('+(k-1)+') = '+o[0]+'. Interpretation: in about '+pc(ans,1)+' of the windows there will be '+k+' or more. The other values exclude '+k+' (1 − F('+k+')), give the opposite tail or use the rate without adjusting.'},
+      oEs:o,oEn:o
+    },rng,true);
+  })();
+
+  /* P9 · spot the error (no work area) */
+  (function(){
+    var q=lamRound(rng,'hm',poolF),r=q.r,m=q.wv,lam=q.lam,k=Math.max(3,Math.round(lam)+pick([2,3],rng));
+    var good=1-cdf(lam,k-1),bad=1-cdf(r,k-1);
+    var oEs=['Debió ajustar la tasa a la ventana: λ = '+r+' × '+fr(m,60)+' = '+clean(lam)+', no '+r,
+             'Debió usar 1 − F('+k+') en lugar de 1 − F('+(k-1)+'), porque el evento incluye a '+k,
+             'Debió usar la binomial, porque el complemento no aplica en distribuciones de Poisson',
+             'Debió multiplicar P(X = '+k+') por el número de valores posibles, que es infinito'];
+    var oEn=['It should have adjusted the rate to the window: λ = '+r+' × '+fr(m,60)+' = '+clean(lam)+', not '+r,
+             'It should have used 1 − F('+k+') instead of 1 − F('+(k-1)+'), because the event includes '+k,
+             'It should have used the binomial, because the complement does not apply to Poisson distributions',
+             'It should have multiplied P(X = '+k+') by the number of possible values, which is infinite'];
+    addProb({
+      t:{es:'Detecta el error en el procedimiento',en:'Spot the error in the procedure'},
+      q:{es:'Un analista dice: "Llegan en promedio '+r+' clientes por hora. Para la probabilidad de que en '+m+' minutos lleguen al menos '+k+', tomo λ = '+r+' y calculo 1 − F('+(k-1)+') = '+fx(bad,4)+'." ¿Cuál es el error en su procedimiento?',en:'An analyst says: "An average of '+r+' customers arrive per hour. For the probability that at least '+k+' arrive in '+m+' minutes, I take λ = '+r+' and compute 1 − F('+(k-1)+') = '+fx(bad,4)+'." What is the error in this procedure?'},
+      h:{es:'Revisa por separado dos cosas: si la desigualdad "al menos" está bien traducida y si λ corresponde a la ventana pedida.',en:'Check two things separately: whether the "at least" inequality is translated correctly and whether λ corresponds to the requested window.'},
+      e:{es:'"Al menos '+k+'" sí se traduce como 1 − F('+(k-1)+'), y el complemento sí se puede usar con Poisson. El fallo está en λ: la ventana es de '+m+' minutos, así que λ = '+clean(lam)+' y la probabilidad correcta es 1 − F('+(k-1)+') = '+fx(good,4)+', no '+fx(bad,4)+'. Usar λ = '+r+' equivale a calcular la probabilidad para una hora completa.',
+         en:'"At least '+k+'" is indeed translated as 1 − F('+(k-1)+'), and the complement can be used with a Poisson. The flaw is in λ: the window is '+m+' minutes, so λ = '+clean(lam)+' and the correct probability is 1 − F('+(k-1)+') = '+fx(good,4)+', not '+fx(bad,4)+'. Using λ = '+r+' amounts to computing the probability for a full hour.'},
+      oEs:oEs,oEn:oEn
+    },rng,false);
+  })();
+
+  /* P10 · between a and b (gated) */
+  (function(){
+    var q=lamRound(rng,pick(['hh','sp','wd','dd'],rng),poolF),lam=q.lam,a=Math.max(1,Math.round(lam)-1),b=a+pick([2,3],rng);
+    var ans=cdf(lam,b)-cdf(lam,a-1),w1=cdf(lam,b)-cdf(lam,a),w2=cdf(lam,b-1)-cdf(lam,a-1),w3=pmf(lam,a)+pmf(lam,b),sc=scnFor(q,'esté entre '+a+' y '+b+' (ambos incluidos)','is between '+a+' and '+b+' (both included)'),why=tWhy(q);
+    var o=distinctN([ans,w1,w2,w3],function(v){return fx(v,4);},0.0001,0.9999);
+    addProb({
+      t:{es:'Entre dos valores',en:'Between two values'},
+      q:sc,
+      h:{es:'Ajusta λ. Después decide qué dos acumuladas restar para que ambos extremos queden dentro del evento.',en:'Adjust λ. Then decide which two cumulatives to subtract so that both ends stay inside the event.'},
+      e:{es:why.es+' Entonces λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+'. P('+a+' ≤ X ≤ '+b+') = F('+b+') − F('+(a-1)+') = '+fx(cdf(lam,b),4)+' − '+fx(cdf(lam,a-1),4)+' = '+o[0]+'. Interpretación: en aproximadamente '+pc(ans,1)+' de las ventanas habrá de '+a+' a '+b+'. Restar F('+a+') dejaría fuera el '+a+'; usar F('+(b-1)+') dejaría fuera el '+b+'; y sumar solo los extremos ignora los valores intermedios.',
+         en:why.en+' So λ = '+clean(q.r)+' × '+clean(q.t)+' = '+clean(lam)+'. P('+a+' ≤ X ≤ '+b+') = F('+b+') − F('+(a-1)+') = '+fx(cdf(lam,b),4)+' − '+fx(cdf(lam,a-1),4)+' = '+o[0]+'. Interpretation: in about '+pc(ans,1)+' of the windows there will be '+a+' to '+b+'. Subtracting F('+a+') would leave out '+a+'; using F('+(b-1)+') would leave out '+b+'; and adding only the ends ignores the intermediate values.'},
+      oEs:o,oEn:o
+    },rng,true);
+  })();
+}
+
+</script>
+</body>
+</html>
