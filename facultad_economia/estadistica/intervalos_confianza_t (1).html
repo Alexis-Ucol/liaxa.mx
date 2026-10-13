@@ -1,0 +1,2809 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intervalos de Confianza con Muestras Pequeñas · Estadística</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS ── fallback only; applyBranding() re-injects from SCHOOL ── */
+:root {
+  --green:      #1a4a8a;   /* PRIMARY      */
+  --green-dark: #0f2d5a;   /* PRIMARY dark (darken ~15%)  */
+  --green-bg:   #e8edf5;   /* PRIMARY tint (lighten ~85%) */
+  --gold:       #c9a84c;
+  --gold-bg:    #faf3e0;
+  --bg:         #f8f6f1;
+  --surface:    #ffffff;
+  --surface2:   #f0ede6;
+  --border:     #ddd8cc;
+  --text:       #1a1a16;
+  --text2:      #4a4640;
+  --text3:      #7a7468;
+  --ok:         #2d6a4f;
+  --ok-bg:      rgba(45,106,79,.10);
+  --bad:        #8b2500;
+  --bad-bg:     rgba(139,37,0,.08);
+  --shadow:     0 4px 20px rgba(0,0,0,.09);
+}
+[data-theme="dark"] {
+  --bg:         #18181a;
+  --surface:    #242420;
+  --surface2:   #2e2e28;
+  --border:     #3a3830;
+  --text:       #e8e4da;
+  --text2:      #b0aa9e;
+  --text3:      #7a7468;
+  --shadow:     0 4px 20px rgba(0,0,0,.35);
+  --green:      #4a7abf;   /* dark-mode PRIMARY (overridden by applyBranding) */
+  --green-dark: #7aaae0;   /* dark-mode PRIMARY dark */
+  --green-bg:   #0e1e38;   /* dark-mode PRIMARY tint */
+  --gold:       #d4b86a;
+  --gold-bg:    #241e0e;
+  --ok:         #4a9a6f;
+  --ok-bg:      rgba(74,154,111,.12);
+  --bad:        #c05030;
+  --bad-bg:     rgba(192,80,48,.10);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* ── WELCOME ── */
+#welcomeScreen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1.5rem; }
+.wcard { background:var(--surface); border-radius:16px; box-shadow:var(--shadow); padding:2.4rem 2rem; width:100%; max-width:460px; text-align:center; border-top:4px solid var(--gold); }
+.wlogos { display:flex; justify-content:center; align-items:center; gap:1.4rem; margin-bottom:1.6rem; padding-bottom:1.6rem; border-bottom:1px solid var(--border); }
+.wlogos img { height:50px; width:auto; object-fit:contain; }
+.wlogsep { width:1px; height:40px; background:var(--border); flex-shrink:0; }
+.wtitle { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.25rem; }
+.wcourse { font-size:.78rem; color:var(--text3); letter-spacing:.07em; text-transform:uppercase; margin-bottom:1.6rem; }
+.flabel { display:block; font-size:.75rem; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; text-align:left; }
+.finput { width:100%; padding:.7rem .9rem; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:.95rem; font-family:inherit; margin-bottom:.9rem; transition:border-color .18s; }
+.finput:focus { outline:none; border-color:var(--green); }
+.sbtn { width:100%; padding:.85rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.sbtn:hover { background:var(--green-dark); }
+.serr { min-height:1.2rem; font-size:.82rem; color:var(--bad); margin-top:.4rem; }
+.wfoot { margin-top:1rem; font-size:.75rem; color:var(--text3); }
+
+/* ── RESTORE BAR ── */
+#restoreBar { display:none; background:var(--gold-bg); border:1.5px solid var(--gold); border-radius:10px; padding:.85rem 1.1rem; margin-top:.9rem; font-size:.88rem; color:var(--text); }
+#restoreBar strong { color:var(--gold); }
+.rbar-btns { display:flex; gap:.6rem; margin-top:.6rem; }
+.rbtn { padding:.45rem 1rem; border-radius:8px; border:none; font-size:.82rem; font-weight:600; cursor:pointer; }
+.rbtn-yes { background:var(--green); color:#fff; }
+.rbtn-yes:hover { background:var(--green-dark); }
+.rbtn-no  { background:var(--surface2); color:var(--text2); border:1px solid var(--border); }
+
+/* ── LESSON ── */
+#lessonScreen { display:none; }
+.stickybar { position:sticky; top:0; z-index:100; background:var(--surface); border-bottom:1px solid var(--border); padding:.55rem 1.2rem; display:flex; align-items:center; gap:.7rem; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.hlogos { display:flex; gap:.5rem; align-items:center; }
+.hlogos img { height:26px; width:auto; object-fit:contain; }
+.hsep { width:1px; height:22px; background:var(--border); flex-shrink:0; }
+.htitle { font-family:'Crimson Pro',serif; font-size:1rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.halexis { flex:1; display:flex; justify-content:center; align-items:center; min-width:0; }
+.hchip { font-size:.7rem; background:var(--green-bg); color:var(--green-dark); padding:.2rem .65rem; border-radius:20px; white-space:nowrap; flex-shrink:0; }
+.tbtn { background:none; border:1px solid var(--border); border-radius:7px; padding:.28rem .55rem; cursor:pointer; font-size:.82rem; color:var(--text2); flex-shrink:0; }
+.progbar { height:3px; background:var(--border); position:sticky; top:47px; z-index:99; }
+.progfill { height:100%; background:var(--green); width:0%; transition:width .4s; }
+
+/* ── LANGUAGE TOGGLE ── */
+.lang-toggle { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; flex-shrink:0; }
+.lang-btn { padding:.28rem .7rem; font-size:.72rem; font-weight:600; letter-spacing:.06em; cursor:pointer; border:none; background:none; color:var(--text3); font-family:inherit; transition:all .15s; }
+.lang-btn.active { background:var(--green); color:#fff; }
+[data-theme="dark"] .lang-btn.active { background:var(--green-dark); }
+
+/* ── CONTENT ── */
+.lbody { max-width:760px; margin:0 auto; padding:2rem 1.2rem 4rem; }
+.section { opacity:0; transform:translateY(16px); transition:opacity .48s, transform .48s; margin-bottom:2.8rem; }
+.section.vis { opacity:1; transform:none; }
+.stag { font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:.45rem; }
+.section h2 { font-family:'Crimson Pro',serif; font-size:1.65rem; font-weight:700; margin-bottom:.7rem; }
+.section p { color:var(--text2); margin-bottom:.8rem; }
+.callout { background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 10px 10px 0; padding:1rem 1.2rem; margin:1rem 0; }
+.callout strong { color:var(--green-dark); }
+.callout p { margin-bottom:0; }
+.dlist { font-family:'IBM Plex Mono',monospace; font-size:.78rem; color:var(--green-dark); background:var(--surface2); border-radius:8px; padding:.6rem .7rem; margin:.6rem 0; word-break:break-word; }
+
+/* ── RULE CARDS ── */
+.rules-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.75rem; margin:1.1rem 0; }
+.rcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem; border-top:3px solid var(--green); overflow-x:auto; }
+.rname { font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.35rem; }
+.rform { font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:var(--green-dark); font-weight:500; margin-bottom:.3rem; }
+.rnote { font-size:.76rem; color:var(--text3); }
+
+/* ── INTERACTIVE WIDGETS ── */
+.gcrd { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.3rem; margin:.9rem 0; }
+.iw-head { display:flex; align-items:baseline; gap:.6rem; margin-bottom:.3rem; flex-wrap:wrap; }
+.iw-tag { font-size:.62rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:600; }
+.iw-title { font-family:'Crimson Pro',serif; font-size:1.08rem; font-weight:700; }
+.iw-sub { font-size:.8rem; color:var(--text2); margin-bottom:.85rem; }
+.iw-canvas { display:block; width:100%; border-radius:8px; background:var(--surface2); }
+.iw-read { margin-top:.85rem; background:var(--green-bg); border-left:4px solid var(--green); border-radius:0 8px 8px 0; padding:.7rem .85rem; font-size:.82rem; color:var(--text2); }
+.iw-read strong { color:var(--green-dark); }
+.cgrid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin-bottom:.9rem; }
+@media(max-width:500px){ .cgrid { grid-template-columns:1fr; } }
+.cg label { display:block; font-size:.73rem; color:var(--text3); margin-bottom:.25rem; }
+.cg input[type=range] { width:100%; accent-color:var(--green); }
+.cval { font-weight:600; color:var(--green); }
+.metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:.9rem; }
+.metric { background:var(--surface2); border-radius:8px; padding:.65rem; text-align:center; }
+.mlbl { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text3); margin-bottom:.15rem; }
+.mnum { font-family:'IBM Plex Mono',monospace; font-size:.95rem; font-weight:600; }
+.mnum.cs { color:var(--green); }
+.mnum.ps { color:var(--gold); }
+.mnum.ts { color:var(--text); }
+
+/* ── MODE TABS (widget toggles) ── */
+.mtabs { display:flex; gap:.4rem; margin-bottom:.8rem; flex-wrap:wrap; }
+.mtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.3rem .7rem; font-size:.76rem; cursor:pointer; color:var(--text2); transition:all .14s; font-family:inherit; }
+.mtab.active, .mtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+
+/* ── PROBLEM CARDS ── */
+.pcrd { background:var(--surface); border:1.5px solid var(--border); border-radius:12px; margin-bottom:1.3rem; overflow:hidden; transition:border-color .25s; }
+.pcrd.ok  { border-color:var(--ok); }
+.pcrd.bad { border-color:var(--bad); }
+.phdr { display:flex; align-items:center; gap:.75rem; padding:.8rem 1rem; background:var(--surface2); border-bottom:1px solid var(--border); }
+.pnum { background:var(--green); color:#fff; width:25px; height:25px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:700; flex-shrink:0; }
+.ptitle { font-weight:600; font-size:.88rem; }
+.pbody { padding:1rem; }
+.pstmt { background:var(--surface2); border-radius:8px; padding:.85rem .95rem; margin-bottom:.9rem; font-size:.88rem; }
+.pfn { display:block; font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--green-dark); margin-top:.45rem; font-weight:500; }
+
+/* ── WORK AREA TABS ── */
+.wtabs { display:flex; gap:.35rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.wtab { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:.26rem .68rem; font-size:.78rem; cursor:pointer; color:var(--text2); transition:all .14s; }
+.wtab.active, .wtab:hover { background:var(--green); color:#fff; border-color:var(--green); }
+.wpanel { display:none; }
+.wpanel.active { display:block; }
+
+/* ── CANVAS ── */
+.cvwrap { border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface); }
+
+/* ── MATH FRACTIONS ── */
+.mf-outer { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 .15em; line-height:1.1; }
+.mf-num   { border-bottom:1.5px solid var(--text); padding:0 .2em .1em; font-size:.92em; text-align:center; }
+.mf-den   { padding:.1em .2em 0; font-size:.92em; text-align:center; }
+.dcanvas { display:block; touch-action:none; cursor:crosshair; width:100%; height:190px; }
+.ctoolbar { display:flex; align-items:center; gap:.35rem; padding:.35rem .55rem; background:var(--surface2); border-top:1px solid var(--border); flex-wrap:wrap; }
+.tbtn2 { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--text2); }
+.tbtn2.on { background:var(--green); color:#fff; border-color:var(--green); }
+.cdot { width:17px; height:17px; border-radius:50%; cursor:pointer; border:2px solid transparent; flex-shrink:0; }
+.cdot.sel { border-color:var(--gold); }
+.clrbtn { background:none; border:1px solid var(--border); border-radius:5px; padding:.22rem .45rem; font-size:.72rem; cursor:pointer; color:var(--bad); margin-left:auto; }
+
+/* ── TEXTAREA ── */
+.wtextarea { width:100%; min-height:120px; padding:.65rem; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-family:'IBM Plex Mono',monospace; font-size:.8rem; resize:vertical; }
+.wtextarea:focus { outline:none; border-color:var(--green); }
+
+/* ── PHOTO ── */
+.pzone { border:2px dashed var(--border); border-radius:8px; padding:1.4rem; text-align:center; cursor:pointer; position:relative; transition:border-color .18s; }
+.pzone:hover { border-color:var(--green); }
+.pzone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pzicon { font-size:1.7rem; margin-bottom:.35rem; }
+.pztxt { font-size:.8rem; color:var(--text3); }
+.ppreview { display:none; width:100%; border-radius:8px; margin-top:.5rem; max-height:280px; object-fit:contain; }
+
+/* ── HINT ── */
+.hintbtn { background:none; border:1px solid var(--gold); color:var(--gold); border-radius:6px; padding:.28rem .65rem; font-size:.78rem; cursor:pointer; margin-bottom:.45rem; }
+.hintbox { display:none; background:var(--gold-bg); border-left:3px solid var(--gold); border-radius:0 8px 8px 0; padding:.65rem .85rem; font-size:.83rem; color:var(--text2); }
+.hintbox.show { display:block; }
+
+/* ── MC ── */
+.mcopt.pending { border-color:var(--gold); background:var(--gold-bg); }
+.mcopts { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.6rem; }
+.mcopt { display:flex; align-items:center; gap:.65rem; padding:.65rem .85rem; border:1.5px solid var(--border); border-radius:8px; cursor:pointer; font-size:.86rem; transition:all .13s; user-select:none; }
+.mcopt:hover:not(.dis) { border-color:var(--green); background:var(--green-bg); }
+.mcopt.dis   { cursor:default; pointer-events:none; }
+.mcopt.sc    { border-color:var(--ok);  background:var(--ok-bg);  color:var(--ok); }
+.mcopt.sw    { border-color:var(--bad); background:var(--bad-bg); color:var(--bad); }
+.mcopt.rc    { border-color:var(--ok);  background:var(--ok-bg); }
+.mcfb { display:none; padding:.65rem .85rem; border-radius:8px; font-size:.83rem; margin-top:.25rem; }
+.mcfb.show  { display:block; }
+.mcfb.fbok  { background:var(--ok-bg);  color:var(--ok); }
+.mcfb.fbbad { background:var(--bad-bg); color:var(--bad); }
+
+/* ── RESULT ── */
+.rpanel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; text-align:center; }
+.dlbtn { background:var(--green); color:#fff; border:none; border-radius:10px; padding:.8rem 1.8rem; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .18s; }
+.dlbtn:hover { background:var(--green-dark); }
+.dlbtn:disabled { opacity:.6; cursor:wait; }
+
+
+/* ── T TABLE ── */
+.tt-open { font-weight:600; color:var(--green-dark); border-color:var(--green); }
+.tt-modal { position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:1rem; }
+.tt-box { background:var(--surface); border-radius:14px; box-shadow:var(--shadow); width:100%; max-width:860px; max-height:92vh; display:flex; flex-direction:column; border-top:4px solid var(--gold); }
+.tt-head { display:flex; align-items:center; justify-content:space-between; padding:.8rem 1rem .2rem; }
+.tt-title { font-family:'Crimson Pro',serif; font-size:1.2rem; font-weight:700; }
+.tt-close { background:none; border:1px solid var(--border); border-radius:8px; width:44px; height:44px; font-size:1rem; cursor:pointer; color:var(--text2); }
+.tt-note { padding:0 1rem .6rem; font-size:.78rem; color:var(--text2); }
+.tt-body { padding:0 1rem 1rem; overflow:auto; }
+.tt-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:8px; }
+.tt-table { border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:.76rem; min-width:640px; width:100%; }
+.tt-table th, .tt-table td { padding:.3rem .4rem; text-align:center; border:1px solid var(--border); white-space:nowrap; }
+.tt-table thead th { background:var(--green-bg); color:var(--green-dark); font-weight:600; position:sticky; top:0; }
+.tt-table thead tr.tt-cl th { font-size:.82rem; }
+.tt-table thead tr.tt-1t th, .tt-table thead tr.tt-2t th { font-size:.68rem; font-weight:500; color:var(--text2); }
+.tt-table tbody th { background:var(--surface2); color:var(--text); font-weight:600; position:sticky; left:0; }
+.tt-table td { cursor:pointer; background:var(--surface); color:var(--text); }
+.tt-table td.tt-row, .tt-table td.tt-col { background:var(--gold-bg); }
+.tt-table td.tt-hit { background:var(--gold); color:#fff; font-weight:700; }
+.tt-table tr.tt-zrow td, .tt-table tr.tt-zrow th { background:var(--green-bg); color:var(--green-dark); font-weight:600; }
+.tt-table td.tt-ok { background:var(--ok-bg); color:var(--ok); font-weight:700; outline:2px solid var(--ok); outline-offset:-2px; }
+.tt-hint { font-size:.74rem; color:var(--text3); margin:.4rem 0 .2rem; }
+@media(max-width:600px){ .tt-open { padding:.28rem .4rem; font-size:.74rem; } }
+
+/* ── WIDGET SCAFFOLD SHARED STYLES (skill_fac §8.S) ── */
+.iw-fb   { font-size:.84rem; margin-top:.65rem; min-height:1.4rem; }
+.iw-fb.good { color:var(--ok);  font-weight:600; }
+.iw-fb.miss { color:var(--bad); }
+.iw-fb.warm { color:#7a5800; }
+[data-theme="dark"] .iw-fb.warm { color:var(--gold); }
+.verify-btn { margin-top:.6rem; padding:.55rem 1.4rem; background:var(--green); color:#fff;
+              border:none; border-radius:9px; font-size:.88rem; font-weight:600;
+              cursor:pointer; min-height:44px; font-family:inherit; }
+.verify-btn:hover { background:var(--green-dark); }
+.verify-btn:disabled { opacity:.5; cursor:default; }
+.verify-btn.next { background:var(--ok); }
+
+.ft-table { width:100%; border-collapse:collapse; font-size:.88rem; margin:.6rem 0; }
+.ft-table th { background:var(--green-bg); color:var(--green-dark); font-weight:600;
+               padding:.4rem .5rem; text-align:center; border:1px solid var(--border); font-size:.78rem; }
+.ft-table td { padding:.35rem .5rem; border:1px solid var(--border); text-align:center;
+               font-family:'IBM Plex Mono',monospace; }
+.ft-table tr.active td { background:var(--gold-bg); }
+.ft-table tr.wait td { color:var(--text3); }
+.ft-inp  { width:100%; max-width:120px; min-height:40px; padding:.3rem .4rem; border:1.5px solid var(--border);
+           border-radius:6px; font-family:'IBM Plex Mono',monospace; font-size:16px;
+           text-align:center; background:var(--surface); color:var(--text); }
+.ft-inp:focus { outline:none; border-color:var(--green); }
+.ft-ok   { border-color:var(--ok)  !important; background:var(--ok-bg)  !important; }
+.ft-bad  { border-color:var(--bad) !important; background:var(--bad-bg) !important; }
+.ft-rev  { color:var(--gold); }
+
+.scenario-box { background:var(--surface2); border-left:4px solid var(--gold);
+                border-radius:8px; padding:.75rem 1rem; font-size:.9rem; margin:.6rem 0; color:var(--text); }
+.scenario-box .eq { display:block; font-family:'IBM Plex Mono',monospace; font-size:.92rem;
+                    color:var(--green-dark); font-weight:500; margin-top:.35rem; }
+.shape-grid   { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; margin:.7rem 0; }
+.shape-btn    { display:flex; align-items:center; justify-content:center; text-align:center;
+                padding:.6rem .5rem; border:1.5px solid var(--border); border-radius:10px;
+                background:var(--surface2); cursor:pointer; font-size:.84rem; font-weight:500;
+                color:var(--text); font-family:inherit; min-height:48px; }
+.shape-btn:hover:not(:disabled) { border-color:var(--green); }
+.shape-btn:disabled { cursor:default; opacity:.75; }
+.shape-correct      { border-color:var(--ok)  !important; background:var(--ok-bg)  !important; color:var(--ok); opacity:1 !important; }
+.shape-wrong        { border-color:var(--bad) !important; background:var(--bad-bg) !important; color:var(--bad); }
+
+/* ── Revenue lab ── */
+.lab-grid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; }
+@media(max-width:620px){ .lab-grid { grid-template-columns:1fr; } }
+.lab-pane-title { font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); margin-bottom:.25rem; }
+.chips { display:flex; flex-wrap:wrap; gap:.4rem; margin:.2rem 0 .8rem; }
+.chip { font-size:.74rem; padding:.28rem .7rem; border-radius:20px; border:1.5px solid var(--border);
+        color:var(--text3); background:var(--surface2); transition:all .2s; }
+.chip.on { border-color:var(--ok); color:var(--ok); background:var(--ok-bg); font-weight:600; }
+.slide-row { display:flex; align-items:center; gap:.5rem; margin:.8rem 0 .2rem; }
+.slide-row input[type=range] { flex:1; accent-color:var(--green); min-height:44px; }
+.nudge-btn { width:44px; height:44px; border-radius:9px; border:1.5px solid var(--border); background:var(--surface2);
+             color:var(--text); font-size:1.1rem; font-weight:600; cursor:pointer; font-family:inherit; flex-shrink:0; }
+.nudge-btn:hover { border-color:var(--green); }
+
+/* ── Field rows for calculate-and-verify widgets ── */
+.fld-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.6rem; margin:.7rem 0 .2rem; }
+.fld label { display:block; font-size:.72rem; color:var(--text3); margin-bottom:.2rem; }
+.fld .ft-inp { max-width:none; }
+.fld .fld-val { font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--green-dark);
+                background:var(--surface2); border-radius:6px; padding:.5rem; text-align:center; min-height:40px; }
+
+@media(min-width:601px){ .rules-grid.two { grid-template-columns:repeat(2,1fr); } }
+
+/* ── Try-first solution ── */
+details.sol { margin-top:.6rem; }
+details.sol summary { cursor:pointer; font-weight:600; color:var(--green-dark); font-size:.86rem; min-height:32px; }
+details.sol .steps { margin-top:.5rem; font-family:'IBM Plex Mono',monospace; font-size:.8rem; color:var(--text); line-height:1.9; }
+.eqline { font-family:'IBM Plex Mono',monospace; font-size:.9rem; color:var(--green-dark); background:var(--surface2);
+          border-radius:8px; padding:.6rem .8rem; margin:.6rem 0; text-align:center; word-break:break-word; }
+
+/* ── Sequential lock + show-work nudge ── */
+.locked { filter:blur(7px); opacity:.3; pointer-events:none; user-select:none; -webkit-user-select:none; }
+.locknote { text-align:center; font-size:.82rem; font-weight:600; color:var(--text2); background:var(--gold-bg);
+            border:1.5px dashed var(--gold); border-radius:10px; padding:.8rem 1rem; margin:-1.4rem 0 2.8rem; }
+.worknudge { display:none; font-size:.8rem; font-weight:600; color:var(--bad); background:var(--bad-bg);
+             border-radius:8px; padding:.5rem .75rem; margin-bottom:.5rem; }
+
+@media(max-width:500px){
+  .ft-table { font-size:.8rem; }
+  .ft-table td, .ft-table th { padding:.3rem .25rem; }
+  .ft-inp { font-size:16px; }
+}
+
+/* ── Confidence-interval guide additions ── */
+.shape-grid.three { grid-template-columns:repeat(3,1fr); }
+.shape-grid.four  { grid-template-columns:repeat(4,1fr); }
+@media(max-width:560px){ .shape-grid.three { grid-template-columns:1fr; } .shape-grid.four { grid-template-columns:repeat(2,1fr); } }
+.verify-btn.alt { background:var(--surface2); color:var(--text); border:1.5px solid var(--border); }
+.verify-btn.alt:hover { border-color:var(--green); background:var(--surface2); }
+.btn-row { display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0 .2rem; }
+.btn-row .verify-btn { margin-top:0; }
+.legend { display:flex; flex-wrap:wrap; gap:.4rem 1rem; font-size:.74rem; color:var(--text2); margin:.2rem 0 .5rem; }
+.legend i { display:inline-block; width:20px; height:4px; border-radius:2px; margin-right:.35rem; vertical-align:middle; }
+.legend i.lz { background:var(--gold); } .legend i.lt { background:var(--green); } .legend i.lm { background:var(--bad); }
+.cov-table td.cur { background:var(--gold-bg); font-weight:600; }
+.cov-table td.dim { color:var(--text3); }
+.size-tabs { margin:.3rem 0 .2rem; }
+.shape-btn.on { border-color:var(--green); background:var(--green-bg); color:var(--green-dark); font-weight:600; }
+.tt-embed { margin:.6rem 0 .2rem; }
+.tt-embed .tt-wrap { max-height:300px; overflow:auto; }
+.src-line { font-family:'IBM Plex Mono',monospace; font-size:.82rem; color:var(--green-dark); background:var(--surface2); border-radius:8px; padding:.5rem .7rem; margin:.5rem 0; text-align:center; }
+.fld .fld-val.sm { font-weight:500; }
+
+i.xbar { text-decoration:overline; text-decoration-thickness:1px; text-underline-offset:0; }
+
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .wcard { padding: 1.6rem 1.1rem; border-radius: 12px; }
+  .wlogos { gap: .9rem; }
+  .wlogos img { height: 38px; max-width: 42%; }
+  .wtitle { font-size: 1.35rem; }
+  .stickybar { padding: .5rem .55rem; gap: .38rem; }
+  .htitle { display: none; }
+  .halexis { display: none; }
+  .hsep { display: none; }
+  .hlogos { gap: .3rem; }
+  .hlogos img { height: 18px; max-width: 60px; }
+  .hchip { font-size: .63rem; padding: .15rem .45rem; max-width: 78px; overflow: hidden; text-overflow: ellipsis; }
+  .lang-btn { padding: .26rem .48rem; font-size: .68rem; }
+  .lbody { padding: 1.2rem .7rem 3rem; max-width: 100%; }
+  .section h2 { font-size: 1.3rem; }
+  .rules-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .gcrd { padding: .9rem .75rem; }
+  .pbody { padding: .75rem; }
+  .pstmt { font-size: .84rem; }
+  .mcopt { font-size: .83rem; padding: .58rem .7rem; }
+  .dcanvas { height: 220px; }
+  .ctoolbar { gap: .25rem; }
+  .callout { padding: .8rem .9rem; }
+  .rcard { overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════ WELCOME ════════════════════ -->
+<div id="welcomeScreen">
+  <div class="wcard">
+    <div class="wlogos" id="wlogos">
+      <div style="font-family:'Crimson Pro',serif;font-size:2rem;font-weight:700;letter-spacing:.28em;color:#1a4a8a;line-height:1;text-indent:.28em">ALEXIS</div>
+    </div>
+    <div class="wtitle"  id="wtitle-el">Intervalos de Confianza para la Media con Muestras Pequeñas</div>
+    <div class="wcourse" id="wcourse-el">Estadística</div>
+    <label class="flabel" for="sName"  id="lbl-name-el">Nombre completo</label>
+    <input class="finput" id="sName"  type="text" placeholder="Tu nombre completo" autocomplete="name"  oninput="checkForSavedSession()">
+    <label class="flabel" for="sGroup" id="lbl-group-el">Grupo</label>
+    <input class="finput" id="sGroup" type="text" placeholder="ej. 3A"             autocomplete="off"   oninput="checkForSavedSession()">
+    <button class="sbtn" id="startBtn" onclick="startLesson()">Comenzar</button>
+    <div class="serr" id="startErr"></div>
+    <div id="restoreBar">
+      <strong id="restoreTitle">Sesión guardada encontrada</strong><br>
+      <span id="restoreMsg">¿Deseas continuar donde la dejaste?</span>
+      <div class="rbar-btns">
+        <button class="rbtn rbtn-yes" id="restoreBtn" onclick="restoreSession()">Retomar sesión</button>
+        <button class="rbtn rbtn-no"  id="dismissBtn" onclick="dismissRestore()">Empezar de nuevo</button>
+      </div>
+    </div>
+    <div class="wfoot" style="display:flex;justify-content:center;align-items:center;padding-top:.5rem">
+      <svg width="200" height="48" viewBox="-22 0 160 34" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="4,24 10,18 16,20 22,10" fill="none" stroke="#1a4a8a" stroke-width="2"/>
+        <circle cx="22" cy="10" r="2.5" fill="#c9a84c"/>
+        <line x1="32" y1="6" x2="32" y2="28" stroke="#c9a84c" stroke-width="2"/>
+        <text x="42" y="22" font-family="'Crimson Pro',serif" font-weight="700" letter-spacing="3" fill="#1a4a8a" font-size="16">LIAXA</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ LESSON ════════════════════ -->
+<div id="lessonScreen">
+  <div class="stickybar">
+    <div class="hlogos">
+      <img id="hlogo-left"  src="" alt="Institution" style="display:none">
+      <img id="hlogo-right" src="" alt="Institution" style="display:none">
+    </div>
+    <div class="hsep"></div>
+    <div class="htitle" id="htitle-el">Intervalos de Confianza para la Media con Muestras Pequeñas</div>
+    <div class="hsep"></div>
+    <div class="halexis">
+      <svg width="120" height="30" viewBox="0 0 120 34" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="4,24 10,18 16,20 22,10" fill="none" stroke="#1a4a8a" stroke-width="2"/>
+        <circle cx="22" cy="10" r="2.5" fill="#c9a84c"/>
+        <line x1="32" y1="6" x2="32" y2="28" stroke="#c9a84c" stroke-width="2"/>
+        <text x="42" y="22" font-family="'Crimson Pro',serif" font-weight="700" letter-spacing="3" fill="#1a4a8a" font-size="16">LIAXA</text>
+      </svg>
+    </div>
+    <div class="hchip" id="studentChip"></div>
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-es" onclick="setLang('es')">ES</button>
+      <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+    </div>
+    <button class="tbtn tt-open" onclick="openTT()" id="ttBtn" aria-haspopup="dialog">Tabla t</button>
+    <button class="tbtn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+  </div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+  <div class="lbody" id="lessonBody"></div>
+
+  <div class="section" id="s_results" style="display:none;">
+    <div class="sbody" style="text-align:center;padding:2rem 1rem;">
+      <button class="dlbtn" id="dlBtn" onclick="generatePDF()">Descargar resultados en PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ T TABLE (always available) ════════════════════ -->
+<div id="ttModal" class="tt-modal" role="dialog" aria-modal="true" aria-labelledby="ttTitle" style="display:none">
+  <div class="tt-box">
+    <div class="tt-head">
+      <div class="tt-title" id="ttTitle">Tabla t</div>
+      <button class="tt-close" id="ttClose" onclick="closeTT()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="tt-note" id="ttNote"></div>
+    <div class="tt-body" id="ttBody"></div>
+  </div>
+</div>
+
+<script>
+/* ── Score reporting ─────────────────────────────────────────────────────────
+   Sends grade silently to Google Sheet when student finishes.
+   Set SCORE_ENDPOINT = '' to disable without breaking anything.
+   ──────────────────────────────────────────────────────────────────────────── */
+var SCORE_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIje7cRD7iI77G2-t6LMJEHtvjnwrFOJXsbbLe_4phhI7h9AhjL2HoIil1C-IoEn8T/exec';
+
+/* ── Active-time clock + checkpoints (Part 0-T Step 5) ── */
+var CLOCK = { active: 0, last: Date.now(), input: Date.now(), vis: true, lastEvt: 0 };
+function tickClock() {
+  var now = Date.now();
+  /* count time only while the tab is visible and the student interacted in the last 3 min */
+  if (CLOCK.vis && now - CLOCK.input < 180000) CLOCK.active += now - CLOCK.last;
+  CLOCK.last = now; CLOCK.vis = !document.hidden;
+}
+['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(function(ev) {
+  document.addEventListener(ev, function() { CLOCK.input = Date.now(); }, { passive: true });
+});
+document.addEventListener('visibilitychange', tickClock);
+setInterval(tickClock, 15000);
+function activeSeconds() { tickClock(); return Math.round(CLOCK.active / 1000); }
+function checkpoint(kind, index, step) {
+  if (!SCORE_ENDPOINT || !studentData.name) return;
+  var a = activeSeconds();
+  var body = {
+    type: 'checkpoint', guide: SCHOOL.guideTitle['es'],
+    name: studentData.name, group: studentData.group,
+    kind: kind, index: index, step: step,
+    activeSec: a, sinceLastSec: a - CLOCK.lastEvt
+  };
+  CLOCK.lastEvt = a;
+  try {
+    fetch(SCORE_ENDPOINT, { method: 'POST', mode: 'no-cors', keepalive: true,
+      headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) });
+  } catch (e) {}
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SCHOOL CONFIG
+   Edit ONLY this block to rebrand for a different school.
+   ════════════════════════════════════════════════════════════════════════ */
+var SCHOOL = {
+  primary:         '#1a4a8a',   /* PRIMARY — update when rebranding */
+  primaryDark:     '#0f2d5a',   /* PRIMARY dark */
+  primaryBg:       '#e8edf5',   /* PRIMARY tint */
+  accent:          '#c9a84c',   /* ACCENT */
+  accentBg:        '#faf3e0',   /* ACCENT tint */
+  pBR: 26,  pBG: 74,  pBB: 138,   /* primary RGB ints for PDF */
+  pAR: 201, pAG: 168, pAB: 76,    /* accent  RGB ints for PDF */
+  darkPrimary:     '#4a7abf',   /* dark-mode PRIMARY */
+  darkPrimaryDark: '#7aaae0',   /* dark-mode PRIMARY dark */
+  darkPrimaryBg:   '#0e1e38',   /* dark-mode PRIMARY tint */
+  darkAccent:      '#d4b86a',   /* dark-mode ACCENT */
+  darkAccentBg:    '#241e0e',   /* dark-mode ACCENT tint */
+  logoLeftB64:     '',          /* always empty: no institution logos in Facultad guides */
+  logoRightB64:    '',          /* always empty */
+  logoLeftAlt:     'Institucion',
+  logoRightAlt:    'Universidad',
+  guideTitle:      { 'es': 'Intervalos de Confianza para la Media con Muestras Pequeñas', 'en': 'Confidence Intervals for the Mean with Small Samples' },
+  courseName:      { 'es': 'Estadística', 'en': 'Statistics' },
+  filePrefix:      'IC_t_Student'
+};
+/* ════════════════════════════════════════════════════════════════════════ */
+
+(function applyBranding(){
+  try {
+    var s = document.createElement('style'); s.setAttribute('data-branding','1');
+    s.textContent =
+      ':root{--green:'+SCHOOL.primary+';--green-dark:'+SCHOOL.primaryDark+';--green-bg:'+SCHOOL.primaryBg+';--gold:'+SCHOOL.accent+';--gold-bg:'+SCHOOL.accentBg+'}'+
+      '[data-theme="dark"]{--green:'+SCHOOL.darkPrimary+';--green-dark:'+SCHOOL.darkPrimaryDark+';--green-bg:'+SCHOOL.darkPrimaryBg+';--gold:'+SCHOOL.darkAccent+';--gold-bg:'+SCHOOL.darkAccentBg+'}';
+    document.head.appendChild(s);
+  } catch(e){}
+})();
+
+/* ════════════════════════════════════════════════════════════════════════
+   BILINGUAL UI STRINGS
+   ════════════════════════════════════════════════════════════════════════ */
+var TX = {
+  'es': {
+    'lbl-name': 'Nombre completo', 'lbl-group': 'Grupo',
+    'ph-name': 'Tu nombre completo', 'ph-group': 'ej. 3A',
+    'btn-start': 'Comenzar', 'err-fields': 'Por favor llena ambos campos.',
+    'btn-pdf': 'Descargar resultados en PDF', 'pdf-busy': 'Generando PDF...',
+    'restore-title': 'Sesión guardada encontrada',
+    'restore-msg': '¿Deseas continuar donde la dejaste?',
+    'btn-restore': 'Retomar sesión', 'btn-dismiss': 'Empezar de nuevo',
+    'lbl-answer': 'Selecciona tu respuesta:',
+    'btn-hint': 'Mostrar pista',
+    'tab-draw': 'Dibujar', 'tab-type': 'Teclear', 'tab-photo': 'Imagen',
+    'tool-pen': 'Lápiz', 'tool-mark': 'Marcador', 'tool-erase': 'Borrador', 'tool-clear': 'Limpiar',
+    'ph-work': 'Muestra tu procedimiento aquí...', 'ph-photo': 'Toca para elegir imagen o tomar foto',
+    'alt-work': 'trabajo del alumno',
+    'fb-correct': 'Correcto.', 'fb-wrong': 'Incorrecto.',
+    'nudge-work': 'Muestra tu procedimiento antes de responder.',
+    'lock-msg': 'Completa la actividad anterior para desbloquear lo que sigue.',
+    'tt-btn': 'Tabla t', 'tt-title': 'Tabla t de Student', 'tt-close': 'Cerrar',
+    'tt-note': 'Valores críticos t* de dos colas. Toca una celda para resaltar su fila (gl) y su columna (nivel de confianza).',
+    'pdf-student': 'ALUMNO', 'pdf-group': 'GRUPO',
+    'pdf-score': 'correcta(s) de', 'pdf-questions': 'preguntas',
+    'pdf-summary': 'RESUMEN DE REACTIVOS', 'pdf-summary2': 'RESUMEN DE REACTIVOS (continuación)',
+    'pdf-item': 'Reactivo', 'pdf-of': 'de', 'pdf-ok': 'Correcto', 'pdf-bad': 'Incorrecto',
+    'pdf-question': 'PREGUNTA', 'pdf-work': 'TRABAJO DEL ALUMNO',
+    'pdf-yours': 'Alumno: ', 'pdf-key': 'Correcto: ', 'pdf-sol': 'Solución: ',
+    'pdf-code': 'Código: ', 'pdf-page': 'Página '
+  },
+  'en': {
+    'lbl-name': 'Full name', 'lbl-group': 'Group',
+    'ph-name': 'Your full name', 'ph-group': 'e.g. 3A',
+    'btn-start': 'Start', 'err-fields': 'Please fill in both fields.',
+    'btn-pdf': 'Download results as PDF', 'pdf-busy': 'Generating PDF...',
+    'restore-title': 'Saved session found',
+    'restore-msg': 'Do you want to continue where you left off?',
+    'btn-restore': 'Resume session', 'btn-dismiss': 'Start over',
+    'lbl-answer': 'Select your answer:',
+    'btn-hint': 'Show hint',
+    'tab-draw': 'Draw', 'tab-type': 'Type', 'tab-photo': 'Photo',
+    'tool-pen': 'Pen', 'tool-mark': 'Marker', 'tool-erase': 'Eraser', 'tool-clear': 'Clear',
+    'ph-work': 'Show your steps here...', 'ph-photo': 'Tap to choose an image or take a photo',
+    'alt-work': 'student work',
+    'fb-correct': 'Correct.', 'fb-wrong': 'Incorrect.',
+    'nudge-work': 'Show your work before answering.',
+    'lock-msg': 'Complete the activity above to unlock what follows.',
+    'tt-btn': 't table', 'tt-title': 'Student t table', 'tt-close': 'Close',
+    'tt-note': 'Two-tailed critical values t*. Tap a cell to highlight its row (df) and its column (confidence level).',
+    'pdf-student': 'STUDENT', 'pdf-group': 'GROUP',
+    'pdf-score': 'correct out of', 'pdf-questions': 'questions',
+    'pdf-summary': 'ITEM SUMMARY', 'pdf-summary2': 'ITEM SUMMARY (continued)',
+    'pdf-item': 'Item', 'pdf-of': 'of', 'pdf-ok': 'Correct', 'pdf-bad': 'Incorrect',
+    'pdf-question': 'QUESTION', 'pdf-work': 'STUDENT WORK',
+    'pdf-yours': 'Student: ', 'pdf-key': 'Correct: ', 'pdf-sol': 'Solution: ',
+    'pdf-code': 'Code: ', 'pdf-page': 'Page '
+  }
+};
+var LANG = 'es';
+var LANG_KEY = 'est_cit__lang';
+function t(k) { return (TX[LANG] && TX[LANG][k]) || TX.es[k] || k; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════════════════════════ */
+var studentData   = {};
+var problems      = [];
+var sectionDefs   = [];
+var widgets       = [];   /* full re-render of each widget: language + theme toggles */
+var wdraws        = [];   /* canvas-only redraw of each widget: resize + first paint */
+var WSTATE        = {};   /* widget progress, persisted with the session */
+var LOCK_SEQUENCE = true; /* true: content after an unfinished activity stays locked */
+var answeredCount = 0;
+var correctCount  = 0;
+
+/* ════════════════════════════════════════════════════════════════════════
+   THEME
+   ════════════════════════════════════════════════════════════════════════ */
+var THEME_KEY = 'est_cit__theme';
+function applyThemeVars(mode) {
+  var r = document.documentElement.style;
+  if (mode === 'dark') {
+    r.setProperty('--green',      SCHOOL.darkPrimary);
+    r.setProperty('--green-dark', SCHOOL.darkPrimaryDark);
+    r.setProperty('--green-bg',   SCHOOL.darkPrimaryBg);
+    r.setProperty('--gold',       SCHOOL.darkAccent);
+    r.setProperty('--gold-bg',    SCHOOL.darkAccentBg);
+  } else {
+    r.setProperty('--green',      SCHOOL.primary);
+    r.setProperty('--green-dark', SCHOOL.primaryDark);
+    r.setProperty('--green-bg',   SCHOOL.primaryBg);
+    r.setProperty('--gold',       SCHOOL.accent);
+    r.setProperty('--gold-bg',    SCHOOL.accentBg);
+  }
+}
+function toggleTheme() {
+  var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  applyThemeVars(next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+  try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+  widgets.forEach(function(f) { try { f(); } catch(e) {} });
+}
+(function() {
+  document.documentElement.setAttribute('data-theme', 'light');
+  applyThemeVars('light');
+  try {
+    var th = localStorage.getItem(THEME_KEY);
+    if (th === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      applyThemeVars('dark');
+      document.addEventListener('DOMContentLoaded', function() {
+        var b = document.getElementById('themeBtn');
+        if (b) b.textContent = '☀️';
+      });
+    }
+  } catch(e) {}
+})();
+
+/* ════════════════════════════════════════════════════════════════════════
+   ATTEMPT COUNTER + SEEDED RNG
+   nextAttempt()    → fresh start: increments counter, new numbers each time
+   currentAttempt() → session restore: reads without incrementing, same numbers
+   ════════════════════════════════════════════════════════════════════════ */
+function getAttemptKey(name, group) {
+  return 'est_cit__att__' + (name + '__' + group).replace(/\s+/g, '_');
+}
+function nextAttempt(name, group) {
+  var k = getAttemptKey(name, group), n = 0;
+  try { n = parseInt(localStorage.getItem(k) || '0', 10) || 0; } catch(e) {}
+  n++;
+  try { localStorage.setItem(k, String(n)); } catch(e) {}
+  return n;
+}
+function currentAttempt(name, group) {
+  var k = getAttemptKey(name, group);
+  try { return parseInt(localStorage.getItem(k) || '1', 10) || 1; } catch(e) { return 1; }
+}
+function seededRng(seed) {
+  var s = 0;
+  for (var i = 0; i < seed.length; i++) s = (Math.imul(31, s) + seed.charCodeAt(i)) | 0;
+  return function() {
+    s = (s + 0x9e3779b9) | 0;
+    var t2 = s ^ (s >>> 16);
+    t2 = Math.imul(t2, 0x21f0aaad);
+    t2 ^= (t2 >>> 15);
+    t2 = Math.imul(t2, 0x735a2d97);
+    return ((t2 ^ (t2 >>> 15)) >>> 0) / 4294967296;
+  };
+}
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+/* Shuffles four options once; keeps both language versions aligned.
+   Index 0 of rawEs/rawEn must always be the correct answer. */
+function shuffleOpts(rawEs, rawEn, rng) {
+  var p = shuffle([0, 1, 2, 3], rng);
+  return {
+    es: p.map(function(j) { return rawEs[j]; }),
+    en: p.map(function(j) { return rawEn[j]; }),
+    correctIdx: p.indexOf(0)
+  };
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SESSION PERSISTENCE
+   ════════════════════════════════════════════════════════════════════════ */
+function lsKey() {
+  var n = (studentData.name || '').trim(), g = (studentData.group || '').trim();
+  return 'est_cit__' + (n + '__' + g).replace(/\s+/g, '_');
+}
+function saveSession() {
+  if (!studentData.name) return;
+  var drawings = [], texts = [], photos = [];
+  problems.forEach(function(p, i) {
+    var dc = document.getElementById('dc' + i);
+    drawings.push((dc && dc.width && dc.dataset.inked === '1') ? dc.toDataURL('image/png') : null);
+    var ta = document.getElementById('ta' + i);
+    texts.push(ta ? ta.value : '');
+    var pp = document.getElementById('pp' + i);
+    photos.push((pp && pp.src && pp.src.indexOf('data:') === 0) ? pp.src : null);
+  });
+  var state = {
+    name: studentData.name, group: studentData.group,
+    answeredCount: answeredCount, correctCount: correctCount,
+    activeSec: activeSeconds(),
+    wstate: WSTATE,
+    choices: problems.map(function(p) { return p.studentChoice; }),
+    drawings: drawings, texts: texts, photos: photos
+  };
+  try { localStorage.setItem(lsKey(), JSON.stringify(state)); } catch(e) {}
+}
+function loadSession(name, group) {
+  var key = 'est_cit__' + (name + '__' + group).replace(/\s+/g, '_');
+  try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+function sessionHasProgress(saved) {
+  if (!saved) return false;
+  if (saved.choices && saved.choices.some(function(c) { return c !== null; })) return true;
+  var ws = saved.wstate || {};
+  return Object.keys(ws).some(function(k) { return ws[k] && (ws[k].done || ws[k].i > 0); });
+}
+function dismissRestore() { document.getElementById('restoreBar').style.display = 'none'; }
+function checkForSavedSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  if (!name || !group) { document.getElementById('restoreBar').style.display = 'none'; return; }
+  var saved = loadSession(name, group);
+  var bar = document.getElementById('restoreBar');
+  bar.style.display = sessionHasProgress(saved) ? 'block' : 'none';
+}
+function observeSections() {
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('vis'); });
+  }, { threshold: 0.05 });
+  document.querySelectorAll('.section').forEach(function(s) { obs.observe(s); });
+}
+window.addEventListener('beforeunload', saveSession);
+window.addEventListener('pagehide', saveSession);
+document.addEventListener('visibilitychange', function() { if (document.hidden) saveSession(); });
+
+/* ════════════════════════════════════════════════════════════════════════
+   SEQUENTIAL LOCK
+   Everything after an unfinished activity is blurred and inert until the
+   activity is completed. Elements keep their layout, so drawing canvases
+   still initialise at their real size. Set LOCK_SEQUENCE = false to disable.
+   ════════════════════════════════════════════════════════════════════════ */
+function applyLocks() {
+  var lb = document.getElementById('lessonBody');
+  if (!lb) return;
+  Array.prototype.slice.call(lb.querySelectorAll('.locknote')).forEach(function(n) { n.parentNode.removeChild(n); });
+  var locked = false;
+  Array.prototype.slice.call(lb.children).forEach(function(el) {
+    if (locked) { el.classList.add('locked'); el.setAttribute('inert', ''); el.setAttribute('aria-hidden', 'true'); }
+    else { el.classList.remove('locked'); el.removeAttribute('inert'); el.removeAttribute('aria-hidden'); }
+    var key = el.getAttribute('data-gate');
+    if (!locked && LOCK_SEQUENCE && key && !(WSTATE[key] && WSTATE[key].done)) {
+      locked = true;
+      var n = document.createElement('div');
+      n.className = 'locknote';
+      n.textContent = t('lock-msg');
+      lb.insertBefore(n, el.nextSibling);
+    }
+  });
+}
+function redrawWidgets() { wdraws.forEach(function(f) { try { f(); } catch(e) {} }); }
+(function() {
+  var rt = null, lastW = window.innerWidth;
+  window.addEventListener('resize', function() {
+    if (window.innerWidth === lastW) return;   /* ignore height-only changes (mobile keyboard) */
+    lastW = window.innerWidth;
+    clearTimeout(rt); rt = setTimeout(redrawWidgets, 180);
+  });
+})();
+
+/* ════════════════════════════════════════════════════════════════════════
+   START / RESTORE
+   ════════════════════════════════════════════════════════════════════════ */
+function resetLesson() {
+  problems = []; sectionDefs = []; widgets = []; wdraws = [];
+  document.getElementById('lessonBody').innerHTML = '';
+}
+function startLesson() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var err   = document.getElementById('startErr');
+  if (!name || !group) { err.textContent = t('err-fields'); return; }
+  err.textContent = '';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  WSTATE = {};
+  resetLesson();
+  var att = nextAttempt(name, group);
+  var rng = seededRng(name + group + att);
+  buildLesson(rng);
+  CLOCK.active = 0; CLOCK.lastEvt = 0; CLOCK.last = Date.now(); checkpoint('start', 0, 'start');
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  applyLocks();
+  observeSections();
+  setTimeout(redrawWidgets, 60);
+}
+function restoreSession() {
+  var name  = document.getElementById('sName').value.trim();
+  var group = document.getElementById('sGroup').value.trim();
+  var saved = loadSession(name, group);
+  if (!saved) return;
+  document.getElementById('restoreBar').style.display = 'none';
+  studentData = { name: name, group: group };
+  answeredCount = 0; correctCount = 0;
+  WSTATE = saved.wstate || {};
+  resetLesson();
+  var att = currentAttempt(name, group);
+  var rng = seededRng(name + group + att);
+  CLOCK.active = (saved.activeSec || 0) * 1000; CLOCK.lastEvt = saved.activeSec || 0; CLOCK.last = Date.now();
+  buildLesson(rng);
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('lessonScreen').style.display  = 'block';
+  document.getElementById('studentChip').textContent = name + ' · ' + group;
+  applyLocks();
+  observeSections();
+  setTimeout(redrawWidgets, 60);
+  saved.choices.forEach(function(choice, idx) {
+    if (choice !== null && choice !== undefined) confirmMC(idx, choice);
+  });
+  setTimeout(function() {
+    if (saved.drawings) saved.drawings.forEach(function(dataUrl, i) {
+      if (!dataUrl) return;
+      var dc = document.getElementById('dc' + i);
+      if (!dc || !dc.width) return;
+      var img = new Image();
+      img.onload = function() {
+        var dpr = window.devicePixelRatio || 1;
+        dc.getContext('2d').drawImage(img, 0, 0, dc.width / dpr, dc.height / dpr);
+        dc.dataset.inked = '1';
+      };
+      img.src = dataUrl;
+    });
+    if (saved.texts) saved.texts.forEach(function(txt, i) {
+      if (!txt) return;
+      var ta = document.getElementById('ta' + i);
+      if (ta) ta.value = txt;
+    });
+    if (saved.photos) saved.photos.forEach(function(dataUrl, i) {
+      if (!dataUrl) return;
+      var pp = document.getElementById('pp' + i);
+      if (!pp) return;
+      pp.src = dataUrl; pp.style.display = 'block';
+      var pz = document.getElementById('pz' + i);
+      if (pz) pz.style.opacity = '0.4';
+    });
+  }, 300);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SHOW RESULTS + SCORE REPORTING
+   ════════════════════════════════════════════════════════════════════════ */
+function showResults() {
+  var rb = document.getElementById('s_results');
+  if (!rb) return;
+
+  /* ── Silent score reporting to Google Sheet ── */
+  if (SCORE_ENDPOINT) {
+    try {
+      fetch(SCORE_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:      studentData.name,
+          group:     studentData.group,
+          correct:   correctCount,
+          score:     Math.round(correctCount / problems.length * 100),
+          timestamp: new Date().toLocaleString('es-MX'),
+          guide:     SCHOOL.guideTitle['es'],
+          elapsedSeconds: activeSeconds()
+        })
+      });
+    } catch(e) {}
+  }
+  /* ─────────────────────────────────────────── */
+
+  rb.style.display = 'block';
+  setTimeout(function() {
+    rb.classList.add('vis');
+    rb.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   CANVAS
+   ════════════════════════════════════════════════════════════════════════ */
+function initCanvas(canvas) {
+  var dpr  = window.devicePixelRatio || 1;
+  var rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(dpr, dpr);
+  ctx.strokeStyle = SCHOOL.primary;
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  var drawing = false, lx = 0, ly = 0;
+  var tb = canvas.closest('.cvwrap').querySelector('.ctoolbar');
+  function getPos(e) {
+    var r = canvas.getBoundingClientRect();
+    var src = e.touches ? e.touches[0] : e;
+    return [src.clientX - r.left, src.clientY - r.top];
+  }
+  function onDown(e) { e.preventDefault(); drawing = true; var p = getPos(e); lx = p[0]; ly = p[1]; }
+  function onMove(e) { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(p[0], p[1]); ctx.stroke(); lx = p[0]; ly = p[1]; canvas.dataset.inked = '1'; }
+  function onUp() { drawing = false; saveSession(); }
+  canvas.addEventListener('mousedown',  onDown, { passive:false });
+  canvas.addEventListener('mousemove',  onMove, { passive:false });
+  canvas.addEventListener('mouseup',    onUp);
+  canvas.addEventListener('mouseleave', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive:false });
+  canvas.addEventListener('touchmove',  onMove, { passive:false });
+  canvas.addEventListener('touchend',   onUp);
+  tb.querySelectorAll('.tbtn2').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      if (btn.classList.contains('bpen'))    { ctx.lineWidth = 2; }
+      if (btn.classList.contains('bmarker')) { ctx.lineWidth = 10; ctx.globalAlpha = 0.45; }
+      if (btn.classList.contains('beraser')) { ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 20; }
+    });
+  });
+  tb.querySelectorAll('.cdot').forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      tb.querySelectorAll('.cdot').forEach(function(d) { d.classList.remove('sel'); });
+      dot.classList.add('sel');
+      ctx.strokeStyle = dot.dataset.color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      tb.querySelectorAll('.tbtn2').forEach(function(b) { b.classList.remove('on'); });
+      tb.querySelector('.bpen').classList.add('on');
+    });
+  });
+  tb.querySelector('.clrbtn').addEventListener('click', function() {
+    ctx.save();
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    ctx.restore();
+    canvas.dataset.inked = '';
+    saveSession();
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   TABS / PHOTO / HINT
+   ════════════════════════════════════════════════════════════════════════ */
+function switchTab(idx, panel, btn) {
+  var prefix = 'wp_' + idx + '_';
+  document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById(prefix + panel).classList.add('active');
+  btn.closest('.wtabs').querySelectorAll('.wtab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+function handlePhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = document.getElementById('pp' + idx);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('pz' + idx).style.opacity = '0.4';
+    workNudge(idx, false);
+    saveSession();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+function toggleHint(idx) { document.getElementById('hint' + idx).classList.toggle('show'); }
+
+/* ════════════════════════════════════════════════════════════════════════
+   SHOW-WORK ENGAGEMENT GATE (Rule 5B)
+   Presence check only: one stroke, 15 typed characters, or a photo.
+   The content of the work is never graded.
+   ════════════════════════════════════════════════════════════════════════ */
+function hasWork(i) {
+  var dc = document.getElementById('dc' + i);
+  var ta = document.getElementById('ta' + i);
+  var pp = document.getElementById('pp' + i);
+  var drawn = dc && dc.dataset.inked === '1';
+  var typed = ta && ta.value.trim().length >= 15;
+  var photo = pp && pp.src && pp.src.indexOf('data:') === 0;
+  return !!(drawn || typed || photo);
+}
+function workNudge(i, show) {
+  var card = document.getElementById('pc' + i);
+  if (!card) return;
+  var n = document.getElementById('wn' + i);
+  if (!n) {
+    if (!show) return;
+    n = document.createElement('div');
+    n.id = 'wn' + i; n.className = 'worknudge';
+    var mo = card.querySelector('.mcopts');
+    mo.parentNode.insertBefore(n, mo);
+  }
+  n.textContent = show ? t('nudge-work') : '';
+  n.style.display = show ? 'block' : 'none';
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   ANSWER HANDLER · two taps to confirm
+   First tap  → highlights in gold (pending).
+   Second tap → confirms, shows feedback, saves.
+   ════════════════════════════════════════════════════════════════════════ */
+function handleMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (prob.studentChoice !== null) return;
+  if (prob.showWork && !hasWork(probIdx)) { workNudge(probIdx, true); return; }
+  workNudge(probIdx, false);
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  if (prob.pendingChoice === chosenIdx) {
+    prob.studentChoice = chosenIdx;
+    prob.pendingChoice = null;
+    var isOk = (chosenIdx === prob.correctIdx);
+    opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+    opts.forEach(function(o, i) {
+      if (i === prob.correctIdx) o.classList.add('rc');
+      if (i === chosenIdx && isOk)  o.classList.add('sc');
+      if (i === chosenIdx && !isOk) o.classList.add('sw');
+    });
+    var fb = document.getElementById('fb' + probIdx);
+    fb.innerHTML = '<strong>' + (isOk ? t('fb-correct') : t('fb-wrong')) + '</strong> ' + prob.explanation;
+    fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+    document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+    if (isOk) correctCount++;
+    answeredCount++;
+    document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+    checkpoint('problem', probIdx, 'answered');
+    saveSession();
+    if (answeredCount === problems.length) setTimeout(showResults, 700);
+    return;
+  }
+  prob.pendingChoice = chosenIdx;
+  opts.forEach(function(o) { o.classList.remove('pending'); });
+  opts[chosenIdx].classList.add('pending');
+}
+/* Direct confirm — used by restoreSession to skip the two-tap requirement. */
+function confirmMC(probIdx, chosenIdx) {
+  var prob = problems[probIdx];
+  if (!prob || prob.studentChoice !== null) return;
+  var opts = document.querySelectorAll('#pc' + probIdx + ' .mcopt');
+  prob.studentChoice = chosenIdx;
+  prob.pendingChoice = null;
+  var isOk = (chosenIdx === prob.correctIdx);
+  opts.forEach(function(o) { o.classList.add('dis'); o.classList.remove('pending'); });
+  opts.forEach(function(o, i) {
+    if (i === prob.correctIdx) o.classList.add('rc');
+    if (i === chosenIdx && isOk)  o.classList.add('sc');
+    if (i === chosenIdx && !isOk) o.classList.add('sw');
+  });
+  var fb = document.getElementById('fb' + probIdx);
+  fb.innerHTML = '<strong>' + (isOk ? t('fb-correct') : t('fb-wrong')) + '</strong> ' + prob.explanation;
+  fb.className = 'mcfb show ' + (isOk ? 'fbok' : 'fbbad');
+  document.getElementById('pc' + probIdx).classList.add(isOk ? 'ok' : 'bad');
+  if (isOk) correctCount++;
+  answeredCount++;
+  document.getElementById('progFill').style.width = (answeredCount / problems.length * 100) + '%';
+  saveSession();
+  if (answeredCount === problems.length) setTimeout(showResults, 700);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   BUILD ONE CARD  (call right after problems.push())
+
+   prob must include:
+     title, questionText, options[], correctIdx, explanation, hint,
+     showWork (bool), fn (string, may be ''),
+     studentChoice: null, pendingChoice: null
+
+   For bilingual guides also include i18n: { title, q, hint, exp, opts }
+   ════════════════════════════════════════════════════════════════════════ */
+function buildOneCard(prob, i) {
+  var opts = prob.options.map(function(opt, oi) {
+    return '<div class="mcopt" onclick="handleMC(' + i + ',' + oi + ')">' + opt + '</div>';
+  }).join('');
+  var work = '';
+  if (prob.showWork) {
+    work =
+      '<div style="margin-bottom:.85rem">' +
+        '<div class="wtabs">' +
+          '<button class="wtab active" onclick="switchTab(' + i + ',\'draw\',this)">' + t('tab-draw') + '</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'type\',this)">' + t('tab-type') + '</button>' +
+          '<button class="wtab"        onclick="switchTab(' + i + ',\'photo\',this)">' + t('tab-photo') + '</button>' +
+        '</div>' +
+        '<div class="wpanel active" id="wp_' + i + '_draw">' +
+          '<div class="cvwrap">' +
+            '<canvas class="dcanvas" id="dc' + i + '"></canvas>' +
+            '<div class="ctoolbar">' +
+              '<button class="tbtn2 bpen on">' + t('tool-pen') + '</button>' +
+              '<button class="tbtn2 bmarker">' + t('tool-mark') + '</button>' +
+              '<button class="tbtn2 beraser">' + t('tool-erase') + '</button>' +
+              '<div class="cdot sel" data-color="' + SCHOOL.primary      + '" style="background:' + SCHOOL.primary      + '"></div>' +
+              '<div class="cdot"     data-color="#1a1a16"                     style="background:#1a1a16"></div>' +
+              '<div class="cdot"     data-color="#8b2500"                     style="background:#8b2500"></div>' +
+              '<div class="cdot"     data-color="#1d4e89"                     style="background:#1d4e89"></div>' +
+              '<button class="clrbtn">' + t('tool-clear') + '</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_type">' +
+          '<textarea class="wtextarea" id="ta' + i + '" placeholder="' + t('ph-work') + '" oninput="saveSession()"></textarea>' +
+        '</div>' +
+        '<div class="wpanel" id="wp_' + i + '_photo">' +
+          '<div class="pzone" id="pz' + i + '">' +
+            '<input type="file" accept="image/*" onchange="handlePhoto(' + i + ',this)">' +
+            '<div class="pzicon">📸</div>' +
+            '<div class="pztxt">' + t('ph-photo') + '</div>' +
+          '</div>' +
+          '<img class="ppreview" id="pp' + i + '" alt="' + t('alt-work') + '">' +
+        '</div>' +
+      '</div>';
+  }
+  var card = document.createElement('div');
+  card.className = 'pcrd section';
+  card.id = 'pc' + i;
+  card.innerHTML =
+    '<div class="phdr"><div class="pnum">' + (i + 1) + '</div><div class="ptitle">' + prob.title + '</div></div>' +
+    '<div class="pbody">' +
+      '<div class="pstmt">' + prob.questionText + '<span class="pfn">' + (prob.fn || '') + '</span></div>' +
+      work +
+      '<button class="hintbtn" onclick="toggleHint(' + i + ')">' + t('btn-hint') + '</button>' +
+      '<div class="hintbox" id="hint' + i + '">' + (prob.hint || '') + '</div>' +
+      '<div style="margin-top:.7rem">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--text3);text-transform:uppercase;margin-bottom:.5rem">' + t('lbl-answer') + '</div>' +
+        '<div class="mcopts">' + opts + '</div>' +
+        '<div class="mcfb" id="fb' + i + '"></div>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('lessonBody').appendChild(card);
+  if (prob.showWork) setTimeout(function() { var c = document.getElementById('dc' + i); if (c) initCanvas(c); }, 80);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SECTION REGISTRY  (concept text re-renders on language switch)
+   ════════════════════════════════════════════════════════════════════════ */
+function addSection(fn) {
+  var d = document.createElement('div');
+  d.className = 'section';
+  d.innerHTML = fn(LANG);
+  document.getElementById('lessonBody').appendChild(d);
+  sectionDefs.push({ el: d, fn: fn });
+}
+function applySectionLang() {
+  sectionDefs.forEach(function(s) { s.el.innerHTML = s.fn(LANG); });
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   CANVAS PRIMITIVES FOR INTERACTIVE WIDGETS
+   fitCanvas(cv, heightPx) → { ctx, w, h }
+   palette()               → color map from current CSS vars
+   cssv(name)              → read a CSS variable
+   ════════════════════════════════════════════════════════════════════════ */
+function cssv(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function fitCanvas(cv, h) {
+  var dpr = window.devicePixelRatio || 1;
+  var w = Math.max(240, cv.clientWidth || cv.parentNode.clientWidth || 300);
+  cv.style.height = h + 'px';
+  cv.width  = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx: ctx, w: w, h: h };
+}
+function palette() {
+  return {
+    green: cssv('--green'), dark: cssv('--green-dark'), tint: cssv('--green-bg'),
+    gold: cssv('--gold'), bad: cssv('--bad'), border: cssv('--border'),
+    text: cssv('--text'), text2: cssv('--text2'), text3: cssv('--text3')
+  };
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   LANGUAGE SWITCHING
+   ════════════════════════════════════════════════════════════════════════ */
+function applyUIStrings() {
+  var set = function(id, txt) { var e = document.getElementById(id); if (e) e.textContent = txt; };
+  var ph  = function(id, txt) { var e = document.getElementById(id); if (e) e.placeholder  = txt; };
+  set('wtitle-el',    SCHOOL.guideTitle[LANG]);
+  set('wcourse-el',   SCHOOL.courseName[LANG]);
+  set('htitle-el',    SCHOOL.guideTitle[LANG]);
+  set('lbl-name-el',  t('lbl-name'));
+  set('lbl-group-el', t('lbl-group'));
+  set('startBtn',     t('btn-start'));
+  set('restoreTitle', t('restore-title'));
+  set('restoreMsg',   t('restore-msg'));
+  set('restoreBtn',   t('btn-restore'));
+  set('dismissBtn',   t('btn-dismiss'));
+  set('dlBtn',        t('btn-pdf'));
+  set('ttBtn',        t('tt-btn'));
+  set('ttTitle',      t('tt-title'));
+  set('ttNote',       t('tt-note'));
+  var tc = document.getElementById('ttClose'); if (tc) tc.setAttribute('aria-label', t('tt-close'));
+  if (typeof refreshTT === 'function') refreshTT();
+  ph('sName',  t('ph-name'));
+  ph('sGroup', t('ph-group'));
+  document.title = SCHOOL.guideTitle[LANG] + ' · ' + SCHOOL.courseName[LANG];
+}
+function applyProblemLang() {
+  problems.forEach(function(p, i) {
+    var card = document.getElementById('pc' + i);
+    if (!card || !p.i18n) return;
+    p.title        = p.i18n.title[LANG];
+    p.questionText = p.i18n.q[LANG];
+    p.hint         = p.i18n.hint[LANG];
+    p.explanation  = p.i18n.exp[LANG];
+    p.options      = p.i18n.opts[LANG].slice();
+    var ti = card.querySelector('.ptitle'); if (ti) ti.textContent = p.title;
+    var st = card.querySelector('.pstmt');
+    if (st) st.innerHTML = p.questionText + '<span class="pfn">' + (p.fn || '') + '</span>';
+    var hb = card.querySelector('.hintbox'); if (hb) hb.innerHTML = p.hint;
+    var hbtn = card.querySelector('.hintbtn'); if (hbtn) hbtn.textContent = t('btn-hint');
+    card.querySelectorAll('.mcopt').forEach(function(o, oi) {
+      if (p.options[oi] !== undefined) o.innerHTML = p.options[oi];
+    });
+    var tabs = card.querySelectorAll('.wtab');
+    if (tabs.length === 3) {
+      tabs[0].textContent = t('tab-draw');
+      tabs[1].textContent = t('tab-type');
+      tabs[2].textContent = t('tab-photo');
+    }
+    var tools = card.querySelectorAll('.tbtn2');
+    if (tools.length === 3) {
+      tools[0].textContent = t('tool-pen');
+      tools[1].textContent = t('tool-mark');
+      tools[2].textContent = t('tool-erase');
+    }
+    var clr = card.querySelector('.clrbtn'); if (clr) clr.textContent = t('tool-clear');
+    var ta  = card.querySelector('.wtextarea'); if (ta) ta.placeholder = t('ph-work');
+    var pzt = card.querySelector('.pztxt'); if (pzt) pzt.textContent = t('ph-photo');
+    var ppv = card.querySelector('.ppreview'); if (ppv) ppv.alt = t('alt-work');
+    var lab = card.querySelector('.pbody > div:last-child > div:first-child');
+    if (lab) lab.textContent = t('lbl-answer');
+    var wn = document.getElementById('wn' + i);
+    if (wn && wn.textContent) wn.textContent = t('nudge-work');
+    var fb = card.querySelector('.mcfb');
+    if (fb && fb.classList.contains('show')) {
+      var isOk = (p.studentChoice === p.correctIdx);
+      fb.innerHTML = '<strong>' + (isOk ? t('fb-correct') : t('fb-wrong')) + '</strong> ' + p.explanation;
+    }
+  });
+}
+function setLang(l) {
+  LANG = l;
+  try { localStorage.setItem(LANG_KEY, l); } catch(e) {}
+  document.documentElement.setAttribute('lang', l);
+  var be = document.getElementById('btn-es'), bn = document.getElementById('btn-en');
+  if (be) be.classList.toggle('active', l === 'es');
+  if (bn) bn.classList.toggle('active', l === 'en');
+  applyUIStrings();
+  applySectionLang();
+  applyProblemLang();
+  widgets.forEach(function(f) { try { f(); } catch(e) {} });
+  applyLocks();
+  document.querySelectorAll('#lessonBody .section').forEach(function(s) { s.classList.add('vis'); });
+}
+(function() {
+  try { var stored = localStorage.getItem(LANG_KEY); if (stored === 'es' || stored === 'en') LANG = stored; } catch(e) {}
+  document.addEventListener('DOMContentLoaded', function() {
+    document.documentElement.setAttribute('lang', LANG);
+    var be = document.getElementById('btn-es'), bn = document.getElementById('btn-en');
+    if (be) be.classList.toggle('active', LANG === 'es');
+    if (bn) bn.classList.toggle('active', LANG === 'en');
+    applyUIStrings();
+  });
+})();
+
+/* ════════════════════════════════════════════════════════════════════════
+   LOGO INJECTION  (runs after DOM ready)
+   ════════════════════════════════════════════════════════════════════════ */
+/* Logo injection — welcome screen uses the ALEXIS text mark.
+   Only the sticky header receives the institution logo(s). */
+document.addEventListener('DOMContentLoaded', function() {
+  var hl = document.getElementById('hlogo-left');
+  if (hl && SCHOOL.logoLeftB64) { hl.src = SCHOOL.logoLeftB64; hl.style.display = 'inline-block'; }
+  var hr = document.getElementById('hlogo-right');
+  if (hr && SCHOOL.logoRightB64) { hr.src = SCHOOL.logoRightB64; hr.style.display = 'inline-block'; }
+});
+
+/* ════════════════════════════════════════════════════════════════════════
+   PDF GENERATION
+   · Synchronous (NOT async) — jsPDF is fully synchronous, and declaring
+     this function async breaks Safari's user-gesture chain on iOS/iPadOS,
+     causing the Share Sheet / window.open to be silently blocked.
+   · iOS/iPadOS: uses navigator.share() → Share Sheet → "Save to Files".
+     Falls back to window.open(blob) if Web Share API unavailable.
+   · Desktop / Android: standard <a download> click.
+   · All text strings go through t() for bilingual support.
+   · Colors come from SCHOOL.pBR/pBG/pBB (primary) and pAR/pAG/pAB (accent).
+   ════════════════════════════════════════════════════════════════════════ */
+function generatePDF() {
+  var btn = document.getElementById('dlBtn');
+  btn.textContent = t('pdf-busy');
+  btn.disabled = true;
+
+  try {
+  var jspdf = window.jspdf;
+  var doc   = new jspdf.jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  var PW    = 215.9, M = 18, TW = PW - M * 2;
+  var PH    = doc.internal.pageSize.height;
+  var name  = studentData.name, group = studentData.group;
+  var total = problems.length;
+  var pct   = Math.round(correctCount / total * 100);
+  var dateStr = new Date().toLocaleString(LANG === 'es' ? 'es-MX' : 'en-US', { dateStyle:'long', timeStyle:'short' });
+
+  /* Verification code — unique per student+score+date */
+  var raw = name + '|' + group + '|' + correctCount + '|' + total + '|' + new Date().toDateString();
+  var h = 0;
+  for (var ci = 0; ci < raw.length; ci++) h = (Math.imul(31, h) + raw.charCodeAt(ci)) | 0;
+  var code = Math.abs(h).toString(36).toUpperCase().slice(0, 8);
+
+  var pBR = SCHOOL.pBR, pBG = SCHOOL.pBG, pBB = SCHOOL.pBB;
+  var pAR = SCHOOL.pAR, pAG = SCHOOL.pAG, pAB = SCHOOL.pAB;
+
+  function pdfText(html) {
+    if (!html) return '';
+    return html
+      .replace(/<i class="xbar">x<\/i>/g,'x-bar')
+      .replace(/<sup>([^<]*)<\/sup>/g,'^$1')
+      .replace(/<span class="mf-num">([^<]*)<\/span><span class="mf-den">([^<]*)<\/span>/g,'($1)/($2)')
+      .replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/&nbsp;/g,' ').replace(/&#[0-9]+;/g,'')
+      .replace(/→/g,'->').replace(/−/g,'-').replace(/²/g,'^2').replace(/³/g,'^3')
+      .replace(/×/g,'x').replace(/÷/g,'/').replace(/≠/g,'!=').replace(/≤/g,'<=')
+      .replace(/≥/g,'>=').replace(/√/g,'sqrt').replace(/π/g,'pi').replace(/x\u0304/g,'x-bar').replace(/\u0304/g,'').replace(/μ/g,'mu').replace(/σ/g,'sigma').replace(/α/g,'alpha').replace(/₁/g,'1').replace(/₂/g,'2').replace(/∞/g,'inf').replace(/✓/g,'').replace(/…/g,'...')
+      .replace(/\s+/g,' ').trim();
+  }
+
+  /* ── Cover page ── */
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,2,'F');
+  doc.setFillColor(255,255,255); doc.rect(0,2,PW,26,'F');
+  doc.setFillColor(pAR,pAG,pAB); doc.rect(0,28,PW,2,'F');
+  doc.setFillColor(pBR,pBG,pBB); doc.rect(0,30,PW,34,'F');
+
+  /* Institution logos */
+  if (SCHOOL.logoLeftB64) {
+    var fmtL = SCHOOL.logoLeftB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoLeftB64,  fmtL, M,  4.0, 22, 22); } catch(e) {}
+  }
+  if (SCHOOL.logoRightB64) {
+    var fmtR = SCHOOL.logoRightB64.indexOf('/9j/') > -1 ? 'JPEG' : 'PNG';
+    try { doc.addImage(SCHOOL.logoRightB64, fmtR, 48, 4.5, 48, 21); } catch(e) {}
+  }
+
+  /* LIAXA mark — always LIAXA brand blue + gold, never school colors */
+  var lx = PW - M - 36, ly = 10;
+  doc.setDrawColor(26,74,138); doc.setLineWidth(0.7);
+  doc.lines([[2.57-1.03,4.63-6.17],[4.11-2.57,5.14-4.63],[5.66-4.11,2.57-5.14]], lx+1.03, ly+6.17);
+  doc.setFillColor(201,168,76); doc.circle(lx+5.66, ly+2.57, 0.9, 'F');
+  doc.setDrawColor(201,168,76); doc.setLineWidth(0.7);
+  doc.line(lx+8.23, ly+1.54, lx+8.23, ly+7.2);
+  doc.setTextColor(26,74,138); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('LIAXA', lx+10, ly+6.8);
+
+  /* Title band */
+  doc.setTextColor(240,244,238); doc.setFontSize(15); doc.setFont('helvetica','bold');
+  doc.text(SCHOOL.guideTitle[LANG], M, 49);
+  doc.setTextColor(198,214,192); doc.setFontSize(8); doc.setFont('helvetica','normal');
+  doc.text(dateStr, M, 59);
+
+  /* Student card */
+  doc.setFillColor(237,240,245); doc.roundedRect(M,72,TW,20,3,3,'F');
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text(t('pdf-student'), M+4, 79); doc.text(t('pdf-group'), 130, 79);
+  doc.setTextColor(20,24,32); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text(name, M+4, 87); doc.text(group, 130, 87);
+
+  /* Score box */
+  var sc = pct>=70?[26,106,74]:pct>=50?[224,123,26]:[176,48,16];
+  doc.setFillColor(255,255,255); doc.roundedRect(M,100,TW,34,4,4,'F');
+  doc.setDrawColor(sc[0],sc[1],sc[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M,100,TW,34,4,4,'S');
+  doc.setTextColor(sc[0],sc[1],sc[2]); doc.setFontSize(40); doc.setFont('helvetica','bold');
+  doc.text(pct+'%', PW/2, 124, {align:'center'});
+  doc.setTextColor(130,140,160); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+  doc.text(correctCount+' '+t('pdf-score')+' '+total+' '+t('pdf-questions'), PW/2, 131, {align:'center'});
+
+  /* Summary bar */
+  doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+  doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.rect(M,142,TW,8,'F'); doc.text(t('pdf-summary'), M+4, 148);
+  var sy = 154;
+  problems.forEach(function(prob, i) {
+    if (sy + 12 > PH - 15) {
+      doc.addPage(); sy = 20;
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,sy,TW,8,'F'); doc.text(t('pdf-summary2'), M+4, sy+6); sy += 12;
+    }
+    var ok = document.getElementById('pc'+i).classList.contains('ok');
+    doc.setFillColor(ok?232:255, ok?240:232, ok?232:228);
+    doc.roundedRect(M,sy,TW,10,2,2,'F');
+    doc.setFillColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.circle(M+6, sy+5, 2.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(ok?'v':'x', M+4.5, sy+6.5);
+    doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text(t('pdf-item')+' '+(i+1)+': '+pdfText(prob.title), M+12, sy+6.5);
+    doc.setTextColor(ok?26:176, ok?106:48, ok?74:16);
+    doc.text(ok?t('pdf-ok'):t('pdf-bad'), PW-M-24, sy+6.5);
+    sy += 12;
+  });
+
+  /* Per-problem pages */
+  for (var i = 0; i < problems.length; i++) {
+    var prob = problems[i];
+    doc.addPage(); var wy = 0;
+    doc.setFillColor(pBR,pBG,pBB); doc.rect(0,0,PW,20,'F');
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0,0,PW,3,'F');
+    doc.setTextColor(pAR,pAG,pAB); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(SCHOOL.courseName[LANG]+'  ·  '+SCHOOL.guideTitle[LANG], M, 10);
+    doc.setTextColor(240,244,238); doc.setFontSize(10.5); doc.setFont('helvetica','bold');
+    doc.text(t('pdf-item')+' '+(i+1)+' '+t('pdf-of')+' '+total+'  ·  '+pdfText(prob.title), M, 17);
+    wy = 25;
+
+    var qRaw = pdfText(prob.questionText);
+    doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qLines = doc.splitTextToSize(qRaw, TW-10);
+    var qBoxH  = 8 + qLines.length*5 + 3;
+    doc.setFillColor(237,240,245); doc.roundedRect(M,wy,TW,qBoxH,2,2,'F');
+    doc.setTextColor(pBR,pBG,pBB); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(t('pdf-question'), M+4, wy+6);
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+    var qy = wy+12;
+    qLines.forEach(function(ln,li){ doc.text(ln, M+4, qy+li*5); });
+    wy += qBoxH + 4;
+
+    var isOk   = document.getElementById('pc'+i).classList.contains('ok');
+    var chosen = prob.studentChoice != null ? pdfText(prob.options[prob.studentChoice]||'') : '';
+    var corr   = pdfText(prob.options[prob.correctIdx]||'');
+    var expRaw = pdfText(prob.explanation||'');
+    doc.setFontSize(8.5); var chLines = doc.splitTextToSize(t('pdf-yours')+chosen, TW-18);
+    doc.setFontSize(8);   var coLines = doc.splitTextToSize(t('pdf-key')+corr, TW-18);
+    doc.setFontSize(7.5); var exLines = doc.splitTextToSize(t('pdf-sol')+expRaw, TW-18).slice(0,4);
+    var ansBoxH = 8 + chLines.length*5.5 + coLines.length*5 + exLines.length*5 + 6;
+    doc.setFillColor(isOk?232:255, isOk?240:232, isOk?232:228);
+    doc.roundedRect(M,wy,TW,ansBoxH,2,2,'F');
+    doc.setFillColor(isOk?26:176, isOk?106:48, isOk?74:16);
+    doc.circle(M+7, wy+8, 3.5, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(isOk?'v':'x', M+5.2, wy+10.5);
+    var ay = wy+7;
+    doc.setTextColor(20,24,32); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+    chLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5.5); }); ay += chLines.length*5.5 + 3;
+    doc.setTextColor(26,106,74); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    coLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); }); ay += coLines.length*5 + 3;
+    doc.setTextColor(90,85,80); doc.setFontSize(7.5);
+    exLines.forEach(function(ln,li){ doc.text(ln, M+14, ay+li*5); });
+    wy += ansBoxH + 5;
+
+    var dc = document.getElementById('dc'+i);
+    if (dc) {
+      doc.setFillColor(pBR,pBG,pBB); doc.setTextColor(255,255,255);
+      doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.rect(M,wy,TW,8,'F'); doc.text(t('pdf-work'), M+4, wy+5.5); wy += 11;
+      try {
+        var imgD = dc.toDataURL('image/png');
+        var ar = dc.height / dc.width, iw = TW, ih = Math.min(iw * ar, 68);
+        doc.addImage(imgD, 'PNG', M, wy, iw, ih); wy += ih + 4;
+      } catch(e) {}
+    }
+    var ta = document.getElementById('ta'+i);
+    if (ta && ta.value.trim()) {
+      if (wy > PH-30) { doc.addPage(); wy = 20; }
+      doc.setTextColor(20,24,32); doc.setFontSize(8); doc.setFont('courier','normal');
+      var taLines = doc.splitTextToSize(ta.value, TW);
+      taLines.slice(0,16).forEach(function(ln) {
+        if (wy > PH-15) { doc.addPage(); wy = 20; }
+        doc.text(ln, M, wy); wy += 5;
+      }); wy += 2;
+    }
+    var pp = document.getElementById('pp'+i);
+    if (pp && pp.src && pp.src.indexOf('data:') === 0) {
+      if (wy > PH-55) { doc.addPage(); wy = 20; }
+      try { doc.addImage(pp.src, 'JPEG', M, wy, TW, 68); wy += 72; } catch(e) {}
+    }
+  }
+
+  /* Footer on every page */
+  var pages = doc.internal.getNumberOfPages();
+  for (var p = 1; p <= pages; p++) {
+    doc.setPage(p);
+    doc.setFillColor(pAR,pAG,pAB); doc.rect(0, PH-3, PW, 3, 'F');
+    doc.setTextColor(130,140,160); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+    doc.text(name+'  ·  '+group+'  ·  '+t('pdf-code')+code+'  ·  '+t('pdf-page')+p+'/'+pages,
+      PW/2, PH-5, {align:'center'});
+  }
+
+  /* ── Cross-platform download ─────────────────────────────────────────────
+     IMPORTANT: this entire function must remain synchronous (not async).
+     Any await before this block would break Safari's user-gesture chain and
+     cause window.open / navigator.share to be silently blocked on iOS.
+
+     iOS/iPadOS strategy (in order of preference):
+       1. navigator.share({ files }) → native Share Sheet → "Save to Files"
+       2. window.open(blobUrl, '_blank') → opens PDF inline in Safari
+       3. location.href = blobUrl → same-tab fallback if popup is blocked
+
+     Desktop / Android: standard <a download> click.
+     ──────────────────────────────────────────────────────────────────────── */
+  var _fn   = SCHOOL.filePrefix + '_' + name.replace(/\s+/g,'_') + '_' + group.replace(/\s+/g,'_') + '.pdf';
+  var _blob = doc.output('blob');
+
+  function _restoreBtn() { btn.textContent = t('btn-pdf'); btn.disabled = false; }
+  function _openInline(b) {
+    var u = URL.createObjectURL(b);
+    var w = window.open(u, '_blank');
+    if (!w) { window.location.href = u; }          // popup blocked → same tab
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 60000);
+  }
+
+  /* iPadOS 13+ reports platform === 'MacIntel' with touch support */
+  var _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (_isIOS) {
+    /* Prefer Web Share API with file — triggers "Save to Files" natively */
+    var _file = new File([_blob], _fn, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [_file] })) {
+      navigator.share({ files: [_file], title: _fn })
+        .then(_restoreBtn)
+        .catch(function(e) {
+          if (e && e.name === 'AbortError') { _restoreBtn(); return; } /* user cancelled */
+          _openInline(_blob); _restoreBtn();
+        });
+      return;   /* button state restored inside the promise callbacks above */
+    }
+    /* Older iOS without Web Share API — open blob inline */
+    _openInline(_blob);
+    _restoreBtn();
+    return;
+  }
+
+  /* Desktop + Android — standard anchor-download */
+  var _dlUrl = URL.createObjectURL(_blob);
+  var _dlA   = document.createElement('a');
+  _dlA.href  = _dlUrl; _dlA.download = _fn;
+  document.body.appendChild(_dlA); _dlA.click();
+  setTimeout(function(){ document.body.removeChild(_dlA); URL.revokeObjectURL(_dlUrl); }, 200);
+  _restoreBtn();
+
+  } catch (err) {
+    btn.textContent = t('btn-pdf');
+    btn.disabled = false;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   LESSON HELPERS
+   ════════════════════════════════════════════════════════════════════════ */
+function L(o) { return (o && o[LANG] !== undefined) ? o[LANG] : (o ? o.es : ''); }
+function B(en, es) { return { en: en, es: es }; }
+function ri(rng, lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function N(n) { return Number(n).toLocaleString('en-US'); }
+function F(v, d) { return Number(v).toFixed(d); }
+function rd(v, d) { var p = Math.pow(10, d); return Math.round(v * p) / p; }
+/* Number typed by the student. Accepts a decimal comma ("2,306") as well as a point. */
+function numVal(s) {
+  s = String(s === undefined || s === null ? '' : s).replace(/[$\s%]/g, '').replace(/[−–]/g, '-');
+  if (s === '') return null;
+  if (s.indexOf('.') !== -1) s = s.replace(/,/g, ''); else s = s.replace(',', '.');
+  var v = parseFloat(s);
+  return isNaN(v) ? null : v;
+}
+var VX = '<i class="xbar">x</i>', VS = '<i>s</i>', VN = '<i>n</i>', VT = '<i>t</i>', VM = 'μ';
+function sqN(a) { return '√<span style="text-decoration:overline">' + a + '</span>'; }
+function frac(a, b) {
+  return '<span class="mf-outer"><span class="mf-num">' + a + '</span><span class="mf-den">' + b + '</span></span>';
+}
+function say(host, cls, msg) {
+  var e = host.querySelector('.iw-fb');
+  if (!e) return;
+  e.className = 'iw-fb' + (cls ? ' ' + cls : '');
+  e.innerHTML = msg;
+}
+/* Widget host factory: data-widget marks the type, data-gate links it to the sequential lock (Rule 5C) */
+function widgetHost(kind, gate) {
+  var d = document.createElement('div');
+  d.className = 'gcrd section';
+  d.setAttribute('data-widget', kind);
+  if (gate) d.setAttribute('data-gate', gate);
+  document.getElementById('lessonBody').appendChild(d);
+  return d;
+}
+/* Builds one graded problem card from a bilingual spec. optsEn/optsEs: index 0 = correct. */
+function addProb(spec, rng) {
+  var o = shuffleOpts(spec.optsEs, spec.optsEn, rng);
+  problems.push({
+    i18n: { title: spec.title, q: spec.q, hint: spec.hint, exp: spec.exp, opts: { es: o.es, en: o.en } },
+    title:        spec.title[LANG],
+    questionText: spec.q[LANG],
+    options:      o[LANG].slice(),
+    correctIdx:   o.correctIdx,
+    explanation:  spec.exp[LANG],
+    hint:         spec.hint[LANG],
+    showWork:     !!spec.showWork,
+    dbg:          spec.dbg || null,
+    fn:           '',
+    studentChoice: null,
+    pendingChoice: null
+  });
+  buildOneCard(problems[problems.length - 1], problems.length - 1);
+}
+/* Seeded random stream for things that happen AFTER the lesson is built (simulation clicks).
+   It never touches the lesson rng, so rebuilding the lesson in the other language cannot desync. */
+function subRng(tag) {
+  var n = studentData.name || '', g = studentData.group || '';
+  return seededRng(n + g + currentAttempt(n, g) + '|' + tag);
+}
+function gauss(r) { var u = 1 - r(), v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+
+/* ════════════════════════════════════════════════════════════════════════
+   THE t TABLE  (values transcribed from the standard table supplied by the instructor)
+   Columns = confidence level of a two-tailed interval; rows = degrees of freedom.
+   ════════════════════════════════════════════════════════════════════════ */
+var TT_CONF = [50, 60, 70, 80, 90, 95, 98, 99, 99.8, 99.9];
+var TT_ONE  = ['0.25', '0.20', '0.15', '0.10', '0.05', '0.025', '0.01', '0.005', '0.001', '0.0005'];
+var TT_TWO  = ['0.50', '0.40', '0.30', '0.20', '0.10', '0.05', '0.02', '0.01', '0.002', '0.001'];
+var TT_RAW = [
+  '1 1.000 1.376 1.963 3.078 6.314 12.71 31.82 63.66 318.31 636.62',
+  '2 0.816 1.061 1.386 1.886 2.920 4.303 6.965 9.925 22.327 31.599',
+  '3 0.765 0.978 1.250 1.638 2.353 3.182 4.541 5.841 10.215 12.924',
+  '4 0.741 0.941 1.190 1.533 2.132 2.776 3.747 4.604 7.173 8.610',
+  '5 0.727 0.920 1.156 1.476 2.015 2.571 3.365 4.032 5.893 6.869',
+  '6 0.718 0.906 1.134 1.440 1.943 2.447 3.143 3.707 5.208 5.959',
+  '7 0.711 0.896 1.119 1.415 1.895 2.365 2.998 3.499 4.785 5.408',
+  '8 0.706 0.889 1.108 1.397 1.860 2.306 2.896 3.355 4.501 5.041',
+  '9 0.703 0.883 1.100 1.383 1.833 2.262 2.821 3.250 4.297 4.781',
+  '10 0.700 0.879 1.093 1.372 1.812 2.228 2.764 3.169 4.144 4.587',
+  '11 0.697 0.876 1.088 1.363 1.796 2.201 2.718 3.106 4.025 4.437',
+  '12 0.695 0.873 1.083 1.356 1.782 2.179 2.681 3.055 3.930 4.318',
+  '13 0.694 0.870 1.079 1.350 1.771 2.160 2.650 3.012 3.852 4.221',
+  '14 0.692 0.868 1.076 1.345 1.761 2.145 2.624 2.977 3.787 4.140',
+  '15 0.691 0.866 1.074 1.341 1.753 2.131 2.602 2.947 3.733 4.073',
+  '16 0.690 0.865 1.071 1.337 1.746 2.120 2.583 2.921 3.686 4.015',
+  '17 0.689 0.863 1.069 1.333 1.740 2.110 2.567 2.898 3.646 3.965',
+  '18 0.688 0.862 1.067 1.330 1.734 2.101 2.552 2.878 3.610 3.922',
+  '19 0.688 0.861 1.066 1.328 1.729 2.093 2.539 2.861 3.579 3.883',
+  '20 0.687 0.860 1.064 1.325 1.725 2.086 2.528 2.845 3.552 3.850',
+  '21 0.686 0.859 1.063 1.323 1.721 2.080 2.518 2.831 3.527 3.819',
+  '22 0.686 0.858 1.061 1.321 1.717 2.074 2.508 2.819 3.505 3.792',
+  '23 0.685 0.858 1.060 1.319 1.714 2.069 2.500 2.807 3.485 3.768',
+  '24 0.685 0.857 1.059 1.318 1.711 2.064 2.492 2.797 3.467 3.745',
+  '25 0.684 0.856 1.058 1.316 1.708 2.060 2.485 2.787 3.450 3.725',
+  '26 0.684 0.856 1.058 1.315 1.706 2.056 2.479 2.779 3.435 3.707',
+  '27 0.684 0.855 1.057 1.314 1.703 2.052 2.473 2.771 3.421 3.690',
+  '28 0.683 0.855 1.056 1.313 1.701 2.048 2.467 2.763 3.408 3.674',
+  '29 0.683 0.854 1.055 1.311 1.699 2.045 2.462 2.756 3.396 3.659',
+  '30 0.683 0.854 1.055 1.310 1.697 2.042 2.457 2.750 3.385 3.646',
+  '40 0.681 0.851 1.050 1.303 1.684 2.021 2.423 2.704 3.307 3.551',
+  '60 0.679 0.848 1.045 1.296 1.671 2.000 2.390 2.660 3.232 3.460',
+  '80 0.678 0.846 1.043 1.292 1.664 1.990 2.374 2.639 3.195 3.416',
+  '100 0.677 0.845 1.042 1.290 1.660 1.984 2.364 2.626 3.174 3.390',
+  '1000 0.675 0.842 1.037 1.282 1.646 1.962 2.330 2.581 3.098 3.300'
+];
+var TT_Z = '0.674 0.842 1.036 1.282 1.645 1.960 2.326 2.576 3.090 3.291'.split(' ');
+var TT = TT_RAW.map(function(r) { var p = r.split(' '); return { df: +p[0], v: p.slice(1) }; });
+function ttRow(df) {                       /* the row to use: exact df, or the nearest row BELOW it */
+  var best = TT[0];
+  TT.forEach(function(r) { if (r.df <= df) best = r; });
+  return best;
+}
+function tCrit(df, conf) { return parseFloat(ttRow(df).v[TT_CONF.indexOf(conf)]); }
+function zCrit(conf) { return parseFloat(TT_Z[TT_CONF.indexOf(conf)]); }
+function confCol(conf) { return TT_CONF.indexOf(conf); }
+function confTxt(c) { return String(c).replace('.', '.') + '%'; }
+
+/* t density and tail area (curves widget) */
+function lgamma(x) {
+  var c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+  var y = x, t = x + 5.5, s = 1.000000000190015, j;
+  t -= (x + 0.5) * Math.log(t);
+  for (j = 0; j < 6; j++) { y += 1; s += c[j] / y; }
+  return -t + Math.log(2.5066282746310005 * s / x);
+}
+function tPdf(x, df) { return Math.exp(lgamma((df + 1) / 2) - lgamma(df / 2) - 0.5 * Math.log(df * Math.PI) - ((df + 1) / 2) * Math.log(1 + x * x / df)); }
+function nPdf(x) { return Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI); }
+function tTailOut(z, df) {                 /* P(|T| > z) */
+  var n = 400, h = z / n, s = tPdf(0, df) + tPdf(z, df), i;
+  for (i = 1; i < n; i++) s += tPdf(i * h, df) * (i % 2 ? 4 : 2);
+  return Math.max(0, 1 - 2 * (h / 3) * s);
+}
+
+/* The table as HTML. Used inside the Table reader widget and inside the always-available popup. */
+function ttHTML() {
+  var head = '<thead>' +
+    '<tr class="tt-cl"><th rowspan="3">gl<br><span style="font-weight:400;font-size:.66rem">df</span></th>' +
+      TT_CONF.map(function(c) { return '<th>' + confTxt(c) + '</th>'; }).join('') + '</tr>' +
+    '<tr class="tt-2t">' + TT_TWO.map(function(a) { return '<th>' + a + '</th>'; }).join('') + '</tr>' +
+    '<tr class="tt-1t">' + TT_ONE.map(function(a) { return '<th>' + a + '</th>'; }).join('') + '</tr></thead>';
+  var legend = '<tr class="tt-leg"><th></th><th colspan="10" style="text-align:left;font-weight:400;font-size:.66rem;background:transparent;border:0;color:var(--text3)">' +
+    L(B('Header rows: confidence level · two-tailed α · one-tailed α', 'Encabezados: nivel de confianza · α de dos colas · α de una cola')) + '</th></tr>';
+  var rows = TT.map(function(r, i) {
+    return '<tr><th>' + r.df + '</th>' + r.v.map(function(v, j) { return '<td data-r="' + i + '" data-c="' + j + '">' + v + '</td>'; }).join('') + '</tr>';
+  }).join('');
+  var zr = '<tr class="tt-zrow"><th>z</th>' + TT_Z.map(function(v, j) { return '<td data-r="z" data-c="' + j + '">' + v + '</td>'; }).join('') + '</tr>';
+  return '<div class="tt-wrap"><table class="tt-table">' + head + '<tbody>' + rows + zr + '</tbody></table></div>' +
+    '<div class="tt-hint">' + L(B('Tap any cell to highlight its row and column. The last row (z) is the normal distribution, shown for comparison.',
+      'Toca una celda para resaltar su fila y su columna. La última fila (z) es la distribución normal, para comparar.')) + '</div>';
+}
+function ttBind(root) {
+  var tbl = root.querySelector('.tt-table'); if (!tbl) return;
+  tbl.querySelectorAll('td').forEach(function(td) {
+    td.addEventListener('click', function() {
+      tbl.querySelectorAll('td').forEach(function(x) { x.classList.remove('tt-row', 'tt-col', 'tt-hit'); });
+      var r = td.getAttribute('data-r'), c = td.getAttribute('data-c');
+      tbl.querySelectorAll('td').forEach(function(x) {
+        if (x.getAttribute('data-r') === r) x.classList.add('tt-row');
+        if (x.getAttribute('data-c') === c) x.classList.add('tt-col');
+      });
+      td.classList.add('tt-hit');
+    });
+  });
+}
+function ttMark(root, df, conf) {           /* shows the right cell after a correct lookup */
+  var tbl = root.querySelector('.tt-table'); if (!tbl) return;
+  tbl.querySelectorAll('td.tt-ok').forEach(function(x) { x.classList.remove('tt-ok'); });
+  var r = TT.indexOf(ttRow(df)), c = confCol(conf);
+  var cell = tbl.querySelector('td[data-r="' + r + '"][data-c="' + c + '"]');
+  if (cell) cell.classList.add('tt-ok');
+}
+/* Popup available at any moment from the sticky bar */
+function refreshTT() {
+  var m = document.getElementById('ttModal'); if (!m || m.style.display === 'none') return;
+  document.getElementById('ttBody').innerHTML = ttHTML();
+  ttBind(document.getElementById('ttBody'));
+}
+function openTT() {
+  var m = document.getElementById('ttModal'); if (!m) return;
+  m.style.display = 'flex';
+  document.getElementById('ttBody').innerHTML = ttHTML();
+  ttBind(document.getElementById('ttBody'));
+  var c = document.getElementById('ttClose'); if (c) c.focus();
+}
+function closeTT() { var m = document.getElementById('ttModal'); if (m) m.style.display = 'none'; var b = document.getElementById('ttBtn'); if (b) b.focus(); }
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTT(); });
+document.addEventListener('click', function(e) { if (e.target && e.target.id === 'ttModal') closeTT(); });
+
+/* ════════════════════════════════════════════════════════════════════════
+   BUSINESS SCENARIOS  (every activity uses a different one)
+   mu = typical mean range, sd = typical sample standard deviation range
+   ════════════════════════════════════════════════════════════════════════ */
+var SC = [
+  { who: B('a food-delivery app', 'una app de reparto'),                 m: B('delivery time', 'tiempo de entrega'), art: 'el',  u: B('min', 'min'), mu: [28, 40],  sd: [4, 8],     dec: 0, dsp: 'unidades' },
+  { who: B('a coffee roaster', 'una tostadora de café'),                 m: B('weight of a bag', 'peso de una bolsa'), art: 'el', u: B('g', 'g'),     mu: [246, 256], sd: [2.5, 5],   dec: 0 },
+  { who: B('a bank branch', 'una sucursal bancaria'),                    m: B('wait at the teller window', 'espera en ventanilla'), art: 'la', u: B('min', 'min'), mu: [7, 14], sd: [2, 4], dec: 0 },
+  { who: B('a courier company', 'una empresa de mensajería'),            m: B('fuel efficiency of a van', 'rendimiento de combustible de una camioneta'), art: 'el', u: B('km/l', 'km/l'), mu: [9, 13], sd: [0.8, 1.6], dec: 1 },
+  { who: B('a battery lab', 'un laboratorio de baterías'),               m: B('battery life', 'duración de la batería'), art: 'la', u: B('h', 'h'),   mu: [14, 22],  sd: [1.5, 3.5], dec: 0 },
+  { who: B('an online store', 'una tienda en línea'),                    m: B('page load time', 'tiempo de carga de la página'), art: 'el', u: B('s', 's'), mu: [2.4, 4.2], sd: [0.4, 0.9], dec: 1 },
+  { who: B('a cafeteria', 'una cafetería'),                              m: B('spending per customer', 'gasto por cliente'), art: 'el', u: B('pesos', 'pesos'), cur: true, mu: [85, 130], sd: [14, 26], dec: 0 },
+  { who: B('a call center', 'un centro de atención telefónica'),         m: B('call duration', 'duración de una llamada'), art: 'la', u: B('min', 'min'), mu: [7, 13], sd: [2, 4], dec: 0 },
+  { who: B('an assembly plant', 'una planta de ensamble'),               m: B('assembly time per unit', 'tiempo de armado por pieza'), art: 'el', u: B('min', 'min'), mu: [18, 28], sd: [2, 4], dec: 0 },
+  { who: B('a hotel', 'un hotel'),                                       m: B('guest check-in time', 'tiempo de registro de un huésped'), art: 'el', u: B('min', 'min'), mu: [4, 8], sd: [1, 2], dec: 0 },
+  { who: B('a bakery', 'una panadería'),                                 m: B('baking time per batch', 'tiempo de horneado por tanda'), art: 'el', u: B('min', 'min'), mu: [32, 44], sd: [3, 6], dec: 0 },
+  { who: B('a ride-hailing service', 'un servicio de transporte por app'), m: B('driver arrival time', 'tiempo de llegada del conductor'), art: 'el', u: B('min', 'min'), mu: [5, 12], sd: [2, 4], dec: 0 },
+  { who: B('a parcel warehouse', 'una bodega de paquetería'),            m: B('packages sorted per hour', 'paquetes clasificados por hora'), art: 'los', u: B('packages', 'paquetes'), mu: [120, 180], sd: [12, 25], dec: 0 },
+  { who: B('a gym', 'un gimnasio'),                                      m: B('workout length', 'duración de una sesión de entrenamiento'), art: 'la', u: B('min', 'min'), mu: [48, 70], sd: [6, 12], dec: 0 },
+  { who: B('a print shop', 'una imprenta'),                              m: B('ink cartridge yield', 'rendimiento de un cartucho de tinta'), art: 'el', u: B('pages', 'páginas'), mu: [420, 520], sd: [30, 60], dec: 0 },
+  { who: B('a tailor shop', 'una sastrería'),                            m: B('time to hem a pair of trousers', 'tiempo para entallar un pantalón'), art: 'el', u: B('min', 'min'), mu: [22, 34], sd: [3, 6], dec: 0 },
+  { who: B('a car wash', 'un autolavado'),                               m: B('wash time per car', 'tiempo de lavado por auto'), art: 'el', u: B('min', 'min'), mu: [11, 18], sd: [1.5, 3], dec: 0 },
+  { who: B('a pharmacy', 'una farmacia'),                                m: B('prescription fill time', 'tiempo de surtido de una receta'), art: 'el', u: B('min', 'min'), mu: [6, 12], sd: [1.5, 3], dec: 0 }
+];
+function Mm(sc, l) { return l === 'en' ? 'the ' + sc.m.en : sc.art + ' ' + sc.m.es; }   /* with article */
+function Mn(sc, l) { return sc.m[l]; }                                                    /* bare noun   */
+function fv(v, sc, l, d) {                                                                /* plain value with unit */
+  var dd = (d === undefined ? sc.dec : d), s = F(v, dd);
+  return sc.cur ? '$' + s : s + ' ' + sc.u[l];
+}
+function fvB(v, sc, d) { return { en: fv(v, sc, 'en', d), es: fv(v, sc, 'es', d) }; }
+function safe1(v) { var f = v * 10 - Math.floor(v * 10); return Math.abs(f - 0.5) > 0.16; }   /* away from a rounding boundary at 1 decimal */
+function r1(v) { return Math.round(v * 10) / 10; }
+
+/* A sample-summary case: n, x̄, s, SE, t*, ME, limits. exactSE: n is a perfect square and SE has one decimal. */
+function mkCase(rng, sc, o) {
+  for (var tries = 0; tries < 400; tries++) {
+    var n = pick(o.ns, rng), conf = pick(o.confs, rng), df = n - 1;
+    var xbar = rd(sc.mu[0] + rng() * (sc.mu[1] - sc.mu[0]), sc.dec);
+    var sdT = sc.sd[0] + rng() * (sc.sd[1] - sc.sd[0]), se, s;
+    if (o.exactSE) { var q = Math.sqrt(n); se = r1(sdT / q); if (se < 0.2) se = 0.2; s = r1(se * q); se = s / q; }
+    else { s = r1(sdT); se = s / Math.sqrt(n); }
+    var ts = tCrit(df, conf), me = ts * se, lo = xbar - me, hi = xbar + me;
+    if (!(safe1(lo) && safe1(hi) && safe1(me))) continue;
+    if (o.exactSE && Math.abs(se * 10 - Math.round(se * 10)) > 1e-9) continue;
+    return { sc: sc, n: n, df: df, conf: conf, xbar: xbar, s: s, se: se, ts: ts, me: me, lo: lo, hi: hi };
+  }
+  throw new Error('mkCase failed');
+}
+function ivTxt(lo, hi, sc, l) {            /* "De 31.5 a 38.4 min" */
+  var a = F(lo, 1), b = F(hi, 1);
+  if (sc.cur) return (l === 'en' ? 'From $' + a + ' to $' + b : 'De $' + a + ' a $' + b);
+  return (l === 'en' ? 'From ' : 'De ') + a + (l === 'en' ? ' to ' : ' a ') + b + ' ' + sc.u[l];
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   WIDGET 1 · Coverage simulator (MODE A · exploration, no Check button)
+   Every simulated sample gets BOTH intervals (z using s, and t), so the comparison is paired.
+   ════════════════════════════════════════════════════════════════════════ */
+function wSim(host, sc) {
+  var SIZES = [4, 8, 15, 30], NEED = 100;
+  var MU = rd((sc.mu[0] + sc.mu[1]) / 2, sc.dec), SG = (sc.sd[0] + sc.sd[1]) / 2;
+  var st = WSTATE.sim || (WSTATE.sim = { n: 4, tot: 0, last: [], stat: {}, cp: {}, done: false });
+  SIZES.forEach(function(n) { if (!st.stat[n]) st.stat[n] = { k: 0, z: 0, t: 0 }; });
+  function allDone() { return SIZES.every(function(n) { return st.stat[n].k >= NEED; }); }
+  function pct(a, b) { return b ? Math.round(1000 * a / b) / 10 : null; }
+  function addSamples(k) {
+    var r = subRng('sim|' + st.tot), n = st.n, df = n - 1, ts = tCrit(df, 95), i, j;
+    for (i = 0; i < k; i++) {
+      var xs = [], m = 0, ss = 0;
+      for (j = 0; j < n; j++) { xs.push(MU + SG * gauss(r)); m += xs[j]; }
+      m /= n;
+      xs.forEach(function(v) { ss += (v - m) * (v - m); });
+      var s = Math.sqrt(ss / (n - 1)), se = s / Math.sqrt(n);
+      var row = { zl: m - 1.96 * se, zh: m + 1.96 * se, tl: m - ts * se, th: m + ts * se };
+      var S = st.stat[n]; S.k++;
+      if (row.zl <= MU && MU <= row.zh) S.z++;
+      if (row.tl <= MU && MU <= row.th) S.t++;
+      st.last.push(row); if (st.last.length > 14) st.last.shift();
+      st.tot++;
+    }
+    var S2 = st.stat[n];
+    if (S2.k >= NEED && !st.cp[n]) { st.cp[n] = 1; checkpoint('cover-sim', SIZES.indexOf(n), 'size'); }
+    if (!st.done && allDone()) { st.done = true; checkpoint('cover-sim', 4, 'round'); }
+    saveSession();
+    if (st.done) applyLocks();
+    refresh();
+  }
+  function draw() {
+    var cv = host.querySelector('.sim-cv'); if (!cv) return;
+    var g = fitCanvas(cv, 270), ctx = g.ctx, W = g.w, H = g.h, P = palette();
+    var span = 2.1 * SG, x0 = MU - span, x1 = MU + span, L0 = 10, R0 = W - 10, T0 = 12, rowH = (H - T0 - 26) / 14;
+    function px(x) { return L0 + (Math.max(x0, Math.min(x1, x)) - x0) / (x1 - x0) * (R0 - L0); }
+    ctx.strokeStyle = P.text2; ctx.lineWidth = 1.4; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(px(MU), T0 - 4); ctx.lineTo(px(MU), H - 22); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = P.text2; ctx.font = '600 11px "IBM Plex Sans", sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('μ = ' + F(MU, sc.dec) + ' ' + (sc.cur ? '' : sc.u[LANG]), px(MU), H - 8);
+    st.last.forEach(function(r, i) {
+      var y = T0 + i * rowH;
+      var okz = r.zl <= MU && MU <= r.zh, okt = r.tl <= MU && MU <= r.th;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = okz ? 3 : 4; ctx.strokeStyle = okz ? P.gold : P.bad;
+      ctx.beginPath(); ctx.moveTo(px(r.zl), y + rowH * 0.3); ctx.lineTo(px(r.zh), y + rowH * 0.3); ctx.stroke();
+      ctx.lineWidth = okt ? 3 : 4; ctx.strokeStyle = okt ? P.green : P.bad;
+      ctx.beginPath(); ctx.moveTo(px(r.tl), y + rowH * 0.7); ctx.lineTo(px(r.th), y + rowH * 0.7); ctx.stroke();
+    });
+    if (!st.last.length) {
+      ctx.fillStyle = P.text3; ctx.font = '12px "IBM Plex Sans", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(L(B('Draw samples to see the intervals here', 'Saca muestras para ver aquí los intervalos')), W / 2, H / 2);
+    }
+  }
+  function refresh() {
+    var q = host.querySelector.bind(host);
+    SIZES.forEach(function(n) {
+      var S = st.stat[n], c = q('.chip-n' + n);
+      c.textContent = 'n = ' + n + ' · ' + Math.min(S.k, NEED) + '/' + NEED;
+      c.classList.toggle('on', S.k >= NEED);
+      var row = q('.cov-' + n), p1 = pct(S.z, S.k), p2 = pct(S.t, S.k);
+      row.innerHTML = '<td class="' + (st.n === n ? 'cur' : '') + '">n = ' + n + '</td>' +
+        '<td>' + S.k + '</td>' +
+        '<td class="' + (S.k ? '' : 'dim') + '">' + (p1 === null ? '·' : p1 + '%') + '</td>' +
+        '<td class="' + (S.k ? '' : 'dim') + '">' + (p2 === null ? '·' : p2 + '%') + '</td>';
+    });
+    host.querySelectorAll('.sz-btn').forEach(function(b) { b.classList.toggle('on', +b.getAttribute('data-n') === st.n); });
+    q('.sim-tot').textContent = N(st.tot);
+    var rd1 = q('.iw-read');
+    rd1.style.display = st.done ? 'block' : 'none';
+    if (st.done) {
+      var a = st.stat[4], b = st.stat[30];
+      rd1.innerHTML = L(B(
+        '<strong>Missions complete.</strong> With n = 4 the interval that uses z with s captured μ in only ' + pct(a.z, a.k) + '% of the samples, while the t interval stayed near its promised 95% (' + pct(a.t, a.k) + '%). With n = 30 the two methods are almost the same (' + pct(b.z, b.k) + '% against ' + pct(b.t, b.k) + '%). The t interval is the repair for small samples. Next you will see why it works.',
+        '<strong>Misiones completas.</strong> Con n = 4 el intervalo que usa z con s capturó a μ solo en ' + pct(a.z, a.k) + '% de las muestras, mientras que el intervalo t se mantuvo cerca del 95% prometido (' + pct(a.t, a.k) + '%). Con n = 30 los dos métodos casi coinciden (' + pct(b.z, b.k) + '% contra ' + pct(b.t, b.k) + '%). El intervalo t es la reparación para muestras pequeñas. Enseguida verás por qué funciona.'));
+    }
+    draw();
+  }
+  function render() {
+    host.innerHTML =
+      '<div class="iw-head"><span class="iw-tag">' + L(B('Exploration', 'Exploración')) + '</span>' +
+        '<span class="iw-title">' + L(B('Coverage simulator', 'Simulador de cobertura')) + '</span></div>' +
+      '<div class="iw-sub">' + L(B(
+        'For ' + sc.who.en + ', the true mean ' + sc.m.en + ' is μ = ' + F(MU, sc.dec) + (sc.cur ? ' pesos' : ' ' + sc.u.en) + ', but pretend nobody knows it. Each click draws random samples and builds two 95% intervals from every one: the gold one treats s as if it were σ (uses z* = 1.96) and the blue one uses t. A bar turns red when it misses μ. Reach 100 samples with each of the four sample sizes.',
+        'Para ' + sc.who.es + ', la media real de la variable «' + sc.m.es + '» es μ = ' + F(MU, sc.dec) + (sc.cur ? ' pesos' : ' ' + sc.u.es) + ', pero imagina que nadie la conoce. Cada clic saca muestras aleatorias y construye dos intervalos de 95% con cada una: el dorado trata a s como si fuera σ (usa z* = 1.96) y el azul usa t. Una barra se vuelve roja cuando no captura a μ. Llega a 100 muestras con cada uno de los cuatro tamaños.')) + '</div>' +
+      '<div class="chips">' + SIZES.map(function(n) { return '<span class="chip chip-n' + n + '"></span>'; }).join('') + '</div>' +
+      '<div class="shape-grid four size-tabs">' + SIZES.map(function(n) {
+        return '<button class="shape-btn sz-btn" data-n="' + n + '">n = ' + n + '</button>'; }).join('') + '</div>' +
+      '<div class="legend"><span><i class="lz"></i>' + L(B('z with s', 'z con s')) + '</span><span><i class="lt"></i>t</span><span><i class="lm"></i>' + L(B('misses μ', 'no captura a μ')) + '</span></div>' +
+      '<canvas class="iw-canvas sim-cv"></canvas>' +
+      '<div class="iw-sub" style="margin:.3rem 0 0">' + L(B('The last 14 samples are shown. Each sample has two bars: gold above, blue below.', 'Se muestran las últimas 14 muestras. Cada muestra tiene dos barras: la dorada arriba, la azul abajo.')) + '</div>' +
+      '<div class="btn-row"><button class="verify-btn add1">' + L(B('+1 sample', '+1 muestra')) + '</button>' +
+        '<button class="verify-btn alt add50">' + L(B('+50 samples', '+50 muestras')) + '</button></div>' +
+      '<table class="ft-table cov-table"><thead><tr><th>' + L(B('Sample size', 'Tamaño de muestra')) + '</th><th>' + L(B('Samples', 'Muestras')) + '</th>' +
+        '<th>' + L(B('z with s captured μ', 'z con s capturó a μ')) + '</th><th>' + L(B('t captured μ', 't capturó a μ')) + '</th></tr></thead><tbody>' +
+        SIZES.map(function(n) { return '<tr class="cov-' + n + '"></tr>'; }).join('') + '</tbody></table>' +
+      '<div class="metrics" style="grid-template-columns:repeat(2,1fr)"><div class="metric"><div class="mlbl">' + L(B('Samples drawn', 'Muestras sacadas')) + '</div><div class="mnum ts sim-tot"></div></div>' +
+        '<div class="metric"><div class="mlbl">' + L(B('Promised coverage', 'Cobertura prometida')) + '</div><div class="mnum cs">95%</div></div></div>' +
+      '<div class="iw-read"></div>';
+    host.querySelectorAll('.sz-btn').forEach(function(b) {
+      b.addEventListener('click', function() { st.n = +b.getAttribute('data-n'); saveSession(); refresh(); });
+    });
+    host.querySelector('.add1').addEventListener('click', function() { addSamples(1); });
+    host.querySelector('.add50').addEventListener('click', function() { addSamples(50); });
+    refresh();
+  }
+  widgets.push(render); wdraws.push(draw); render();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   WIDGET 2 · t curves (MODE A · exploration, no Check button)
+   ════════════════════════════════════════════════════════════════════════ */
+function wCurves(host) {
+  var st = WSTATE.curves || (WSTATE.curves = { df: 10, seen: {}, lo: 0, hi: 0, find: 0, done: false });
+  function mark() {
+    st.seen[st.df] = 1;
+    if (st.df <= 3) st.lo = 1;
+    if (st.df >= 25) st.hi = 1;
+    if (st.df === 19 && st.seen[18]) st.find = 1;
+  }
+  function draw() {
+    var cv = host.querySelector('.cu-cv'); if (!cv) return;
+    var g = fitCanvas(cv, 230), ctx = g.ctx, W = g.w, H = g.h, P = palette();
+    var ox = 14, oy = H - 28, tp = 14, rp = 14, xmin = -5, xmax = 5, ymax = 0.42;
+    function px(x) { return ox + (x - xmin) / (xmax - xmin) * (W - ox - rp); }
+    function py(y) { return oy - y / ymax * (oy - tp); }
+    var df = st.df, ts = tCrit(df, 95), x, i;
+    ctx.font = '10px "IBM Plex Sans", sans-serif'; ctx.textAlign = 'center';
+    for (x = -5; x <= 5; x++) {
+      ctx.strokeStyle = P.border; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px(x), tp); ctx.lineTo(px(x), oy + 3); ctx.stroke();
+      ctx.fillStyle = P.text3; ctx.fillText(String(x).replace('-', '−'), px(x), oy + 15);
+    }
+    /* tails of the t curve beyond ±1.96 */
+    ctx.fillStyle = P.bad; ctx.globalAlpha = 0.28;
+    [[-5, -1.96], [1.96, 5]].forEach(function(seg) {
+      ctx.beginPath(); ctx.moveTo(px(seg[0]), py(0));
+      for (i = 0; i <= 40; i++) { x = seg[0] + (seg[1] - seg[0]) * i / 40; ctx.lineTo(px(x), py(tPdf(x, df))); }
+      ctx.lineTo(px(seg[1]), py(0)); ctx.closePath(); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = P.text2; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(W - rp, oy); ctx.stroke();
+    /* normal */
+    ctx.strokeStyle = P.text3; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath();
+    for (i = 0; i <= 120; i++) { x = xmin + (xmax - xmin) * i / 120; if (i === 0) ctx.moveTo(px(x), py(nPdf(x))); else ctx.lineTo(px(x), py(nPdf(x))); }
+    ctx.stroke(); ctx.setLineDash([]);
+    /* t */
+    ctx.strokeStyle = P.green; ctx.lineWidth = 2.6; ctx.beginPath();
+    for (i = 0; i <= 120; i++) { x = xmin + (xmax - xmin) * i / 120; if (i === 0) ctx.moveTo(px(x), py(tPdf(x, df))); else ctx.lineTo(px(x), py(tPdf(x, df))); }
+    ctx.stroke();
+    /* ±1.96 and ±t* markers */
+    ctx.lineWidth = 1.2; ctx.strokeStyle = P.bad; ctx.setLineDash([3, 3]);
+    [-1.96, 1.96].forEach(function(v) { ctx.beginPath(); ctx.moveTo(px(v), tp); ctx.lineTo(px(v), oy); ctx.stroke(); });
+    ctx.setLineDash([]);
+    if (ts <= 5) {
+      ctx.strokeStyle = P.gold; ctx.lineWidth = 2.2;
+      [-ts, ts].forEach(function(v) { ctx.beginPath(); ctx.moveTo(px(v), tp + 6); ctx.lineTo(px(v), oy); ctx.stroke(); });
+      ctx.fillStyle = P.gold; ctx.font = '600 10px "IBM Plex Sans", sans-serif';
+      ctx.fillText('t* = ' + F(ts, 3), px(ts), tp + 2);
+    } else {
+      ctx.fillStyle = P.gold; ctx.font = '600 10px "IBM Plex Sans", sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText('t* = ' + F(ts, 2) + ' →', W - rp, tp + 8);
+    }
+  }
+  function refresh() {
+    var q = host.querySelector.bind(host), df = st.df;
+    q('.cu-df').textContent = df;
+    q('.cu-ts').textContent = F(tCrit(df, 95), 3);
+    q('.cu-tail').textContent = F(tTailOut(1.96, df) * 100, 1) + '%';
+    q('.chip-lo').classList.toggle('on', !!st.lo);
+    q('.chip-hi').classList.toggle('on', !!st.hi);
+    q('.chip-fd').classList.toggle('on', !!st.find);
+    q('.iw-read').style.display = st.done ? 'block' : 'none';
+    draw();
+  }
+  function setDf(v) {
+    st.df = Math.max(1, Math.min(30, Math.round(v)));
+    mark();
+    if (!st.done && st.lo && st.hi && st.find) {
+      st.done = true; checkpoint('t-curves', 0, 'round'); saveSession(); applyLocks();
+    }
+    refresh();
+  }
+  function render() {
+    host.innerHTML =
+      '<div class="iw-head"><span class="iw-tag">' + L(B('Exploration', 'Exploración')) + '</span>' +
+        '<span class="iw-title">' + L(B('t curve explorer', 'Explorador de curvas t')) + '</span></div>' +
+      '<div class="iw-sub">' + L(B(
+        'The dashed grey curve is the normal distribution. The blue curve is the t distribution for the degrees of freedom you choose. The red areas are the tails beyond ±1.96, and the gold lines mark ±t*, the value that captures the central 95%. Complete the three missions.',
+        'La curva gris punteada es la distribución normal. La curva azul es la distribución t con los grados de libertad que elijas. Las áreas rojas son las colas más allá de ±1.96 y las líneas doradas marcan ±t*, el valor que captura el 95% central. Completa las tres misiones.')) + '</div>' +
+      '<div class="chips">' +
+        '<span class="chip chip-lo">' + L(B('1 · Go to 3 df or fewer', '1 · Ve a 3 gl o menos')) + '</span>' +
+        '<span class="chip chip-hi">' + L(B('2 · Go to 25 df or more', '2 · Ve a 25 gl o más')) + '</span>' +
+        '<span class="chip chip-fd">' + L(B('3 · Find the smallest df whose t* is below 2.10', '3 · Encuentra los gl más pequeños cuyo t* sea menor que 2.10')) + '</span>' +
+      '</div>' +
+      '<canvas class="iw-canvas cu-cv"></canvas>' +
+      '<div class="slide-row">' +
+        '<button class="nudge-btn" data-d="-1" aria-label="−1">−</button>' +
+        '<input type="range" class="cu-slider" min="1" max="30" step="1" value="' + st.df + '" aria-label="df">' +
+        '<button class="nudge-btn" data-d="1" aria-label="+1">+</button>' +
+      '</div>' +
+      '<div class="metrics">' +
+        '<div class="metric"><div class="mlbl">' + L(B('Degrees of freedom', 'Grados de libertad')) + '</div><div class="mnum ts cu-df"></div></div>' +
+        '<div class="metric"><div class="mlbl">t* (95%)</div><div class="mnum ps cu-ts"></div></div>' +
+        '<div class="metric"><div class="mlbl">' + L(B('Area beyond ±1.96', 'Área más allá de ±1.96')) + '</div><div class="mnum cs cu-tail"></div></div>' +
+      '</div>' +
+      '<div class="iw-read">' + L(B(
+        '<strong>Missions complete.</strong> With few degrees of freedom the tails are heavy (with 1 df, 30% of the area lies beyond ±1.96) and t* is far larger than 1.96. As the degrees of freedom grow, the t curve settles onto the normal curve and t* approaches 1.960. That extra width at small n is the price of not knowing σ.',
+        '<strong>Misiones completas.</strong> Con pocos grados de libertad las colas son pesadas (con 1 gl, el 30% del área queda más allá de ±1.96) y t* es mucho mayor que 1.96. Al crecer los grados de libertad, la curva t se asienta sobre la normal y t* se acerca a 1.960. Ese ancho extra con n pequeña es el precio de no conocer σ.')) + '</div>';
+    var sl = host.querySelector('.cu-slider');
+    sl.addEventListener('input', function() { setDf(+sl.value); });
+    host.querySelectorAll('.nudge-btn').forEach(function(b) {
+      b.addEventListener('click', function() { setDf(st.df + (+b.getAttribute('data-d'))); sl.value = st.df; });
+    });
+    mark(); refresh();
+  }
+  widgets.push(render); wdraws.push(draw); render();
+}
+
+/* Scenario sentence for a sample summary */
+function caseTxt(cs, l) {
+  var sc = cs.sc;
+  if (l === 'en') return 'For ' + sc.who.en + ', the variable is ' + sc.m.en + '. A random sample of ' + VN + ' = ' + cs.n +
+    ' gave ' + VX + ' = ' + fv(cs.xbar, sc, 'en') + ' and ' + VS + ' = ' + fv(cs.s, sc, 'en', 1) + '.';
+  return 'Para ' + sc.who.es + ', la variable es «' + sc.m.es + '». Una muestra aleatoria de ' + VN + ' = ' + cs.n +
+    ' dio ' + VX + ' = ' + fv(cs.xbar, sc, 'es') + ' y ' + VS + ' = ' + fv(cs.s, sc, 'es', 1) + '.';
+}
+function near(v, target, tol) { return v !== null && Math.abs(v - target) <= tol; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   WIDGET 3 · Table reader (MODE B · one lookup per round, Check button)
+   ════════════════════════════════════════════════════════════════════════ */
+function wTableReader(host, rounds) {
+  var st = WSTATE.table || (WSTATE.table = { i: 0, v: { df: '', row: '', ts: '' }, tries: 0, phase: 'input', fb: null, bad: {}, done: false });
+  function R() { return rounds[Math.min(st.i, rounds.length - 1)]; }
+  function info() {
+    var r = R(), df = r.n - 1, row = ttRow(df).df;
+    return { n: r.n, conf: r.conf, df: df, row: row, missing: row !== df, ts: tCrit(df, r.conf) };
+  }
+  function msg(id) {
+    var o = info();
+    if (id === 'empty') return L(B('Fill in every box of the round before checking.', 'Llena todas las casillas de la ronda antes de verificar.'));
+    if (id === 'df') return L(B('Check the degrees of freedom: for a single mean, df = ' + VN + ' − 1.', 'Revisa los grados de libertad: para una sola media, gl = ' + VN + ' − 1.'));
+    if (id === 'dfn') return L(B('You used ' + VN + ' itself. One degree of freedom is spent on estimating the mean, so df = ' + VN + ' − 1.', 'Usaste ' + VN + ' tal cual. Un grado de libertad se gasta en estimar la media, así que gl = ' + VN + ' − 1.'));
+    if (id === 'row') return L(B('The table has no row for ' + o.df + ' df. Use the printed row with the nearest SMALLER number of degrees of freedom.', 'La tabla no tiene fila para ' + o.df + ' gl. Usa la fila impresa con el número de grados de libertad MÁS CERCANO POR DEBAJO.'));
+    if (id === 'rowup') return L(B('That row has MORE degrees of freedom than you have. Go to the nearest row below: it gives a slightly larger t*, which keeps the interval honest.', 'Esa fila tiene MÁS grados de libertad de los que tienes. Ve a la fila más cercana por debajo: da un t* un poco mayor, y eso mantiene honesto al intervalo.'));
+    if (id === 'col') return L(B('That number is in the right row but in another column. Find the column headed ' + confTxt(o.conf) + ' in the first header row.', 'Ese número está en la fila correcta pero en otra columna. Busca la columna con el encabezado ' + confTxt(o.conf) + ' en la primera fila de encabezados.'));
+    if (id === 'z') return L(B('That is z*, from the last row. With σ unknown you need the row of your degrees of freedom.', 'Ese es z*, de la última fila. Si σ es desconocida necesitas la fila de tus grados de libertad.'));
+    if (id === 'ts') return L(B('Check t*: go to row ' + (o.missing ? o.row : 'df') + ' and move across to the ' + confTxt(o.conf) + ' column.', 'Revisa t*: ve a la fila ' + (o.missing ? o.row : 'gl') + ' y avanza hasta la columna de ' + confTxt(o.conf) + '.'));
+    if (id === 'reveal') return L(B(
+      'The answer: df = ' + o.n + ' − 1 = ' + o.df + (o.missing ? ', which is not printed, so you use row ' + o.row : '') + '; in the ' + confTxt(o.conf) + ' column, t* = ' + F(o.ts, 3) + '. The cell is highlighted in the table.',
+      'La respuesta: gl = ' + o.n + ' − 1 = ' + o.df + (o.missing ? ', que no aparece, así que se usa la fila ' + o.row : '') + '; en la columna de ' + confTxt(o.conf) + ', t* = ' + F(o.ts, 3) + '. La celda quedó resaltada en la tabla.'));
+    if (id === 'done') return L(B(
+      '✓ Three lookups done. Remember the two moves: df = n − 1, and if that row is missing, drop to the nearest row below.',
+      '✓ Tres búsquedas hechas. Recuerda los dos movimientos: gl = n − 1 y, si esa fila no aparece, baja a la fila más cercana por debajo.'));
+    var z = zCrit(o.conf), more = Math.round((o.ts / z - 1) * 100);
+    return L(B(
+      '✓ Correct: t* = ' + F(o.ts, 3) + '. The normal value for ' + confTxt(o.conf) + ' is z* = ' + F(z, 3) + ', so with ' + o.n + ' observations the interval must be about ' + more + '% wider.' + (o.missing ? ' Using row ' + o.row + ' instead of ' + o.df + ' makes it a hair wider still: the safe side.' : ''),
+      '✓ Correcto: t* = ' + F(o.ts, 3) + '. El valor normal para ' + confTxt(o.conf) + ' es z* = ' + F(z, 3) + ', así que con ' + o.n + ' observaciones el intervalo debe ser alrededor de ' + more + '% más ancho.' + (o.missing ? ' Usar la fila ' + o.row + ' en lugar de ' + o.df + ' lo hace apenas un poco más ancho: el lado seguro.' : '')));
+  }
+  function render() {
+    var o = info(), tag = st.done ? L(B('Complete', 'Completa')) : L(B('Lookup', 'Búsqueda')) + ' ' + (st.i + 1) + '/' + rounds.length;
+    var body = '';
+    if (!st.done) {
+      var solved = st.phase === 'solved';
+      function fld(k, lab) {
+        var cls = 'ft-inp' + (st.bad[k] === 1 ? ' ft-bad' : st.bad[k] === 0 ? ' ft-ok' : '');
+        return '<div class="fld"><label>' + lab + '</label>' + (solved
+          ? '<div class="fld-val">' + (k === 'df' ? o.df : k === 'row' ? o.row : F(o.ts, 3)) + '</div>'
+          : '<input class="' + cls + ' tr-' + k + '" type="text" inputmode="decimal" autocomplete="off" placeholder="?" value="' + st.v[k] + '">') + '</div>';
+      }
+      body = '<div class="scenario-box">' + L(B(
+          'A random sample has <strong>' + VN + ' = ' + o.n + '</strong> observations and you want a <strong>' + confTxt(o.conf) + '</strong> confidence interval for the mean (σ unknown).',
+          'Una muestra aleatoria tiene <strong>' + VN + ' = ' + o.n + '</strong> observaciones y quieres un intervalo de confianza de <strong>' + confTxt(o.conf) + '</strong> para la media (σ desconocida).')) + '</div>' +
+        '<div class="fld-grid">' + fld('df', L(B('Degrees of freedom (df)', 'Grados de libertad (gl)'))) +
+          (o.missing ? fld('row', L(B('Row of the table you use', 'Fila de la tabla que usas'))) : '') +
+          fld('ts', L(B('Critical value t*', 'Valor crítico t*'))) + '</div>' +
+        (solved ? '<button class="verify-btn next tr-next">' + (st.i === rounds.length - 1 ? L(B('Finish', 'Terminar')) : L(B('Next lookup', 'Siguiente búsqueda'))) + '</button>'
+                : '<button class="verify-btn tr-check">' + L(B('Check', 'Verificar')) + '</button>');
+    }
+    host.innerHTML =
+      '<div class="iw-head"><span class="iw-tag">' + tag + '</span><span class="iw-title">' + L(B('Reading the t table', 'Lectura de la tabla t')) + '</span></div>' +
+      '<div class="iw-sub">' + L(B(
+        'Use the table below (or the «t table» button at the top, which is there for the rest of the guide). Type the degrees of freedom and the critical value t*. When the degrees of freedom are not printed, also say which row you used.',
+        'Usa la tabla de abajo (o el botón «Tabla t» de arriba, que estará disponible el resto de la guía). Escribe los grados de libertad y el valor crítico t*. Cuando los grados de libertad no aparezcan impresos, indica también qué fila usaste.')) + '</div>' +
+      body + '<div class="iw-fb"></div>' +
+      '<div class="tt-embed">' + ttHTML() + '</div>';
+    if (st.fb) say(host, st.fb.cls, msg(st.fb.id));
+    ttBind(host);
+    if (!st.done && st.phase === 'solved') ttMark(host, o.df, o.conf);
+    ['df', 'row', 'ts'].forEach(function(k) {
+      var e = host.querySelector('.tr-' + k);
+      if (e) e.addEventListener('input', function() { st.v[k] = e.value; });
+    });
+    var bc = host.querySelector('.tr-check'), bn = host.querySelector('.tr-next');
+    if (bc) bc.onclick = verify;
+    if (bn) bn.onclick = next;
+  }
+  function verify() {
+    var o = info(), df = numVal(st.v.df), row = numVal(st.v.row), ts = numVal(st.v.ts);
+    if (df === null || ts === null || (o.missing && row === null)) { st.fb = { cls: 'warm', id: 'empty' }; render(); return; }
+    var okDf = df === o.df, okRow = !o.missing || row === o.row, okTs = near(ts, o.ts, 0.0015);
+    st.bad = { df: okDf ? 0 : 1, ts: okTs ? 0 : 1 };
+    if (o.missing) st.bad.row = okRow ? 0 : 1;
+    if (okDf && okRow && okTs) { st.phase = 'solved'; st.fb = { cls: 'good', id: 'ok' }; st.bad = {}; render(); return; }
+    st.tries++;
+    if (st.tries >= 3) { st.phase = 'solved'; st.bad = {}; st.fb = { cls: 'warm', id: 'reveal' }; render(); return; }
+    var id;
+    if (!okDf) id = (df === o.n ? 'dfn' : 'df');
+    else if (!okRow) id = (row > o.df ? 'rowup' : 'row');
+    else {
+      var c = confCol(o.conf), rr = ttRow(o.df);
+      if (near(ts, zCrit(o.conf), 0.0005)) id = 'z';
+      else if (rr.v.some(function(v, j) { return j !== c && near(ts, parseFloat(v), 0.0005); })) id = 'col';
+      else id = 'ts';
+    }
+    st.fb = { cls: 'miss', id: id };
+    render();
+  }
+  function next() {
+    checkpoint('table-reader', st.i, 'round');
+    st.i++; st.v = { df: '', row: '', ts: '' }; st.tries = 0; st.phase = 'input'; st.fb = null; st.bad = {};
+    if (st.i >= rounds.length) { st.done = true; st.fb = { cls: 'good', id: 'done' }; }
+    saveSession(); render();
+    if (st.done) applyLocks();
+  }
+  widgets.push(render); render();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   WIDGET 4 · Interval builder (MODE B · calculate, then Check; less is given each round)
+   ════════════════════════════════════════════════════════════════════════ */
+function wBuilder(host, cases) {
+  var KEYS = ['df', 'ts', 'se', 'me', 'lo', 'hi'];
+  var GIVEN = [{ df: 1, ts: 1 }, { df: 1 }, {}];
+  var st = WSTATE.builder || (WSTATE.builder = { i: 0, v: {}, tries: 0, phase: 'input', fb: null, bad: {}, done: false });
+  function C() { return cases[Math.min(st.i, cases.length - 1)]; }
+  function G() { return GIVEN[Math.min(st.i, GIVEN.length - 1)]; }
+  function val(k) { var c = C(); return { df: c.df, ts: c.ts, se: c.se, me: c.me, lo: c.lo, hi: c.hi }[k]; }
+  function show(k) {
+    var c = C(), sc = c.sc;
+    if (k === 'df') return String(c.df);
+    if (k === 'ts') return F(c.ts, 3);
+    if (k === 'se') return F(c.se, 2);
+    if (k === 'me') return F(c.me, 2);
+    return F(val(k), 1);
+  }
+  function ok(k, v) {
+    var c = C();
+    if (v === null) return false;
+    if (k === 'df') return v === c.df;
+    if (k === 'ts') return near(v, c.ts, 0.002);
+    if (k === 'se') return near(v, c.se, 0.02 * c.se + 0.005);
+    if (k === 'me') return near(v, c.me, 0.02 * c.me + 0.005);
+    return near(v, val(k), 0.02 * c.me + 0.03);
+  }
+  function label(k) {
+    return {
+      df: L(B('df = n − 1', 'gl = n − 1')),
+      ts: L(B('t* (table)', 't* (tabla)')),
+      se: L(B('Standard error s/√n', 'Error estándar s/√n')),
+      me: L(B('Margin of error t*·SE', 'Margen de error t*·EE')),
+      lo: L(B('Lower limit', 'Límite inferior')),
+      hi: L(B('Upper limit', 'Límite superior'))
+    }[k];
+  }
+  function msg(id) {
+    var c = C(), sc = c.sc;
+    if (id === 'empty') return L(B('Fill in every open box before checking.', 'Llena todas las casillas abiertas antes de verificar.'));
+    var M = {
+      df:  B('Check df: it is n − 1.', 'Revisa gl: es n − 1.'),
+      dfn: B('You used n. The degrees of freedom are n − 1.', 'Usaste n. Los grados de libertad son n − 1.'),
+      ts:  B('Check t*: row df, column ' + confTxt(c.conf) + '.', 'Revisa t*: fila gl, columna ' + confTxt(c.conf) + '.'),
+      tz:  B('That is z*. Since σ is unknown, the critical value comes from the t row of your degrees of freedom.', 'Ese es z*. Como σ es desconocida, el valor crítico sale de la fila t de tus grados de libertad.'),
+      se:  B('Check the standard error: divide s by the square root of n.', 'Revisa el error estándar: divide s entre la raíz cuadrada de n.'),
+      ses: B('You used s itself. The standard error is s divided by √n = ' + F(Math.sqrt(c.n), Number.isInteger(Math.sqrt(c.n)) ? 0 : 3) + '.', 'Usaste s tal cual. El error estándar es s dividida entre √n = ' + F(Math.sqrt(c.n), Number.isInteger(Math.sqrt(c.n)) ? 0 : 3) + '.'),
+      sen: B('You divided by n. The standard error divides by √n, not by n.', 'Dividiste entre n. El error estándar divide entre √n, no entre n.'),
+      me:  B('Check the margin of error: multiply t* by the standard error.', 'Revisa el margen de error: multiplica t* por el error estándar.'),
+      mez: B('That margin uses 1.96 or another z value. Multiply by t* instead.', 'Ese margen usa 1.96 u otro valor z. Multiplica por t*.'),
+      mes: B('You multiplied t* by s. Multiply it by the standard error.', 'Multiplicaste t* por s. Multiplícalo por el error estándar.'),
+      lim: B('Check the limits: ' + VX + ' − ME and ' + VX + ' + ME.', 'Revisa los límites: ' + VX + ' − ME y ' + VX + ' + ME.')
+    };
+    if (M[id]) return L(M[id]);
+    if (id === 'reveal') return L(B(
+      'The solution: df = ' + c.df + ', t* = ' + F(c.ts, 3) + ', SE = ' + F(c.s, 1) + '/√' + c.n + ' = ' + F(c.se, 2) + ', ME = ' + F(c.ts, 3) + ' × ' + F(c.se, 2) + ' = ' + F(c.me, 2) + ', limits ' + F(c.xbar, sc.dec) + ' ± ' + F(c.me, 2) + '. Follow each step before you continue.',
+      'La solución: gl = ' + c.df + ', t* = ' + F(c.ts, 3) + ', EE = ' + F(c.s, 1) + '/√' + c.n + ' = ' + F(c.se, 2) + ', ME = ' + F(c.ts, 3) + ' × ' + F(c.se, 2) + ' = ' + F(c.me, 2) + ', límites ' + F(c.xbar, sc.dec) + ' ± ' + F(c.me, 2) + '. Sigue cada paso antes de continuar.'));
+    if (id === 'done') return L(B(
+      '✓ Three intervals built. The recipe never changes: df, t*, standard error, margin, limits.',
+      '✓ Tres intervalos construidos. La receta nunca cambia: gl, t*, error estándar, margen, límites.'));
+    return L(B(
+      '✓ Correct. Interpretation: we are ' + confTxt(c.conf) + ' confident that the mean ' + sc.m.en + ' for ' + sc.who.en + ' is between ' + F(c.lo, 1) + ' and ' + F(c.hi, 1) + (sc.cur ? ' pesos' : ' ' + sc.u.en) + '.',
+      '✓ Correcto. Interpretación: tenemos ' + confTxt(c.conf) + ' de confianza en que la media de «' + sc.m.es + '» para ' + sc.who.es + ' está entre ' + F(c.lo, 1) + ' y ' + F(c.hi, 1) + (sc.cur ? ' pesos' : ' ' + sc.u.es) + '.'));
+  }
+  function render() {
+    var c = C(), g = G(), tag = st.done ? L(B('Complete', 'Completo')) : L(B('Interval', 'Intervalo')) + ' ' + (st.i + 1) + '/' + cases.length;
+    var body = '';
+    if (!st.done) {
+      var solved = st.phase === 'solved';
+      body = '<div class="scenario-box">' + caseTxt(c, LANG) + ' ' + L(B('Build the ' + confTxt(c.conf) + ' confidence interval for μ.', 'Construye el intervalo de confianza de ' + confTxt(c.conf) + ' para μ.')) + '</div>' +
+        '<div class="src-line">' + VX + ' ± ' + VT + '* · ' + frac(VS, sqN(VN)) + '</div>' +
+        '<div class="fld-grid">' + KEYS.map(function(k) {
+          var inner;
+          if (g[k] || solved) inner = '<div class="fld-val' + (g[k] ? ' sm' : '') + '">' + show(k) + '</div>';
+          else {
+            var cls = 'ft-inp' + (st.bad[k] === 1 ? ' ft-bad' : st.bad[k] === 0 ? ' ft-ok' : '');
+            inner = '<input class="' + cls + ' bd-' + k + '" type="text" inputmode="decimal" autocomplete="off" placeholder="?" value="' + (st.v[k] || '') + '">';
+          }
+          return '<div class="fld"><label>' + label(k) + (g[k] ? ' · ' + L(B('given', 'dado')) : '') + '</label>' + inner + '</div>';
+        }).join('') + '</div>' +
+        '<div class="iw-sub" style="margin:.2rem 0 0">' + L(B('Round the standard error and the margin to 2 decimals and the limits to 1 decimal.', 'Redondea el error estándar y el margen a 2 decimales y los límites a 1 decimal.')) + '</div>' +
+        (solved ? '<button class="verify-btn next bd-next">' + (st.i === cases.length - 1 ? L(B('Finish', 'Terminar')) : L(B('Next interval', 'Siguiente intervalo'))) + '</button>'
+                : '<button class="verify-btn bd-check">' + L(B('Check', 'Verificar')) + '</button>');
+    }
+    host.innerHTML =
+      '<div class="iw-head"><span class="iw-tag">' + tag + '</span><span class="iw-title">' + L(B('Interval builder', 'Constructor de intervalos')) + '</span></div>' +
+      '<div class="iw-sub">' + L(B(
+        'Three cases, and each one gives you less help: first df and t* are given, then only df, and finally nothing. Use the «t table» button whenever you need it.',
+        'Tres casos, y cada uno te da menos ayuda: primero se dan gl y t*, después solo gl y al final nada. Usa el botón «Tabla t» cuando lo necesites.')) + '</div>' +
+      body + '<div class="iw-fb"></div>';
+    if (st.fb) say(host, st.fb.cls, msg(st.fb.id));
+    KEYS.forEach(function(k) {
+      var e = host.querySelector('.bd-' + k);
+      if (e) e.addEventListener('input', function() { st.v[k] = e.value; });
+    });
+    var bc = host.querySelector('.bd-check'), bn = host.querySelector('.bd-next');
+    if (bc) bc.onclick = verify;
+    if (bn) bn.onclick = next;
+  }
+  function verify() {
+    var c = C(), g = G(), open = KEYS.filter(function(k) { return !g[k]; }), v = {};
+    open.forEach(function(k) { v[k] = numVal(st.v[k]); });
+    if (open.some(function(k) { return v[k] === null; })) { st.fb = { cls: 'warm', id: 'empty' }; render(); return; }
+    st.bad = {};
+    var first = null;
+    open.forEach(function(k) { var good = ok(k, v[k]); st.bad[k] = good ? 0 : 1; if (!good && !first) first = k; });
+    if (!first) { st.phase = 'solved'; st.bad = {}; st.fb = { cls: 'good', id: 'ok' }; render(); return; }
+    st.tries++;
+    if (st.tries >= 3) { st.phase = 'solved'; st.bad = {}; st.fb = { cls: 'warm', id: 'reveal' }; render(); return; }
+    var x = v[first], id;
+    if (first === 'df') id = (x === c.n ? 'dfn' : 'df');
+    else if (first === 'ts') id = (near(x, zCrit(c.conf), 0.002) ? 'tz' : 'ts');
+    else if (first === 'se') id = near(x, c.s, 0.02 * c.s) ? 'ses' : near(x, c.s / c.n, 0.02 * c.s / c.n + 0.005) ? 'sen' : 'se';
+    else if (first === 'me') id = near(x, zCrit(c.conf) * c.se, 0.01 * c.se) ? 'mez' : near(x, c.ts * c.s, 0.02 * c.ts * c.s) ? 'mes' : 'me';
+    else id = 'lim';
+    st.fb = { cls: 'miss', id: id };
+    render();
+  }
+  function next() {
+    checkpoint('interval-builder', st.i, 'round');
+    st.i++; st.v = {}; st.tries = 0; st.phase = 'input'; st.fb = null; st.bad = {};
+    if (st.i >= cases.length) { st.done = true; st.fb = { cls: 'good', id: 'done' }; }
+    saveSession(); render();
+    if (st.done) applyLocks();
+  }
+  widgets.push(render); render();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   WIDGET 5 · Method chooser (MODE C · the tap is the submission)
+   ════════════════════════════════════════════════════════════════════════ */
+function wMethod(host, items) {
+  var CATS = [
+    { k: 't',  t: B('t interval', 'Intervalo t') },
+    { k: 'z',  t: B('z interval', 'Intervalo z') },
+    { k: 'no', t: B('Neither: a condition fails', 'Ninguno: falla una condición') }
+  ];
+  var st = WSTATE.method || (WSTATE.method = { i: 0, tries: 0, phase: 'ask', fb: null, wrong: {}, done: false });
+  var tok = 0;
+  function catName(k) { return L(CATS.filter(function(z) { return z.k === k; })[0].t); }
+  function step(withCheckpoint) {
+    if (withCheckpoint) checkpoint('method-chooser', st.i, 'round');
+    st.i++; st.tries = 0; st.wrong = {}; st.phase = 'ask'; st.fb = null;
+    if (st.i >= items.length) st.done = true;
+  }
+  if (st.phase === 'shown') step(false);
+  function later(ms) {
+    var mine = ++tok;
+    setTimeout(function() {
+      if (mine !== tok || st.phase !== 'shown') return;
+      step(true); saveSession(); render();
+      if (st.done) applyLocks();
+    }, ms);
+  }
+  function render() {
+    if (st.done) {
+      host.innerHTML =
+        '<div class="iw-head"><span class="iw-tag">' + L(B('Complete', 'Completo')) + '</span><span class="iw-title">' + L(B('Method chooser', 'Selector de método')) + '</span></div>' +
+        '<div class="iw-fb good">' + L(B(
+          '✓ ' + items.length + ' cases decided. Three questions settle it every time: Is σ known? Is the sample random? With a small n, does the data look roughly normal, without strong skew or outliers?',
+          '✓ ' + items.length + ' casos decididos. Tres preguntas lo resuelven siempre: ¿se conoce σ? ¿la muestra es aleatoria? Con n pequeña, ¿los datos se ven aproximadamente normales, sin sesgo fuerte ni valores atípicos?')) + '</div>';
+      return;
+    }
+    var it = items[st.i];
+    host.innerHTML =
+      '<div class="iw-head"><span class="iw-tag">' + L(B('Case', 'Caso')) + ' ' + (st.i + 1) + '/' + items.length + '</span>' +
+        '<span class="iw-title">' + L(B('Method chooser', 'Selector de método')) + '</span></div>' +
+      '<div class="iw-sub">' + L(B('Read the case and tap the method an analyst should use to estimate the mean.', 'Lee el caso y toca el método que un analista debe usar para estimar la media.')) + '</div>' +
+      '<div class="scenario-box">' + L(it.t) + '</div>' +
+      '<div class="shape-grid three">' + CATS.map(function(c) {
+        var cls = 'shape-btn', dis = '';
+        if (st.phase === 'shown') { dis = ' disabled'; if (c.k === it.k) cls += ' shape-correct'; }
+        else if (st.wrong[c.k]) { cls += ' shape-wrong'; dis = ' disabled'; }
+        return '<button class="' + cls + '" data-k="' + c.k + '"' + dis + '>' + L(c.t) + '</button>';
+      }).join('') + '</div>' +
+      '<div class="iw-fb"></div>';
+    if (st.fb) {
+      var m = st.fb.id === 'why' ? '✓ ' + L(it.why)
+            : st.fb.id === 'reveal' ? L(B('The right choice is <strong>' + catName(it.k) + '</strong>. ', 'La elección correcta es <strong>' + catName(it.k) + '</strong>. ')) + L(it.why)
+            : L(it.hint);
+      say(host, st.fb.cls, m);
+    }
+    host.querySelectorAll('.shape-btn').forEach(function(btn) {
+      btn.onclick = function() {
+        if (st.phase !== 'ask') return;
+        var k = btn.getAttribute('data-k');
+        if (k === it.k) { st.phase = 'shown'; st.fb = { cls: 'good', id: 'why' }; render(); later(3200); return; }
+        st.tries++; st.wrong[k] = 1;
+        if (st.tries >= 2) { st.phase = 'shown'; st.fb = { cls: 'warm', id: 'reveal' }; render(); later(5000); return; }
+        st.fb = { cls: 'miss', id: 'hint' };
+        render();
+      };
+    });
+  }
+  widgets.push(render); render();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   buildLesson(rng)
+   ════════════════════════════════════════════════════════════════════════ */
+function buildLesson(rng) {
+  /*
+   * CONCEPT ARC
+   * topic        : Confidence intervals for the mean with small samples (Statistics)
+   * prerequisite : The student knows the z interval x̄ ± z*·σ/√n, the sample mean and the
+   *                sample standard deviation s, and what a confidence level is.
+   * sequence     : 1. Why replacing σ by s and keeping z* fails when n is small
+   *                   (seen in a coverage simulation before any new formula appears)
+   *                2. The t distribution: df = n − 1, heavier tails, convergence to the normal;
+   *                   how to read the t table, including the missing-row rule
+   *                3. The t interval x̄ ± t*·s/√n built step by step (df, t*, SE, ME, limits)
+   *                4. Choosing between t, z or neither (σ known? random? shape?), the correct
+   *                   meaning of the confidence level, and what changes the width
+   * why_this_order: the failure (1) motivates the new distribution (2); the table must be
+   *                readable before an interval can be built (3); judging when the method
+   *                applies and what it means (4) needs the full procedure in hand.
+   *
+   * time_audit   : (Part 0-T constants unchanged; x1.2 applied to every C1, C2 and S)
+   *   reading   ~1050w (ES) / 90 + 1 try-first (build an interval on paper)  = 13.7m
+   *   W cover-sim        60s + 4 missions x [T 2T R15]        (Mode A)      =  5.0m
+   *   W t-curves         60s + 3 missions x 40s               (Mode A)      =  3.0m
+   *   W table-reader     60s + R30 + [R10 C1 2K] + 2 x [R10 2C1 3K]
+   *                      = 90 + 92 + 2x154                                  =  8.2m
+   *   W interval-builder 60s + R30 + [R20 3C1 4K] + [R20 4C1 5K] + [R20 4C1 6K]
+   *                      = 90 + 226 + 288 + 308                             = 15.2m
+   *   W method-chooser   60s + 5 x [R25 K T]                  (Mode C)      =  6.0m
+   *   P1 [R30 2K T] 85s        P2 [R30 C1 K T] 107s     P3 [R30 2C1 T] 129s
+   *   P4 [R45 2K T] 100s       P5 gated [R40 4C1] 248s  P6 gated [R40 S] 188s
+   *   P7 [R40 2K T] 95s        P8 [R40 2C1 K T] 159s
+   *   P9 gated [R40 5C1] 290s  P10 gated [R50 4C1 K T] 293s = 1694s       = 28.2m
+   *   slack (welcome, interface, t-table popup, PDF)                        =  5.0m
+   *   TOTAL 84.3m  (target 75-85, hard window 70-90; heavy rounds 1/6: builder round 3)
+   *   first pass was 91m: applied Step 4 in order (simulator +25 -> +50 per click,
+   *   table reader 4 -> 3 lookups, P4 margin calculation -> conceptual width item,
+   *   method chooser 6 -> 5 cases).
+   */
+  var scn = shuffle(SC, rng);
+  var S0 = scn[0];
+  function caseOn(list, o, cond) {           /* first scenario in list that yields a case meeting cond */
+    for (var a = 0; a < 6; a++) {
+      for (var i = 0; i < list.length; i++) {
+        var c;
+        try { c = mkCase(rng, list[i], o); } catch (e) { continue; }
+        if (!cond || cond(c)) return c;
+      }
+    }
+    throw new Error('caseOn failed');
+  }
+  function oneTailCol(conf) { return { 90: 80, 95: 90, 99: 98 }[conf]; }
+  function iv(lo, hi, sc) { return { en: ivTxt(lo, hi, sc, 'en'), es: ivTxt(lo, hi, sc, 'es') }; }
+  function uniq(arr) { return arr.every(function(v, i) { return arr.indexOf(v) === i; }); }
+
+  /* ───────────────────────── CONCEPT 1 ───────────────────────── */
+  addSection(function(l) {
+    var E = (l === 'en');
+    return '<div class="stag">' + (E ? 'Concept 1' : 'Concepto 1') + '</div>' +
+      '<h2>' + (E ? 'The problem: unknown σ and few data' : 'El problema: σ desconocida y pocos datos') + '</h2>' +
+      '<p>' + (E
+        ? 'A confidence interval for a mean always has the same shape: estimate ± margin of error. When the population standard deviation σ is known, the interval is'
+        : 'Un intervalo de confianza para una media siempre tiene la misma forma: estimación ± margen de error. Cuando se conoce la desviación estándar poblacional σ, el intervalo es') + '</p>' +
+      '<div class="eqline">' + VX + ' ± <i>z</i>* · ' + frac('σ', sqN(VN)) + '</div>' +
+      '<p>' + (E
+        ? 'In business σ is almost never known. All you have is the standard deviation of your own sample, ' + VS + '. The temptation is to put ' + VS + ' in place of σ and keep using z*. With large samples that works, because ' + VS + ' lands very close to σ. With small samples it does not: ' + VS + ' changes a lot from one sample to the next and is sometimes much smaller than σ. Those intervals come out too narrow and fail more often than they promise.'
+        : 'En los negocios casi nunca se conoce σ. Lo único que tienes es la desviación estándar de tu propia muestra, ' + VS + '. La tentación es poner ' + VS + ' en lugar de σ y seguir usando z*. Con muestras grandes funciona, porque ' + VS + ' queda muy cerca de σ. Con muestras pequeñas no: ' + VS + ' cambia mucho de una muestra a otra y a veces sale bastante menor que σ. Esos intervalos salen demasiado angostos y fallan más veces de lo que prometen.') + '</p>' +
+      '<div class="callout"><p>' + (E
+        ? '<strong>A bit of history.</strong> In the early 1900s William Sealy Gosset worked for the Guinness brewery in Dublin and had to draw conclusions from very few batches. He found the right distribution for that situation and published it in 1908 under the pen name «Student». That is why it is called Student\'s t distribution.'
+        : '<strong>Un poco de historia.</strong> A principios del siglo XX, William Sealy Gosset trabajaba en la cervecería Guinness, en Dublín, y tenía que sacar conclusiones con muy pocos lotes. Encontró la distribución correcta para esa situación y la publicó en 1908 con el seudónimo «Student». Por eso se llama distribución t de Student.') + '</p></div>' +
+      '<div class="callout"><p>' + (E
+        ? '<strong>Worked example.</strong> A delivery app times 5 deliveries: ' + VX + ' = 34 min and ' + VS + ' = 6 min. The standard error is ' + VS + '/√' + VN + ' = 6/√5 = 2.68 min. With z* = 1.96 the interval would be 34 ± 5.26, from 28.7 to 39.3 min. With the t value you will learn to read in this guide, t* = 2.776, it is 34 ± 7.45, from 26.6 to 41.4 min. Is that extra width worth it? The simulator answers.'
+        : '<strong>Ejemplo resuelto.</strong> Una app de reparto cronometra 5 entregas: ' + VX + ' = 34 min y ' + VS + ' = 6 min. El error estándar es ' + VS + '/√' + VN + ' = 6/√5 = 2.68 min. Con z* = 1.96 el intervalo sería 34 ± 5.26, de 28.7 a 39.3 min. Con el valor t que aprenderás a leer en esta guía, t* = 2.776, queda 34 ± 7.45, de 26.6 a 41.4 min. ¿Vale la pena ese ancho extra? El simulador responde.') + '</p></div>';
+  });
+
+  wSim(widgetHost('cover-sim', 'sim'), S0);
+
+  /* P1 · why the z-with-s interval under-covers */
+  addProb({
+    title: B('Why the shortcut fails', 'Por qué falla el atajo'),
+    q: B('In the simulator, with ' + VN + ' = 4 the gold interval (z* = 1.96 with ' + VS + ' in place of σ) missed μ far more often than 5% of the time. What is the main reason?',
+         'En el simulador, con ' + VN + ' = 4 el intervalo dorado (z* = 1.96 con ' + VS + ' en lugar de σ) falló en capturar a μ mucho más del 5% de las veces. ¿Cuál es la razón principal?'),
+    hint: B('Both intervals used the same sample mean. Think about what else goes into the margin of error and how stable it is with only 4 data.',
+            'Los dos intervalos usaron la misma media muestral. Piensa qué más entra en el margen de error y qué tan estable es con solo 4 datos.'),
+    exp: B('Both intervals are centred on the same ' + VX + ', so the centre is not the problem. With 4 data, ' + VS + ' jumps around and often falls below σ; 1.96 does not account for that, so many intervals are too narrow. The t distribution uses a larger critical value that pays for this extra uncertainty.',
+           'Los dos intervalos están centrados en la misma ' + VX + ', así que el centro no es el problema. Con 4 datos, ' + VS + ' brinca mucho y con frecuencia queda por debajo de σ; 1.96 no toma eso en cuenta, así que muchos intervalos salen demasiado angostos. La distribución t usa un valor crítico mayor que paga esa incertidumbre extra.'),
+    optsEn: ['With 4 data, s is unstable and often too small, so the intervals come out too narrow',
+             'The sample mean is a biased estimate of μ whenever the sample contains very few data',
+             'The true mean μ shifts from one sample to the next when the samples are very small',
+             'Samples of size 4 are never truly random, so no interval built from them can be trusted'],
+    optsEs: ['Con 4 datos, s es inestable y a menudo sale pequeña, así que los intervalos quedan angostos',
+             'La media muestral es un estimador sesgado de μ siempre que la muestra tiene muy pocos datos',
+             'La media real μ se mueve de una muestra a otra cuando las muestras son muy pequeñas',
+             'Las muestras de tamaño 4 nunca son realmente aleatorias, así que ningún intervalo es confiable'],
+    showWork: false
+  }, rng);
+
+  /* ───────────────────────── CONCEPT 2 ───────────────────────── */
+  addSection(function(l) {
+    var E = (l === 'en');
+    function card(name, form, note) { return '<div class="rcard"><div class="rname">' + name + '</div><div class="rform">' + form + '</div><div class="rnote">' + note + '</div></div>'; }
+    return '<div class="stag">' + (E ? 'Concept 2' : 'Concepto 2') + '</div>' +
+      '<h2>' + (E ? 'The t distribution and how to read its table' : 'La distribución t y cómo leer su tabla') + '</h2>' +
+      '<p>' + (E
+        ? 'The t distribution looks like the standard normal: bell-shaped, symmetric and centred at 0. The difference is in the tails, which are heavier, because the t distribution accounts for the extra uncertainty of estimating σ with ' + VS + '.'
+        : 'La distribución t se parece a la normal estándar: tiene forma de campana, es simétrica y está centrada en 0. La diferencia está en las colas, que son más pesadas, porque la distribución t toma en cuenta la incertidumbre adicional de estimar σ con ' + VS + '.') + '</p>' +
+      '<p>' + (E
+        ? 'There is not one t curve but a family, and each member is identified by its <strong>degrees of freedom</strong> (df). For the mean of one sample, df = ' + VN + ' − 1. The more degrees of freedom, the closer the t curve is to the normal.'
+        : 'No hay una sola curva t, sino una familia, y cada curva se identifica por sus <strong>grados de libertad</strong> (gl). Para la media de una muestra, gl = ' + VN + ' − 1. Entre más grados de libertad, más se parece la curva t a la normal.') + '</p>' +
+      '<div class="rules-grid">' +
+        card(E ? 'Degrees of freedom' : 'Grados de libertad', E ? 'df = n − 1' : 'gl = n − 1', E ? 'With n = 12 data, df = 11.' : 'Con n = 12 datos, gl = 11.') +
+        card(E ? 'Critical value' : 'Valor crítico', 't*', E ? 'Leaves the confidence level in the centre of the curve. It comes from the table.' : 'Deja el nivel de confianza en el centro de la curva. Sale de la tabla.') +
+        card(E ? 'Missing row' : 'Fila faltante', E ? 'nearest df below' : 'gl más cercano por debajo', E ? 'If your df is not printed (say 35), use row 30. Its t* is slightly larger, so the interval stays on the safe side.' : 'Si tu gl no aparece (por ejemplo 35), usa la fila 30. Su t* es un poco mayor, así que el intervalo queda del lado seguro.') +
+      '</div>' +
+      '<p>' + (E
+        ? 'In the table, each row is a number of degrees of freedom and each column is a confidence level (the first header row). The other two header rows give the area left in both tails and in one tail; for confidence intervals the confidence level is all you need. The «t table» button in the top bar opens it at any moment.'
+        : 'En la tabla, cada fila es un número de grados de libertad y cada columna es un nivel de confianza (la primera fila de encabezados). Las otras dos filas de encabezados dan el área que queda en las dos colas y en una sola cola; para intervalos de confianza basta con el nivel de confianza. El botón «Tabla t» de la barra superior la abre en cualquier momento.') + '</p>' +
+      '<div class="callout"><p>' + (E
+        ? '<strong>Worked example.</strong> For ' + VN + ' = 14 and 95% confidence: df = 14 − 1 = 13. In row 13, column 95%, the table gives t* = 2.160, larger than z* = 1.960.'
+        : '<strong>Ejemplo resuelto.</strong> Para ' + VN + ' = 14 y 95% de confianza: gl = 14 − 1 = 13. En la fila 13, columna de 95%, la tabla da t* = 2.160, mayor que z* = 1.960.') + '</p></div>';
+  });
+
+  wCurves(widgetHost('t-curves', 'curves'));
+
+  (function() {
+    var r1n = ri(rng, 8, 25), r3n = pick([36, 38], rng), r4n = pick([46, 51], rng);
+    wTableReader(widgetHost('table-reader', 'table'), [
+      { n: r1n, conf: pick([90, 95, 99], rng) }, { n: r3n, conf: 95 }, { n: r4n, conf: pick([90, 99], rng) }
+    ]);
+  })();
+
+  /* P2 · critical value lookup */
+  (function() {
+    var sc = scn[6], n = ri(rng, 6, 22), conf = pick([90, 95, 99], rng), df = n - 1;
+    var vals = [tCrit(df, conf), tCrit(n, conf), zCrit(conf), tCrit(df, oneTailCol(conf))].map(function(v) { return F(v, 3); });
+    addProb({
+      title: B('Reading the critical value', 'Leer el valor crítico'),
+      q: B('For ' + sc.who.en + ', an analyst will estimate the mean ' + sc.m.en + ' from a random sample of ' + VN + ' = ' + n + ', with ' + confTxt(conf) + ' confidence and σ unknown. Which critical value must she use?',
+           'Para ' + sc.who.es + ', una analista estimará la media de «' + sc.m.es + '» con una muestra aleatoria de ' + VN + ' = ' + n + ', con ' + confTxt(conf) + ' de confianza y σ desconocida. ¿Qué valor crítico debe usar?'),
+      hint: B('Compute the degrees of freedom first, then use the column headed by the confidence level, not by the one-tail area.',
+              'Calcula primero los grados de libertad y después usa la columna encabezada por el nivel de confianza, no por el área de una cola.'),
+      exp: B('df = ' + n + ' − 1 = ' + df + '. Row ' + df + ', column ' + confTxt(conf) + ': t* = ' + vals[0] + '. Row ' + n + ' would ignore the lost degree of freedom, ' + vals[2] + ' is z* (σ known), and ' + vals[3] + ' is the column whose one-tail area is ' + F((100 - conf) / 100, 2) + '.',
+             'gl = ' + n + ' − 1 = ' + df + '. Fila ' + df + ', columna ' + confTxt(conf) + ': t* = ' + vals[0] + '. La fila ' + n + ' ignora el grado de libertad perdido, ' + vals[2] + ' es z* (σ conocida) y ' + vals[3] + ' es la columna cuya área de una cola es ' + F((100 - conf) / 100, 2) + '.'),
+      optsEn: vals, optsEs: vals, showWork: false
+    }, rng);
+  })();
+
+  /* P3 · missing row */
+  (function() {
+    var sc = scn[7], n = pick([34, 37, 44, 48, 55, 66, 72], rng), conf = pick([90, 95, 99], rng), df = n - 1;
+    var below = ttRow(df), above = TT[TT.indexOf(below) + 1];
+    var vals = [tCrit(df, conf), parseFloat(above.v[confCol(conf)]), zCrit(conf), tCrit(df, oneTailCol(conf))].map(function(v) { return F(v, 3); });
+    addProb({
+      title: B('When the row is missing', 'Cuando la fila no aparece'),
+      q: B('A random sample of ' + VN + ' = ' + n + ' values of ' + sc.m.en + ' at ' + sc.who.en + ' will be used for a ' + confTxt(conf) + ' confidence interval (σ unknown). Using the table in this guide, which t* is correct?',
+           'Se usará una muestra aleatoria de ' + VN + ' = ' + n + ' valores de «' + sc.m.es + '» de ' + sc.who.es + ' para un intervalo de confianza de ' + confTxt(conf) + ' (σ desconocida). Con la tabla de esta guía, ¿qué t* es el correcto?'),
+      hint: B('Check whether your degrees of freedom are printed. If not, decide which neighbouring row keeps the interval on the safe side.',
+              'Revisa si tus grados de libertad están impresos. Si no, decide qué fila vecina mantiene al intervalo del lado seguro.'),
+      exp: B('df = ' + df + ' is not in the table. The nearest row below is ' + below.df + ', and in the ' + confTxt(conf) + ' column it gives t* = ' + vals[0] + '. Row ' + above.df + ' would pretend you have more data than you do and give a narrower interval.',
+             'gl = ' + df + ' no aparece en la tabla. La fila más cercana por debajo es ' + below.df + ', y en la columna de ' + confTxt(conf) + ' da t* = ' + vals[0] + '. La fila ' + above.df + ' fingiría que tienes más datos de los que tienes y daría un intervalo más angosto.'),
+      optsEn: vals, optsEs: vals, showWork: false
+    }, rng);
+  })();
+
+  /* ───────────────────────── CONCEPT 3 ───────────────────────── */
+  var WX = caseOn([scn[1], scn[2], scn[15]], { ns: [10, 12, 15], confs: [95], exactSE: false });
+  var TF = caseOn([scn[2], scn[1], scn[16]], { ns: [9, 16, 25], confs: [90, 99], exactSE: true });
+  addSection(function(l) {
+    var E = (l === 'en');
+    function card(name, form, note) { return '<div class="rcard"><div class="rname">' + name + '</div><div class="rform">' + form + '</div><div class="rnote">' + note + '</div></div>'; }
+    function solve(c) {
+      var sc = c.sc;
+      return (E ? 'df = ' : 'gl = ') + c.n + ' − 1 = ' + c.df + '; t* = ' + F(c.ts, 3) + '<br>' +
+        (E ? 'SE = ' : 'EE = ') + F(c.s, 1) + '/√' + c.n + ' = ' + F(c.se, 2) + '<br>' +
+        'ME = ' + F(c.ts, 3) + ' × ' + F(c.se, 2) + ' = ' + F(c.me, 2) + '<br>' +
+        F(c.xbar, sc.dec) + ' − ' + F(c.me, 2) + ' = ' + F(c.lo, 1) + '; ' + F(c.xbar, sc.dec) + ' + ' + F(c.me, 2) + ' = ' + F(c.hi, 1);
+    }
+    return '<div class="stag">' + (E ? 'Concept 3' : 'Concepto 3') + '</div>' +
+      '<h2>' + (E ? 'Building the t interval step by step' : 'Construir el intervalo t paso a paso') + '</h2>' +
+      '<p>' + (E
+        ? 'When σ is unknown and the sample is random, the confidence interval for the population mean μ is'
+        : 'Cuando σ es desconocida y la muestra es aleatoria, el intervalo de confianza para la media poblacional μ es') + '</p>' +
+      '<div class="eqline">' + VX + ' ± ' + VT + '* · ' + frac(VS, sqN(VN)) + '</div>' +
+      '<div class="rules-grid">' +
+        card('1', E ? 'df = n − 1' : 'gl = n − 1', E ? 'Degrees of freedom.' : 'Grados de libertad.') +
+        card('2', 't*', E ? 'Row df, column of the confidence level.' : 'Fila gl, columna del nivel de confianza.') +
+        card('3', E ? 'SE = s/√n' : 'EE = s/√n', E ? 'Standard error: how much ' + VX + ' typically varies.' : 'Error estándar: cuánto varía típicamente ' + VX + '.') +
+        card('4', 'ME = t* · ' + (E ? 'SE' : 'EE'), E ? 'Margin of error.' : 'Margen de error.') +
+        card('5', VX + ' ± ME', E ? 'Lower and upper limits.' : 'Límites inferior y superior.') +
+      '</div>' +
+      '<div class="callout"><p><strong>' + (E ? 'Worked example.' : 'Ejemplo resuelto.') + '</strong> ' + caseTxt(WX, l) + ' ' +
+        (E ? 'For a 95% interval:' : 'Para un intervalo de 95%:') + '</p>' +
+        '<div class="steps" style="font-family:\'IBM Plex Mono\',monospace;font-size:.8rem;line-height:1.9;margin-top:.4rem">' + solve(WX) + '</div>' +
+        '<p style="margin-top:.4rem">' + (E
+          ? 'Conclusion: we are 95% confident that the mean ' + WX.sc.m.en + ' for ' + WX.sc.who.en + ' is between ' + F(WX.lo, 1) + ' and ' + F(WX.hi, 1) + (WX.sc.cur ? ' pesos' : ' ' + WX.sc.u.en) + '.'
+          : 'Conclusión: tenemos 95% de confianza en que la media de «' + WX.sc.m.es + '» para ' + WX.sc.who.es + ' está entre ' + F(WX.lo, 1) + ' y ' + F(WX.hi, 1) + (WX.sc.cur ? ' pesos' : ' ' + WX.sc.u.es) + '.') + '</p></div>' +
+      '<p>' + (E
+        ? 'Always write the conclusion in context, with units, and round only the final limits: rounding t* or the standard error too early can move the last decimal.'
+        : 'Escribe siempre la conclusión en contexto, con unidades, y redondea solo los límites finales: redondear t* o el error estándar demasiado pronto puede mover el último decimal.') + '</p>' +
+      '<div class="callout"><p>' + (E
+        ? '<strong>Try it first.</strong> ' + caseTxt(TF, 'en') + ' On paper, build the ' + confTxt(TF.conf) + ' confidence interval for μ. Then open the solution and compare.'
+        : '<strong>Inténtalo primero.</strong> ' + caseTxt(TF, 'es') + ' En papel, construye el intervalo de confianza de ' + confTxt(TF.conf) + ' para μ. Después abre la solución y compara.') + '</p>' +
+        '<details class="sol"><summary>' + (E ? 'Open the solution' : 'Abrir la solución') + '</summary><div class="steps">' + solve(TF) + '</div></details></div>';
+  });
+
+  wBuilder(widgetHost('interval-builder', 'builder'), [
+    caseOn([scn[3], scn[4], scn[5]], { ns: [9, 16], confs: [95], exactSE: true }),
+    caseOn([scn[4], scn[5], scn[3]], { ns: [16, 25], confs: [90, 99], exactSE: true }),
+    caseOn([scn[5], scn[3], scn[4]], { ns: [9, 16, 25], confs: [90, 95, 99], exactSE: true })
+  ]);
+
+  /* P4 · confidence level and width */
+  (function() {
+    var c = caseOn([scn[8], scn[9], scn[10]], { ns: [8, 10, 12, 15, 20], confs: [90], exactSE: false });
+    var sc = c.sc, t99 = tCrit(c.df, 99), lo99 = c.xbar - t99 * c.se, hi99 = c.xbar + t99 * c.se;
+    var wideIsA = rng() < 0.5, X = wideIsA ? 'A' : 'B', Y = wideIsA ? 'B' : 'A';
+    var A = wideIsA ? [lo99, hi99] : [c.lo, c.hi], Bv = wideIsA ? [c.lo, c.hi] : [lo99, hi99];
+    function ivs(l) { return (l === 'en' ? 'Interval A: ' : 'Intervalo A: ') + ivTxt(A[0], A[1], sc, l).toLowerCase() + '. ' + (l === 'en' ? 'Interval B: ' : 'Intervalo B: ') + ivTxt(Bv[0], Bv[1], sc, l).toLowerCase() + '.'; }
+    addProb({
+      title: B('Confidence and width', 'Confianza y ancho'),
+      q: B('From the same random sample (' + VN + ' = ' + c.n + '), an analyst at ' + sc.who.en + ' built two confidence intervals for the mean ' + sc.m.en + '. ' + ivs('en') + ' One was built with 90% confidence and the other with 99%. Which one is the 99% interval?',
+           'Con la misma muestra aleatoria (' + VN + ' = ' + c.n + '), un analista de ' + sc.who.es + ' construyó dos intervalos de confianza para la media de «' + sc.m.es + '». ' + ivs('es') + ' Uno se construyó con 90% de confianza y el otro con 99%. ¿Cuál es el intervalo de 99%?'),
+      hint: B('Same sample means same x̄, s and n. Only one ingredient of the margin of error changes with the confidence level.',
+              'La misma muestra significa la misma x̄, s y n. Solo un ingrediente del margen de error cambia con el nivel de confianza.'),
+      exp: B('With df = ' + c.df + ', t* is ' + F(c.ts, 3) + ' for 90% and ' + F(t99, 3) + ' for 99%. Everything else is the same, so the 99% interval is the wider one, interval ' + X + '. Being more confident costs precision.',
+             'Con gl = ' + c.df + ', t* vale ' + F(c.ts, 3) + ' para 90% y ' + F(t99, 3) + ' para 99%. Todo lo demás es igual, así que el intervalo de 99% es el más ancho, el intervalo ' + X + '. Tener más confianza cuesta precisión.'),
+      optsEn: ['Interval ' + X + ', because more confidence needs a larger t* and a wider interval',
+               'Interval ' + Y + ', because more confidence needs a narrower, more precise interval',
+               'Interval ' + X + ', because a 99% interval is always built from a larger sample',
+               'There is no way to tell which is which without knowing the population σ'],
+      optsEs: ['El intervalo ' + X + ', porque más confianza exige un t* mayor y un intervalo más ancho',
+               'El intervalo ' + Y + ', porque más confianza exige un intervalo más angosto y más preciso',
+               'El intervalo ' + X + ', porque un intervalo de 99% siempre se construye con una muestra más grande',
+               'No hay forma de saber cuál es cuál sin conocer la σ de la población'],
+      showWork: false, dbg: { wide: X }
+    }, rng);
+  })();
+
+  /* P5 · full interval (gated) */
+  (function() {
+    function opts(c) {
+      var z = zCrit(c.conf), t1 = tCrit(c.df, oneTailCol(c.conf));
+      return [[c.lo, c.hi], [c.xbar - z * c.se, c.xbar + z * c.se], [c.xbar - c.ts * c.s, c.xbar + c.ts * c.s], [c.xbar - t1 * c.se, c.xbar + t1 * c.se]];
+    }
+    var c = caseOn([scn[9], scn[10], scn[11]], { ns: [5, 6, 7, 8, 10, 12, 14, 17, 20], confs: [90, 95, 99], exactSE: false }, function(c) {
+      var o = opts(c);
+      return o.every(function(p) { return p[0] > 0; }) && uniq(o.map(function(p) { return ivTxt(p[0], p[1], c.sc, 'en'); }));
+    });
+    var sc = c.sc, o = opts(c);
+    addProb({
+      title: B('The complete interval', 'El intervalo completo'),
+      q: B(caseTxt(c, 'en') + ' Which is the ' + confTxt(c.conf) + ' confidence interval for the population mean?',
+           caseTxt(c, 'es') + ' ¿Cuál es el intervalo de confianza de ' + confTxt(c.conf) + ' para la media poblacional?'),
+      hint: B('Follow the five steps: df, t*, standard error, margin of error, limits.', 'Sigue los cinco pasos: gl, t*, error estándar, margen de error, límites.'),
+      exp: B('df = ' + c.df + ', t* = ' + F(c.ts, 3) + ', SE = ' + F(c.s, 1) + '/√' + c.n + ' = ' + F(c.se, 3) + ', ME = ' + F(c.me, 2) + '. Limits: ' + F(c.xbar, sc.dec) + ' ± ' + F(c.me, 2) + ' → ' + F(c.lo, 1) + ' to ' + F(c.hi, 1) + '. The other options use z*, use s instead of the standard error, or read the column of the one-tail area.',
+             'gl = ' + c.df + ', t* = ' + F(c.ts, 3) + ', EE = ' + F(c.s, 1) + '/√' + c.n + ' = ' + F(c.se, 3) + ', ME = ' + F(c.me, 2) + '. Límites: ' + F(c.xbar, sc.dec) + ' ± ' + F(c.me, 2) + ' → ' + F(c.lo, 1) + ' a ' + F(c.hi, 1) + '. Las otras opciones usan z*, usan s en lugar del error estándar o leen la columna del área de una cola.'),
+      optsEn: o.map(function(p) { return ivTxt(p[0], p[1], sc, 'en'); }),
+      optsEs: o.map(function(p) { return ivTxt(p[0], p[1], sc, 'es'); }),
+      showWork: true, dbg: { lo: c.lo, hi: c.hi }
+    }, rng);
+  })();
+
+  /* P6 · s from raw data (gated) */
+  (function() {
+    var PATS = [[-3, -1, 1, 3], [-2, -1, 0, 3], [-4, 0, 1, 3], [-3, -1, 0, 1, 3]];
+    var pool = scn.slice(10).concat(scn.slice(0, 10)).filter(function(s) { return s.dec === 0 && !s.cur && s.sd[0] >= 1.5; });
+    var sc = pool[0], pat = pick(PATS, rng), n = pat.length;
+    var k = Math.max(1, Math.round((sc.sd[0] + sc.sd[1]) / 2 / 2.5));
+    var m = Math.round(sc.mu[0] + rng() * (sc.mu[1] - sc.mu[0]));
+    var data = shuffle(pat.map(function(d) { return m + k * d; }), rng);
+    var SS = pat.reduce(function(a, d) { return a + d * d; }, 0) * k * k;
+    var s = Math.sqrt(SS / (n - 1)), pop = Math.sqrt(SS / n), vr = SS / (n - 1), se = s / Math.sqrt(n);
+    var vals = [s, pop, vr, se].map(function(v) { return F(v, 2); });
+    var u = sc.u;
+    addProb({
+      title: B('Where s comes from', 'De dónde sale s'),
+      q: B('A manager at ' + sc.who.en + ' records ' + sc.m.en + ' for a random sample of ' + n + ' cases (' + u.en + '): ' + data.join(', ') + '. Before building a t interval she needs the sample standard deviation. What is ' + VS + '?',
+           'Una gerente de ' + sc.who.es + ' registra «' + sc.m.es + '» en una muestra aleatoria de ' + n + ' casos (' + u.es + '): ' + data.join(', ') + '. Antes de construir un intervalo t necesita la desviación estándar muestral. ¿Cuánto vale ' + VS + '?'),
+      hint: B('Find the mean, square each deviation from it, add them, and divide by n − 1 before taking the square root.',
+              'Encuentra la media, eleva al cuadrado cada desviación respecto a ella, súmalas y divide entre n − 1 antes de sacar la raíz cuadrada.'),
+      exp: B(VX + ' = ' + m + '. The squared deviations add up to ' + SS + ', so ' + VS + '² = ' + SS + '/' + (n - 1) + ' = ' + F(vr, 2) + ' and ' + VS + ' = ' + vals[0] + '. Dividing by ' + n + ' instead of ' + (n - 1) + ' gives ' + vals[1] + ', which underestimates the spread; ' + vals[2] + ' is the variance and ' + vals[3] + ' is the standard error.',
+             VX + ' = ' + m + '. Las desviaciones al cuadrado suman ' + SS + ', así que ' + VS + '² = ' + SS + '/' + (n - 1) + ' = ' + F(vr, 2) + ' y ' + VS + ' = ' + vals[0] + '. Dividir entre ' + n + ' en lugar de ' + (n - 1) + ' da ' + vals[1] + ', que subestima la dispersión; ' + vals[2] + ' es la varianza y ' + vals[3] + ' es el error estándar.'),
+      optsEn: vals, optsEs: vals, showWork: true, dbg: { data: data, s: s }
+    }, rng);
+  })();
+
+  /* ───────────────────────── CONCEPT 4 ───────────────────────── */
+  addSection(function(l) {
+    var E = (l === 'en');
+    function card(name, form, note) { return '<div class="rcard"><div class="rname">' + name + '</div><div class="rform">' + form + '</div><div class="rnote">' + note + '</div></div>'; }
+    return '<div class="stag">' + (E ? 'Concept 4' : 'Concepto 4') + '</div>' +
+      '<h2>' + (E ? 'Choosing the method and reading it correctly' : 'Elegir el método e interpretarlo bien') + '</h2>' +
+      '<p>' + (E ? 'Before calculating anything, decide whether the t interval is the right tool. Three questions settle it:' : 'Antes de calcular, decide si el intervalo t es la herramienta correcta. Tres preguntas lo resuelven:') + '</p>' +
+      '<div class="rules-grid">' +
+        card(E ? 'Is σ known?' : '¿Se conoce σ?', E ? 'known → z · unknown → t' : 'conocida → z · desconocida → t', E
+          ? 'If σ is truly known (for example, from years of calibrating a machine), use z. If you only have s, use t, even with a large n: with many data t* is almost equal to z*.'
+          : 'Si σ se conoce de verdad (por ejemplo, por años de calibrar una máquina), usa z. Si solo tienes s, usa t, incluso con n grande: con muchos datos t* casi es igual a z*.') +
+        card(E ? 'Is the sample random?' : '¿La muestra es aleatoria?', E ? 'no → no interval' : 'no → ningún intervalo', E
+          ? 'If the data come from volunteers or from the easiest cases to measure, no formula corrects that bias.'
+          : 'Si los datos vienen de voluntarios o de los casos más fáciles de medir, ninguna fórmula corrige ese sesgo.') +
+        card(E ? 'Is the shape reasonable?' : '¿La forma es razonable?', E ? 'small n → near normal' : 'n pequeña → casi normal', E
+          ? 'With n below 15 the data should look nearly normal. From 15 to 40 moderate skew is tolerable. A strong outlier in a small sample invalidates the interval.'
+          : 'Con n menor que 15, los datos deben verse casi normales. Entre 15 y 40 se tolera un sesgo moderado. Un valor atípico fuerte en una muestra pequeña invalida el intervalo.') +
+      '</div>' +
+      '<p>' + (E
+        ? 'The 95% describes the method, not one particular interval: if the sampling were repeated many times, about 95% of the intervals would capture μ, exactly what you watched in the simulator. An interval already calculated either captures μ or it does not. That is why we say «95% confidence» rather than «95% probability».'
+        : 'El 95% describe al método, no a un intervalo en particular: si se repitiera el muestreo muchas veces, cerca del 95% de los intervalos capturaría a μ, justo lo que viste en el simulador. Un intervalo ya calculado captura a μ o no la captura. Por eso se dice «95% de confianza» y no «95% de probabilidad».') + '</p>' +
+      '<div class="callout"><p>' + (E
+        ? '<strong>Watch out.</strong> The interval is about the population mean μ, not about individual observations. An interval from 31 to 37 minutes does not mean that 95% of deliveries take between 31 and 37 minutes.'
+        : '<strong>Cuidado.</strong> El intervalo habla de la media poblacional μ, no de las observaciones individuales. Un intervalo de 31 a 37 minutos no significa que el 95% de las entregas tarde entre 31 y 37 minutos.') + '</p></div>' +
+      '<p>' + (E
+        ? 'Two levers control the width. More confidence gives a wider interval. A larger sample gives a narrower one, for two reasons at once: √' + VN + ' grows and t* shrinks.'
+        : 'Dos palancas controlan el ancho. Más confianza da un intervalo más ancho. Una muestra más grande lo hace más angosto, por dos razones a la vez: √' + VN + ' crece y t* baja.') + '</p>';
+  });
+
+  /* Method chooser items (seeded numbers; two t, one z, two neither) */
+  (function() {
+    var sA = scn[15], sB = scn[16], sC = scn[17], sD = scn[12], sE = scn[13], sF = scn[14];
+    function mid(sc) { return rd((sc.mu[0] + sc.mu[1]) / 2, sc.dec); }
+    function sdv(sc) { return rd((sc.sd[0] + sc.sd[1]) / 2, 1); }
+    function val(v, sc, l) { return fv(v, sc, l); }
+    var hSig = B('Start with σ: is it really known, or only estimated from the sample?', 'Empieza por σ: ¿se conoce de verdad o solo se estima con la muestra?');
+    var hCond = B('Before choosing a formula, check how the sample was obtained and what the data look like.', 'Antes de elegir fórmula, revisa cómo se obtuvo la muestra y cómo se ven los datos.');
+    var n1 = ri(rng, 8, 14), n2 = ri(rng, 36, 60), n3 = ri(rng, 6, 12), n4 = ri(rng, 10, 20), n6 = ri(rng, 12, 20);
+    var m5 = mid(sE), d5 = sdv(sE), lo5 = m5 - d5, hi5 = m5 + d5, out5 = m5 + 6 * d5;
+    var items = [
+      { k: 't', t: B('For ' + sA.who.en + ', an analyst records ' + sA.m.en + ' in a random sample of ' + n1 + ' cases. The dot plot is roughly symmetric with no outliers, and σ is unknown.',
+                     'Para ' + sA.who.es + ', un analista registra «' + sA.m.es + '» en una muestra aleatoria de ' + n1 + ' casos. El diagrama de puntos es aproximadamente simétrico, sin valores atípicos, y σ es desconocida.'),
+        why: B('σ is unknown, the sample is random and the data look roughly normal: t interval with df = ' + (n1 - 1) + '.', 'σ es desconocida, la muestra es aleatoria y los datos se ven aproximadamente normales: intervalo t con gl = ' + (n1 - 1) + '.'), hint: hSig },
+      { k: 't', t: B('A random sample of ' + n2 + ' values of ' + sB.m.en + ' at ' + sB.who.en + ' has a moderately skewed histogram. Only the sample standard deviation s is available.',
+                     'Una muestra aleatoria de ' + n2 + ' valores de «' + sB.m.es + '» de ' + sB.who.es + ' tiene un histograma con sesgo moderado. Solo se cuenta con la desviación estándar muestral s.'),
+        why: B('σ is unknown, so the method is t, even with ' + n2 + ' data. With that many observations moderate skew is acceptable, and t* is very close to z*.', 'σ es desconocida, así que el método es t, aun con ' + n2 + ' datos. Con tantas observaciones el sesgo moderado es aceptable, y t* queda muy cerca de z*.'),
+        hint: B('A large sample does not make σ known. What do you actually have?', 'Una muestra grande no hace que σ se conozca. ¿Qué tienes en realidad?') },
+      { k: 'z', t: B('For ' + sC.who.en + ', years of process records establish σ = ' + val(sdv(sC), sC, 'en') + ' for ' + sC.m.en + ', and the process has not changed. A random sample of ' + n3 + ' cases looks roughly normal.',
+                     'Para ' + sC.who.es + ', años de registros del proceso establecen σ = ' + val(sdv(sC), sC, 'es') + ' para «' + sC.m.es + '», y el proceso no ha cambiado. Una muestra aleatoria de ' + n3 + ' casos se ve aproximadamente normal.'),
+        why: B('σ is known from long experience with an unchanged process, so the critical value comes from the normal distribution: z interval, even with a small sample.', 'σ se conoce por larga experiencia con un proceso que no ha cambiado, así que el valor crítico sale de la normal: intervalo z, aun con muestra pequeña.'),
+        hint: B('The sample is small, but read again what is said about σ.', 'La muestra es pequeña, pero vuelve a leer lo que se dice de σ.') },
+      { k: 'no', t: B('For ' + sE.who.en + ', 7 random measurements of ' + sE.m.en + ': six fall between ' + val(lo5, sE, 'en') + ' and ' + val(hi5, sE, 'en') + ', and one is ' + val(out5, sE, 'en') + '. σ is unknown.',
+                      'Para ' + sE.who.es + ', 7 mediciones aleatorias de «' + sE.m.es + '»: seis caen entre ' + val(lo5, sE, 'es') + ' y ' + val(hi5, sE, 'es') + ', y una vale ' + val(out5, sE, 'es') + '. σ es desconocida.'),
+        why: B('With only 7 data, one strong outlier drags ' + VX + ' and inflates s, so the t interval is not reliable. Investigate that value before estimating anything.', 'Con solo 7 datos, un valor atípico fuerte arrastra a ' + VX + ' e infla a s, así que el intervalo t no es confiable. Investiga ese valor antes de estimar nada.'), hint: hCond },
+      { k: 'no', t: B('The ' + n6 + ' values of ' + sF.m.en + ' at ' + sF.who.en + ' come from the customers who chose to answer a survey right after filing a complaint. σ is unknown.',
+                      'Los ' + n6 + ' valores de «' + sF.m.es + '» de ' + sF.who.es + ' vienen de los clientes que decidieron contestar una encuesta justo después de presentar una queja. σ es desconocida.'),
+        why: B('The sample is not random: customers who complained and volunteered are not representative, and no formula fixes that bias.', 'La muestra no es aleatoria: los clientes que se quejaron y se ofrecieron a contestar no son representativos, y ninguna fórmula corrige ese sesgo.'), hint: hCond }
+    ];
+    wMethod(widgetHost('method-chooser', 'method'), shuffle(items, rng));
+  })();
+
+  /* P7 · interpretation */
+  (function() {
+    var c = caseOn([scn[11], scn[12], scn[13]], { ns: [8, 10, 12, 15], confs: [90, 95, 99], exactSE: false });
+    var sc = c.sc, a = F(c.lo, 1), b = F(c.hi, 1), cf = confTxt(c.conf);
+    var ue = sc.cur ? ' pesos' : ' ' + sc.u.en, us = sc.cur ? ' pesos' : ' ' + sc.u.es;
+    addProb({
+      title: B('What the interval says', 'Qué dice el intervalo'),
+      q: B('From a random sample, an analyst at ' + sc.who.en + ' reports a ' + cf + ' confidence interval for the mean ' + sc.m.en + ' from ' + a + ' to ' + b + ue + '. Which statement is correct?',
+           'Con una muestra aleatoria, un analista de ' + sc.who.es + ' reporta un intervalo de confianza de ' + cf + ' para la media de «' + sc.m.es + '» de ' + a + ' a ' + b + us + '. ¿Qué afirmación es correcta?'),
+      hint: B('The interval estimates one fixed number about the whole population. Individual cases and the sample mean are something else.',
+              'El intervalo estima un número fijo de toda la población. Los casos individuales y la media muestral son otra cosa.'),
+      exp: B('The confidence is about the method capturing the population mean μ. It says nothing about ' + cf + ' of individual cases, the sample mean is already known (it is the centre), and other samples would produce their own intervals.',
+             'La confianza se refiere a que el método capture la media poblacional μ. No dice nada sobre el ' + cf + ' de los casos individuales, la media muestral ya se conoce (es el centro) y otras muestras producirían sus propios intervalos.'),
+      optsEn: ['We are ' + cf + ' confident that the population mean is between ' + a + ' and ' + b,
+               cf + ' of the individual cases in the population are between ' + a + ' and ' + b,
+               'There is a ' + cf + ' chance that the sample mean is between ' + a + ' and ' + b,
+               cf + ' of future samples will have a mean between ' + a + ' and ' + b],
+      optsEs: ['Tenemos ' + cf + ' de confianza en que la media poblacional está entre ' + a + ' y ' + b,
+               'El ' + cf + ' de los casos individuales de la población está entre ' + a + ' y ' + b,
+               'Hay una probabilidad de ' + cf + ' de que la media muestral esté entre ' + a + ' y ' + b,
+               'El ' + cf + ' de las muestras futuras tendrá una media entre ' + a + ' y ' + b],
+      showWork: false
+    }, rng);
+  })();
+
+  /* ───────────────────────── FINAL ───────────────────────── */
+  addSection(function(l) {
+    var E = (l === 'en');
+    return '<div class="stag">' + (E ? 'Final assessment' : 'Evaluación final') + '</div>' +
+      '<h2>' + (E ? 'Estimate like an analyst' : 'Estima como analista') + '</h2>' +
+      '<p>' + (E ? 'Three decisions with no guidance from the text. Each one counts toward your result. Keep the «t table» button at hand.' : 'Tres decisiones sin guía del texto. Cada una cuenta para tu resultado. Ten a la mano el botón «Tabla t».') + '</p>';
+  });
+
+  /* P8 · sample size effect */
+  (function() {
+    var pr = pick([[4, 16], [9, 25]], rng), conf = pick([90, 95], rng), sc = scn[12];
+    var m1 = tCrit(pr[0] - 1, conf) / Math.sqrt(pr[0]), m2 = tCrit(pr[1] - 1, conf) / Math.sqrt(pr[1]);
+    var ratio = m1 / m2, sq = Math.sqrt(pr[1] / pr[0]), nr = pr[1] / pr[0];
+    var r = [F(ratio, 1), F(sq, 1), F(nr, 1)];
+    addProb({
+      title: B('More data, narrower interval', 'Más datos, intervalo más angosto'),
+      q: B('An analyst at ' + sc.who.en + ' built a ' + confTxt(conf) + ' t interval for the mean ' + sc.m.en + ' with ' + VN + ' = ' + pr[0] + '. She will repeat the study with ' + VN + ' = ' + pr[1] + '. If ' + VS + ' turns out the same, about how many times smaller will the margin of error be?',
+           'Una analista de ' + sc.who.es + ' construyó un intervalo t de ' + confTxt(conf) + ' para la media de «' + sc.m.es + '» con ' + VN + ' = ' + pr[0] + '. Repetirá el estudio con ' + VN + ' = ' + pr[1] + '. Si ' + VS + ' sale igual, ¿aproximadamente cuántas veces más pequeño será el margen de error?'),
+      hint: B('Write ME = t* · s/√n for both sample sizes. Both t* and √n change.', 'Escribe ME = t* · s/√n para los dos tamaños de muestra. Cambian tanto t* como √n.'),
+      exp: B('ME₁ = ' + F(tCrit(pr[0] - 1, conf), 3) + ' · s/' + Math.sqrt(pr[0]) + ' = ' + F(m1, 3) + 's and ME₂ = ' + F(tCrit(pr[1] - 1, conf), 3) + ' · s/' + Math.sqrt(pr[1]) + ' = ' + F(m2, 3) + 's. The ratio is ' + F(ratio, 2) + ': √n alone would give ' + F(sq, 1) + ', and the smaller t* adds the rest.',
+             'ME₁ = ' + F(tCrit(pr[0] - 1, conf), 3) + ' · s/' + Math.sqrt(pr[0]) + ' = ' + F(m1, 3) + 's y ME₂ = ' + F(tCrit(pr[1] - 1, conf), 3) + ' · s/' + Math.sqrt(pr[1]) + ' = ' + F(m2, 3) + 's. El cociente es ' + F(ratio, 2) + ': √n por sí sola daría ' + F(sq, 1) + ', y el t* más pequeño aporta el resto.'),
+      optsEn: ['About ' + r[0] + ' times smaller', 'About ' + r[1] + ' times smaller', 'About ' + r[2] + ' times smaller', 'About the same size as before'],
+      optsEs: ['Unas ' + r[0] + ' veces más pequeño', 'Unas ' + r[1] + ' veces más pequeño', 'Unas ' + r[2] + ' veces más pequeño', 'Más o menos del mismo tamaño'],
+      showWork: false, dbg: { ratio: ratio }
+    }, rng);
+  })();
+
+  /* P9 · interval with a missing row (gated) */
+  (function() {
+    function opts(c) {
+      var t1 = tCrit(c.df, oneTailCol(c.conf));
+      return [[c.lo, c.hi], [c.xbar - t1 * c.se, c.xbar + t1 * c.se], [c.xbar - c.ts * c.s / c.n, c.xbar + c.ts * c.s / c.n], [c.xbar - c.ts * c.s, c.xbar + c.ts * c.s]];
+    }
+    var c = caseOn([scn[13], scn[14], scn[10], scn[11]], { ns: [36, 49, 64], confs: [90, 95, 99], exactSE: true }, function(c) {
+      var o = opts(c);
+      return o.every(function(p) { return p[0] > 0; }) && uniq(o.map(function(p) { return ivTxt(p[0], p[1], c.sc, 'en'); }));
+    });
+    var sc = c.sc, o = opts(c), row = ttRow(c.df).df;
+    addProb({
+      title: B('A larger sample', 'Una muestra más grande'),
+      q: B(caseTxt(c, 'en') + ' σ is unknown. Which is the ' + confTxt(c.conf) + ' confidence interval for μ?',
+           caseTxt(c, 'es') + ' σ es desconocida. ¿Cuál es el intervalo de confianza de ' + confTxt(c.conf) + ' para μ?'),
+      hint: B('Check whether your degrees of freedom appear in the table before you read t*.', 'Revisa si tus grados de libertad aparecen en la tabla antes de leer t*.'),
+      exp: B('df = ' + c.df + ' is not printed, so use row ' + row + ': t* = ' + F(c.ts, 3) + '. SE = ' + F(c.s, 1) + '/√' + c.n + ' = ' + F(c.se, 2) + ', ME = ' + F(c.me, 2) + ', limits ' + F(c.xbar, sc.dec) + ' ± ' + F(c.me, 2) + '.',
+             'gl = ' + c.df + ' no aparece, así que se usa la fila ' + row + ': t* = ' + F(c.ts, 3) + '. EE = ' + F(c.s, 1) + '/√' + c.n + ' = ' + F(c.se, 2) + ', ME = ' + F(c.me, 2) + ', límites ' + F(c.xbar, sc.dec) + ' ± ' + F(c.me, 2) + '.'),
+      optsEn: o.map(function(p) { return ivTxt(p[0], p[1], sc, 'en'); }),
+      optsEs: o.map(function(p) { return ivTxt(p[0], p[1], sc, 'es'); }),
+      showWork: true, dbg: { lo: c.lo, hi: c.hi }
+    }, rng);
+  })();
+
+  /* P10 · a claim tested with the interval (gated). The claim sits between the z limit and the t limit. */
+  (function() {
+    var mu0, zH, t9;
+    var c = caseOn([scn[14], scn[15], scn[16], scn[17], scn[1]], { ns: [5, 6, 7, 8], confs: [95], exactSE: false }, function(c) {
+      zH = c.xbar + 1.96 * c.se; t9 = tCrit(c.df, 90);
+      if (c.hi - zH < 0.6) return false;
+      mu0 = r1((zH + c.hi) / 2);
+      if (mu0 - zH < 0.2 || c.hi - mu0 < 0.2) return false;
+      if (Math.abs(c.xbar + t9 * c.se - zH) < 0.15 || Math.abs(c.xbar + t9 * c.se - mu0) < 0.15) return false;
+      return c.xbar - 1.96 * c.se > 0;
+    });
+    var sc = c.sc, ints = [[c.lo, c.hi], [c.xbar - 1.96 * c.se, zH], [c.lo, c.hi], [c.xbar - t9 * c.se, c.xbar + t9 * c.se]];
+    function inside(p) { return p[0] <= mu0 && mu0 <= p[1]; }
+    var verd = [inside(ints[0]), inside(ints[1]), !inside(ints[2]), inside(ints[3])];
+    var mE = sc.cur ? '$' + F(mu0, 1) : F(mu0, 1) + ' ' + sc.u.en, mS = sc.cur ? '$' + F(mu0, 1) : F(mu0, 1) + ' ' + sc.u.es;
+    function opt(p, v, l) {
+      return ivTxt(p[0], p[1], sc, l) + (l === 'en' ? (v ? '; the claim is plausible' : '; the data contradict the claim') : (v ? '; la afirmación es plausible' : '; los datos contradicen la afirmación'));
+    }
+    addProb({
+      title: B('Checking a claim', 'Revisar una afirmación'),
+      q: B('The provider of ' + sc.who.en + ' claims that the mean ' + sc.m.en + ' is ' + mE + '. ' + caseTxt(c, 'en') + ' Build the 95% confidence interval for μ. What do you conclude about the claim?',
+           'El proveedor de ' + sc.who.es + ' afirma que la media de «' + sc.m.es + '» es ' + mS + '. ' + caseTxt(c, 'es') + ' Construye el intervalo de confianza de 95% para μ. ¿Qué concluyes sobre la afirmación?'),
+      hint: B('Build the t interval first (σ is unknown), then check whether the claimed value lies inside it.', 'Construye primero el intervalo t (σ es desconocida) y después revisa si el valor afirmado queda dentro.'),
+      exp: B('df = ' + c.df + ', t* = ' + F(c.ts, 3) + ', SE = ' + F(c.se, 3) + ', ME = ' + F(c.me, 2) + ': the interval goes from ' + F(c.lo, 1) + ' to ' + F(c.hi, 1) + ', and ' + F(mu0, 1) + ' is inside, so the claim is plausible. The z shortcut ends at ' + F(zH, 1) + ' and would wrongly reject it: with ' + c.n + ' data that mistake changes the decision.',
+             'gl = ' + c.df + ', t* = ' + F(c.ts, 3) + ', EE = ' + F(c.se, 3) + ', ME = ' + F(c.me, 2) + ': el intervalo va de ' + F(c.lo, 1) + ' a ' + F(c.hi, 1) + ', y ' + F(mu0, 1) + ' queda dentro, así que la afirmación es plausible. El atajo con z termina en ' + F(zH, 1) + ' y la rechazaría por error: con ' + c.n + ' datos ese error cambia la decisión.'),
+      optsEn: ints.map(function(p, i) { return opt(p, verd[i], 'en'); }),
+      optsEs: ints.map(function(p, i) { return opt(p, verd[i], 'es'); }),
+      showWork: true, dbg: { lo: c.lo, hi: c.hi, mu0: mu0, zH: zH }
+    }, rng);
+  })();
+}
+
+</script>
+</body>
+</html>
