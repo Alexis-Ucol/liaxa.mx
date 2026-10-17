@@ -367,6 +367,22 @@ html,body{min-height:100%}
 /* the coordinates of the point under the finger */
 .gx .gx-tip { font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums; pointer-events:none; }
 
+/* plans */
+.pay2{display:flex;flex-direction:column;gap:10px}
+.pmeth{display:flex;gap:14px;align-items:center;width:100%;text-align:left;padding:15px 16px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font:inherit;color:inherit;cursor:pointer}
+.pmeth:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.pmeth[aria-pressed=true]{border:2px solid var(--blue);background:var(--blue-tint)}
+.pmeth .ic{flex-shrink:0;width:44px;height:44px;border-radius:50%;background:var(--blue-tint);color:var(--blue);display:flex;align-items:center;justify-content:center}
+.pmeth[aria-pressed=true] .ic{background:var(--blue);color:#fff}
+.pmeth b{display:block;font:600 1rem var(--sans);color:var(--navy)}
+.pmeth small{display:block;font-size:.84rem;line-height:1.4;color:var(--ink-2);margin-top:2px}
+.pmeth .dot{margin-left:auto;margin-top:0}
+.sumbox{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:12px;background:var(--paper)}
+.sumbox .tag.warn{background:#fbf6e8;color:var(--gold-deep)}
+.pend{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:14px;border:1.5px solid var(--gold);background:#fbf6e8}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;font-size:.92rem}
+.kv span{color:var(--ink-2)}.kv b{color:var(--navy);font-weight:600}
+.plbar{height:10px;border-radius:100px;background:var(--surface-2);overflow:hidden}.plbar i{display:block;height:100%;background:var(--blue);border-radius:100px}
 /* Calificaciones */
 .nav .lnk.on{color:var(--navy);font-weight:600;box-shadow:inset 0 -2px 0 var(--gold)}
 .gmeta{font-size:.9rem;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px}
@@ -597,7 +613,9 @@ function langSwitch() {
     '<button type="button" data-act="lang-en" aria-pressed="' + (S.lang === "en") + '">EN</button></div>';
 }
 function kindLabel() {
-  var k = S.me && S.me.account && S.me.account.kind;
+  var a = S.me && S.me.account, bp = a && a.billing && a.billing.plan;
+  if (bp) return bp.name;
+  var k = a && a.kind;
   return k === "trial" ? t("kindTrial") : k === "student" ? t("kindStudent") : t("kindTeacher");
 }
 function header(kind) {
@@ -620,6 +638,7 @@ function header(kind) {
       '<span class="av">' + esc(initial) + '</span><span class="hide-sm">' + esc(kindLabel()) + '</span></button>' +
       (S.menu ? '<div class="menu" role="menu"><div class="who">' + esc(email) + '<br><b style="color:var(--navy)">' + esc(kindLabel()) + '</b></div>' +
         (teach ? '<button type="button" role="menuitem" data-act="go-sheets">' + f("navSheets") + '</button><button type="button" role="menuitem" data-act="go-grades">' + f("navGrades") + '</button>' : "") +
+        (S.me && S.me.account && S.me.account.billing ? '<button type="button" role="menuitem" data-act="b-my-plan">' + f("menuPlan") + '</button>' : "") +
         '<button type="button" role="menuitem" data-act="logout">' + t("signOut") + '</button></div>' : "") +
       '</div></nav>';
   }
@@ -700,6 +719,27 @@ var FIX = {
     thStudent: "Alumno", thGrade: "Calificación", thRight: "Aciertos", thTries: "Intentos", thTime: "Tiempo", thWhen: "Entregó", thAlerts: "Alertas", thWork: "Procedimiento",
     grOf: "{c} de {t}", grMin: "{n} min", grLeftN: "Salió {n} {w}", grTime1: "vez", grTimeN: "veces", grPdf: "Ver PDF", grToday: "Hoy", grYest: "Ayer",
     grNone: "Aún no hay entregas. Comparte el enlace con tu grupo:", grBars: "Aciertos por ejercicio", grBarsNote: "En dorado, los ejercicios que menos de 60% resolvió bien.",
+    bTrialUsed: "Usaste tus hojas de prueba", bTrialUsedNote: "Elige cómo seguir. Tus hojas de prueba siguen disponibles.", bNoSheets: "No te quedan hojas", bNoSheetsNote: "Elige cómo seguir. Tus hojas anteriores, enlaces y calificaciones siguen funcionando.",
+    bPlanUsed: "Usaste tus {n} hojas de este periodo", bPlanRenews: "Tu plan {p} se renueva el <b>{d}</b>. Si necesitas más antes:", bPlanEnds: "Tu plan {p} vence el <b>{d}</b>. Si necesitas más antes:",
+    bOne: "Una hoja", bOneNote: "Pago único, sin suscripción.", bBuyOne: "Comprar 1 hoja", bBuyOneNote: "Pago único, para algo puntual.",
+    bM20Note: "20 hojas al mes · $15 por hoja", bM40Note: "40 hojas al mes · $12.50 por hoja", bBest: "Mejor precio por hoja", bMxn: "Precios en pesos mexicanos.",
+    bRenew: "Renovar {p} hoy", bRenewNote: "{n} hojas nuevas desde hoy.", bRenewCardNote: "{n} hojas nuevas desde hoy. Tu siguiente renovación pasa a dentro de un mes.",
+    bUpgrade: "Cambiar a Mensual 40", bUpgradeNote: "Pagas solo la diferencia y las 20 hojas extra se activan de inmediato. Después, $500 al mes.", bUpgradeOxxoNote: "Pagas solo la diferencia y las 20 hojas extra se activan de inmediato, hasta que vence tu plan.",
+    bKeepWorking: "Tus hojas anteriores, enlaces y calificaciones siguen funcionando normalmente.",
+    bHow: "¿Cómo quieres pagar?", bCard: "Tarjeta de crédito o débito", bCardNote: "Se renueva cada mes. Puedes cancelar cuando quieras.", bCardOneNote: "Se activa al momento.",
+    bOxxo: "Efectivo en OXXO", bOxxoNote: "30 días, sin renovación automática. Se activa cuando OXXO confirma el pago (normalmente el siguiente día hábil).", bOxxoOneNote: "Se activa cuando OXXO confirma el pago (normalmente el siguiente día hábil).",
+    bGoPay: "Continuar al pago", bSecure: "El pago se hace en la página segura de Stripe. LIAXA no ve ni guarda los datos de tu tarjeta.", bOpening: "Abriendo…",
+    bConfirmCharge: "Se cobrarán <b>{a}</b> a tu tarjeta{c}.", bCardEnd: " terminada en {n}", bPayNow: "Pagar {a}", bPaying: "Cobrando…", bPerMonth: "{q} hojas cada mes · {a} MXN",
+    bPending: "Pago pendiente en OXXO", bBuying: "Compra", bPayBefore: "Paga antes del", bVoucher: "Ver ficha de pago", bPendingNote: "También te la enviamos a {e}. Se activa en cuanto OXXO confirme el pago, normalmente el siguiente día hábil. Te avisaremos por correo.",
+    bNoWait: "¿Prefieres no esperar?", bPayCard: "Pagar con tarjeta", bNoWait2: "y se activa al momento.",
+    bMyPlan: "Mi plan", bActive: "Activo", bCancelled: "Cancelado", bEndsSoon: "Vence pronto", bNoPlan: "Sin plan", bTrialLeft: "Hojas de prueba", bSingles: "Hojas sueltas", bSinglesNote: "{n} (no vencen)",
+    bPeriodSheets: "Hojas de este periodo", bRenewsOn: "Se renueva", bSince: "Desde", bEnds: "Vence", bEndsOn: "Activo hasta", bNext: "Siguiente periodo", bNextFrom: "desde el {d}",
+    bCardInfo: "Tarjeta terminada en {n} · {a} al mes", bCardInfo2: "Tarjeta · {a} al mes", bOxxoInfo: "Pagado en OXXO · 30 días, sin renovación automática",
+    bChangePlan: "Cambiar a Mensual 40", bPortal: "Cambiar tarjeta o cancelar", bCancelNote: "Si cancelas, tu plan sigue activo hasta el {d} y no se vuelve a cobrar.", bCancelledNote: "Cancelaste la renovación: tu plan sigue activo hasta el {d}.",
+    bRenewOxxo: "Renovar en OXXO", bToCard: "Cambiar a tarjeta (se renueva solo)", bEarlyNote: "Si pagas antes de que venza, los 30 días nuevos empiezan el {d}: no pierdes días.", bToCardNote: "Con tarjeta, tu plan empieza hoy y se renueva solo cada mes.",
+    bSeePlans: "Ver planes", bPlansTitle: "Elige tu plan", bPlansSub: "Todos los planes incluyen las mismas funciones. Solo cambia cuántas hojas puedes crear.",
+    bPayOk: "✓ Pago recibido. Lo estamos activando…", bPayDone: "✓ Listo: tu compra ya está activa", bPayWait: "Tu pago se está procesando. En unos minutos se verá aquí.", bPayCancel: "No se hizo ningún cargo.", bNotReady: "Los pagos todavía no están listos.",
+    bPayErr: "No se pudo abrir el pago. Intenta de nuevo.", menuPlan: "Mi plan", bVoucherReady: "✓ Tu ficha de OXXO está lista. Págala antes de que venza.",
     grRemove: "Quitar", grRemoveQ: "¿Quitar a {n}? Podrá volver a entregar.", grRemoveYes: "Sí, quitar", grRemoved: "✓ Se quitó la entrega", gcExamLost: "No se pudo guardar el modo examen: en Classroom tus alumnos verán si aciertan en cada ejercicio.",
     grEx: "Ej. {n}", grLoadErr: "No se pudieron cargar las calificaciones.", grItems: "{n} ejercicios", grTableAria: "Calificaciones por alumno", grWithGrades: "Con calificaciones",
     gcLoading: "Buscando tus clases de Classroom…", gcAccount: "Se creará con la cuenta", gcFirst: "La primera vez, Google te pedirá permiso para ver tus clases y crear la tarea. Solo se pide una vez.",
@@ -757,6 +797,27 @@ var FIX = {
     thStudent: "Student", thGrade: "Grade", thRight: "Right", thTries: "Attempts", thTime: "Time", thWhen: "Handed in", thAlerts: "Alerts", thWork: "Work",
     grOf: "{c} of {t}", grMin: "{n} min", grLeftN: "Left {n} {w}", grTime1: "time", grTimeN: "times", grPdf: "View PDF", grToday: "Today", grYest: "Yesterday",
     grNone: "No submissions yet. Share the link with your group:", grBars: "Right answers per exercise", grBarsNote: "In gold, the exercises fewer than 60% got right.",
+    bTrialUsed: "You used your trial worksheets", bTrialUsedNote: "Choose how to continue. Your trial worksheets are still available.", bNoSheets: "You have no worksheets left", bNoSheetsNote: "Choose how to continue. Your earlier worksheets, links and grades keep working.",
+    bPlanUsed: "You used the {n} worksheets of this period", bPlanRenews: "Your {p} plan renews on <b>{d}</b>. If you need more before then:", bPlanEnds: "Your {p} plan ends on <b>{d}</b>. If you need more before then:",
+    bOne: "One worksheet", bOneNote: "One payment, no subscription.", bBuyOne: "Buy 1 worksheet", bBuyOneNote: "One payment, for a one-off need.",
+    bM20Note: "20 worksheets a month · $15 each", bM40Note: "40 worksheets a month · $12.50 each", bBest: "Best price per worksheet", bMxn: "Prices in Mexican pesos.",
+    bRenew: "Renew {p} today", bRenewNote: "{n} new worksheets from today.", bRenewCardNote: "{n} new worksheets from today. Your next renewal moves to a month from now.",
+    bUpgrade: "Switch to Mensual 40", bUpgradeNote: "You pay only the difference and the 20 extra worksheets are available at once. Then $500 a month.", bUpgradeOxxoNote: "You pay only the difference and the 20 extra worksheets are available at once, until your plan ends.",
+    bKeepWorking: "Your earlier worksheets, links and grades keep working normally.",
+    bHow: "How do you want to pay?", bCard: "Credit or debit card", bCardNote: "Renews every month. Cancel anytime.", bCardOneNote: "Available at once.",
+    bOxxo: "Cash at OXXO", bOxxoNote: "30 days, no automatic renewal. Starts when OXXO confirms the payment (usually the next business day).", bOxxoOneNote: "Starts when OXXO confirms the payment (usually the next business day).",
+    bGoPay: "Continue to payment", bSecure: "You pay on Stripe's secure page. LIAXA never sees or keeps your card details.", bOpening: "Opening…",
+    bConfirmCharge: "<b>{a}</b> will be charged to your card{c}.", bCardEnd: " ending in {n}", bPayNow: "Pay {a}", bPaying: "Charging…", bPerMonth: "{q} worksheets a month · {a} MXN",
+    bPending: "OXXO payment pending", bBuying: "Purchase", bPayBefore: "Pay before", bVoucher: "See payment voucher", bPendingNote: "We also sent it to {e}. It starts as soon as OXXO confirms the payment, usually the next business day. We'll let you know by email.",
+    bNoWait: "Rather not wait?", bPayCard: "Pay by card", bNoWait2: "and it starts at once.",
+    bMyPlan: "My plan", bActive: "Active", bCancelled: "Cancelled", bEndsSoon: "Ends soon", bNoPlan: "No plan", bTrialLeft: "Trial worksheets", bSingles: "Single worksheets", bSinglesNote: "{n} (they don't expire)",
+    bPeriodSheets: "Worksheets this period", bRenewsOn: "Renews", bSince: "Since", bEnds: "Ends", bEndsOn: "Active until", bNext: "Next period", bNextFrom: "from {d}",
+    bCardInfo: "Card ending in {n} · {a} a month", bCardInfo2: "Card · {a} a month", bOxxoInfo: "Paid at OXXO · 30 days, no automatic renewal",
+    bChangePlan: "Switch to Mensual 40", bPortal: "Change card or cancel", bCancelNote: "If you cancel, your plan stays active until {d} and you won't be charged again.", bCancelledNote: "You cancelled the renewal: your plan stays active until {d}.",
+    bRenewOxxo: "Renew at OXXO", bToCard: "Switch to card (renews itself)", bEarlyNote: "If you pay before it ends, the new 30 days start on {d}: you don't lose days.", bToCardNote: "With a card, your plan starts today and renews itself every month.",
+    bSeePlans: "See plans", bPlansTitle: "Choose your plan", bPlansSub: "Every plan has the same features. Only the number of worksheets changes.",
+    bPayOk: "✓ Payment received. Activating it…", bPayDone: "✓ Done: your purchase is active", bPayWait: "Your payment is being processed. It will show here in a few minutes.", bPayCancel: "Nothing was charged.", bNotReady: "Payments aren't ready yet.",
+    bPayErr: "The payment couldn't be opened. Please try again.", menuPlan: "My plan", bVoucherReady: "✓ Your OXXO voucher is ready. Pay it before it expires.",
     grRemove: "Remove", grRemoveQ: "Remove {n}? They will be able to hand it in again.", grRemoveYes: "Yes, remove", grRemoved: "✓ Submission removed", gcExamLost: "Exam mode couldn't be saved: in Classroom your students will see whether each answer is right.",
     grEx: "Ex. {n}", grLoadErr: "The grades couldn't be loaded.", grItems: "{n} exercises", grTableAria: "Grades by student", grWithGrades: "With grades",
     gcLoading: "Looking for your Classroom classes…", gcAccount: "It will be created with the account", gcFirst: "The first time, Google will ask your permission to see your classes and create the assignment. It's asked only once.",
@@ -1001,6 +1062,7 @@ function filesHtml() {
   }).join("");
 }
 function formArea2(a) {
+  if (a.billing && !S.ws && (a.next === "limit" || a.billing.pending && !a.billing.available)) return billingLimit(a);
   if (a.next === "limit" && !S.ws) {
     return '<div class="form"><div class="form-head"><span class="t">' + t("newSheet") + "</span></div>" +
       '<div class="form-b lim"><span style="width:44px;height:44px;border-radius:50%;background:var(--surface-2);color:var(--gold-deep);display:flex;align-items:center;justify-content:center">' + SUN + "</span>" +
@@ -1023,7 +1085,7 @@ function formArea2(a) {
         '<input type="file" id="cam" accept="image/*" capture="environment" class="sr"' + dis + "></label></div>" +
     '<button type="submit" id="mainBtn" class="btn btn-p main-btn"' + dis + ">" + esc(mainLabel()) + " " + ARROW + "</button>" +
     (S.formHint ? '<p class="small" id="hint">' + esc(S.formHint) + "</p>" : '<p class="small" id="hint" hidden></p>') +
-    (S.formErr ? '<p class="notice bad" role="alert">' + esc(S.formErr) + "</p>" : "") +
+    (S.formErr ? '<p class="notice bad" role="alert">' + esc(S.formErr) + (S.formPlans && a.billing ? ' <button type="button" class="lnk-blue" data-act="b-plans">' + f("bSeePlans") + '</button>' : "") + "</p>" : "") +
     meter() + "</div></form>";
 }
 function phoneBar2() {
@@ -1107,6 +1169,7 @@ function startPanel() {
   try { S.proc = localStorage.getItem("lx_proc") === "1"; } catch (e) { S.proc = false; }
   loadHistory();
   gcResume();
+  bResume();
 }
 
 /* ── making a worksheet, or a change to one ── */
@@ -1176,6 +1239,7 @@ function submit(chosen) {
     else if (ev === "http-error") {
       if (d.status === 401) { finished = true; gen = null; S.text = text; sessionOver(); return; }
       if (d.status === 429 || d.error === "no_access") { S.limitMsg = d.message || ""; giveBack(d.message || f("limitNow")); refreshAccount(); return; }
+      if (d.status === 402 || d.error === "no_sheets") { S.formPlans = true; giveBack(d.message || f("bNoSheets")); refreshAccount(); return; }
       giveBack(d.message || f("genErr"));
     }
   }).then(function () { if (!finished && gen) giveBack(f("cutOff")); })
@@ -1221,6 +1285,186 @@ function practice() {
     renderPanel();
   }, function () { if (win) try { win.close(); } catch (e) {} toast(f("openErr")); });
 }
+/* ── plans and payment (liaxa.mx teachers on the trial, plans or single worksheets) ── */
+var STORE_IC = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18M9 20v-6h6v6"/></svg>';
+var CARD_IC = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 10h19M6 15h4"/></svg>';
+var B_PRICE = { one: 50, m20: 300, m40: 500, upgrade: 200 };
+var B_NAME = { one: "Una hoja", m20: "Mensual 20", m40: "Mensual 40" };
+function bill() { var a = S.me && S.me.account; return a && a.billing || null; }
+function money(n) { return "$" + n; }
+function bDate(iso, long) {
+  try { return new Date(iso).toLocaleDateString(S.lang === "en" ? "en-US" : "es-MX", long ? { weekday: "long", day: "numeric", month: "long" } : { day: "numeric", month: "long" }); } catch (e) { return ""; }
+}
+function bOpt(act, title, note, price, hl, badge) {
+  return '<button type="button" class="opt' + (hl ? " hl" : "") + '" data-act="' + act + '"><span class="ot"><b>' + title + (badge ? '<span class="badge">' + badge + "</span>" : "") + "</b><small>" + note + '</small></span><span class="pr">' + price + '</span><span style="color:' + (hl ? "var(--gold)" : "var(--blue)") + '">' + ARROW + "</span></button>";
+}
+function bPlanOpts() {
+  return bOpt("b-buy-one", f("bOne"), f("bOneNote"), money(50)) + bOpt("b-buy-m20", "Mensual 20", f("bM20Note"), money(300)) + bOpt("b-buy-m40", "Mensual 40", f("bM40Note"), money(500), true, f("bBest"));
+}
+function bPendingHtml(b) {
+  var p = b.pending;
+  return '<div class="pend"><div class="kv"><span>' + f("bBuying") + '</span><b>' + esc(p.name) + " · " + money(B_PRICE[p.product] || "") + '</b>' +
+    (p.expiresAt ? '<span>' + f("bPayBefore") + '</span><b>' + esc(bDate(p.expiresAt, true)) + '</b>' : "") + '</div>' +
+    (p.voucherUrl ? '<a class="btn btn-p" href="' + esc(p.voucherUrl) + '" target="_blank" rel="noopener">' + f("bVoucher") + '</a>' : "") +
+    '<p class="small" style="margin:0;line-height:1.5">' + f("bPendingNote", { e: esc((S.me && S.me.email) || "") }) + '</p></div>' +
+    '<p class="small" style="line-height:1.5;margin:0">' + f("bNoWait") + ' <button type="button" class="lnk-blue" data-act="b-pay-card" data-p="' + esc(p.product) + '">' + f("bPayCard") + '</button> ' + f("bNoWait2") + '</p>';
+}
+function billingLimit(a) {
+  var b = a.billing, body;
+  if (b.pending) {
+    body = "<h2>" + f("bPending") + "</h2>" + bPendingHtml(b);
+  } else if (b.plan && b.plan.left <= 0) {
+    var p = b.plan, opts = bOpt("b-buy-one", f("bBuyOne"), f("bBuyOneNote"), money(50)) +
+      bOpt("b-renew", f("bRenew", { p: esc(p.name) }), f(p.source === "card" && p.renews ? "bRenewCardNote" : "bRenewNote", { n: p.quota }), money(B_PRICE[p.key]));
+    if (p.key === "m20") opts += bOpt("b-upgrade", f("bUpgrade"), f(p.source === "card" ? "bUpgradeNote" : "bUpgradeOxxoNote"), money(200), true, f("bBest"));
+    body = "<h2>" + f("bPlanUsed", { n: p.quota }) + '</h2><p class="small" style="font-size:.92rem;line-height:1.5">' + f(p.renews ? "bPlanRenews" : "bPlanEnds", { p: esc(p.name), d: esc(bDate(p.end)) }) + '</p>' +
+      '<div style="display:flex;flex-direction:column;gap:10px">' + opts + '</div><p class="small">' + f("bKeepWorking") + '</p>';
+  } else {
+    body = "<h2>" + f(b.paidEver ? "bNoSheets" : "bTrialUsed") + '</h2><p class="small" style="font-size:.92rem;line-height:1.5">' + f(b.paidEver ? "bNoSheetsNote" : "bTrialUsedNote") + '</p>' +
+      '<div style="display:flex;flex-direction:column;gap:10px">' + bPlanOpts() + '</div><p class="small">' + f("bMxn") + '</p>';
+  }
+  return '<div class="form"><div class="form-head"><span class="t">' + t("newSheet") + "</span></div>" +
+    '<div class="form-b lim"><span style="width:44px;height:44px;border-radius:50%;background:var(--surface-2);color:var(--gold-deep);display:flex;align-items:center;justify-content:center">' + (b.pending ? STORE_IC : SUN) + "</span>" +
+    body + '<div style="margin-top:auto">' + meter() + "</div></div></div>";
+}
+// ?pay=ok|cancel back from Stripe: say so, and look again until the payment shows (the webhook may take a moment).
+var B_BACK = (function () {
+  try {
+    var q = new URLSearchParams(location.search), pay = q.get("pay");
+    if (!pay) return null;
+    q.delete("pay");
+    history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : "") + location.hash);
+    return pay === "ok" ? "ok" : "cancel";
+  } catch (e) { return null; }
+})();
+function bResume() {
+  var r = B_BACK; B_BACK = null;
+  if (!r) return;
+  if (r === "cancel") { toast(f("bPayCancel")); return; }
+  var before = JSON.stringify(bill() || {}), n = 0;
+  // An OXXO voucher was made (nothing paid yet): say so instead of "payment received".
+  if (bill() && bill().pending) { toast(f("bVoucherReady")); return; }
+  toast(f("bPayOk"));
+  (function again() {
+    n++;
+    api("/api/login/me").then(function (d) {
+      if (!d.signedIn) return;
+      var nb = d.account && d.account.billing || {}, now = JSON.stringify(nb);
+      S.me = d;
+      if (nb.pending) { toast(f("bVoucherReady")); render(); return; }
+      if (now !== before) { toast(f("bPayDone")); render(); return; }
+      if (n < 8) setTimeout(again, 2000); else { toast(f("bPayWait")); render(); }
+    });
+  })();
+}
+// The modal: how to pay (monthly), or confirm a charge to the saved card ("Renovar hoy", the upgrade).
+function bOpenPay(product) {
+  var b = bill(); if (!b) return;
+  S.payProduct = product; S.payMethod = "card"; S.sendErr = ""; S.payBusy = false; S.menu = false;
+  if (product === "one") { bCheckout("one", "card"); return; }
+  S.modal = "pay"; render(".dlg-x");
+}
+function bCardSub() { var b = bill(); return !!(b && b.plan && b.plan.source === "card" && b.subscription && b.subscription.status !== "canceled"); }
+function modalPay() {
+  var b = bill() || {}, pr = S.payProduct, inner;
+  var x = '<button type="button" class="dlg-x" data-act="close-modal" aria-label="' + t("close") + '">×</button>';
+  var charge = (pr === "renew" || pr === "upgrade") && bCardSub();
+  var amount = pr === "upgrade" ? 200 : pr === "renew" ? B_PRICE[b.plan && b.plan.key] : B_PRICE[pr];
+  var name = pr === "upgrade" ? f("bUpgrade") : pr === "renew" ? f("bRenew", { p: esc(b.plan ? b.plan.name : "") }) : esc(B_NAME[pr] || "");
+  var sub = pr === "upgrade" ? f(b.plan && b.plan.source === "card" ? "bUpgradeNote" : "bUpgradeOxxoNote") : pr === "renew" ? f("bRenewNote", { n: b.plan ? b.plan.quota : "" }) : f("bPerMonth", { q: pr === "m20" ? 20 : 40, a: money(amount) });
+  if (charge) {
+    inner = '<div><h2 id="dlgT">' + name + '</h2><p class="small" style="font-size:.95rem;margin-top:4px">' + sub + '</p></div>' +
+      '<p style="margin:0;line-height:1.55">' + f("bConfirmCharge", { a: money(amount) + " MXN", c: b.plan && b.plan.last4 ? f("bCardEnd", { n: esc(b.plan.last4) }) : "" }) + '</p>' +
+      (S.sendErr ? '<p class="notice bad" role="alert">' + esc(S.sendErr) + '</p>' : "") +
+      '<div class="dlg-acts"><button type="button" class="btn btn-s" data-act="close-modal">' + f("cancel") + '</button><button type="button" class="btn btn-p" data-act="b-go" style="min-width:200px"' + (S.payBusy ? " disabled" : "") + '>' + (S.payBusy ? f("bPaying") : f("bPayNow", { a: money(amount) })) + '</button></div>';
+  } else {
+    var oneTime = pr === "upgrade" || pr === "renew" && b.plan && b.plan.source === "oxxo" && false;
+    function m(id, ic, ti, note) { return '<button type="button" class="pmeth" aria-pressed="' + (S.payMethod === id) + '" data-act="b-method" data-m="' + id + '"><span class="ic">' + ic + '</span><span><b>' + ti + '</b><small>' + note + '</small></span><span class="dot"></span></button>'; }
+    inner = '<div><h2 id="dlgT">' + name + '</h2><p class="small" style="font-size:.95rem;margin-top:4px">' + sub + '</p></div>' +
+      '<fieldset style="border:0;margin:0;padding:0"><legend style="font:700 .74rem var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--gold-deep);margin-bottom:10px;padding:0">' + f("bHow") + '</legend>' +
+      '<div class="pay2">' + m("card", CARD_IC, f("bCard"), f(pr === "upgrade" || oneTime ? "bCardOneNote" : "bCardNote")) + m("oxxo", STORE_IC, f("bOxxo"), f(pr === "upgrade" ? "bOxxoOneNote" : "bOxxoNote")) + '</div></fieldset>' +
+      (S.sendErr ? '<p class="notice bad" role="alert">' + esc(S.sendErr) + '</p>' : "") +
+      '<div class="dlg-acts"><button type="button" class="btn btn-s" data-act="close-modal">' + f("cancel") + '</button><button type="button" class="btn btn-p" data-act="b-go" style="min-width:220px"' + (S.payBusy ? " disabled" : "") + '>' + (S.payBusy ? f("bOpening") : f("bGoPay")) + '</button></div>' +
+      '<p class="small" style="margin:0;line-height:1.5">' + f("bSecure") + '</p>';
+  }
+  return '<div class="scrim" data-act="close-modal"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT" style="max-width:560px" data-stop="1">' + x + '<div class="dlg-in">' + inner + '</div></div></div>';
+}
+function bCheckout(product, method) {
+  S.payBusy = true; S.sendErr = ""; if (S.modal === "pay") render();
+  api("/api/billing/checkout", { product: product, method: method, ret: location.origin + location.pathname }).then(function (d) {
+    S.payBusy = false;
+    if (d._status === 401) { sessionOver(); return; }
+    if (d.ok && d.url) { location.href = d.url; return; }
+    if (d.ok && d.done) { S.modal = null; B_BACK = "ok"; bResume(); render(); return; }
+    var msg = d.error === "not_ready" ? f("bNotReady") : d.message || f("bPayErr");
+    if (S.modal === "pay") { S.sendErr = msg; render(); } else toast(msg);
+    if (d.error === "pending") refreshAccount();
+  });
+}
+function bPortal() {
+  api("/api/billing/portal", { ret: location.origin + location.pathname }).then(function (d) {
+    if (d._status === 401) { sessionOver(); return; }
+    if (d.ok && d.url) { location.href = d.url; return; }
+    toast(d.message || f("bPayErr"));
+  });
+}
+function modalPlan() {
+  var b = bill() || {}, p = b.plan, x = '<button type="button" class="dlg-x" data-act="close-modal" aria-label="' + t("close") + '">×</button>';
+  var body = '<div><h2 id="dlgT">' + f("bMyPlan") + '</h2><p class="small" style="font-size:.95rem;margin-top:4px;overflow-wrap:anywhere">' + esc((S.me && S.me.email) || "") + '</p></div>';
+  if (b.pending) body += '<div style="display:flex;flex-direction:column;gap:10px"><b style="color:var(--navy)">' + f("bPending") + '</b>' + bPendingHtml(b) + '</div>';
+  if (p) {
+    var soon = p.source === "oxxo" && Date.parse(p.end) - Date.now() < 4 * 864e5;
+    var tag = p.cancelAtEnd ? f("bCancelled") : soon ? f("bEndsSoon") : f("bActive");
+    var info = p.source === "card" ? (p.last4 ? f("bCardInfo", { n: esc(p.last4), a: money(B_PRICE[p.key]) }) : f("bCardInfo2", { a: money(B_PRICE[p.key]) })) : f("bOxxoInfo");
+    var pct = p.quota ? Math.round(p.used / p.quota * 100) : 0;
+    body += '<div class="sumbox"><span><b style="font:600 1.15rem var(--display)">' + esc(p.name) + '</b><br><span class="small">' + info + '</span></span><span class="tag' + (soon || p.cancelAtEnd ? " warn" : "") + '">' + tag + '</span></div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-size:.9rem"><span>' + f("bPeriodSheets") + '</span><span><b style="color:var(--navy)">' + p.used + '</b> ' + t("of") + ' ' + p.quota + '</span></div><div class="plbar"><i style="width:' + pct + '%"></i></div></div>' +
+      '<div class="kv"><span>' + (p.renews ? f("bRenewsOn") : p.cancelAtEnd ? f("bEndsOn") : f("bEnds")) + '</span><b>' + esc(bDate(p.end)) + '</b>' +
+      (b.next ? '<span>' + f("bNext") + '</span><b>' + esc(b.next.name) + ' · ' + f("bNextFrom", { d: esc(bDate(b.next.start)) }) + '</b>' : "") +
+      (b.singles ? '<span>' + f("bSingles") + '</span><b>' + f("bSinglesNote", { n: b.singles }) + '</b>' : "") + '</div>';
+    var acts = [];
+    if (p.key === "m20" && (p.source !== "card" || bCardSub())) acts.push('<button type="button" class="btn btn-s" data-act="b-upgrade">' + f("bChangePlan") + '</button>');
+    if (p.source === "card" && b.subscription) acts.push('<button type="button" class="btn btn-s" data-act="b-portal">' + f("bPortal") + '</button>');
+    if (p.source === "oxxo") { acts.push('<button type="button" class="btn btn-s" data-act="b-to-card" data-p="' + esc(p.key) + '">' + f("bToCard") + '</button>'); if (!b.pending) acts.push('<button type="button" class="btn btn-p" data-act="b-renew-oxxo" data-p="' + esc(p.key) + '">' + f("bRenewOxxo") + '</button>'); }
+    body += '<div class="dlg-acts" style="justify-content:space-between">' + acts.join("") + '</div>' +
+      '<p class="small" style="margin:0;line-height:1.5">' + (p.source === "card" ? (p.cancelAtEnd ? f("bCancelledNote", { d: esc(bDate(p.end)) }) : f("bCancelNote", { d: esc(bDate(p.end)) })) : f("bEarlyNote", { d: esc(bDate(b.next ? b.next.end : p.end)) })) + '</p>';
+  } else {
+    body += '<div class="sumbox"><span><b style="font:600 1.15rem var(--display)">' + f("bNoPlan") + '</b></span></div><div class="kv">' +
+      '<span>' + f("bTrialLeft") + '</span><b>' + b.trialLeft + ' ' + t("of") + ' ' + b.trialTotal + '</b>' +
+      (b.singles ? '<span>' + f("bSingles") + '</span><b>' + f("bSinglesNote", { n: b.singles }) + '</b>' : "") + '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:10px">' + bPlanOpts() + '</div><p class="small" style="margin:0">' + f("bMxn") + '</p>';
+  }
+  return '<div class="scrim" data-act="close-modal"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT" style="max-width:560px" data-stop="1">' + x + '<div class="dlg-in">' + body + '</div></div></div>';
+}
+function modalPlansIn() {
+  var x = '<button type="button" class="dlg-x" data-act="close-modal" aria-label="' + t("close") + '">×</button>';
+  return '<div class="scrim" data-act="close-modal"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT" style="max-width:560px" data-stop="1">' + x + '<div class="dlg-in">' +
+    '<div><h2 id="dlgT">' + f("bPlansTitle") + '</h2><p class="small" style="font-size:.95rem;margin-top:6px">' + f("bPlansSub") + '</p></div>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">' + bPlanOpts() + '</div><p class="small" style="margin:0">' + f("bMxn") + '</p></div></div></div>';
+}
+function billingAct(act, el) {
+  switch (act) {
+    case "b-buy-one": bOpenPay("one"); return true;
+    case "b-buy-m20": bOpenPay("m20"); return true;
+    case "b-buy-m40": bOpenPay("m40"); return true;
+    case "b-renew": bOpenPay("renew"); return true;
+    case "b-upgrade": bOpenPay("upgrade"); return true;
+    case "b-plans": S.modal = "plansIn"; render(".dlg-x"); return true;
+    case "b-my-plan": S.menu = false; S.modal = "plan"; render(".dlg-x"); refreshAccount().then(function () { if (S.modal === "plan") render(); }); return true;
+    case "b-method": S.payMethod = el.getAttribute("data-m") === "oxxo" ? "oxxo" : "card"; render('[data-m="' + S.payMethod + '"]'); return true;
+    case "b-go":
+      var b = bill() || {}, pr = S.payProduct;
+      if ((pr === "renew" || pr === "upgrade") && bCardSub()) { bCheckout(pr, "card"); return true; }
+      if (pr === "renew") { bCheckout(b.plan ? b.plan.key : "m20", S.payMethod); return true; }
+      bCheckout(pr, S.payMethod); return true;
+    case "b-pay-card": S.modal = null; var pp = el.getAttribute("data-p"); if (pp === "one") bCheckout("one", "card"); else bOpenPay(pp); return true;
+    case "b-portal": bPortal(); return true;
+    case "b-renew-oxxo": S.modal = null; bCheckout(el.getAttribute("data-p"), "oxxo"); return true;
+    case "b-to-card": S.payProduct = el.getAttribute("data-p"); S.payMethod = "card"; S.sendErr = ""; S.modal = "pay"; render(".dlg-x"); return true;
+  }
+  return false;
+}
+
 /* ── link with grades ── */
 function makeLink() {
   var w = S.ws; if (!w || S.sendBusy) return;
@@ -1682,6 +1926,7 @@ function addFile(file) {
 
 /* ── what the panel does when clicked ── */
 function panelAct(act, el) {
+  if (act.indexOf("b-") === 0 && billingAct(act, el)) return true;
   switch (act) {
     case "toggle-item": S.openItems[el.getAttribute("data-k")] = !S.openItems[el.getAttribute("data-k")]; renderPanel("left"); return true;
     case "history": S.showHist = !S.showHist; renderPanel("left"); return true;
@@ -1826,8 +2071,15 @@ function screenRole() {
 }
 function meter() {
   var a = (S.me && S.me.account) || {};
-  var html = "";
-  if (a.dailyLimit !== null && a.dailyLimit !== undefined && a.dailyLimit > 0) {
+  var html = "", bm = a.billing && a.billing.meter;
+  if (bm) {
+    if (bm.kind === "singles") html += '<div class="meter-l"><span>' + f("bSingles") + '</span><span>' + bm.left + '</span></div>';
+    else {
+      var bu = Math.min(bm.used || 0, bm.of || 0), bp = bm.of ? Math.round(bu / bm.of * 100) : 100;
+      html += '<div class="meter-l"><span>' + (bm.kind === "plan" ? f("bPeriodSheets") : f("bTrialLeft")) + '</span><span>' + bu + ' ' + t("of") + ' ' + bm.of + '</span></div>' +
+        '<div class="bar"><i class="' + (bp >= 100 ? "full" : "") + '" style="width:' + bp + '%"></i></div>';
+    }
+  } else if (a.dailyLimit !== null && a.dailyLimit !== undefined && a.dailyLimit > 0) {
     var used = Math.min(a.usedToday || 0, a.dailyLimit), pct = Math.round(used / a.dailyLimit * 100);
     html += '<div class="meter-l"><span>' + t("usedToday") + '</span><span>' + used + ' ' + t("of") + ' ' + a.dailyLimit + '</span></div>' +
       '<div class="bar"><i class="' + (pct >= 100 ? "full" : "") + '" style="width:' + pct + '%"></i></div>';
@@ -1855,6 +2107,9 @@ function render(focusSel) {
   var html = S.screen === "inicio" ? screenInicio() : S.screen === "codigo" ? screenCodigo() : S.screen === "google" ? screenGoogle() : S.screen === "app" ? screenApp2() : S.screen === "role" ? screenRole() : S.screen === "grades" ? screenGrades() : screenBoot();
   if (S.modal === "prices") html += modalPrices();
   if (S.modal === "send" && S.screen === "app") html += modalSend2();
+  if (S.modal === "pay" && (S.screen === "app" || S.screen === "grades")) html += modalPay();
+  if (S.modal === "plan" && (S.screen === "app" || S.screen === "grades")) html += modalPlan();
+  if (S.modal === "plansIn" && (S.screen === "app" || S.screen === "grades")) html += modalPlansIn();
   document.getElementById("root").innerHTML = html;
   if (focusSel) { var el = document.querySelector(focusSel); if (el) { el.focus(); if (el.select && el.id === "email") el.select(); } }
   afterRender();
